@@ -15,7 +15,10 @@ namespace com::neppert::context {
 
 Q_LOGGING_CATEGORY(loggingCategory, "qapplicationcontext");
 
+QApplicationContext::QApplicationContext(QObject* parent) :
+    QObject(parent) {
 
+}
 
 
 

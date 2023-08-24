@@ -11,7 +11,7 @@
 namespace com::neppert::context {
 
 
-class StandardApplicationContext : public QObject, public QApplicationContext
+class StandardApplicationContext : public QApplicationContext
 {
     Q_OBJECT
 public:
@@ -21,11 +21,9 @@ public:
 
     virtual bool publish() final override;
 
+    virtual bool published() const final override;
 
 
-signals:
-
-    void contextPublished();
 
 
 protected:
@@ -291,6 +289,8 @@ private:
 
 
     mutable std::unordered_map<std::type_index,ProxyRegistration*> proxyRegistrationCache;
+
+    bool successfullyPublished;
 };
 
 

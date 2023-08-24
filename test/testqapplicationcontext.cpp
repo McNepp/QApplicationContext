@@ -577,23 +577,30 @@ private slots:
 
     void testPublishAdditionalServices() {
 
+        bool contextPublished = context->published();
+        connect(context, &QApplicationContext::publishedChanged, this, [&contextPublished] (bool p) {contextPublished = p;});
         context->registerService<Service<Interface1,BaseService>>("base");
         RegistrationSlot<Interface1> baseSlot{context->getRegistration<Interface1>()};
         auto regDep = context->registerService<DependentService,Interface1>();
         RegistrationSlot<DependentService> depSlot{regDep};
 
+        QVERIFY(!contextPublished);
         QVERIFY(context->publish());
+        QVERIFY(contextPublished);
         QVERIFY(baseSlot());
         QVERIFY(depSlot());
         QCOMPARE(baseSlot.invocationCount(), 1);
         QCOMPARE(baseSlot(), baseSlot());
 
         auto anotherBaseReg = context->registerService<Service<Interface1,BaseService2>>("anotherBase");
+        QVERIFY(!contextPublished);
         RegistrationSlot<Interface1> anotherBaseSlot{anotherBaseReg};
         auto regCard = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>();
+        QVERIFY(!contextPublished);
 
         RegistrationSlot<CardinalityNService> cardSlot{regCard};
         QVERIFY(context->publish());
+        QVERIFY(contextPublished);
         QVERIFY(cardSlot());
         QCOMPARE(cardSlot->my_bases.size(), 2);
         QCOMPARE(baseSlot.invocationCount(), 2);

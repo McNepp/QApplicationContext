@@ -57,7 +57,8 @@ inline QDebug operator<<(QDebug out, const dependency_info& info) {
 }
 
 StandardApplicationContext::StandardApplicationContext(QObject* parent) :
-QObject(parent)
+QApplicationContext(parent),
+successfullyPublished(false)
 {
 }
 
@@ -426,9 +427,16 @@ bool StandardApplicationContext::publish()
     if(publishedCount != allPublished.size()) {
         qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has a total number of " << allPublished.size() << " objects.";
     }
-    emit contextPublished();
+
+    successfullyPublished = true;
+    emit publishedChanged(true);
 
     return true;
+}
+
+bool StandardApplicationContext::published() const
+{
+    return successfullyPublished;
 }
 
 
@@ -466,11 +474,16 @@ std::pair<Registration*,bool> StandardApplicationContext::registerDescriptor(Sta
 
     }
 
+    bool wasPublished = published();
     registrationsByName.insert({registration->name(), registration});
     registrations.insert(registration);
     auto proxy = proxyRegistrationCache.find(registration->service_type());
     if(proxy != proxyRegistrationCache.end()) {
         proxy->second->add(registration);
+    }
+    if(wasPublished) {
+        successfullyPublished = false;
+        emit publishedChanged(false);
     }
     return {registration, true};
 

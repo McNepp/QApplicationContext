@@ -729,10 +729,13 @@ private:
 
 
 
-class QApplicationContext
+class QApplicationContext : public QObject
 {
+    Q_OBJECT
 
 public:
+
+    Q_PROPERTY(bool published READ published NOTIFY publishedChanged)
 
     template<typename S,typename...Dep> auto registerService(const QString& objectName, const ServiceConfig<S,Dep...>& config) -> TRegistration<typename detail::service_traits<S>::service_type>* {
         using service_type = typename detail::service_traits<S>::service_type;
@@ -772,11 +775,25 @@ public:
 
     virtual bool publish() = 0;
 
-    virtual ~QApplicationContext() = default;
+    ///
+    /// \brief Have all registered services been published?
+    /// This property will initially yield `false`, until publish() is invoked.
+    /// If that was successul, this property will yield `true`.
+    /// It will stay `true` as long as no more services are registered but not yet published.
+    /// **Note:** This property will **not** transition back to `false` upon destruction of this ApplicationContext!
+    /// \return `true` if all registered services have been published.
+    ///
+    virtual bool published() const = 0;
+
+signals:
+
+    void publishedChanged(bool);
 
 
 
 protected:
+
+    explicit QApplicationContext(QObject* parent = nullptr);
 
 
     virtual Registration* registerService(const QString& name, service_descriptor* descriptor) = 0;
