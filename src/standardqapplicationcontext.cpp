@@ -385,6 +385,19 @@ bool StandardApplicationContext::publish()
         }
     }
     qsizetype publishedCount = publishedNow.size();
+    QList<QApplicationContextPostProcessor*> postProcessors;
+    for(auto reg : allPublished) {
+        if(auto processor = dynamic_cast<QApplicationContextPostProcessor*>(reg->getObject())) {
+            postProcessors.push_back(processor);
+            qCInfo(loggingCategory()).noquote().nospace() << "Detected PostProcessor " << *reg;
+        }
+    }
+    //Move PostProcessors to the front, so that they will be configured before they process other Services:
+    for(unsigned moved = 0, pos = 1; pos < publishedNow.size(); ++pos) {
+        if(dynamic_cast<QApplicationContextPostProcessor*>(publishedNow[pos]->getObject())) {
+            std::swap(publishedNow[moved++], publishedNow[pos]);
+        }
+    }
     //The services that have been instantiated during this methd-invocation will be configured in the order they have have been
     //instantiated. However, if their configuration has bean-refs, this order may need to be modified.
     while(!publishedNow.empty()) {
@@ -404,7 +417,7 @@ bool StandardApplicationContext::publish()
 
             auto service = reg->theService;
             if(service) {
-                if(!configure(reg, service)) {
+                if(!configure(reg, service, postProcessors)) {
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
                     unpublish();
                     return false;
@@ -413,7 +426,7 @@ bool StandardApplicationContext::publish()
                 reg->notifyPublished();
             }
             for(auto privateObj : reg->privateObjects()) {
-                if(!configure(reg, privateObj)) {
+                if(!configure(reg, privateObj, postProcessors)) {
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
                     unpublish();
                     return false;
@@ -680,7 +693,7 @@ QVariant StandardApplicationContext::resolveValue(const QVariant &value)
 
 
 
-bool StandardApplicationContext::configure(DescriptorRegistration* reg, QObject* target) {
+bool StandardApplicationContext::configure(DescriptorRegistration* reg, QObject* target, const QList<QApplicationContextPostProcessor*>& postProcessors) {
     if(!target) {
         return false;
     }
@@ -736,7 +749,7 @@ bool StandardApplicationContext::configure(DescriptorRegistration* reg, QObject*
                 }
                 if(candidate) {
                     if(prop.write(target, QVariant::fromValue(candidate->getObject()))) {
-                        qCDebug(loggingCategory()).nospace() << "Autowired property '" << prop.name() << "' of " << *reg << " to " << *candidate;
+                        qCInfo(loggingCategory()).nospace() << "Autowired property '" << prop.name() << "' of " << *reg << " to " << *candidate;
                         break;
                     } else {
                         qCInfo(loggingCategory()).nospace().noquote() << "Could not autowire property '" << prop.name()  << "' of " << *reg << " to " << *candidate;
@@ -748,7 +761,13 @@ bool StandardApplicationContext::configure(DescriptorRegistration* reg, QObject*
 
     }
 
-    afterConfiguration(target);
+
+    for(auto processor : postProcessors) {
+        if(processor != dynamic_cast<QApplicationContextPostProcessor*>(target)) {
+            //Don't process yourself!
+            processor->process(this, target);
+        }
+    }
 
     if(!config.initMethod.isEmpty()) {
         for(int index = 0, methodCount = metaObject->methodCount(); index < methodCount; ++index) {

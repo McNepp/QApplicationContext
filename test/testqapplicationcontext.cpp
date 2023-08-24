@@ -63,6 +63,18 @@ private:
     int m_invocationCount;
 };
 
+class PostProcessor : public QObject, public QApplicationContextPostProcessor {
+public:
+    explicit PostProcessor(QObject* parent = nullptr) : QObject(parent) {}
+
+    // QApplicationContextServicePostProcessor interface
+    void process(QApplicationContext *appContext, QObject *service) override {
+        processedObjects.push_back(service);
+    }
+
+    QObjectList processedObjects;
+};
+
 class ApplicationContextTest
  : public QObject {
     Q_OBJECT
@@ -535,6 +547,31 @@ private slots:
         QCOMPARE(regs->getPublishedObjects().size(), 2);
 
     }
+
+    void testPostProcessor() {
+        auto processReg = context->registerService<PostProcessor>();
+        auto reg1 = context->registerService<Service<Interface1,BaseService>>("base1");
+        auto reg2 = context->registerService<Service<Interface1,BaseService2>>("base2");
+        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>();
+        QVERIFY(context->publish());
+        auto regs = context->getRegistration<Interface1>();
+        RegistrationSlot<Interface1> base1{reg1};
+        RegistrationSlot<Interface1> base2{reg2};
+        RegistrationSlot<CardinalityNService> service{reg};
+        RegistrationSlot<PostProcessor> processSlot{processReg};
+        QCOMPARE_NE(base1, base2);
+        QCOMPARE(service->my_bases.size(), 2);
+
+        RegistrationSlot<Interface1> services{regs};
+        QCOMPARE(services.invocationCount(), 2);
+        QCOMPARE(regs->getPublishedObjects().size(), 2);
+        QCOMPARE(processSlot->processedObjects.size(), 3);
+        QVERIFY(processSlot->processedObjects.contains(dynamic_cast<QObject*>(base1())));
+        QVERIFY(processSlot->processedObjects.contains(dynamic_cast<QObject*>(base2())));
+        QVERIFY(processSlot->processedObjects.contains(service()));
+
+    }
+
 
 
     void testCardinalityNServiceEmpty() {

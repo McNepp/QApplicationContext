@@ -36,9 +36,6 @@ protected:
 
     virtual QVariant getConfigurationValue(const QString& key) const;
 
-    virtual void afterConfiguration(QObject*) {
-
-    }
 
 private:
 
@@ -278,7 +275,7 @@ private:
 
     std::pair<Registration*,bool> registerDescriptor(DescriptorRegistration* registration);
 
-    bool configure(DescriptorRegistration*,QObject*);
+    bool configure(DescriptorRegistration*,QObject*, const QList<QApplicationContextPostProcessor*>& postProcessors);
 
     QVariant resolveValue(const QVariant& value);
 

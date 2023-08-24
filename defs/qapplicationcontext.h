@@ -817,6 +817,19 @@ protected:
 
 };
 
+
+///
+/// \brief A mix-in interface for classes that may modify services before publication.
+/// The process(QObject*) method will be invoked for each service after its properties have been set, but
+/// before an *init-method* is invoked.
+///
+class QApplicationContextPostProcessor {
+public:
+    virtual void process(QApplicationContext* appContext, QObject* service) = 0;
+
+    virtual ~QApplicationContextPostProcessor() = default;
+};
+
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 
 }
