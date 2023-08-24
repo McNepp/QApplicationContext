@@ -11,6 +11,14 @@ namespace com::neppert::context {
 
 class QApplicationContext;
 
+///
+/// This template can be used to force the QApplicationContext to use a static factory-function instead of a constructor.
+/// You may specialize this template for your own component-types.
+/// If you do so, it must be a Callable object with a pointer to your component as its return-type
+/// and as many arguments as are needed to construct an instance.
+///
+template<typename S> struct service_factory;
+
 
 ///
 /// \brief Describes a Service by its interface and implementation.
@@ -194,7 +202,22 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
            left.config() == right.config();
  }
 
+
+
 namespace detail {
+
+ template<typename S> auto couldBeQObject(S* ptr) -> decltype(dynamic_cast<QObject*>(ptr));
+
+ void couldBeQObject(void*);
+
+ template<typename S> constexpr bool could_be_qobject = std::is_same_v<decltype(couldBeQObject(static_cast<S*>(nullptr))),QObject*>;
+
+ template<typename S> auto hasServiceFactory(S*) -> std::integral_constant<int,sizeof(service_factory<S>)>;
+
+ void hasServiceFactory(void*);
+
+
+ template<typename S> constexpr bool has_service_factory = std::negation_v<std::is_same<decltype(hasServiceFactory(static_cast<S*>(nullptr))),void>>;
 
 
 ///
@@ -233,8 +256,8 @@ template<typename S> constructor_t get_default_constructor() {
 template <typename T>
 QList<T*> convertQList(const QObjectList &list) {
     QList<T *> result;
-    for (auto ptr : list) {
-        if(T* ptr = dynamic_cast<T*>(ptr)) {
+    for (auto obj : list) {
+        if(T* ptr = dynamic_cast<T*>(obj)) {
             result.push_back(ptr);
         }
     }
@@ -334,7 +357,13 @@ template <typename T, typename... D> struct descriptor_helper;
 template <typename T>
 struct descriptor_helper<T> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) { return new T; };
+        return [](const QObjectList &dependencies) {
+            if constexpr(detail::has_service_factory<T>) {
+                return service_factory<T>{}();
+            } else {
+                return new T;
+            }
+        };
     }
 
     static std::vector<dependency_info> dependencies() {
@@ -345,7 +374,13 @@ struct descriptor_helper<T> {
 template <typename T, typename D1>
 struct descriptor_helper<T, D1> : descriptor_helper_base<D1> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) { return new T{ convert_arg<D1>(dependencies[0]) }; };
+        return [](const QObjectList &dependencies) {
+            if constexpr(detail::has_service_factory<T>) {
+                return service_factory<T>{}(convert_arg<D1>(dependencies[0]));
+            } else {
+                return new T{ convert_arg<D1>(dependencies[0]) };
+            }
+        };
     }
 
 };
@@ -353,43 +388,76 @@ struct descriptor_helper<T, D1> : descriptor_helper_base<D1> {
 template <typename T, typename D1, typename D2>
 struct descriptor_helper<T, D1, D2>  : descriptor_helper_base<D1,D2> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) { return new T{ convert_arg<D1>(dependencies[0]), convert_arg<D2>(dependencies[1]) }; };
+        return [](const QObjectList &dependencies) {
+            if constexpr(detail::has_service_factory<T>) {
+                return service_factory<T>{}(convert_arg<D1>(dependencies[0]), convert_arg<D2>(dependencies[1]));
+            } else {
+                return new T{ convert_arg<D1>(dependencies[0]), convert_arg<D2>(dependencies[1]) };
+            }
+        };
     }
 };
 
 template <typename T, typename D1, typename D2, typename D3>
 struct descriptor_helper<T, D1, D2, D3> :  descriptor_helper_base<D1,D2,D3> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) { return new T{
-                                                         convert_arg<D1>(dependencies[0]),
-                                                         convert_arg<D2>(dependencies[1]),
-                                                         convert_arg<D3>(dependencies[2])
-                                                     }; };
+        return [](const QObjectList &dependencies) {
+            if constexpr(detail::has_service_factory<T>) {
+                return service_factory<T>{}(
+                        convert_arg<D1>(dependencies[0]),
+                        convert_arg<D2>(dependencies[1]),
+                        convert_arg<D3>(dependencies[2]));
+            } else {
+            return new T{
+                         convert_arg<D1>(dependencies[0]),
+                         convert_arg<D2>(dependencies[1]),
+                         convert_arg<D3>(dependencies[2])
+                        };
+            }
+        };
     }
 };
 
 template <typename T, typename D1, typename D2, typename D3, typename D4>
 struct descriptor_helper<T, D1, D2, D3, D4>  : descriptor_helper_base<D1,D2,D3,D4> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) { return new T{
-                                                         convert_arg<D1>(dependencies[0]),
-                                                         convert_arg<D2>(dependencies[1]),
-                                                         convert_arg<D3>(dependencies[2]),
-                                                         convert_arg<D4>(dependencies[3])
-                                                     }; };
+        return [](const QObjectList &dependencies) {
+            if constexpr(detail::has_service_factory<T>) {
+                return service_factory<T>{}(
+                        convert_arg<D1>(dependencies[0]),
+                        convert_arg<D2>(dependencies[1]),
+                        convert_arg<D3>(dependencies[2]),
+                        convert_arg<D4>(dependencies[3]));
+            } else {
+            return new T{
+                         convert_arg<D1>(dependencies[0]),
+                         convert_arg<D2>(dependencies[1]),
+                         convert_arg<D3>(dependencies[2]),
+                         convert_arg<D4>(dependencies[3])
+                     };
+            }
+        };
     }
 };
 
 template <typename T, typename D1, typename D2, typename D3, typename D4, typename D5>
 struct descriptor_helper<T, D1, D2, D3, D4, D5>  : descriptor_helper_base<D1,D2,D3,D4,D5> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) { return new T{
-                                                         convert_arg<D1>(dependencies[0]),
-                                                         convert_arg<D2>(dependencies[1]),
-                                                         convert_arg<D3>(dependencies[2]),
-                                                         convert_arg<D4>(dependencies[3]),
-                                                         convert_arg<D5>(dependencies[4])
-                                                     }; };
+        return [](const QObjectList &dependencies) {
+            if constexpr(detail::has_service_factory<T>) {
+                return service_factory<T>{}(convert_arg<D1>(dependencies[0]),
+                        convert_arg<D2>(dependencies[1]),
+                        convert_arg<D3>(dependencies[2]),
+                        convert_arg<D4>(dependencies[3]),
+                        convert_arg<D5>(dependencies[4]));
+            } else
+            return new T{
+                             convert_arg<D1>(dependencies[0]),
+                             convert_arg<D2>(dependencies[1]),
+                             convert_arg<D3>(dependencies[2]),
+                             convert_arg<D4>(dependencies[3]),
+                             convert_arg<D5>(dependencies[4])
+                         }; };
     }
 };
 
@@ -692,6 +760,7 @@ public:
 
 
     template<typename S> TRegistration<S>* registerObject(S* obj, const QString& objName = {}) {
+        static_assert(detail::could_be_qobject<S>, "Object is not convertible to QObject");
         return TRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), new service_descriptor(typeid(S), typeid(*obj))));
     }
 

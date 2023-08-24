@@ -23,11 +23,12 @@ class CyclicDependency;
 
 class BaseService : public QObject, public Interface1
 {
+    friend struct com::neppert::context::service_factory<BaseService>;
+
     Q_OBJECT
 public:
     explicit BaseService(QObject *parent = nullptr);
 
-    explicit BaseService(CyclicDependency* dependency, QObject *parent = nullptr);
 
     Q_PROPERTY(QTimer *timer READ timer WRITE setTimer NOTIFY timerChanged)
 
@@ -65,10 +66,16 @@ signals:
     void dependencyChanged();
 
 private:
+
+
+    explicit BaseService(CyclicDependency* dependency, QObject *parent = nullptr);
+
     CyclicDependency* m_dependency;
     bool initCalled;
     QApplicationContext* m_appContext;
 };
+
+
 
 
 class CyclicDependency : public QObject {

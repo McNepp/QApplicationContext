@@ -10,6 +10,16 @@ namespace com::neppert::context {
 
 using namespace contexttest;
 
+template<> struct service_factory<BaseService> {
+    BaseService* operator()() const {
+        return new BaseService;
+    }
+
+    BaseService* operator()(CyclicDependency* dep) const {
+        return new BaseService{dep};
+    }
+
+};
 
 
 
@@ -83,6 +93,8 @@ private slots:
 
 
     void testNoDependency() {
+        bool baseHasFactory = detail::has_service_factory<BaseService>;
+        QVERIFY(baseHasFactory);
         auto reg = context->registerService<BaseService>();
         QVERIFY(reg);
         QCOMPARE(reg->service_type(), typeid(BaseService));
@@ -97,6 +109,7 @@ private slots:
         RegistrationSlot<QTimer> slot{reg};
         QCOMPARE(slot->interval(), 4711);
     }
+
 
     void testWithConfiguredProperty() {
         config->setValue("timerInterval", 4711);
