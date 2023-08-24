@@ -562,24 +562,10 @@ bool StandardApplicationContext::checkTransitiveDependentsOn(service_descriptor*
 
 QVariant StandardApplicationContext::resolveValue(const QVariant &value)
 {
-    static const QRegularExpression PLACEHOLDER{"\\$\\{(.*)\\}"};
-
     if(!value.isValid()) {
         return value;
     }
     QString key = value.toString();
-    auto match = PLACEHOLDER.match(key);
-    if(match.hasMatch()) {
-        key = match.captured(1);
-        auto resolvedValue = getConfigurationValue(key);
-        if(resolvedValue.isValid()) {
-            qCInfo(loggingCategory()).nospace().noquote() << "Resolved variable '" << key << "' to " << resolvedValue;
-            return resolvedValue;
-        }
-        qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve '" << key << "'";
-        return {};
-    }
-
     if(key.startsWith('&')) {
         key = key.last(key.size()-1);
         auto components = key.split('.');
@@ -609,6 +595,85 @@ QVariant StandardApplicationContext::resolveValue(const QVariant &value)
         return resultValue;
     }
 
+
+
+    if(key.contains("${")) {
+        QVariant lastResolvedValue;
+        QString resolvedString;
+        QString token;
+        int state = 0;
+        for(int pos = 0; pos < key.length(); ++pos) {
+            auto ch = key[pos];
+            switch(ch.toLatin1()) {
+            case '$':
+                switch(state) {
+                case 1:
+                    resolvedString += '$';
+                case 0:
+                    state = 1;
+                    continue;
+                default:
+                    qCCritical(loggingCategory()).nospace().noquote() << "Invalid placeholder '" << key << "'";
+                    return {};
+                 }
+            case '{':
+                switch(state) {
+                case 1:
+                    state = 2;
+                    continue;
+                default:
+                    state = 0;
+                    resolvedString += ch;
+                    continue;
+                }
+
+            case '}':
+                switch(state) {
+                case 2:
+                    if(!token.isEmpty()) {
+                        lastResolvedValue = getConfigurationValue(token);
+                        if(!lastResolvedValue.isValid()) {
+                            qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve '" << token << "'";
+                            return {};
+                        }
+                        qCInfo(loggingCategory()).nospace().noquote() << "Resolved variable '" << token << "' to " << lastResolvedValue;
+                        if(resolvedString.isEmpty() && pos + 1 == key.length()) {
+                            return lastResolvedValue;
+                        }
+                        resolvedString += lastResolvedValue.toString();
+                        token.clear();
+                    }
+                    state = 0;
+                    continue;
+                default:
+                    resolvedString += ch;
+                    continue;
+                }
+
+            default:
+                switch(state) {
+                case 1:
+                    resolvedString += '$';
+                    state = 0;
+                case 0:
+                    resolvedString += ch;
+                    continue;
+                default:
+                    token += ch;
+                    continue;
+                }
+            }
+        }
+        switch(state) {
+        case 1:
+            resolvedString += '$';
+        case 0:
+            return resolvedString;
+        default:
+            qCCritical(loggingCategory()).nospace().noquote() << "Unbalanced placeholder '" << key << "'";
+            return {};
+        }
+    }
     return value;
 }
 

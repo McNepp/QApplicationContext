@@ -111,7 +111,7 @@ private slots:
     }
 
 
-    void testWithConfiguredProperty() {
+    void testWithPlaceholderProperty() {
         config->setValue("timerInterval", 4711);
         context->registerObject(config);
 
@@ -119,6 +119,56 @@ private slots:
         QVERIFY(context->publish());
         RegistrationSlot<QTimer> slot{reg};
         QCOMPARE(slot->interval(), 4711);
+    }
+
+    void testWithUnbalancedPlaceholderProperty() {
+        config->setValue("timerInterval", 4711);
+        context->registerObject(config);
+
+        auto reg = context->registerService<QTimer>("timer", {{"interval", "${timerInterval"}});
+        QVERIFY(!context->publish());
+    }
+
+    void testWithDollarInPlaceholderProperty() {
+        config->setValue("timerInterval", 4711);
+        context->registerObject(config);
+
+        auto reg = context->registerService<QTimer>("timer", {{"interval", "${$timerInterval}"}});
+        QVERIFY(!context->publish());
+    }
+
+
+    void testWithEmbeddedPlaceholderProperty() {
+        config->setValue("baseName", "theBase");
+        context->registerObject(config);
+
+        auto reg = context->registerService<BaseService>("base", {{"objectName", "I am ${baseName}!"}});
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> slot{reg};
+
+        QCOMPARE(slot->objectName(), "I am theBase!");
+    }
+
+    void testWithEmbeddedPlaceholderPropertyAndDollarSign() {
+        config->setValue("dollars", "one thousand");
+        context->registerObject(config);
+
+        auto reg = context->registerService<BaseService>("base", {{"objectName", "I have $${dollars}$"}});
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> slot{reg};
+        QCOMPARE(slot->objectName(), "I have $one thousand$");
+    }
+
+
+    void testWithTwoPlaceholders() {
+        config->setValue("section", "BaseServices");
+        config->setValue("baseName", "theBase");
+        context->registerObject(config);
+
+        auto reg = context->registerService<BaseService>("base", {{"objectName", "${section}:${baseName}:yeah"}});
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> slot{reg};
+        QCOMPARE(slot->objectName(), "BaseServices:theBase:yeah");
     }
 
 

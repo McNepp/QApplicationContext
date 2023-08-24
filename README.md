@@ -83,7 +83,7 @@ Likewise, we could register a second service that will fetch the weather-informa
 
     context -> registerService<RestPropFetcher,QNetworkAccessManager("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
 
-## 1 -> N relations
+## One-to-many relations
 
 Now, let's extend our example a bit: we want to create a component that shall receive the fetched values from all RestPropFetchers and
 somehow sum them up. Such a component could look like this:
@@ -178,6 +178,27 @@ for a specific type is resolved and a matching service has not been explicitly r
 2. The order of registrations has been switched: now, the dependent service `PropSummary` is registered before the services it depends on.
 This was done to demonstrate that **the order of registrations is actually completely irrelevant**!  
 `QApplicationContext` figures out automatically what the correct order must be.
+
+## Externalized Configuration
+
+In the above example, we were configuring the Url with a String-literal in the code. This is less than optimal, as we usually want to be able
+to change such configuration-values without re-compiling the program.  
+This is made possible with so-called *placeholders* in the configured values:  
+A placeholder embedded in `${   }` will be resolved by the QApplicationContext using Qt's `QSettings` class.  
+You simply register one or more instances of `QSettings` with the context, using `QApplicationContext::registerObject()`.
+This is what it looks like if you out-source the "url" configuration-value into an external configuration-file:
+
+    context -> registerObject(new QSettings{"application.ini", QSettings::IniFormat, context});
+    
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {{"url", "${hamburgWeatherUrl}"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("bearlinWeather", {{"url", "${hamburgBerlinUrl}"}}); 
+
+
+You could even improve on this by re-factoring the common part of the Url into its own configuration-value:
+
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("bearlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
+
 
 
 
