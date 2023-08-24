@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-find_package(Qt6 COMPONENTS Core REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Core OPTIONAL_COMPONENTS Test)
 
 FILE(GLOB sources src/*.cpp src/*.h defs/*.h)
 
