@@ -12,7 +12,7 @@ namespace com::neppert::context {
 /// This class has a read-only Q_PROPERTY `publishedObjects' with a corresponding signal `publishedObjectsChanged`.
 /// However, it would be quite unwieldly to use that property directly in order to get hold of the
 /// Objects managed by this Registration.
-/// Rather, use the class-template `ServiceRegistration` and its type-safe method `ServiceRegistration::onPublished()`.
+/// Rather, use the class-template `ServiceRegistration` and its type-safe method `ServiceRegistration::subscribe()`.
 ///
 class Registration : public QObject {
     Q_OBJECT
@@ -42,7 +42,7 @@ protected:
 /// Instances of this class are being returned by the public function-templates QApplicationContext::registerService(),
 /// QApplicationContext::registerObject(QObject*) and IApplicationService::getRegistration().
 ///
-/// This class offers the type-safe function `onPublished()` which should be preferred over directly connecting to the signal `publishedObjectsChanged()`.
+/// This class offers the type-safe function `subscribe()` which should be preferred over directly connecting to the signal `publishedObjectsChanged()`.
 ///
 template<typename S> class ServiceRegistration : public Registration {
     friend class QApplicationContext;
@@ -69,7 +69,7 @@ public:
     /// \param context
     /// \param callable
     ///
-    template<typename F> void onPublished(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
+    template<typename F> void subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
         connect(this, &Registration::publishedObjectsChanged, context, Notifier<F>{callable, this}, connectionType);
         emit publishedObjectsChanged();
     }
@@ -82,8 +82,8 @@ public:
     /// \param target
     /// \param setter
     ///
-    template<typename T,typename A,typename R> void onPublished(T* target, R (T::*setter)(A*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
-        onPublished(target, std::bind(std::mem_fn(setter), target, std::placeholders::_1), connectionType);
+    template<typename T,typename A,typename R> void subscribe(T* target, R (T::*setter)(A*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
+        subscribe(target, std::bind(std::mem_fn(setter), target, std::placeholders::_1), connectionType);
     }
 
 

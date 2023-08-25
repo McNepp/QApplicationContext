@@ -28,7 +28,7 @@ public:
 
     explicit RegistrationSlot(ServiceRegistration<S>* registration) : m_obj(nullptr),
         m_invocationCount(0) {
-        registration->onPublished(this, &RegistrationSlot::setObj);
+        registration->subscribe(this, &RegistrationSlot::setObj);
     }
 
 
@@ -707,19 +707,19 @@ private slots:
          };
 
         auto baseReg = context->registerService<BaseService>("base");
-        baseReg->onPublished(this, published);
+        baseReg->subscribe(this, published);
         auto base2Reg = context->registerService<BaseService2>("base2");
-        base2Reg->onPublished(this, published);
+        base2Reg->subscribe(this, published);
         auto dependent2Reg = context->registerService<DependentServiceLevel2,DependentService>("dependent2");
-        dependent2Reg->onPublished(this, published);
+        dependent2Reg->subscribe(this, published);
         auto dependentReg = context->registerService<DependentService,BaseService>("dependent");
-        dependentReg->onPublished(this, published);
+        dependentReg->subscribe(this, published);
         auto threeReg = context->registerService<ServiceWithThreeArgs,BaseService,DependentService,BaseService2>("three");
-        threeReg->onPublished(this, published);
+        threeReg->subscribe(this, published);
         auto fourReg = context->registerService<ServiceWithFourArgs,BaseService,DependentService,BaseService2,ServiceWithThreeArgs>("four");
-        fourReg->onPublished(this, published);
+        fourReg->subscribe(this, published);
         auto fiveReg = context->registerService<ServiceWithFiveArgs,BaseService,DependentService,BaseService2,ServiceWithThreeArgs,ServiceWithFourArgs>("five");
-        fiveReg->onPublished(this, published);
+        fiveReg->subscribe(this, published);
 
 
         QVERIFY(context->publish());
