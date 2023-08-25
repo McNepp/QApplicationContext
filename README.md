@@ -22,7 +22,7 @@ How do I create application-wide "singletons" (without resorting to C++ singleti
 - Support both 1 -> 1 and 1 -> N relations between components.
 - Further configuration of components after creation, including externalized configuration (using `QSettings`).
 - Automatic invocation of an *init-method* after creation, using Qt-slots.
-- Offer a Qt-signal for "published" components, together with a type-safe `onPublished(...)` slot.
+- Offer a Qt-signal for "published" components, together with a type-safe `subscribe()` mechanism.
 - Fail-fast, i.e. terminate compilation with meaningful diagnostics if possible.
 - Help to find runtime-problems by generating verbose logging (using a `QLoggingCategory`).
 
@@ -100,7 +100,7 @@ Note that the above component comprises a 1 -> N relationship with its dependent
 We must notify the QApplicationContext about this, so that it can correctly inkect all the matching dependencies into the component's constructor.  
 The following statement will do the trick:
 
-   context -> registerService<PropSummary,Dependency<RestPropFetcher,Cardinality::N>>();
+   context -> registerService<PropSummary,Dependency<RestPropFetcher,Cardinality::N>>("propSummary");
    
 ## Service-interfaces
 
@@ -163,7 +163,7 @@ Putting it all together, we use the helper-template `Service` for specifying bot
     
     QApplicationContext* context = new StandardQApplicationContext; 
     
-    context -> registerService<PropSummary,Dependency<PropFetcher,Cardinality::N>>();
+    context -> registerService<PropSummary,Dependency<PropFetcher,Cardinality::N>>("propSummary");
     
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}}); 
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
@@ -199,12 +199,71 @@ You could even improve on this by re-factoring the common part of the Url into i
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("bearlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
 
+## Referencing other members of the ApplicationContext
+
+Sometimes, it may be necessary to inject one member of the ApplicationContext into another member not via constructor, but via a Q_PROPERTY.  
+Suppose that each `PropFetcher` shall have (for whatever reason) a reference to the `PropSummary`.  
+This cannot be done via constructor-arguments, as it would constitute a dependency-circle!  
+However, we could introduce a Q_PROPERTY like this:
+
+    class PropFetcher : public QObject {
+      Q_OBJECT
+
+      Q_PROPERTY(QString value READ value NOTIFY valueChanged)
+      
+      Q_PROPERTY(PropSummary* summary READ summary WRITE setSummary NOTIFY summaryChanged)
+
+      public:
+      
+      explicit PropFetcher(QObject* parent = nullptr);
+
+      virtual QString value() const = 0;
+      
+      virtual PropSummary* summary() const = 0;
+      
+      virtual void setSummary(PropSummary*) = 0;
+
+      signals:
+      void valueChanged();
+      
+      void summaryChanged();
+    };
+
+And here's how this property will be automatically set to the ApplicationContext's `PropSummary`. Note the ampersand in the property-value that means *reference to another member*:
 
 
+    context -> registerService<PropSummary,Dependency<PropFetcher,Cardinality::N>>("propSummary");
+    
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {
+      {"url", "${weatherUrl}${hamburgStationId}"},
+      {"summary", "&propSummary"}
+    }); 
+
+## Accessing a member of the ApplicationContext
+
+So far, we have published the ApplicationContext and let it take care of wiring all the components together.  
+In some cases, you need to obtain a reference to a member of the Context after it has been published.  
+This is where the return-value of `QApplicationContext::registerService()` comes into play. It offers a Q_PROPERTY `publishedObjects` with a corresponding signal which is emitted
+when the corresponding services are published.  
+As a Q_OBJECT cannot be a class-template, the property and signal use the generic `QObject*`, which is unfortunate.  
+Therefore, it it strongly recommended to use the method `ServiceRegistration::subscribe()` instead.  
+In addition to being type-safe, this method has the advantage that is will automatically notify you if you subscribe after the service has already been published.  
+This code shows how to do this:
+
+    auto registration = context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
+    
+    registration -> subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got the PropFether!"; });
+
+## Accessing published members of the ApplicationContext
+
+In the previous paragraph, we used the `ServiceRegistration` obtained by `QApplicationContext::registerService()`, which refers to a single member of the ApplicationContext.
+However, we might be interested in all members of a certain service-type.  
+We use `QApplicationContext::getRegistration()` for this:
 
 
-
-
+    auto registration = context -> getRegistration<PropFetcher>();
+    
+    registration -> subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got another PropFetcher!"; });
 
 
 

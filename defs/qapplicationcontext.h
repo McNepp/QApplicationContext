@@ -13,10 +13,20 @@ namespace com::neppert::context {
 class QApplicationContext;
 
 ///
+/// \brief A template that can be specialized to override the standard way of instantiating services.
 /// This template can be used to force the QApplicationContext to use a static factory-function instead of a constructor.
 /// You may specialize this template for your own component-types.
 /// If you do so, it must be a Callable object with a pointer to your component as its return-type
 /// and as many arguments as are needed to construct an instance.
+///
+/// For example, if you have a service-type `MyService` with an inaccessible constructor for which only a static factory-function `MySerivce::create` exists,
+/// you may define the corresponding service_factory like this:
+///
+///     template<> struct service_factory<MyService> {
+///       MyService* operator()(QObject* parent) {
+///         return MyService::create(parent);
+///       }
+///     };
 ///
 template<typename S> struct service_factory;
 
@@ -69,35 +79,34 @@ enum class Cardinality {
 
 ///
 /// \brief Specifies a dependency of a Service.
-/// Can by used as a type-argument for QApplicationContext::registerService(const QString&, const QApplicationContext::Config&).
+/// Can by used as a type-argument for QApplicationContext::registerService().
 /// In the standard-case of a mandatory relationship, the use of `Dependency` is optional.
 /// Suppose you have a service-type `Reader` that needs a mandatory pointer to a `DatabaseAccess` in its constructor:
-
-///    class Reader : public QObject {
-///      public:
-///        explicit Update(DatabaseAccess* dao, QObject* parent = nullptr);
-///    };
+///     class Reader : public QObject {
+///       public:
+///         explicit Update(DatabaseAccess* dao, QObject* parent = nullptr);
+///     };
 ///
 /// In that case, the following two lines would be completely equivalent:
 ///
-///    context->registerService<Reader,DatabaseAccess>("reader");
+///     context->registerService<Reader,DatabaseAccess>("reader");
 ///
-///    context->registerService<Reader,Dependency<DatabaseAccess,Cardinality::MANDATORY>>("reader");
+///     context->registerService<Reader,Dependency<DatabaseAccess,Cardinality::MANDATORY>>("reader");
 ///
 /// However, if your service can do without a `DatabaseAccess`, you should register it like this:
 ///
-///    context->registerService<Reader,Dependency<DatabaseAccess,Cardinality::OPTIONAL>>("reader");
+///     context->registerService<Reader,Dependency<DatabaseAccess,Cardinality::OPTIONAL>>("reader");
 ///
 /// Consider the case where your `Reader` takes a List of `DatabaseAccess` instances:
 ///
-///    class Reader : public QObject {
-///      public:
-///        explicit Update(const QList<DatabaseAccess>& daos, QObject* parent = nullptr);
-///    };
+///     class Reader : public QObject {
+///       public:
+///         explicit Update(const QList<DatabaseAccess>& daos, QObject* parent = nullptr);
+///     };
 ///
 /// In that case, it would be registered in an ApplicationContext using the following line:
 ///
-///    context->registerService<Reader,Dependency<DatabaseAccess,Cardinality::N>>("reader");
+///     context->registerService<Reader,Dependency<DatabaseAccess,Cardinality::N>>("reader");
 ///
 ///
 template<typename S,Cardinality c> struct Dependency {
@@ -482,6 +491,9 @@ struct service_traits<Service<Srv, Impl>> {
 
 } // namespace detail
 
+///
+/// \brief Configures a Service for an ApplicationContext.
+///
 template<typename S,typename...Dep> class ServiceConfig {
 public:
 
@@ -601,21 +613,60 @@ private:
 
 
 
+///
+/// \brief A DI-Container for Qt-based applications.
+///
 class QApplicationContext : public QObject
 {
     Q_OBJECT
 
 public:
 
+    ///
+    /// \brief Have all registered services been published?
+    /// This property will initially yield `false`, until publish() is invoked.
+    /// If that was successul, this property will yield `true`.
+    /// It will stay `true` as long as no more services are registered but not yet published.
+    /// **Note:** This property will **not** transition back to `false` upon destruction of this ApplicationContext!
+    /// \return `true` if all registered services have been published.
+    ///
     Q_PROPERTY(bool published READ published NOTIFY publishedChanged)
 
+    ///
+    /// \brief contents of ServiceConfig, without the required names.
+    ///
     using config_data = detail::config_data;
 
+    ///
+    /// \brief everything needed to describe Service.
+    ///
     using service_descriptor = detail::service_descriptor;
 
+    ///
+    /// \brief describes a Service-dependency.
+    ///
     using dependency_info = detail::dependency_info;
 
 
+    ///
+    /// \brief Registers a Service with this ApplicationContext.
+    ///
+    /// There are two alternatives for specifying the service-type:
+    /// 1. Use a QObject-derived class directly as the service-type:
+    ///
+    ///     context -> registerService<QNetworkAccessManager>();
+    ///
+    /// 2. Use the template Service, which helps separate the service-interface from its implementation:
+    ///
+    ///     context -> registerService<Service<QAbstractItemModel,QStringListModel>>();
+    ///
+    /// \param objectName the name that the Service shall have. If empty, a name will be auto-generated.
+    /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param config the Configuration for the service.
+    /// \tparam S the service-type.
+    /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
+    ///
     template<typename S,typename...Dep> auto registerService(const QString& objectName, const ServiceConfig<S,Dep...>& config) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         using service_type = typename detail::service_traits<S>::service_type;
         using impl_type = typename detail::service_traits<S>::impl_type;
@@ -628,6 +679,27 @@ public:
         return ServiceRegistration<service_type>::wrap(result);
     }
 
+    ///
+    /// \brief Registers a Service with this ApplicationContext.
+    /// This is a convenience-method that can be used in lieu of registerService(const QString&, const ServiceConfig<S,Dep...>&)
+    /// in the common case where the Service's configuration only consists of a set of key/values.
+    ///
+    /// There are two alternatives for specifying the service-type:
+    /// 1. Use a QObject-derived class directly as the service-type:
+    ///
+    ///     context -> registerService<QNetworkAccessManager>();
+    ///
+    /// 2. Use the template Service, which helps separate the service-interface from its implementation:
+    ///
+    ///     context -> registerService<Service<QAbstractItemModel,QStringListModel>>();
+    ///
+    /// \param objectName the name that the Service shall have. If empty, a name will be auto-generated.
+    /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param properties the configuration-properties for the service.
+    /// \tparam S the service-type.
+    /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
+    ///
     template<typename S,typename...Dep> auto registerService(const QString& objectName = "", std::initializer_list<config_data::entry_type> properties = {}) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         using service_type = typename detail::service_traits<S>::service_type;
         using impl_type = typename detail::service_traits<S>::impl_type;
@@ -641,17 +713,42 @@ public:
 
 
 
-    template<typename S> ServiceRegistration<S>* registerObject(S* obj, const QString& objName = {}) {
+    ///
+    /// \brief Registers an object with this ApplicationContext.
+    /// The object will immediately be published.
+    /// You can either let the compiler's template-argument deduction figure out the servicetype `<S>` for you,
+    /// or you can supply it explicitly, if it differs from the static type of the object.
+    /// \param obj must be non-null. Also, must be convertible to QObject.
+    /// \param objName the name for this Object in the ApplicationContext.
+    /// *Note*: this name will not be set as the QObject::objectName(). It will be the internal name within the ApplicationContext only.
+    /// \tparam S the service-type for the object.
+    /// \return a ServiceRegistration for the registered object, or `nullptr` if it could not be registered.
+    ///
+    template<typename S> ServiceRegistration<S>* registerObject(S* obj, const QString& objName = "") {
         static_assert(detail::could_be_qobject<S>, "Object is not convertible to QObject");
         return ServiceRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), new service_descriptor(typeid(S), typeid(*obj))));
     }
 
+    ///
+    /// \brief Obtains a ServiceRegistration for a service-type.
+    /// In contrast to the ServiceRegistration that is returned by registerService(),
+    /// the ServiceRegistration returned by this function manages all Services of the requested type.
+    /// This means that if you subscribe to it using ServiceRegistration::subscribe(), you will be notified
+    /// about all those published services.
+    /// \return a ServiceRegistration that manages all Services of the requested type.
+    ///
     template<typename S> [[nodiscard]] ServiceRegistration<S>* getRegistration() const {
         return ServiceRegistration<S>::wrap(getRegistration(typeid(S)));
     }
 
 
 
+    ///
+    /// \brief Publishes this ApplicationContext.
+    /// This method may be invoked multiple times.
+    /// Each time it is invoked, it will attempt to instantiate all yet-unpublished services that have been registered with this ApplicationContext.
+    /// \return `true` if this ApplicationContext could be successfully published.
+    ///
     virtual bool publish() = 0;
 
     ///
@@ -666,6 +763,12 @@ public:
 
 signals:
 
+    ///
+    /// \brief Signals that the published() property has changed.
+    /// This signal will be emitted with a `true`value after a successful invocatin of publich().
+    /// It will be emitted with a `false` value when a new service has been registered after publication.
+    /// **Note:** the signal will not be emitted on destruction of this ApplicationContext!
+    ///
     void publishedChanged(bool);
 
 
@@ -675,20 +778,68 @@ protected:
     explicit QApplicationContext(QObject* parent = nullptr);
 
 
+    ///
+    /// \brief Registers a Service with this QApplicationContext.
+    /// \param name
+    /// \param obj
+    /// \param descriptor
+    /// \return a Registration for the Service, or `nullptr` if it could not be registered.
+    ///
     virtual Registration* registerService(const QString& name, service_descriptor* descriptor) = 0;
 
+    ///
+    /// \brief Registers an Object with this QApplicationContext.
+    /// \param name
+    /// \param obj
+    /// \param descriptor
+    /// \return a Registration for the object, or `nullptr` if it could not be registered.
+    ///
     virtual Registration* registerObject(const QString& name, QObject* obj, service_descriptor* descriptor) = 0;
 
+    ///
+    /// \brief Obtains a Registration for a service_type.
+    /// \param service_type
+    /// \return a Registration for the supplied service_type.
+    ///
     virtual Registration* getRegistration(const std::type_info& service_type) const = 0;
 
+    ///
+    /// \brief Allows you to invoke a protected virtual function on another target.
+    /// If you are implementing registerService(const QString&, service_descriptor*) and want to delegate
+    /// to another implementation, access-rules will not allow you to invoke the function on another target.
+    ///
+    /// \param appContext the target on which to invoke registerService(const QString&, service_descriptor*).
+    /// \param name
+    /// \param descriptor
+    /// \return the result of registerService(const QString&, service_descriptor*).
+    ///
     static Registration* delegateRegisterService(QApplicationContext& appContext, const QString& name, service_descriptor* descriptor) {
         return appContext.registerService(name, descriptor);
     }
 
+    ///
+    /// \brief Allows you to invoke a protected virtual function on another target.
+    /// If you are implementing registerObject(const QString& name, QObject*, service_descriptor*) and want to delegate
+    /// to another implementation, access-rules will not allow you to invoke the function on another target.
+    ///
+    /// \param appContext the target on which to invoke registerObject(const QString& name, QObject*, service_descriptor*).
+    /// \param name
+    /// \param descriptor
+    /// \return the result of registerObject<S>(const QString& name, QObject*, service_descriptor*).
+    ///
     static Registration* delegateRegisterObject(QApplicationContext& appContext, const QString& name, QObject* obj, service_descriptor* descriptor) {
         return appContext.registerObject(name, obj, descriptor);
     }
 
+    ///
+    /// \brief Allows you to invoke a protected virtual function on another target.
+    /// If you are implementing getRegistration(const std::type_info&) const and want to delegate
+    /// to another implementation, access-rules will not allow you to invoke the function on another target.
+    ///
+    /// \param appContext the target on which to invoke getRegistration(const std::type_info&) const.
+    /// \param service_type
+    /// \return the result of getRegistration(const std::type_info&) const.
+    ///
     static Registration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type) {
         return appContext.getRegistration(service_type);
     }

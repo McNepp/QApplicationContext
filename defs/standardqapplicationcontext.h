@@ -11,6 +11,9 @@
 namespace com::neppert::context {
 
 
+///
+/// \brief A ready-to use implementation of the QApplicationContext.
+///
 class StandardApplicationContext final : public QApplicationContext
 {
     Q_OBJECT
