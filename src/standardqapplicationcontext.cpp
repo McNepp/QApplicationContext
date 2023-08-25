@@ -48,7 +48,7 @@ inline QString cardinalityToString(Cardinality card) {
     }
 }
 
-inline QDebug operator<<(QDebug out, const dependency_info& info) {
+inline QDebug operator<<(QDebug out, const QApplicationContext::dependency_info& info) {
     QDebug tmp = out.noquote().nospace() << "Dependency '" << info.type().name() << "' [" << cardinalityToString(info.cardinality);
     if(!info.requiredName.isEmpty()) {
         return tmp << "] with required name '" << info.requiredName << "'";

@@ -11,7 +11,7 @@
 namespace com::neppert::context {
 
 
-class StandardApplicationContext : public QApplicationContext
+class StandardApplicationContext final : public QApplicationContext
 {
     Q_OBJECT
 public:
@@ -28,13 +28,12 @@ public:
 
 protected:
 
-    virtual Registration* registerService(const QString& name, service_descriptor* descriptor) final override;
+    virtual Registration* registerService(const QString& name, service_descriptor* descriptor) override;
 
-    virtual Registration* registerObject(const QString& name, QObject* obj, service_descriptor* descriptor) final override;
+    virtual Registration* registerObject(const QString& name, QObject* obj, service_descriptor* descriptor) override;
 
-    virtual Registration* getRegistration(const std::type_info& service_type) const final override;
+    virtual Registration* getRegistration(const std::type_info& service_type) const override;
 
-    virtual QVariant getConfigurationValue(const QString& key) const;
 
 
 private:
@@ -263,6 +262,7 @@ private:
 
     void unpublish();
 
+    QVariant getConfigurationValue(const QString& key) const;
 
     static QStringList getBeanRefs(const config_data&);
 

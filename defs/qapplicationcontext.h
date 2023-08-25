@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QVariant>
 #include <QLoggingCategory>
+#include "qapplicationcontextregistration.h"
 
 namespace com::neppert::context {
 
@@ -103,7 +104,7 @@ template<typename S,Cardinality c> struct Dependency {
 };
 
 
-
+namespace detail {
 
 struct config_data final {
     using entry_type = std::pair<QString,QVariant>;
@@ -204,7 +205,6 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
 
 
 
-namespace detail {
 
  template<typename S> auto couldBeQObject(S* ptr) -> decltype(dynamic_cast<QObject*>(ptr));
 
@@ -487,6 +487,8 @@ public:
 
     ServiceConfig() = default;
 
+    using config_data = detail::config_data;
+
 
     static ServiceConfig autowired()
     {
@@ -587,141 +589,11 @@ public:
 
 private:
 
-    ServiceConfig(const config_data& config, const std::unordered_map<std::type_index,QString>& requiredNames) :
-            m_config{config},
-            m_requiredNames{requiredNames}
-    {
-    }
-
-    ServiceConfig(config_data&& config, std::unordered_map<std::type_index,QString>&& requiredNames) :
-            m_config{std::move(config)},
-            m_requiredNames{std::move(requiredNames)}
-    {
-    }
     std::unordered_map<std::type_index,QString> m_requiredNames;
     config_data m_config;
-
 };
 
 
-
-
-///
-/// An  type that serves as a "handle" for registrations.
-///
-class Registration : public QObject {
-    Q_OBJECT
-
-    Q_PROPERTY(QObjectList publishedObjects READ getPublishedObjects NOTIFY publishedObjectsChanged)
-
-public:
-    [[nodiscard]] virtual const std::type_info& service_type() const = 0;
-
-    [[nodiscard]] virtual QObjectList getPublishedObjects() const = 0;
-
-signals:
-
-    void publishedObjectsChanged();
-
-protected:
-
-    explicit Registration(QObject* parent = nullptr) : QObject(parent) {
-
-    }
-
-    virtual ~Registration() = default;
-};
-
-///
-/// \brief A type-safe wrapper for a Registration.
-/// Instances of this class are being returned by the public function-templates QApplicationContext::registerService(),
-/// QApplicationContext::registerObject(QObject*) and IApplicationService::getRegistration().
-///
-template<typename S> class TRegistration : public Registration {
-    friend class QApplicationContext;
-public:
-    [[nodiscard]] virtual const std::type_info& service_type() const override {
-        return unwrap()->service_type();
-    }
-
-
-
-    [[nodiscard]] virtual QObjectList getPublishedObjects() const override {
-        return unwrap()->getPublishedObjects();
-    }
-
-
-
-           ///
-           /// \brief Receive all published QObjects in a type-safe way.
-           /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
-           /// Type `F` is assumed to be a Callable that accepts an argument of type `S*`.
-           /// If the ApplicationContext has already been published, this method
-           /// will invoke the callable immediately with the current getPublishedObjects().
-           /// \param context
-           /// \param callable
-           ///
-    template<typename F> void onPublished(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
-        connect(this, &Registration::publishedObjectsChanged, context, Notifier<F>{callable, this}, connectionType);
-        emit publishedObjectsChanged();
-    }
-
-           /// \brief Receive all published QObjects in a type-safe way.
-           /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
-           /// Type `F` is assumed to be a Callable that accepts an argument of type `S*`.
-           /// If the ApplicationContext has already been published, this method
-           /// will invoke the setter immediately with the current getPublishedObjects().
-           /// \param target
-           /// \param setter
-           ///
-    template<typename T,typename A,typename R> void onPublished(T* target, R (T::*setter)(A*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
-        onPublished(target, std::bind(std::mem_fn(setter), target, std::placeholders::_1), connectionType);
-    }
-
-
-
-    Registration* unwrap() const {
-        return static_cast<Registration*>(parent());
-    }
-
-
-
-
-private:
-    explicit TRegistration(Registration* reg) : Registration(reg)
-    {
-        connect(reg, &Registration::publishedObjectsChanged, this, &Registration::publishedObjectsChanged);
-    }
-
-
-
-    static TRegistration* wrap(Registration* reg) {
-        return reg ? new TRegistration(reg) : nullptr;
-    }
-
-    template<typename F> struct Notifier {
-        F callable;
-
-        Registration* source;
-
-        std::unordered_set<S*> publishedObjects;
-
-        void operator()() {
-            for(auto obj : source->getPublishedObjects()) {
-                S* ptr = dynamic_cast<S*>(obj);
-                if(ptr && publishedObjects.insert(ptr).second) {
-                    callable(ptr);
-                }
-            }
-        }
-    };
-};
-
-
-///
-/// \brief Extended Service-Configuration.
-/// Allows to add additional constraints regarding the Service-dependencies.
-///
 
 
 
@@ -737,7 +609,14 @@ public:
 
     Q_PROPERTY(bool published READ published NOTIFY publishedChanged)
 
-    template<typename S,typename...Dep> auto registerService(const QString& objectName, const ServiceConfig<S,Dep...>& config) -> TRegistration<typename detail::service_traits<S>::service_type>* {
+    using config_data = detail::config_data;
+
+    using service_descriptor = detail::service_descriptor;
+
+    using dependency_info = detail::dependency_info;
+
+
+    template<typename S,typename...Dep> auto registerService(const QString& objectName, const ServiceConfig<S,Dep...>& config) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         using service_type = typename detail::service_traits<S>::service_type;
         using impl_type = typename detail::service_traits<S>::impl_type;
         using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
@@ -746,29 +625,29 @@ public:
             dep.requiredName = config.requiredName(dep.type());
         }
         auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies, config.data()));
-        return TRegistration<service_type>::wrap(result);
+        return ServiceRegistration<service_type>::wrap(result);
     }
 
-    template<typename S,typename...Dep> auto registerService(const QString& objectName = "", std::initializer_list<config_data::entry_type> properties = {}) -> TRegistration<typename detail::service_traits<S>::service_type>* {
+    template<typename S,typename...Dep> auto registerService(const QString& objectName = "", std::initializer_list<config_data::entry_type> properties = {}) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         using service_type = typename detail::service_traits<S>::service_type;
         using impl_type = typename detail::service_traits<S>::impl_type;
         using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
         auto dependencies = descriptor_helper::dependencies();
         auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies, config_data{properties}));
-        return TRegistration<service_type>::wrap(result);
+        return ServiceRegistration<service_type>::wrap(result);
     }
 
 
 
 
 
-    template<typename S> TRegistration<S>* registerObject(S* obj, const QString& objName = {}) {
+    template<typename S> ServiceRegistration<S>* registerObject(S* obj, const QString& objName = {}) {
         static_assert(detail::could_be_qobject<S>, "Object is not convertible to QObject");
-        return TRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), new service_descriptor(typeid(S), typeid(*obj))));
+        return ServiceRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), new service_descriptor(typeid(S), typeid(*obj))));
     }
 
-    template<typename S> [[nodiscard]] TRegistration<S>* getRegistration() const {
-        return TRegistration<S>::wrap(getRegistration(typeid(S)));
+    template<typename S> [[nodiscard]] ServiceRegistration<S>* getRegistration() const {
+        return ServiceRegistration<S>::wrap(getRegistration(typeid(S)));
     }
 
 

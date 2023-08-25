@@ -26,7 +26,7 @@ template<> struct service_factory<BaseService> {
 template<typename S> class RegistrationSlot : public QObject {
 public:
 
-    explicit RegistrationSlot(TRegistration<S>* registration) : m_obj(nullptr),
+    explicit RegistrationSlot(ServiceRegistration<S>* registration) : m_obj(nullptr),
         m_invocationCount(0) {
         registration->onPublished(this, &RegistrationSlot::setObj);
     }
