@@ -19,7 +19,7 @@ How do I create application-wide "singletons" (without resorting to C++ singleti
 - Relieve the developer of the need to know the precise order in which the inter-dependent components must be instantiated.
 - Dependency-injection via constructor.
 - Dependency-injection via Qt-properties.
-- Support both 1 -> 1 and 1 -> N relations between components.
+- Support both one-to-one and one-to-many relations between components.
 - Further configuration of components after creation, including externalized configuration (using `QSettings`).
 - Automatic invocation of an *init-method* after creation, using Qt-slots.
 - Offer a Qt-signal for "published" components, together with a type-safe `subscribe()` mechanism.
@@ -110,26 +110,22 @@ However, in most complex applications you will likely use an abstract base-class
 Additionally, this interface need not be derived from QObject!  
 This is well supported by QApplicationContext. First, let's declare our interface:
 
-    class PropFetcher : public QObject {
-      Q_OBJECT
-
-      Q_PROPERTY(QString value READ value NOTIFY valueChanged)
+    class PropFetcher  {
 
       public:
       
-      explicit PropFetcher(QObject* parent = nullptr);
-
       virtual QString value() const = 0;
-
-      signals:
-      void valueChanged();
+      
+      virtual ~PropFetcher() 0 default;
     };
 
-Then, we modify our class `RestPropFetcher` so that it derives from this interface:
+Then, we modify our class `RestPropFetcher` so that it derives from both QObject and this interface:
 
-    class RestPropFetcher : public PropFetcher {
+    class RestPropFetcher : public QObject, public PropFetcher {
       Q_OBJECT
 
+      Q_PROPERTY(QString value READ value NOTIFY valueChanged)
+      
       Q_PROPERTY(QString url READ url WRITE setURl NOTIFY urlChanged)
       
       public:
@@ -143,6 +139,9 @@ Then, we modify our class `RestPropFetcher` so that it derives from this interfa
       void setUrl(const QString&);
 
       signals:
+
+      void valueChanged();
+      
       void urlChanged();
     };
 
@@ -172,7 +171,7 @@ Putting it all together, we use the helper-template `Service` for specifying bot
 
 Two noteworthy things:
 
-1. You may have noticed, that the registration of the `QNetworkAccessManager` is no longer there!  
+1. You may have noticed that the registration of the `QNetworkAccessManager` is no longer there.  
 The reason for this is that the class has an accessible default-constructor. `QApplicationContext` makes sure that whenever a dependency
 for a specific type is resolved and a matching service has not been explicitly registered, a default-instance will be created if possible.
 2. The order of registrations has been switched: now, the dependent service `PropSummary` is registered before the services it depends on.
@@ -239,7 +238,7 @@ And here's how this property will be automatically set to the ApplicationContext
       {"summary", "&propSummary"}
     }); 
 
-## Accessing a member of the ApplicationContext
+## Accessing a service after registration
 
 So far, we have published the ApplicationContext and let it take care of wiring all the components together.  
 In some cases, you need to obtain a reference to a member of the Context after it has been published.  
@@ -258,15 +257,44 @@ This code shows how to do this:
 
 In the previous paragraph, we used the `ServiceRegistration` obtained by `QApplicationContext::registerService()`, which refers to a single member of the ApplicationContext.
 However, we might be interested in all members of a certain service-type.  
-We use `QApplicationContext::getRegistration()` for this:
+This can be achieved using `QApplicationContext::getRegistration()`, which yields a `ServiceRegistration` that represents *all services of the requested service-type*.
 
 
     auto registration = context -> getRegistration<PropFetcher>();
     
     registration -> subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got another PropFetcher!"; });
+    
+## Tweaking services (QApplicationContextPostProcessor)
+
+Whenever a service has been instantiated and all properties have been set, QApplicationContext will apply all registered `QApplicationContextPostProcessor`s 
+to it. These are user-supplied QObjects that implement the aforementioned interface which comprises a single method:
+
+    QApplicationContextPostProcessor::process(QApplicationContext*, QObject*)
+
+You might apply further configuration to your service there, or perform logging or monitoring tasks.
+
+## 'Starting' services
+
+The last step done in `ApplicationContext::publish()` for each service is the invocation of an *init-method*, should one have been 
+registered.
+
+*Init-methods* are part of the `ServiceConfig`. They can be specified by supplying the method's name to `ServiceConfig::withInitMethod(const QString&)`.
+
+Suitable *init-methods* are `Q_INVOKABLE`-methods with either no arguments, or with one argument of type `QApplicationContext*`.
 
 
+## The Service-lifefycle
 
+Every service that is registered with a QApplicationContext will undergo the following states, in order shown.
+
+|External Trigger|Internal Step|State|
+|---|---|---|
+|ApplicationContext::registerService()||REGISTERED|
+|ApplicationContext::publish()|Instantiation via constructor or service_factory|NEW|
+|ApplicationContext::publish()|Set properties|AFTER_PROPERTIES_SET|
+|ApplicationContext::publish()|Apply QApplicationContextPostProcessor|PROCESSED|
+|ApplicationContext::publish()|if exists, invoke init-method|PUBLISHED|
+|~ApplicationContext()|delete service|DESTROYED|
 
 
 
