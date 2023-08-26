@@ -499,15 +499,13 @@ public:
 
     ServiceConfig() = default;
 
+    explicit ServiceConfig(bool autowired) {
+        m_config.autowire = autowired;
+    }
+
     using config_data = detail::config_data;
 
 
-    static ServiceConfig autowired()
-    {
-        ServiceConfig cfg;
-        cfg.m_config.autowire = true;
-        return cfg;
-    }
 
 
 
@@ -552,23 +550,47 @@ public:
         return cfg;
     }
 
+    ///
+    /// \brief Adds some properties to this ServiceConfig.
+    /// \param properties a list of key/value-pairs.
+    /// **Note**: all property-keys will be considered potential Q_PROPERTYs of the target-service.
+    /// QApplicationContext::publish() will fail if no such Q_PROPERTY can be found. This attempt can be suppressed by prefixing
+    /// the property-key with a dot, turning it into a *private property*. Those can be leveraged by a QApplicationContextPostProcessor.
+    ///
     void setProperties(std::initializer_list<config_data::entry_type> properties) {
         for(auto& entry : properties) {
             m_config.properties.insert(entry.first, entry.second);
         }
     }
 
+
+
+    ///
+    /// \brief Adds some properties to a ServiceConfig.
+    /// \param properties
+    /// **Note**: all property-keys will be considered potential Q_PROPERTYs of the target-service.
+    /// QApplicationContext::publish() will fail if no such Q_PROPERTY can be found. This attempt can be suppressed by prefixing
+    /// \return a ServiceConfig with the supplied keys and values.
+    ///
     ServiceConfig withProperties(std::initializer_list<config_data::entry_type> properties) const& {
         ServiceConfig cfg{*this};
         cfg.setProperties(properties);
         return cfg;
     }
 
+    ///
+    /// \brief Adds some properties to a ServiceConfig.
+    /// \param properties
+    /// **Note**: all property-keys will be considered potential Q_PROPERTYs of the target-service.
+    /// QApplicationContext::publish() will fail if no such Q_PROPERTY can be found. This attempt can be suppressed by prefixing
+    /// \return a ServiceConfig with the supplied keys and values.
+    ///
     ServiceConfig withProperties(std::initializer_list<config_data::entry_type> properties) && {
         ServiceConfig cfg{std::move(*this)};
         cfg.setProperties(properties);
         return cfg;
     }
+
 
 
     ServiceConfig withInitMethod(const QString& initMethod) const& {
@@ -610,6 +632,10 @@ private:
 
 
 
+template<typename S,typename...Dep> inline ServiceConfig<S,Dep...> makeConfig(bool autowired = false)
+{
+    return ServiceConfig<S,Dep...>{autowired};
+}
 
 
 
@@ -850,12 +876,12 @@ protected:
 
 ///
 /// \brief A mix-in interface for classes that may modify services before publication.
-/// The process(QObject*) method will be invoked for each service after its properties have been set, but
+/// The process(QApplicationContext*, QObject*,const QVariantMap&) method will be invoked for each service after its properties have been set, but
 /// before an *init-method* is invoked.
 ///
 class QApplicationContextPostProcessor {
 public:
-    virtual void process(QApplicationContext* appContext, QObject* service) = 0;
+    virtual void process(QApplicationContext* appContext, QObject* service, const QVariantMap& resolvedProperties) = 0;
 
     virtual ~QApplicationContextPostProcessor() = default;
 };

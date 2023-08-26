@@ -101,6 +101,7 @@ private:
         QObject* theService;
         QString m_name;
         bool isAnonymous;
+        QVariantMap resolvedProperties;
     };
 
     using descriptor_set = std::unordered_set<DescriptorRegistration*>;

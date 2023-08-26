@@ -197,6 +197,11 @@ You could even improve on this by re-factoring the common part of the Url into i
 
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("bearlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
+    
+**Note:** Every property supplied to `ServiceConfig::withProperties()`will be considered a potential Q_PROPERTY of the target-service. `QApplicationContext::publish()` will fail if no such property can be
+found.  
+However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
+Such *private properties* may be passed to a `QApplicationContextPostProcessor` (see below).
 
 ## Referencing other members of the ApplicationContext
 
@@ -269,9 +274,12 @@ This can be achieved using `QApplicationContext::getRegistration()`, which yield
 Whenever a service has been instantiated and all properties have been set, QApplicationContext will apply all registered `QApplicationContextPostProcessor`s 
 to it. These are user-supplied QObjects that implement the aforementioned interface which comprises a single method:
 
-    QApplicationContextPostProcessor::process(QApplicationContext*, QObject*)
+    QApplicationContextPostProcessor::process(QApplicationContext*, QObject*,const QVariantMap&)
 
 You might apply further configuration to your service there, or perform logging or monitoring tasks.
+Any information that you might want to pass to a QApplicationContextPostProcessor can be supplied via the `ServiceConfig`, using `ServiceConfig::withProperties()` as
+so-called *private properties*. Just prefix the property-key with a dot.
+
 
 ## 'Starting' services
 

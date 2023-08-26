@@ -68,8 +68,10 @@ public:
     explicit PostProcessor(QObject* parent = nullptr) : QObject(parent) {}
 
     // QApplicationContextServicePostProcessor interface
-    void process(QApplicationContext *appContext, QObject *service) override {
-        processedObjects.push_back(service);
+    void process(QApplicationContext *appContext, QObject *service, const QVariantMap& additionalInfos) override {
+        if(additionalInfos.contains(".store")) {
+            processedObjects.push_back(service);
+        }
     }
 
     QObjectList processedObjects;
@@ -239,7 +241,7 @@ private slots:
         QTimer timer;
         timer.setObjectName("timer");
         context->registerObject(&timer);
-        auto reg = context->registerService("base", ServiceConfig<BaseService>::autowired());
+        auto reg = context->registerService("base", makeConfig<BaseService>(true));
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{reg};
@@ -250,7 +252,7 @@ private slots:
         QTimer timer;
         timer.setObjectName("IAmTheRealTimer");
         context->registerObject(&timer);
-        auto reg = context->registerService("base", ServiceConfig<BaseService>::autowired());
+        auto reg = context->registerService("base", makeConfig<BaseService>(true));
         context->registerService<BaseService2>("timer");
 
         QVERIFY(context->publish());
@@ -262,7 +264,7 @@ private slots:
     void testExplicitPropertyOverridesAutowired() {
         auto regBase = context->registerService<BaseService>("dependency");
         auto regBaseToUse = context->registerService<BaseService>("baseToUse");
-        auto regCyclic = context->registerService("cyclic", ServiceConfig<CyclicDependency>::autowired().withProperties({{"dependency", "&baseToUse"}}));
+        auto regCyclic = context->registerService("cyclic", makeConfig<CyclicDependency>(true).withProperties({{"dependency", "&baseToUse"}}));
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{regBase};
@@ -276,7 +278,7 @@ private slots:
         QObject timer;
         timer.setObjectName("timer");
         context->registerObject(&timer);
-        auto reg = context->registerService("base", ServiceConfig<BaseService>::autowired());
+        auto reg = context->registerService("base", makeConfig<BaseService>(true));
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{reg};
@@ -550,9 +552,9 @@ private slots:
 
     void testPostProcessor() {
         auto processReg = context->registerService<PostProcessor>();
-        auto reg1 = context->registerService<Service<Interface1,BaseService>>("base1");
+        auto reg1 = context->registerService("base1", makeConfig<Service<Interface1,BaseService>>().withProperties({{".store", true}}));
         auto reg2 = context->registerService<Service<Interface1,BaseService2>>("base2");
-        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>();
+        auto reg = context->registerService("card", makeConfig<CardinalityNService,Dependency<Interface1,Cardinality::N>>().withProperties({{".store", true}}));
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
         RegistrationSlot<Interface1> base1{reg1};
@@ -565,9 +567,9 @@ private slots:
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
         QCOMPARE(regs->getPublishedObjects().size(), 2);
-        QCOMPARE(processSlot->processedObjects.size(), 3);
+        QCOMPARE(processSlot->processedObjects.size(), 2);
         QVERIFY(processSlot->processedObjects.contains(dynamic_cast<QObject*>(base1())));
-        QVERIFY(processSlot->processedObjects.contains(dynamic_cast<QObject*>(base2())));
+        QVERIFY(!processSlot->processedObjects.contains(dynamic_cast<QObject*>(base2())));
         QVERIFY(processSlot->processedObjects.contains(service()));
 
     }
@@ -644,7 +646,7 @@ private slots:
 
 
 
-        auto regCyclic = context->registerService("cyclic", ServiceConfig<CyclicDependency>::autowired());
+        auto regCyclic = context->registerService("cyclic", makeConfig<CyclicDependency>(true));
         QVERIFY(regCyclic);
 
         QVERIFY(context->publish());

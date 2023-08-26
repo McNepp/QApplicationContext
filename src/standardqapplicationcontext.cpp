@@ -702,22 +702,25 @@ bool StandardApplicationContext::configure(DescriptorRegistration* reg, QObject*
     if(metaObject) {
         std::unordered_set<QString> usedProperties;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
-            int index = metaObject->indexOfProperty(key.toUtf8());
-            if(index < 0) {
-                qCCritical(loggingCategory()).nospace() << "Could not find property " << key << " of '" << metaObject->className() << "'";
-                return false;
-            }
-            auto property = metaObject->property(index);
             auto resolvedValue = resolveValue(value);
             if(!resolvedValue.isValid()) {
                 return false;
             }
-            if(property.write(target, resolvedValue)) {
-                qCDebug(loggingCategory()).nospace() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
-                usedProperties.insert(key);
-            } else {
-                qCCritical(loggingCategory()).nospace() << "Could not set property '" << key << "' of " << *reg << " to value " << resolvedValue;
-                return false;
+            reg->resolvedProperties.insert(key, resolvedValue);
+            if(!key.startsWith('.')) {
+                int index = metaObject->indexOfProperty(key.toUtf8());
+                if(index < 0) {
+                    qCCritical(loggingCategory()).nospace() << "Could not find property " << key << " of '" << metaObject->className() << "'";
+                    return false;
+                }
+                auto property = metaObject->property(index);
+                if(property.write(target, resolvedValue)) {
+                    qCDebug(loggingCategory()).nospace() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
+                    usedProperties.insert(key);
+                } else {
+                    qCCritical(loggingCategory()).nospace() << "Could not set property '" << key << "' of " << *reg << " to value " << resolvedValue;
+                    return false;
+                }
             }
         }
         if(config.autowire) {
@@ -765,7 +768,7 @@ bool StandardApplicationContext::configure(DescriptorRegistration* reg, QObject*
     for(auto processor : postProcessors) {
         if(processor != dynamic_cast<QApplicationContextPostProcessor*>(target)) {
             //Don't process yourself!
-            processor->process(this, target);
+            processor->process(this, target, reg->resolvedProperties);
         }
     }
 
