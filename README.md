@@ -3,10 +3,10 @@ A DI-Container for Qt-based applications, inspired by Spring
 
 ## Motivation
 
-As an experienced developer, you know that is is vital to design your software-components with the *SOC*  (**S**eparation **O**f **C**oncern) - principle in mind:  
-each component shall be responsible for "one task", or at least, one set of related tasks.  
+As an experienced developer, you know how crucial it is to follow the SOC*  (**S**eparation **O**f **C**oncern) - principle:  
+Each component shall be responsible for "one task" only, (or, at least, for one set of related tasks).  
 Things that are outside of a component's realm shall be delegated to other components.  
-This of course means that some components will need to get references to those other components, commonly referred to as "Dependencies".  
+This, of course, means that some components will need to get references to those other components, commonly referred to as "Dependencies".  
 Following this rule greatly increases testability of your components, thus making your software more robust.
 
 But, sooner or later, you will ask yourself: How do I wire all those inter-dependent components together?  
@@ -14,17 +14,18 @@ How do I create application-wide "singletons" (without resorting to C++ singleti
 
 ## Features
 
-- Provide an easy-to use Container for Dependency-Injection of Qt-based components.
-- Offer a typesafe syntax for declaring dependencies between components in C++.
-- Relieve the developer of the need to know the precise order in which the inter-dependent components must be instantiated.
+- Provides an easy-to use Container for Dependency-Injection of Qt-based components.
+- Offers a typesafe syntax for declaring dependencies between components in C++.
+- Automatically determines the precise order in which the inter-dependent components must be instantiated.
+- Helps make the components *container-agnostic*.
 - Dependency-injection via constructor.
 - Dependency-injection via Qt-properties.
-- Support both one-to-one and one-to-many relations between components.
+- Supports both one-to-one and one-to-many relations between components.
 - Further configuration of components after creation, including externalized configuration (using `QSettings`).
 - Automatic invocation of an *init-method* after creation, using Qt-slots.
-- Offer a Qt-signal for "published" components, together with a type-safe `subscribe()` mechanism.
+- Offers a Qt-signal for "published" components, together with a type-safe `subscribe()` mechanism.
 - Fail-fast, i.e. terminate compilation with meaningful diagnostics if possible.
-- Help to find runtime-problems by generating verbose logging (using a `QLoggingCategory`).
+- Helps to find runtime-problems by generating verbose logging (using a `QLoggingCategory`).
 
 ## An example
 
@@ -61,14 +62,14 @@ Given the above component, here is the minimal code for creating a QApplicationC
     QApplicationContext* context = new StandardQApplicationContext; // 1
     
     context -> registerService<QNetworkAccessManager>(); // 2
-    context -> registerService<RestPropFetcher,QNetworkAccessManager("hamburgWeather"); // 3
+    context -> registerService<RestPropFetcher,QNetworkAccessManager>("hamburgWeather"); // 3
     
     context -> publish(); // 4
 
 1. Creates a StandardQApplicationContext on the heap. Note that we assign it to a pointer of the interface QApplicationContext. This avoids accidental use of non-public API.
 2. Registers a QNetworkAccessManager with the context. We are supplying no parameters here, so the component will get an auto-generated name!
 3. Registers a RestPropFetcher with the context. Since the constructor requires an argument of type `QNetworkAccessManager*`, we simply supply the type as the second argument to the function.
-   Everything else is taken care of automatically. We assign the name "propFetcher" to this service.
+   Everything else is taken care of automatically. We assign the name "hamburgWeather" to this service.
 4. The context is published. It will instantiate a QNetworkAccessManager first, then a RestPropFetcher, injecting the QNetworkAccessManager.
 
 
@@ -77,35 +78,35 @@ Let's assume we want to use the Url `"https://dwd.api.proxy.bund.dev/v30/station
 How do we do this?
 The answer is simple: we supply the required property-name and value at registration:
 
-    context -> registerService<RestPropFetcher,QNetworkAccessManager("hamburgWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}}); 
+    context -> registerService<RestPropFetcher,QNetworkAccessManager>("hamburgWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}}); 
 
 Likewise, we could register a second service that will fetch the weather-information for Berlin:
 
-    context -> registerService<RestPropFetcher,QNetworkAccessManager("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
+    context -> registerService<RestPropFetcher,QNetworkAccessManager>("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
 
 ## One-to-many relations
 
 Now, let's extend our example a bit: we want to create a component that shall receive the fetched values from all RestPropFetchers and
 somehow sum them up. Such a component could look like this:
 
-    class PropSummary : public QObject {
+    class PropFetcherAggregator : public QObject {
       Q_OBJECT
       
       public:
       
-      explicit PropSummary(const QList<RestPropFetcher>& fetchers, QObject* parent = nullptr);
+      explicit PropFetcherAggregator(const QList<RestPropFetcher>& fetchers, QObject* parent = nullptr);
     };
 
-Note that the above component comprises a 1 -> N relationship with its dependent components.
-We must notify the QApplicationContext about this, so that it can correctly inkect all the matching dependencies into the component's constructor.  
+Note that the above component comprises a one-to-N relationship with its dependent components.
+We must notify the QApplicationContext about this, so that it can correctly inject all the matching dependencies into the component's constructor.  
 The following statement will do the trick:
 
-   context -> registerService<PropSummary,Dependency<RestPropFetcher,Cardinality::N>>("propSummary");
+   context -> registerService<PropFetcherAggregator,Dependency<RestPropFetcher,Cardinality::N>>("propFetcherAggregation");
    
 ## Service-interfaces
 
 In the preceeding example, we have used our QObject-derived class `RestPropFetcher` directly. We have also specified 
-the class as the dependency-type for `RestPropSummary`.  
+the class as the dependency-type for `PropFetcherAggregator`.  
 However, in most complex applications you will likely use an abstract base-class (or 'interface').
 Additionally, this interface need not be derived from QObject!  
 This is well supported by QApplicationContext. First, let's declare our interface:
@@ -116,7 +117,7 @@ This is well supported by QApplicationContext. First, let's declare our interfac
       
       virtual QString value() const = 0;
       
-      virtual ~PropFetcher() 0 default;
+      virtual ~PropFetcher() = default;
     };
 
 Then, we modify our class `RestPropFetcher` so that it derives from both QObject and this interface:
@@ -145,14 +146,14 @@ Then, we modify our class `RestPropFetcher` so that it derives from both QObject
       void urlChanged();
     };
 
-And lastly, we modify our class `PropSummary` so that it accepts dependencies of the interface-type:
+And lastly, we modify our class `PropFetcherAggregator` so that it accepts dependencies of the interface-type:
 
-    class PropSummary : public QObject {
+    class PropFetcherAggregator : public QObject {
       Q_OBJECT
       
       public:
       
-      explicit PropSummary(const QList<PropFetcher>& fetchers, QObject* parent = nullptr);
+      explicit PropFetcherAggregator(const QList<PropFetcher>& fetchers, QObject* parent = nullptr);
     };
 
 Putting it all together, we use the helper-template `Service` for specifying both an interface-type and an implementation-type:
@@ -162,10 +163,10 @@ Putting it all together, we use the helper-template `Service` for specifying bot
     
     QApplicationContext* context = new StandardQApplicationContext; 
     
-    context -> registerService<PropSummary,Dependency<PropFetcher,Cardinality::N>>("propSummary");
+    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Cardinality::N>>("propFetcherAggration");
     
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}}); 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
     
     context -> publish(); 
 
@@ -174,7 +175,7 @@ Two noteworthy things:
 1. You may have noticed that the registration of the `QNetworkAccessManager` is no longer there.  
 The reason for this is that the class has an accessible default-constructor. `QApplicationContext` makes sure that whenever a dependency
 for a specific type is resolved and a matching service has not been explicitly registered, a default-instance will be created if possible.
-2. The order of registrations has been switched: now, the dependent service `PropSummary` is registered before the services it depends on.
+2. The order of registrations has been switched: now, the dependent service `PropFetcherAggregator` is registered before the services it depends on.
 This was done to demonstrate that **the order of registrations is actually completely irrelevant**!  
 `QApplicationContext` figures out automatically what the correct order must be.
 
@@ -189,14 +190,14 @@ This is what it looks like if you out-source the "url" configuration-value into 
 
     context -> registerObject(new QSettings{"application.ini", QSettings::IniFormat, context});
     
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {{"url", "${hamburgWeatherUrl}"}}); 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("bearlinWeather", {{"url", "${hamburgBerlinUrl}"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${hamburgWeatherUrl}"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("bearlinWeather", {{"url", "${hamburgBerlinUrl}"}}); 
 
 
 You could even improve on this by re-factoring the common part of the Url into its own configuration-value:
 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("bearlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("bearlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
     
 **Note:** Every property supplied to `ServiceConfig::withProperties()`will be considered a potential Q_PROPERTY of the target-service. `QApplicationContext::publish()` will fail if no such property can be
 found.  
@@ -206,7 +207,7 @@ Such *private properties* may be passed to a `QApplicationContextPostProcessor` 
 ## Referencing other members of the ApplicationContext
 
 Sometimes, it may be necessary to inject one member of the ApplicationContext into another member not via constructor, but via a Q_PROPERTY.  
-Suppose that each `PropFetcher` shall have (for whatever reason) a reference to the `PropSummary`.  
+Suppose that each `PropFetcher` shall have (for whatever reason) a reference to the `PropFetcherAggregator`.  
 This cannot be done via constructor-arguments, as it would constitute a dependency-circle!  
 However, we could introduce a Q_PROPERTY like this:
 
@@ -215,7 +216,7 @@ However, we could introduce a Q_PROPERTY like this:
 
       Q_PROPERTY(QString value READ value NOTIFY valueChanged)
       
-      Q_PROPERTY(PropSummary* summary READ summary WRITE setSummary NOTIFY summaryChanged)
+      Q_PROPERTY(PropFetcherAggregator* summary READ summary WRITE setSummary NOTIFY summaryChanged)
 
       public:
       
@@ -223,9 +224,9 @@ However, we could introduce a Q_PROPERTY like this:
 
       virtual QString value() const = 0;
       
-      virtual PropSummary* summary() const = 0;
+      virtual PropFetcherAggregator* summary() const = 0;
       
-      virtual void setSummary(PropSummary*) = 0;
+      virtual void setSummary(PropFetcherAggregator*) = 0;
 
       signals:
       void valueChanged();
@@ -233,14 +234,14 @@ However, we could introduce a Q_PROPERTY like this:
       void summaryChanged();
     };
 
-And here's how this property will be automatically set to the ApplicationContext's `PropSummary`. Note the ampersand in the property-value that means *reference to another member*:
+And here's how this property will be automatically set to the ApplicationContext's `PropFetcherAggregator`. Note the ampersand in the property-value that means *reference to another member*:
 
 
-    context -> registerService<PropSummary,Dependency<PropFetcher,Cardinality::N>>("propSummary");
+    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Cardinality::N>>("propFetcherAggregator");
     
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {
       {"url", "${weatherUrl}${hamburgStationId}"},
-      {"summary", "&propSummary"}
+      {"summary", "&propFetcherAggregator"}
     }); 
 
 ## Accessing a service after registration
@@ -254,7 +255,7 @@ Therefore, it it strongly recommended to use the method `ServiceRegistration::su
 In addition to being type-safe, this method has the advantage that is will automatically notify you if you subscribe after the service has already been published.  
 This code shows how to do this:
 
-    auto registration = context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
+    auto registration = context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
     
     registration -> subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got the PropFether!"; });
 
@@ -278,7 +279,7 @@ to it. These are user-supplied QObjects that implement the aforementioned interf
 
 You might apply further configuration to your service there, or perform logging or monitoring tasks.
 Any information that you might want to pass to a QApplicationContextPostProcessor can be supplied via the `ServiceConfig`, using `ServiceConfig::withProperties()` as
-so-called *private properties*. Just prefix the property-key with a dot.
+so-called *private properties*: Just prefix the property-key with a dot.
 
 
 ## 'Starting' services
@@ -286,23 +287,25 @@ so-called *private properties*. Just prefix the property-key with a dot.
 The last step done in `ApplicationContext::publish()` for each service is the invocation of an *init-method*, should one have been 
 registered.
 
-*Init-methods* are part of the `ServiceConfig`. They can be specified by supplying the method's name to `ServiceConfig::withInitMethod(const QString&)`.
+*Init-methods* are supplied as part of the `ServiceConfig`. They can be specified by supplying the method's name to `ServiceConfig::withInitMethod(const QString&)`.
 
 Suitable *init-methods* are `Q_INVOKABLE`-methods with either no arguments, or with one argument of type `QApplicationContext*`.
 
 
 ## The Service-lifefycle
 
-Every service that is registered with a QApplicationContext will undergo the following states, in order shown.
+Every service that is registered with a QApplicationContext will go through the following states, in the order shown.
+The names of these states are shown for illustration-purposes only. They are not visible outside the QApplicationContext.  
+However, some transitions trigger may have observable side-effects.
 
-|External Trigger|Internal Step|State|
-|---|---|---|
-|ApplicationContext::registerService()||REGISTERED|
-|ApplicationContext::publish()|Instantiation via constructor or service_factory|NEW|
-|ApplicationContext::publish()|Set properties|AFTER_PROPERTIES_SET|
-|ApplicationContext::publish()|Apply QApplicationContextPostProcessor|PROCESSED|
-|ApplicationContext::publish()|if exists, invoke init-method|PUBLISHED|
-|~ApplicationContext()|delete service|DESTROYED|
+|External Trigger|Internal Step|State|Observable side-effect|
+|---|---|---|---|
+|ApplicationContext::registerService()||REGISTERED| |
+|ApplicationContext::publish()|Instantiation via constructor or service_factory|NEW|Invocation of Services's constructor|
+| |Set properties|AFTER_PROPERTIES_SET|Invocation of property-setters|
+| |Apply QApplicationContextPostProcessor|PROCESSED|Invocation of user-supplied QApplicationContextPostProcessor::process()| 
+| |if exists, invoke init-method|PUBLISHED|emit signal Registration::publishedObjectsChanged|
+|~ApplicationContext()|delete service|DESTROYED|Invoke Services's destructor|
 
 
 

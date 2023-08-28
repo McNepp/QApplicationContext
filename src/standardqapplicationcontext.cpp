@@ -143,6 +143,7 @@ QObject* StandardApplicationContext::resolveDependency(const descriptor_set &pub
         case 0:
             return nullptr;
         case 1:
+            qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " of " << *reg;
             return dep[0];
         default:
             qCritical(loggingCategory()).noquote().nospace() << d << "' of " << *reg << " is ambiguous";
@@ -191,6 +192,7 @@ QObject* StandardApplicationContext::resolveDependency(const descriptor_set &pub
         }
         qCInfo(loggingCategory()).noquote().nospace() << "Created private copy of " << *depReg << " for " << *reg;
         privateSubDep.moveTo(service);
+        qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " of " << *reg;
         return service;
     }
 
