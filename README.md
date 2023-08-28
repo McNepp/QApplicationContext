@@ -199,7 +199,7 @@ You could even improve on this by re-factoring the common part of the Url into i
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("bearlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
     
-**Note:** Every property supplied to `ServiceConfig::withProperties()`will be considered a potential Q_PROPERTY of the target-service. `QApplicationContext::publish()` will fail if no such property can be
+**Note:** Every property supplied to `QApplicationContext::registerService()` will be considered a potential Q_PROPERTY of the target-service. `QApplicationContext::publish()` will fail if no such property can be
 found.  
 However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
 Such *private properties* may be passed to a `QApplicationContextPostProcessor` (see below).
@@ -278,7 +278,7 @@ to it. These are user-supplied QObjects that implement the aforementioned interf
     QApplicationContextPostProcessor::process(QApplicationContext*, QObject*,const QVariantMap&)
 
 You might apply further configuration to your service there, or perform logging or monitoring tasks.
-Any information that you might want to pass to a QApplicationContextPostProcessor can be supplied via the `ServiceConfig`, using `ServiceConfig::withProperties()` as
+Any information that you might want to pass to a QApplicationContextPostProcessor can be supplied as
 so-called *private properties*: Just prefix the property-key with a dot.
 
 
@@ -287,9 +287,27 @@ so-called *private properties*: Just prefix the property-key with a dot.
 The last step done in `ApplicationContext::publish()` for each service is the invocation of an *init-method*, should one have been 
 registered.
 
-*Init-methods* are supplied as part of the `ServiceConfig`. They can be specified by supplying the method's name to `ServiceConfig::withInitMethod(const QString&)`.
+*Init-methods* are supplied as part of the `service_config`, for example like this:
+
+    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Cardinality::N>>("propFetcherAggregator", service_config{{}, false, "init"});
+
+or, more conveniently:
+
+    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Cardinality::N>>("propFetcherAggregator", {}, false, "init");
 
 Suitable *init-methods* are `Q_INVOKABLE`-methods with either no arguments, or with one argument of type `QApplicationContext*`.
+
+## Resolving ambiguities
+
+Sometimes, multiple instances of a service with the same service-type have been registered.  
+(In our previous examples, this was the case with two instances of the `PropFetcher` service-type.)  
+If you want to inject only one of those into a dependent service, how can you do that?  
+Well, using the name of the registered service seems like a good idea.  
+The name of a dependency can be supplied to the helper-class `Dependency`. Previously, we did not ever need to instantiate a `Dependency`, but
+rather used it as a type-argument only.  
+Now, we will create an instance of `Dependency` and supply a name to it:
+
+    context -> registerService<PropFetcherAggregator>("propFetcherAggregator", service_config{{}, false, "init"}, Dependency<PropFetcher,Cardinality::N>{"hamburgWeather"});
 
 
 ## The Service-lifefycle

@@ -268,7 +268,7 @@ private:
 
     QVariant getConfigurationValue(const QString& key) const;
 
-    static QStringList getBeanRefs(const config_data&);
+    static QStringList getBeanRefs(const service_config&);
 
     void contextObjectDestroyed(QObject*);
 

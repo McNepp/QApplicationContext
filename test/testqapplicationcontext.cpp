@@ -354,7 +354,7 @@ private slots:
     void testNamedMandatoryDependency() {
         BaseService base;
         context->registerObject<Interface1>(&base, "base");
-        auto reg = context->registerService("", ServiceConfig<DependentService,Interface1>().withRequiredName<Interface1>("myBase"));
+        auto reg = context->registerService<DependentService>("", service_config{}, Dependency<Interface1>{"myBase"});
         QVERIFY(!context->publish());
         context->registerObject<Interface1>(&base, "myBase");
         QVERIFY(context->publish());
@@ -365,9 +365,8 @@ private slots:
     void testNamedOptionalDependency() {
         BaseService base;
         context->registerObject<Interface1>(&base, "base");
-        ServiceConfig<DependentService,Dependency<Interface1,Cardinality::OPTIONAL>> config;
-        auto depReg = context->registerService("", config.withRequiredName<Interface1>("myBase"));
-        auto depReg2 = context->registerService("", config.withRequiredName<Interface1>("base"));
+        auto depReg = context->registerService<DependentService>("", service_config{}, Dependency<Interface1,Cardinality::OPTIONAL>{"myBase"});
+        auto depReg2 = context->registerService<DependentService>("", service_config{}, Dependency<Interface1,Cardinality::OPTIONAL>{"base"});
 
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> depSlot{depReg};
@@ -547,8 +546,30 @@ private slots:
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
         QCOMPARE(regs->getPublishedObjects().size(), 2);
+        QVERIFY(regs->getPublishedServices().contains(service->my_bases[0]));
+        QVERIFY(regs->getPublishedServices().contains(service->my_bases[1]));
 
     }
+
+    void testCardinalityNServiceWithRequiredName() {
+        auto reg1 = context->registerService<Service<Interface1,BaseService>>("base1");
+        auto reg2 = context->registerService<Service<Interface1,BaseService2>>("base2");
+        auto reg = context->registerService<CardinalityNService>("", service_config{}, Dependency<Interface1,Cardinality::N>{"base2"});
+        QVERIFY(context->publish());
+        auto regs = context->getRegistration<Interface1>();
+        RegistrationSlot<Interface1> base1{reg1};
+        RegistrationSlot<Interface1> base2{reg2};
+        RegistrationSlot<CardinalityNService> service{reg};
+        QCOMPARE_NE(base1, base2);
+        QCOMPARE(service->my_bases.size(), 1);
+
+        RegistrationSlot<Interface1> services{regs};
+        QCOMPARE(services.invocationCount(), 2);
+        QCOMPARE(regs->getPublishedObjects().size(), 2);
+        QCOMPARE(service->my_bases[0], services());
+
+    }
+
 
     void testPostProcessor() {
         auto processReg = context->registerService<PostProcessor>();

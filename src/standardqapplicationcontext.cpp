@@ -225,7 +225,7 @@ Registration *StandardApplicationContext::getRegistration(const type_info &servi
 
 
 
-QStringList StandardApplicationContext::getBeanRefs(const config_data& config)
+QStringList StandardApplicationContext::getBeanRefs(const service_config& config)
 {
     QStringList result;
     for(auto entry : config.properties.asKeyValueRange()) {

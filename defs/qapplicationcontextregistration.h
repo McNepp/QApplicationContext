@@ -74,6 +74,17 @@ public:
         return unwrap()->getPublishedObjects();
     }
 
+    [[nodiscard]] QList<S*> getPublishedServices() const {
+        QList<S*> result;
+        for(auto obj : getPublishedObjects()) {
+            if(S* ptr = dynamic_cast<S*>(obj)) {
+                result.push_back(ptr);
+            }
+        }
+        return result;
+    }
+
+
 
 
     ///
