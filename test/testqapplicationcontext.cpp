@@ -241,7 +241,7 @@ private slots:
         QTimer timer;
         timer.setObjectName("timer");
         context->registerObject(&timer);
-        auto reg = context->registerService("base", makeConfig<BaseService>(true));
+        auto reg = context->registerService<BaseService>("base", {}, true);
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{reg};
@@ -252,7 +252,7 @@ private slots:
         QTimer timer;
         timer.setObjectName("IAmTheRealTimer");
         context->registerObject(&timer);
-        auto reg = context->registerService("base", makeConfig<BaseService>(true));
+        auto reg = context->registerService<BaseService>("base", {}, true);
         context->registerService<BaseService2>("timer");
 
         QVERIFY(context->publish());
@@ -264,7 +264,7 @@ private slots:
     void testExplicitPropertyOverridesAutowired() {
         auto regBase = context->registerService<BaseService>("dependency");
         auto regBaseToUse = context->registerService<BaseService>("baseToUse");
-        auto regCyclic = context->registerService("cyclic", makeConfig<CyclicDependency>(true).withProperties({{"dependency", "&baseToUse"}}));
+        auto regCyclic = context->registerService<CyclicDependency>("cyclic", {{"dependency", "&baseToUse"}}, true);
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{regBase};
@@ -278,7 +278,7 @@ private slots:
         QObject timer;
         timer.setObjectName("timer");
         context->registerObject(&timer);
-        auto reg = context->registerService("base", makeConfig<BaseService>(true));
+        auto reg = context->registerService<BaseService>("base", {}, true);
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{reg};
@@ -315,7 +315,7 @@ private slots:
     }
 
     void testInitMethod() {
-        auto baseReg = context->registerService("base", ServiceConfig<BaseService>().withInitMethod("init"));
+        auto baseReg = context->registerService<BaseService>("base", {}, false, "init");
         QVERIFY(context->publish());
 
         RegistrationSlot<BaseService> baseSlot{baseReg};
@@ -323,7 +323,7 @@ private slots:
     }
 
     void testInitMethodWithContext() {
-        auto baseReg = context->registerService("base", ServiceConfig<BaseService>().withInitMethod("initContext"));
+        auto baseReg = context->registerService<BaseService>("base", {}, false, "initContext");
         QVERIFY(context->publish());
 
         RegistrationSlot<BaseService> baseSlot{baseReg};
@@ -552,9 +552,9 @@ private slots:
 
     void testPostProcessor() {
         auto processReg = context->registerService<PostProcessor>();
-        auto reg1 = context->registerService("base1", makeConfig<Service<Interface1,BaseService>>().withProperties({{".store", true}}));
+        auto reg1 = context->registerService<Service<Interface1,BaseService>>("base1", {{".store", true}});
         auto reg2 = context->registerService<Service<Interface1,BaseService2>>("base2");
-        auto reg = context->registerService("card", makeConfig<CardinalityNService,Dependency<Interface1,Cardinality::N>>().withProperties({{".store", true}}));
+        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>("card", {{".store", true}});
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
         RegistrationSlot<Interface1> base1{reg1};
@@ -646,7 +646,7 @@ private slots:
 
 
 
-        auto regCyclic = context->registerService("cyclic", makeConfig<CyclicDependency>(true));
+        auto regCyclic = context->registerService<CyclicDependency>("cyclic", {}, true);
         QVERIFY(regCyclic);
 
         QVERIFY(context->publish());

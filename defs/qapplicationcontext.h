@@ -723,15 +723,17 @@ public:
     /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param properties the configuration-properties for the service.
+    /// \param auowire determines whether the service's properties shall be autowired.
+    /// \param initMethod the Q_INVOKABLE method to call before publishing this Service.
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
     ///
-    template<typename S,typename...Dep> auto registerService(const QString& objectName = "", std::initializer_list<config_data::entry_type> properties = {}) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
+    template<typename S,typename...Dep> auto registerService(const QString& objectName = "", std::initializer_list<config_data::entry_type> properties = {}, bool autowire = false, const QString& initMethod = "") -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         using service_type = typename detail::service_traits<S>::service_type;
         using impl_type = typename detail::service_traits<S>::impl_type;
         using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
         auto dependencies = descriptor_helper::dependencies();
-        auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies, config_data{properties}));
+        auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies, config_data{properties, autowire, initMethod}));
         return ServiceRegistration<service_type>::wrap(result);
     }
 
