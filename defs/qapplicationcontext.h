@@ -1,5 +1,4 @@
 #pragma once
-
 #include <utility>
 #include <typeindex>
 #include <unordered_set>
@@ -7,6 +6,7 @@
 #include <QVariant>
 #include <QLoggingCategory>
 #include "qapplicationcontextregistration.h"
+#include "cardinality.h"
 
 namespace com::neppert::context {
 
@@ -52,30 +52,7 @@ template<typename Srv,typename Impl> struct Service {
     using impl_type = Impl;
 };
 
-///
-/// \brief Specifies the cardinality of a Service-dependency.
-/// Will be used as a non-type argument to Dependency, when registering a Service.
-///
-enum class Cardinality {
-    ///
-    /// This dependency must be present in the ApplicationContext.
-    MANDATORY,
-    /// This dependency need not be present in the ApplicationContext.
-    /// If not, `nullptr` will be provided.
-    OPTIONAL,
-    ///
-    /// All Objects with the required service_type will be pushed into QList
-    /// and provided to the constructor of the service that depends on them.
-    N,
-    ///
-    /// This dependency must be present in the ApplicationContext.
-    /// A copy will be made and provided to the constructor of the service that depends on them.
-    /// This copy will not be published in the ApplicationContext.
-    /// After construction, the QObject::parent() of the dependency will
-    /// be set to the service that owns it.
-    ///
-    PRIVATE_COPY
-};
+
 
 ///
 /// \brief Specifies a dependency of a Service.
@@ -145,7 +122,6 @@ struct service_config final {
     bool autowire = false;
     QString initMethod;
 };
-
 
 
 namespace detail {
@@ -664,7 +640,7 @@ public:
     /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param properties the configuration-properties for the service.
-    /// \param auowire determines whether the service's properties shall be autowired.
+    /// \param autowire determines whether the service's properties shall be autowired.
     /// \param initMethod the Q_INVOKABLE method to call before publishing this Service.
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
@@ -688,9 +664,7 @@ public:
     /// \param objectName the name that the Service shall have. If empty, a name will be auto-generated.
     /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
-    /// \param properties the configuration-properties for the service.
-    /// \param auowire determines whether the service's properties shall be autowired.
-    /// \param initMethod the Q_INVOKABLE method to call before publishing this Service.
+    /// \param config the configuration for the service.
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
     ///
@@ -786,7 +760,6 @@ protected:
     ///
     /// \brief Registers a Service with this QApplicationContext.
     /// \param name
-    /// \param obj
     /// \param descriptor
     /// \return a Registration for the Service, or `nullptr` if it could not be registered.
     ///

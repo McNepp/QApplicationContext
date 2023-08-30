@@ -306,6 +306,14 @@ private slots:
     }
 
 
+    void testRegisterObjectSignalsImmediately() {
+        BaseService base;
+        RegistrationSlot<BaseService> baseSlot{context->registerObject(&base)};
+        QVERIFY(baseSlot());
+        QVERIFY(context->publish());
+        QCOMPARE(baseSlot.invocationCount(), 1);
+    }
+
     void testOptionalDependency() {
         auto reg = context->registerService<DependentService,Dependency<Interface1,Cardinality::OPTIONAL>>();
         QVERIFY(reg);

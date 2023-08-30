@@ -84,7 +84,58 @@ Likewise, we could register a second service that will fetch the weather-informa
 
     context -> registerService<RestPropFetcher,QNetworkAccessManager>("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
 
-## One-to-many relations
+## Managed Services vs. Un-managed Objects
+
+The function `QApplicationContext::registerService()` that was shown in the preceeding example results in the creation of a `managed service`.  
+The entire lifecylce of the registered Service will be managed by the QApplicationContext.  
+Sometimes, however, it will be necessary to register an existing QObject with the ApplicationContext and make it available to other components as a dependency.  
+A reason for this may be that the constructor of the class does not merely accept other `QObject`-pointers (as "dependencies"), but also `QString`s or other non-QObject-typed value.  
+A good example would be registering objects of type `QSettings`, which play an important role in *Externalized Configuration* (see below).  
+
+
+There are some crucial differences between `QApplicationContext::registerService()` and `QApplicationContext::registerObject()`, as the following table shows:
+
+| |registerService|registerObject|
+|---|---|---|
+|Instantiation of the object|upon `QApplicationContext::publish()`|prior to the registration with the QApplicationContext|
+|When does the Q_PROPERTY `Registration::publishedObjects` become non-empty?|upon `QApplicationContext::publish()`|immediately after the registration|
+|Naming of the QObject|`QObject::objectName` is set to the name of the registration|`QObject::objectName` is not touched by QApplicationContext|
+|Handling of Properties|The key/value-pairs supplied at registration will be set as Q_PROPERTYs by QApplicationContext|All properties must be set before registration|
+|Processing by `QApplicationContextPostProcessor`|Every service will be processed by the registered QApplicationContextPostProcessors|Object is not processed|
+|Invocation of *init-method*|If present, will be invoked by QApplicationContext|If present, must have been invoked prior to registration|
+|Destruction of the object|upon destruction of the QApplicationContext|at the discrection of the code that created it|
+
+
+
+
+## Types of dependency-relations
+
+In our previous example, we have seen the dependency of our `RestPropFetcher` to a `QNetworkAccessManager`.  
+This constitutes a *mandatory dependency*: instantion of the `RestPropFetcher`will fail if no `QNetworkAccessManager`can be found.
+However, there are more ways to express a dependency-relation.  
+This is reflected by the enum-type `com::neppert::context::Cardinality` and its enum-constants as listed below:
+
+
+### MANDATORY
+
+As stated before, mandatory dependencies enforce that there is exactly one service of the dependency-type present in the ApplicationContext.
+Otherwise, publication will fail.
+Mandatory dependencies can be specified by simply listing the type of the dependency as a template-argument:
+
+    registerService<RestPropFetcher,QNetworkAccessManager>();
+
+Just for the sake of consistency, you could also use the `Dependency` helper-template, even though this is not recommended:
+
+    registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Cardinality::MANDATORY>>();
+
+### OPTIONAL
+A service that has an *optional dependency* to another service may be instantiated even when no matching other service can be found in the ApplicationContext.
+In that case, `nullptr` will be passed to the service's constructor.  
+Optional dependencies are specified the `Dependency` helper-template. Suppose it were possible to create our `RestPropFetcher` without a `QNetworkAccessManage`:
+
+    registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Cardinality::OPTIONAL>>();
+
+### N (one-to-many)
 
 Now, let's extend our example a bit: we want to create a component that shall receive the fetched values from all RestPropFetchers and
 somehow sum them up. Such a component could look like this:
@@ -97,12 +148,41 @@ somehow sum them up. Such a component could look like this:
       explicit PropFetcherAggregator(const QList<RestPropFetcher>& fetchers, QObject* parent = nullptr);
     };
 
-Note that the above component comprises a one-to-N relationship with its dependent components.
+Note that the above component comprises a one-to-,any relationship with its dependent components.
 We must notify the QApplicationContext about this, so that it can correctly inject all the matching dependencies into the component's constructor.  
 The following statement will do the trick:
 
-   context -> registerService<PropFetcherAggregator,Dependency<RestPropFetcher,Cardinality::N>>("propFetcherAggregation");
-   
+    context -> registerService<PropFetcherAggregator,Dependency<RestPropFetcher,Cardinality::N>>("propFetcherAggregation");
+
+### PRIVATE_COPY
+
+Sometime, you may want to ensure that every instance of your service will get its own instance of a dependency. This might be necessary if the dependency shall be configured (i.e. modified) by the
+dependent service, thus potentially affecting other dependent services.  
+QApplicationContext defines the dependency-type PRIVATE_COPY for this. Applied to our example, you would enfore a private `QNetworkAccessManager` for both `RestPropFetcher`s like this:
+
+    context -> registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Cardinality::PRIVATE_COPY>("berlinWeather"); 
+    context -> registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Cardinality::PRIVATE_COPY>("hamburgWeather"); 
+    
+**Note:** The life-cycle of instances created with PRIVATE_COPY will not be managed by the ApplicationContext! Rather, the ApplicationContext will set the dependent object's `QObject::parent()` to the dependent service, thus it will be destructed when its parent is destructed.
+    
+The following table sums up the characteristics of the different types of dependencies:
+
+<table><tr><th>&nbsp;</th><th>Normal behaviour</th><th>What if no dependency can be found?</th><th>What if more than one dependency can be found?</th></tr>
+<tr><td>MANDATORY</td><td>Injects one dependency into the dependent service.</td><td>If the dependency-type has an accessible default-constructor, this will be used to register and create an instance of that type.
+<br>If no default-constructor exists, publication of the ApplicationContext will fail.</td>
+<td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+<tr><td>OPTIONAL</td><td>Injects one dependency into the dependent service</td><td>Injects `nullptr` into the dependent service.</td>
+<td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+<tr><td>N</td><td>Injects all dependencies of the dependency-type that have been registered into the dependent service, using a `QList`</td>
+<td>Injects an empty `QList` into the dependent service.</td>
+<td>See 'Normal behaviour'</td></tr>
+<tr><td>PRIVATE_COPY</td><td>Injects a newly created instance of the dependency-type and sets its `QObject::parent()` to the dependent service.</td>
+<td>If the dependency-type has an accessible default-constructor, this will be used to create an instance of that type.<br>
+If no default-constructor exists, publication of the ApplicationContext will fail.</td>
+<td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+</table>
+
+
 ## Service-interfaces
 
 In the preceeding example, we have used our QObject-derived class `RestPropFetcher` directly. We have also specified 
@@ -178,6 +258,22 @@ for a specific type is resolved and a matching service has not been explicitly r
 2. The order of registrations has been switched: now, the dependent service `PropFetcherAggregator` is registered before the services it depends on.
 This was done to demonstrate that **the order of registrations is actually completely irrelevant**!  
 `QApplicationContext` figures out automatically what the correct order must be.
+
+## The Service-lifefycle
+
+Every service that is registered with a QApplicationContext will go through the following states, in the order shown.
+The names of these states are shown for illustration-purposes only. They are not visible outside the QApplicationContext.  
+However, some transitions trigger may have observable side-effects.
+
+|External Trigger|Internal Step|State|Observable side-effect|
+|---|---|---|---|
+|ApplicationContext::registerService()||REGISTERED| |
+|ApplicationContext::publish()|Instantiation via constructor or service_factory|NEW|Invocation of Services's constructor|
+| |Set properties|AFTER_PROPERTIES_SET|Invocation of property-setters|
+| |Apply QApplicationContextPostProcessor|PROCESSED|Invocation of user-supplied QApplicationContextPostProcessor::process()| 
+| |if exists, invoke init-method|PUBLISHED|emit signal Registration::publishedObjectsChanged|
+|~ApplicationContext()|delete service|DESTROYED|Invoke Services's destructor|
+
 
 ## Externalized Configuration
 
@@ -310,20 +406,6 @@ Now, we will create an instance of `Dependency` and supply a name to it:
     context -> registerService<PropFetcherAggregator>("propFetcherAggregator", service_config{{}, false, "init"}, Dependency<PropFetcher,Cardinality::N>{"hamburgWeather"});
 
 
-## The Service-lifefycle
-
-Every service that is registered with a QApplicationContext will go through the following states, in the order shown.
-The names of these states are shown for illustration-purposes only. They are not visible outside the QApplicationContext.  
-However, some transitions trigger may have observable side-effects.
-
-|External Trigger|Internal Step|State|Observable side-effect|
-|---|---|---|---|
-|ApplicationContext::registerService()||REGISTERED| |
-|ApplicationContext::publish()|Instantiation via constructor or service_factory|NEW|Invocation of Services's constructor|
-| |Set properties|AFTER_PROPERTIES_SET|Invocation of property-setters|
-| |Apply QApplicationContextPostProcessor|PROCESSED|Invocation of user-supplied QApplicationContextPostProcessor::process()| 
-| |if exists, invoke init-method|PUBLISHED|emit signal Registration::publishedObjectsChanged|
-|~ApplicationContext()|delete service|DESTROYED|Invoke Services's destructor|
 
 
 
