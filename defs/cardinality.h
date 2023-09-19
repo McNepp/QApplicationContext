@@ -1,6 +1,7 @@
 #pragma once
 /** @file cardinality.h
  *  @brief Declares the enum-class that specifies the type of a dependency.
+ *  @author McNepp
 */
 
 namespace com::neppert::context {

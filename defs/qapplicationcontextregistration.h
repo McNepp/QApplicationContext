@@ -140,9 +140,9 @@ private:
 
         Registration* source;
 
-        std::unordered_set<S*> publishedObjects;
+        mutable std::unordered_set<S*> publishedObjects;
 
-        void operator()() {
+        void operator()() const {
             for(auto obj : source->getPublishedObjects()) {
                 S* ptr = dynamic_cast<S*>(obj);
                 if(ptr && publishedObjects.insert(ptr).second) {

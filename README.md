@@ -84,6 +84,33 @@ Likewise, we could register a second service that will fetch the weather-informa
 
     context -> registerService<RestPropFetcher,QNetworkAccessManager>("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
 
+
+## Externalized Configuration
+
+In the above example, we were configuring the Url with a String-literal in the code. This is less than optimal, as we usually want to be able
+to change such configuration-values without re-compiling the program.  
+This is made possible with so-called *placeholders* in the configured values:  
+A placeholder embedded in `${   }` will be resolved by the QApplicationContext using Qt's `QSettings` class.  
+You simply register one or more instances of `QSettings` with the context, using `QApplicationContext::registerObject()`.
+This is what it looks like if you out-source the "url" configuration-value into an external configuration-file:
+
+    context -> registerObject(new QSettings{"application.ini", QSettings::IniFormat, context});
+    
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${hamburgWeatherUrl}"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("berlinWeather", {{"url", "${hamburgBerlinUrl}"}}); 
+
+
+You could even improve on this by re-factoring the common part of the Url into its own configuration-value:
+
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("berlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
+    
+**Note:** Every property supplied to `QApplicationContext::registerService()` will be considered a potential Q_PROPERTY of the target-service. `QApplicationContext::publish()` will fail if no such property can be
+found.  
+However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
+Such *private properties* may be passed to a `QApplicationContextPostProcessor` (see below).
+
+
 ## Managed Services vs. Un-managed Objects
 
 The function `QApplicationContext::registerService()` that was shown in the preceeding example results in the creation of a `managed service`.  
@@ -275,30 +302,6 @@ However, some transitions trigger may have observable side-effects.
 |~ApplicationContext()|delete service|DESTROYED|Invoke Services's destructor|
 
 
-## Externalized Configuration
-
-In the above example, we were configuring the Url with a String-literal in the code. This is less than optimal, as we usually want to be able
-to change such configuration-values without re-compiling the program.  
-This is made possible with so-called *placeholders* in the configured values:  
-A placeholder embedded in `${   }` will be resolved by the QApplicationContext using Qt's `QSettings` class.  
-You simply register one or more instances of `QSettings` with the context, using `QApplicationContext::registerObject()`.
-This is what it looks like if you out-source the "url" configuration-value into an external configuration-file:
-
-    context -> registerObject(new QSettings{"application.ini", QSettings::IniFormat, context});
-    
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${hamburgWeatherUrl}"}}); 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("bearlinWeather", {{"url", "${hamburgBerlinUrl}"}}); 
-
-
-You could even improve on this by re-factoring the common part of the Url into its own configuration-value:
-
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("bearlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
-    
-**Note:** Every property supplied to `QApplicationContext::registerService()` will be considered a potential Q_PROPERTY of the target-service. `QApplicationContext::publish()` will fail if no such property can be
-found.  
-However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
-Such *private properties* may be passed to a `QApplicationContextPostProcessor` (see below).
 
 ## Referencing other members of the ApplicationContext
 
@@ -404,6 +407,30 @@ rather used it as a type-argument only.
 Now, we will create an instance of `Dependency` and supply a name to it:
 
     context -> registerService<PropFetcherAggregator>("propFetcherAggregator", service_config{{}, false, "init"}, Dependency<PropFetcher,Cardinality::N>{"hamburgWeather"});
+
+## Publishing an ApplicationContext more than once
+
+Sometimes, it may be desirable to inovoke QApplicationContext::publish() more than once.
+Proceeding with the previous example, there may be several independent modules that each want to supply a service of type `PropFetcher`.
+Each of these modules will rightly assume that the dependency of type `QNetworkAccessManager` will be automatically supplied by the QApplicationContext.
+
+But which module shall then invoke QApplicationContext::publish()? Do we need to coordinate this with additional code?
+That could be a bit unwieldly. Luckily, this is not necessary.
+
+Given that each module has access to the (global) QApplicationContext, you can simply do this in some initialization function in module A:
+
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
+    context -> publish();
+
+...and this in module B:
+
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("berlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
+    context -> publish();
+
+At the first `publish()`, an instance of `QNetworkAccessManager` will be instantiated. It will be injected into both `RestPropFetchers`.
+
+This will work <b>regardless of the order in which the modules are initialized</b>!
+
 
 
 

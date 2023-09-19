@@ -10,21 +10,30 @@
 
 namespace com::neppert::context {
 
-class QApplicationContext;
 
 ///
 /// \brief A template that can be specialized to override the standard way of instantiating services.
 /// This template can be used to force the QApplicationContext to use a static factory-function instead of a constructor.
 /// You may specialize this template for your own component-types.
-/// If you do so, it must be a Callable object with a pointer to your component as its return-type
+///
+/// If you do so, you must define a call-operator with a pointer to your component as its return-type
 /// and as many arguments as are needed to construct an instance.
 ///
-/// For example, if you have a service-type `MyService` with an inaccessible constructor for which only a static factory-function `MySerivce::create` exists,
+/// For example, if you have a service-type `MyService` with an inaccessible constructor for which only a static factory-function `MySerivce::create()` exists,
 /// you may define the corresponding service_factory like this:
 ///
 ///     template<> struct service_factory<MyService> {
-///       MyService* operator()(QObject* parent) {
-///         return MyService::create(parent);
+///       MyService* operator()() const {
+///         return MyService::create();
+///       }
+///     };
+///
+/// Should the service-type `MyService` have a dependency of type `QNetworkAccessManager` that must be supplied to the factory-function,
+/// the corresponding service_factory would be defined like this this:
+///
+///     template<> struct service_factory<MyService> {
+///       MyService* operator()(QNetworkAccessManager* networkManager) const {
+///         return MyService::create(networkManager);
 ///       }
 ///     };
 ///
@@ -102,6 +111,10 @@ template<typename Srv,typename Impl> struct Service {
 ///
 ///
 template<typename S,Cardinality c=Cardinality::MANDATORY> struct Dependency {
+    ///
+    /// \brief the required name for this dependency.
+    /// The default-value is the empty String, with the implied meaning <em>"any dependency of the correct type may be used"</em>.
+    ///
     QString requiredName;
 };
 
@@ -744,6 +757,12 @@ signals:
 protected:
 
 
+    ///
+    /// \brief Registers a Service with this QApplicationContext.
+    /// \param objectName
+    /// \param config
+    /// \param dependencyInfos
+    ///
     template<typename S,typename...Dep> auto registerServiceWithDependencies(const QString& objectName, const service_config& config, Dep... dependencyInfos) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         using service_type = typename detail::service_traits<S>::service_type;
         using impl_type = typename detail::service_traits<S>::impl_type;
@@ -754,6 +773,10 @@ protected:
     }
 
 
+    ///
+    /// \brief Standard constructor.
+    /// \param parent the optional parent of this QApplicationContext.
+    ///
     explicit QApplicationContext(QObject* parent = nullptr);
 
 
@@ -802,6 +825,7 @@ protected:
     ///
     /// \param appContext the target on which to invoke registerObject(const QString& name, QObject*, service_descriptor*).
     /// \param name
+    /// \param obj
     /// \param descriptor
     /// \return the result of registerObject<S>(const QString& name, QObject*, service_descriptor*).
     ///
@@ -828,11 +852,17 @@ protected:
 
 ///
 /// \brief A mix-in interface for classes that may modify services before publication.
-/// The process(QApplicationContext*, QObject*,const QVariantMap&) method will be invoked for each service after its properties have been set, but
+/// The method process(QApplicationContext*, QObject*,const QVariantMap&) will be invoked for each service after its properties have been set, but
 /// before an *init-method* is invoked.
 ///
 class QApplicationContextPostProcessor {
 public:
+    ///
+    /// \brief Processes each service published by an ApplicationContext.
+    /// \param appContext
+    /// \param service
+    /// \param resolvedProperties
+    ///
     virtual void process(QApplicationContext* appContext, QObject* service, const QVariantMap& resolvedProperties) = 0;
 
     virtual ~QApplicationContextPostProcessor() = default;
