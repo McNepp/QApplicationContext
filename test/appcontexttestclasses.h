@@ -136,6 +136,7 @@ public:
 };
 
 class CardinalityNService : public QObject {
+    Q_OBJECT
 public:
     explicit CardinalityNService(const QList<Interface1*>& bases) :
             my_bases(bases) {
