@@ -322,6 +322,39 @@ private slots:
         QVERIFY(!service->m_dependency);
     }
 
+    void testOptionalDependencyWithAutowire() {
+        auto reg = context->registerService<DependentService,Dependency<Interface1,Cardinality::OPTIONAL>>();
+        QVERIFY(reg->autowire(&DependentService::setBase));
+        QVERIFY(!reg->autowire(&DependentService::setBase)); //Should report false on the second time.
+        RegistrationSlot<DependentService> service{reg};
+        QVERIFY(context->publish());
+        QVERIFY(!service->m_dependency);
+        auto baseReg = context->registerService<Service<Interface1,BaseService>>();
+        RegistrationSlot<Interface1> baseSlot{baseReg};
+        QVERIFY(context->publish());
+        QVERIFY(service->m_dependency);
+        QCOMPARE(service->m_dependency, baseSlot());
+    }
+
+    void testCardinalityNDependencyWithAutowire() {
+        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>();
+        QVERIFY(reg->autowire(&CardinalityNService::addBase));
+        QVERIFY(!reg->autowire(&CardinalityNService::addBase)); //Should report false on the second time.
+        RegistrationSlot<CardinalityNService> service{reg};
+        QVERIFY(context->publish());
+        QCOMPARE(service->my_bases.size(), 0);
+        auto baseReg1 = context->registerService<Service<Interface1,BaseService>>();
+        RegistrationSlot<Interface1> baseSlot1{baseReg1};
+        auto baseReg2 = context->registerService<Service<Interface1,BaseService2>>();
+        RegistrationSlot<Interface1> baseSlot2{baseReg2};
+
+        QVERIFY(context->publish());
+        QCOMPARE(service->my_bases.size(), 2);
+        QVERIFY(service->my_bases.contains(baseSlot1()));
+        QVERIFY(service->my_bases.contains(baseSlot2()));
+    }
+
+
     void testInitMethod() {
         auto baseReg = context->registerService<BaseService>("base", {}, false, "init");
         QVERIFY(context->publish());
@@ -556,6 +589,8 @@ private slots:
         QCOMPARE(regs->getPublishedObjects().size(), 2);
         QVERIFY(regs->getPublishedServices().contains(service->my_bases[0]));
         QVERIFY(regs->getPublishedServices().contains(service->my_bases[1]));
+        QVERIFY(service->my_bases.contains(base1()));
+        QVERIFY(service->my_bases.contains(base2()));
 
     }
 

@@ -7,8 +7,8 @@
 namespace com::neppert::context {
 
 /**
-* \brief Specifies the cardinality of a Service-dependency.
-* Will be used as a non-type argument to Dependency, when registering a Service.
+* \brief Specifies the cardinality of a service-dependency.
+* Will be used as a non-type argument to Dependency, when registering a service.
 * The following table sums up the characteristics of each type of dependency:
 * <table><tr><th>&nbsp;</th><th>Normal behaviour</th><th>What if no dependency can be found?</th><th>What if more than one dependency can be found?</th></tr>
 * <tr><td>MANDATORY</td><td>Injects one dependency into the dependent service.</td><td>If the dependency-type has an accessible default-constructor, this will be used to register and create an instance of that type.

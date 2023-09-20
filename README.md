@@ -172,7 +172,7 @@ somehow sum them up. Such a component could look like this:
       
       public:
       
-      explicit PropFetcherAggregator(const QList<RestPropFetcher>& fetchers, QObject* parent = nullptr);
+      explicit PropFetcherAggregator(const QList<RestPropFetcher*>& fetchers, QObject* parent = nullptr);
     };
 
 Note that the above component comprises a one-to-,any relationship with its dependent components.
@@ -260,7 +260,7 @@ And lastly, we modify our class `PropFetcherAggregator` so that it accepts depen
       
       public:
       
-      explicit PropFetcherAggregator(const QList<PropFetcher>& fetchers, QObject* parent = nullptr);
+      explicit PropFetcherAggregator(const QList<PropFetcher*>& fetchers, QObject* parent = nullptr);
     };
 
 Putting it all together, we use the helper-template `Service` for specifying both an interface-type and an implementation-type:
@@ -417,7 +417,7 @@ Each of these modules will rightly assume that the dependency of type `QNetworkA
 But which module shall then invoke QApplicationContext::publish()? Do we need to coordinate this with additional code?
 That could be a bit unwieldly. Luckily, this is not necessary.
 
-Given that each module has access to the (global) QApplicationContext, you can simply do this in some initialization function in module A:
+Given that each module has access to the (global) QApplicationContext, you can simply do this in some initialization-code in module A:
 
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
     context -> publish();
@@ -430,6 +430,42 @@ Given that each module has access to the (global) QApplicationContext, you can s
 At the first `publish()`, an instance of `QNetworkAccessManager` will be instantiated. It will be injected into both `RestPropFetchers`.
 
 This will work <b>regardless of the order in which the modules are initialized</b>!
+
+Now let's get back to our class `PropFetcherAggregator` from above. We'll assume that a third module C contains this initialization-code:
+
+    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Cardinality::N>>("propFetcherAggregator");
+    context -> publish();
+
+Unfortunately, this code will only have the desired effect of injecting all `PropFetchers` into the `PropFetcherAggregator` if it is executed after the code in modules A and B.
+Thus, we have once again introduced a mandatory order of initialization!
+
+But we can do better: First, we need to tweak our class `PropFetcherAggregator` a little:
+
+    class PropFetcherAggregator : public QObject {
+      Q_OBJECT
+      
+      public:
+      
+      explicit PropFetcherAggregator(const QList<PropFetcher*>& fetchers = {}, QObject* parent = nullptr);
+      
+      void addPropFetcher(PropFetcher*);
+    };
+
+As you can see, we've added a default-value for the constructor-argument, thus made the class default-constructible. 
+We've also added a member-function `addPropFetcher(PropFetcher*)`, which we'll put to use in the revised initialization-code in module C:
+
+    auto aggregatorRegistration = context -> registerService<PropFetcherAggregator>("propFetcherAggregator"); // No need to specify Dependency anymore!
+    
+    aggregatorRegistration->autowire(&PropFetcherAggregator::addPropFetcher); // Will cause all PropFetchers to be injected into PropFetcherAggregator.
+    
+    context -> publish();
+
+And that's all that is needed to get rid of any mandatory order of initialization of the modules A, B and C.
+
+
+
+
+
 
 
 

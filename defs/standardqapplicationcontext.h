@@ -41,11 +41,57 @@ protected:
 
 private:
 
+    struct StandardRegistration : public Registration {
+        StandardRegistration(StandardApplicationContext* parent) : Registration(parent) {
+
+        }
+
+        virtual StandardApplicationContext* applicationContext() const final override {
+            return static_cast<StandardApplicationContext*>(parent());
+        }
+
+        virtual bool registerAutoWiring(const std::type_info& type, binder_t binder) final override;
+    private:
+        struct Injector : public PublicationNotifier {
+            injector_t m_injector;
+
+            Injector(Registration* dependency, injector_t injector) : PublicationNotifier(dependency),
+                m_injector(injector) {
+            }
+
+            void notify(QObject* obj) const override {
+                m_injector(obj);
+            }
+        };
+
+        struct TargetBinder : public PublicationNotifier {
+            binder_t m_binder;
+            Registration* dependency;
+
+            TargetBinder(Registration* target, binder_t binder, Registration* dependency) : PublicationNotifier(target),
+                m_binder(binder) {
+                this->dependency = dependency;
+            }
+
+            void notify(QObject* obj) const override {
+                    injector_t injector = m_binder(obj);
+                    if(!injector) {
+                        qCritical(loggingCategory()).noquote().nospace() << "Cannot inject " << dependency->service_type().name() << " into " << obj;
+                        return;
+                    }
+                    connect(dependency, &Registration::publishedObjectsChanged, obj, Injector{dependency, injector});
+            }
+        };
 
 
-    struct DescriptorRegistration : public Registration {
+        std::unordered_map<std::type_index,binder_t> autowirings;
+
+    };
+
+
+    struct DescriptorRegistration : public StandardRegistration {
         const std::type_info& service_type() const override {
-            return descriptor->service_type();
+            return descriptor->service_type;
         }
 
 
@@ -60,6 +106,8 @@ private:
         bool isPublished() const {
             return theService != nullptr;
         }
+
+
 
 
         virtual QObjectList getPublishedObjects() const override {
@@ -91,8 +139,9 @@ private:
 
         virtual QObject* createPrivateObject(const QObjectList& dependencies) = 0;
 
+
         friend QDebug operator << (QDebug out, const DescriptorRegistration& reg) {
-            return out.nospace().noquote() << "Object '" << reg.name() << "' with service-type '" << reg.service_type().name() << "' and impl-type '" << reg.descriptor->impl_type().name() << "'";
+            return out.nospace().noquote() << "Object '" << reg.name() << "' with service-type '" << reg.service_type().name() << "' and impl-type '" << reg.descriptor->impl_type.name() << "'";
         }
 
 
@@ -210,12 +259,12 @@ private:
     };
 
 
-    struct ProxyRegistration : public Registration {
+    struct ProxyRegistration : public StandardRegistration {
 
 
 
         ProxyRegistration(const std::type_info& type, StandardApplicationContext* parent) :
-                Registration{parent},
+                StandardRegistration{parent},
                 m_type(type){
         }
 
@@ -246,11 +295,9 @@ private:
 
 
 
-
     private:
 
         descriptor_set registrations;
-
     };
 
 

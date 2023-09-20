@@ -5,11 +5,252 @@
 #include <QObject>
 #include <QVariant>
 #include <QLoggingCategory>
-#include "qapplicationcontextregistration.h"
 #include "cardinality.h"
 
 namespace com::neppert::context {
 
+class QApplicationContext;
+
+///
+/// \brief A  type that serves as a "handle" for registrations in a QApplicationContext.
+/// This class has a read-only Q_PROPERTY `publishedObjects' with a corresponding signal `publishedObjectsChanged`.
+/// However, it would be quite unwieldly to use that property directly in order to get hold of the
+/// Objects managed by this Registration.
+/// Rather, use the class-template `ServiceRegistration` and its type-safe method `ServiceRegistration::subscribe()`.
+///
+class Registration : public QObject {
+    Q_OBJECT
+
+    /// \brief The List of published Objects managed by this Registration.
+    /// If this is a Registration obtained by QApplicationContext::registerService(), the List
+    /// can comprise of at most one Object.
+    /// However, if the Registration was obtained by QApplicationContext::getRegistration(),
+    /// it may comprise multiple objects of the supplied service-type.
+    ///
+    Q_PROPERTY(QObjectList publishedObjects READ getPublishedObjects NOTIFY publishedObjectsChanged)
+
+public:
+    ///
+    /// \brief The service-type that this Registration manages.
+    /// \return The service-type that this Registration manages.
+    ///
+    [[nodiscard]] virtual const std::type_info& service_type() const = 0;
+
+    /// \brief The List of published Objects managed by this Registration.
+    /// If this is a Registration obtained by QApplicationContext::registerService(), the List
+    /// can comprise of at most one Object.
+    /// However, if the Registration was obtained by QApplicationContext::getRegistration(),
+    /// it may comprise multiple objects of the supplied service-type.
+    ///
+    [[nodiscard]] virtual QObjectList getPublishedObjects() const = 0;
+
+    ///
+    /// \brief Yields the ApplicationContext that this Registration belongs to.
+    /// \return the ApplicationContext that this Registration belongs to.
+    ///
+    [[nodiscard]] virtual QApplicationContext* applicationContext() const = 0;
+
+signals:
+
+    void publishedObjectsChanged();
+
+protected:
+
+    explicit Registration(QObject* parent = nullptr) : QObject(parent) {
+
+    }
+
+    virtual ~Registration() = default;
+
+    using injector_t = std::function<void(QObject*)>;
+    using binder_t = std::function<injector_t(QObject*)>;
+
+
+
+    class PublicationNotifier {
+    public:
+        explicit PublicationNotifier(Registration* source) :
+            m_source(source){
+        }
+
+        void operator()() const {
+            for(auto obj : m_source->getPublishedObjects()) {
+                if(publishedObjects.insert(obj).second) {
+                    notify(obj);
+                }
+            }
+        }
+    protected:
+
+        ~PublicationNotifier() = default; //We never want to delete polymorphically
+
+        virtual void notify(QObject*) const = 0;
+    private:
+        Registration* const m_source;
+        mutable std::unordered_set<QObject*> publishedObjects;
+    };
+
+    virtual bool registerAutoWiring(const std::type_info& typ, binder_t binder) = 0;
+
+    static bool delegateRegisterAutoWiring(Registration* reg, const std::type_info& type, binder_t binder) {
+        return reg->registerAutoWiring(type, binder);
+    }
+};
+
+///
+/// \brief A type-safe wrapper for a Registration.
+/// Instances of this class are being returned by the public function-templates QApplicationContext::registerService(),
+/// QApplicationContext::registerObject() and QApplicationContext::getRegistration().
+///
+/// This class offers the type-safe function `subscribe()` which should be preferred over directly connecting to the signal `publishedObjectsChanged()`.
+///
+template<typename S> class ServiceRegistration : public Registration {
+    friend class QApplicationContext;
+
+public:
+    [[nodiscard]] virtual const std::type_info& service_type() const override {
+        return unwrap()->service_type();
+    }
+
+
+
+    [[nodiscard]] virtual QObjectList getPublishedObjects() const override {
+        return unwrap()->getPublishedObjects();
+    }
+
+    [[nodiscard]] QList<S*> getPublishedServices() const {
+        QList<S*> result;
+        for(auto obj : getPublishedObjects()) {
+            if(S* ptr = dynamic_cast<S*>(obj)) {
+                result.push_back(ptr);
+            }
+        }
+        return result;
+    }
+
+    [[nodiscard]] virtual QApplicationContext* applicationContext() const override {
+        return unwrap()->applicationContext();
+    }
+
+
+
+
+    ///
+    /// \brief Receive all published QObjects in a type-safe way.
+    /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
+    /// Type `F` is assumed to be a Callable that accepts an argument of type `S*`.
+    /// If the ApplicationContext has already been published, this method
+    /// will invoke the callable immediately with the current getPublishedObjects().
+    /// \param context the target-context.
+    /// \param callable the piece of code to execute.
+    /// \param connectionType determines whether the signal is processed synchronously or asynchronously
+    /// \return the Connection representing this subscription.
+    ///
+    template<typename F> QMetaObject::Connection subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
+        auto connection = connect(this, &Registration::publishedObjectsChanged, context, CallableNotifier<F>{this, callable}, connectionType);
+        emit publishedObjectsChanged();
+        return connection;
+    }
+
+    /// \brief Receive all published QObjects in a type-safe way.
+    /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
+    /// Type `F` is assumed to be a Callable that accepts an argument of type `S*`.
+    /// If the ApplicationContext has already been published, this method
+    /// will invoke the setter immediately with the current getPublishedObjects().
+    /// \param target the object on which the setter will be invoked.
+    /// \param setter the method that will be invoked.
+    /// \param connectionType determines whether the signal is processed synchronously or asynchronously
+    /// \return the Connection representing this subscription.
+    ///
+    template<typename T,typename R> QMetaObject::Connection subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
+        auto connection = connect(this, &Registration::publishedObjectsChanged, target, SetterNotifier<T,R>{this, target, setter}, connectionType);
+        emit publishedObjectsChanged();
+        return connection;
+
+    }
+
+
+
+    Registration* unwrap() const {
+        return static_cast<Registration*>(parent());
+    }
+
+    ///
+    /// \brief Connects a service with another service from the same QApplicationContext.
+    /// Whenever a service of the type `<D>` is published, it will be injected into every service
+    /// of type `<S>`, using the supplied member-function.
+    ///
+    /// You may autowire every dependent type `<D>` at most once. This function will return `false` if you invoke
+    /// it multiple times for the same type `<D>`.
+    /// \param injectionSlot the member-function to invoke when a service of type `<D>` is published.
+    /// \return `true` if this Registration was wired for the first time for the type `<D>`.
+    ///
+    template<typename D,typename R> bool autowire(R (S::*injectionSlot)(D*)) {
+        return registerAutoWiring(typeid(D), [injectionSlot](QObject* target) {
+            injector_t injector;
+            if(S* typedTarget = dynamic_cast<S*>(target)) {
+                injector = [injectionSlot,typedTarget](QObject* dependency) {
+                    (typedTarget->*injectionSlot)(dynamic_cast<D*>(dependency));
+                };
+            }
+            return injector;
+        });
+    }
+
+
+
+protected:
+    virtual bool registerAutoWiring(const std::type_info& type, binder_t binder) override {
+        return delegateRegisterAutoWiring(unwrap(), type, binder);
+    }
+
+private:
+    explicit ServiceRegistration(Registration* reg) : Registration(reg)
+    {
+        connect(reg, &Registration::publishedObjectsChanged, this, &Registration::publishedObjectsChanged);
+    }
+
+    static ServiceRegistration* wrap(Registration* reg) {
+        return reg ? new ServiceRegistration(reg) : nullptr;
+    }
+
+
+
+    template<typename F> struct CallableNotifier : public PublicationNotifier {
+
+        CallableNotifier(Registration* source, F c) : PublicationNotifier(source),
+            callable(c) {
+        }
+
+        void notify(QObject* obj) const override {
+            if(S* ptr = dynamic_cast<S*>(obj)) {
+               callable(ptr);
+            }
+        }
+
+        F callable;
+    };
+
+    template<typename T,typename R> struct SetterNotifier : public PublicationNotifier {
+
+        SetterNotifier(Registration* source, T* target, R (T::*setter)(S*)) : PublicationNotifier(source),
+            m_setter(setter),
+            m_target(target){
+        }
+
+        void notify(QObject* obj) const override {
+            if(S* ptr = dynamic_cast<S*>(obj)) {
+               (m_target->*m_setter)(ptr);
+            }
+        }
+
+        T* const m_target;
+        R (T::*m_setter)(S*);
+    };
+
+
+
+};
 
 ///
 /// \brief A template that can be specialized to override the standard way of instantiating services.
@@ -41,7 +282,7 @@ template<typename S> struct service_factory;
 
 
 ///
-/// \brief Describes a Service by its interface and implementation.
+/// \brief Describes a service by its interface and implementation.
 ///
 /// Compilation will fail if either `Srv` is not a sub-class of QObject, or if `Impl` is not a sub-class of `Srv`.
 ///
@@ -64,7 +305,7 @@ template<typename Srv,typename Impl> struct Service {
 
 
 ///
-/// \brief Specifies a dependency of a Service.
+/// \brief Specifies a dependency of a service.
 /// Can by used as a type-argument for QApplicationContext::registerService().
 /// In the standard-case of a mandatory relationship, the use of `Dependency` is optional.
 /// Suppose you have a service-type `Reader` that needs a mandatory pointer to a `DatabaseAccess` in its constructor:
@@ -120,7 +361,7 @@ template<typename S,Cardinality c=Cardinality::MANDATORY> struct Dependency {
 
 
 ///
-/// \brief Configures a Service for an ApplicationContext.
+/// \brief Configures a service for an ApplicationContext.
 ///
 struct service_config final {
     using entry_type = std::pair<QString,QVariant>;
@@ -141,8 +382,8 @@ namespace detail {
 
 
 
-
 using constructor_t = std::function<QObject*(const QObjectList&)>;
+
 
 struct dependency_info {
     const std::type_info* m_type;
@@ -159,50 +400,22 @@ inline bool operator==(const dependency_info& info1, const dependency_info& info
 }
 
 struct service_descriptor {
-    service_descriptor(const std::type_info& service_type, const std::type_info& impl_type,
-            constructor_t constructor = nullptr,
-            const std::vector<dependency_info>& dependencies = {},
-                       const service_config& config = service_config{}) :
-            m_service_type(service_type),
-            m_impl_type(impl_type),
-            m_constructor(constructor),
-            m_dependencies(dependencies),
-            m_config(config)
-    {
-    }
-
-    const std::type_info& service_type() const {
-        return m_service_type;
-    }
-
-    const std::type_info& impl_type() const {
-        return m_impl_type;
-    }
-
-
-
-    const std::vector<dependency_info>& dependencies() const {
-        return m_dependencies;
-    }
 
 
     QObject* create(const QObjectList& dependencies) const {
-        return m_constructor ? m_constructor(dependencies) : nullptr;
+        return constructor ? constructor(dependencies) : nullptr;
     }
 
     bool matches(const std::type_index& type) const {
-        return type == m_service_type || type == m_impl_type;
+        return type == service_type || type == impl_type;
     }
 
-    const service_config& config() const {
-        return m_config;
-    }
 
-    const std::type_info& m_service_type;
-    const std::type_info& m_impl_type;
-    constructor_t m_constructor;
-    std::vector<dependency_info> m_dependencies;
-    service_config m_config;
+    const std::type_info& service_type;
+    const std::type_info& impl_type;
+    constructor_t constructor;
+    std::vector<dependency_info> dependencies;
+    service_config config;
 };
 
 ///
@@ -217,10 +430,10 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
     if (&left == &right) {
         return true;
     }
-    return left.service_type() == right.service_type() &&
-           left.impl_type() == right.impl_type() &&
-           left.dependencies() == right.dependencies() &&
-           left.config() == right.config();
+    return left.service_type == right.service_type &&
+           left.impl_type == right.impl_type &&
+           left.dependencies == right.dependencies &&
+           left.config == right.config;
  }
 
 
@@ -261,7 +474,7 @@ const QObjectList &unwrapList(QObject *obj);
 
 template<typename S,typename I,typename F> service_descriptor* create_descriptor(F creator, const std::vector<dependency_info>& dependencies = {}, const service_config& config = service_config{}) {
     static_assert(std::is_base_of_v<QObject,I>, "Impl-type must be a sub-class of QObject");
-    return new service_descriptor(typeid(S), typeid(I), creator, dependencies, config);
+    return new service_descriptor{typeid(S), typeid(I), creator, dependencies, config};
 }
 
 template<typename S> constructor_t get_default_constructor() {
@@ -507,7 +720,7 @@ struct descriptor_helper<T, D1, D2, D3, D4, D5>  : descriptor_helper_base<D1,D2,
 
 template <typename T>
 struct service_traits {
-    static_assert(std::is_base_of_v<QObject, T>, "Service-type must be a subclass of QObject");
+    static_assert(std::is_base_of_v<QObject,T>, "Service-type must be a subclass of QObject");
 
     using service_type = T;
 
@@ -556,81 +769,81 @@ public:
 
 
     ///
-    /// \brief everything needed to describe Service.
+    /// \brief everything needed to describe service.
     ///
     using service_descriptor = detail::service_descriptor;
 
     ///
-    /// \brief describes a Service-dependency.
+    /// \brief describes a service-dependency.
     ///
     using dependency_info = detail::dependency_info;
 
 
     ///
-    /// \brief Registers a Service with this ApplicationContext.
+    /// \brief Registers a service with this ApplicationContext.
     /// \see registerService(const QString&,std::initializer_list<service_config::entry_type>,bool,const QString&).
-    /// \param objectName the name that the Service shall have. If empty, a name will be auto-generated.
-    /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
+    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
     template<typename S,typename D1,Cardinality c1> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerServiceWithDependencies<S>(objectName, config, dep1);
     }
 
     ///
-    /// \brief Registers a Service with this ApplicationContext.
+    /// \brief Registers a service with this ApplicationContext.
     /// \see registerService(const QString&,std::initializer_list<service_config::entry_type>,bool,const QString&).
-    /// \param objectName the name that the Service shall have. If empty, a name will be auto-generated.
-    /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
+    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
     template<typename S,typename D1,Cardinality c1,typename D2,Cardinality c2> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerServiceWithDependencies<S>(objectName, config, dep1, dep2);
     }
 
     ///
-    /// \brief Registers a Service with this ApplicationContext.
+    /// \brief Registers a service with this ApplicationContext.
     /// \see registerService(const QString&,std::initializer_list<service_config::entry_type>,bool,const QString&).
-    /// \param objectName the name that the Service shall have. If empty, a name will be auto-generated.
-    /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
+    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
     template<typename S,typename D1,Cardinality c1,typename D2,Cardinality c2,typename D3,Cardinality c3> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerServiceWithDependencies<S>(objectName, config, dep1, dep2, dep3);
     }
 
     ///
-    /// \brief Registers a Service with this ApplicationContext.
+    /// \brief Registers a service with this ApplicationContext.
     /// \see registerService(const QString&,std::initializer_list<service_config::entry_type>,bool,const QString&).
-    /// \param objectName the name that the Service shall have. If empty, a name will be auto-generated.
-    /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
+    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
     template<typename S,typename D1,Cardinality c1,typename D2,Cardinality c2,typename D3,Cardinality c3,typename D4,Cardinality c4> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3, Dependency<D4,c4> dep4) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerServiceWithDependencies<S>(objectName, config, dep1, dep2, dep3, dep4);
     }
 
     ///
-    /// \brief Registers a Service with this ApplicationContext.
+    /// \brief Registers a service with this ApplicationContext.
     /// \see registerService(const QString&,std::initializer_list<service_config::entry_type>,bool,const QString&).
-    /// \param objectName the name that the Service shall have. If empty, a name will be auto-generated.
-    /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
+    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
     template<typename S,typename D1,Cardinality c1,typename D2,Cardinality c2,typename D3,Cardinality c3,typename D4,Cardinality c4,typename D5,Cardinality c5> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3, Dependency<D4,c4> dep4, Dependency<D5,c5> dep5) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerServiceWithDependencies<S>(objectName, config, dep1, dep2, dep3, dep4, dep5);
@@ -638,7 +851,7 @@ public:
 
 
     ///
-    /// \brief Registers a Service with this ApplicationContext.
+    /// \brief Registers a service with this ApplicationContext.
     ///
     /// There are two alternatives for specifying the service-type:
     /// 1. Use a QObject-derived class directly as the service-type:
@@ -649,21 +862,21 @@ public:
     ///
     ///     context -> registerService<Service<QAbstractItemModel,QStringListModel>>();
     ///
-    /// \param objectName the name that the Service shall have. If empty, a name will be auto-generated.
-    /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param properties the configuration-properties for the service.
     /// \param autowire determines whether the service's properties shall be autowired.
-    /// \param initMethod the Q_INVOKABLE method to call before publishing this Service.
+    /// \param initMethod the Q_INVOKABLE method to call before publishing this service.
     /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
+    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
     template<typename S,typename...Dep> auto registerService(const QString& objectName = "", std::initializer_list<service_config::entry_type> properties = {}, bool autowire = false, const QString& initMethod = "") -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerService<S,Dep...>(objectName, service_config{properties, autowire, initMethod});
     }
 
     ///
-    /// \brief Registers a Service with this ApplicationContext.
+    /// \brief Registers a service with this ApplicationContext.
     ///
     /// There are two alternatives for specifying the service-type:
     /// 1. Use a QObject-derived class directly as the service-type:
@@ -674,12 +887,12 @@ public:
     ///
     ///     context -> registerService<Service<QAbstractItemModel,QStringListModel>>();
     ///
-    /// \param objectName the name that the Service shall have. If empty, a name will be auto-generated.
-    /// The instantiated Service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param config the configuration for the service.
     /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered Service, or `nullptr` if it could not be registered.
+    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
     template<typename S,typename...Dep> auto registerService(const QString& objectName, const service_config& config) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         using service_type = typename detail::service_traits<S>::service_type;
@@ -707,7 +920,7 @@ public:
     ///
     template<typename S> ServiceRegistration<S>* registerObject(S* obj, const QString& objName = "") {
         static_assert(detail::could_be_qobject<S>, "Object is not convertible to QObject");
-        return ServiceRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), new service_descriptor(typeid(S), typeid(*obj))));
+        return ServiceRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), new service_descriptor{typeid(S), typeid(*obj)}));
     }
 
     ///
@@ -758,7 +971,7 @@ protected:
 
 
     ///
-    /// \brief Registers a Service with this QApplicationContext.
+    /// \brief Registers a service with this QApplicationContext.
     /// \param objectName
     /// \param config
     /// \param dependencyInfos
@@ -781,10 +994,10 @@ protected:
 
 
     ///
-    /// \brief Registers a Service with this QApplicationContext.
+    /// \brief Registers a service with this QApplicationContext.
     /// \param name
     /// \param descriptor
-    /// \return a Registration for the Service, or `nullptr` if it could not be registered.
+    /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
     virtual Registration* registerService(const QString& name, service_descriptor* descriptor) = 0;
 
@@ -867,6 +1080,8 @@ public:
 
     virtual ~QApplicationContextPostProcessor() = default;
 };
+
+
 
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 

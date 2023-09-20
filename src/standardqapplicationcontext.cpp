@@ -30,6 +30,16 @@ struct QOwningList : QObjectList {
 
     }
 };
+
+QMetaMethod methodByName(const QMetaObject* metaObject, const QString& name) {
+    for(int i = 0; i < metaObject->methodCount(); ++i) {
+        auto method = metaObject->method(i);
+            if(method.name() == name.toLatin1()) {
+                return method;
+            }
+        }
+        return {};
+    }
 }
 
 inline QString cardinalityToString(Cardinality card) {
@@ -49,7 +59,7 @@ inline QString cardinalityToString(Cardinality card) {
 }
 
 inline QDebug operator<<(QDebug out, const QApplicationContext::dependency_info& info) {
-    QDebug tmp = out.noquote().nospace() << "Dependency '" << info.type().name() << "' [" << cardinalityToString(info.cardinality);
+    QDebug tmp = out.noquote().nospace() << "Dependency '" << info.type().name() << "' [" << cardinalityToString(info.cardinality) << ']';
     if(!info.requiredName.isEmpty()) {
         return tmp << "] with required name '" << info.requiredName << "'";
     }
@@ -90,7 +100,7 @@ void StandardApplicationContext::unpublish()
             }
             auto reg = *iter;
             for(auto& depend : published) {
-                for(auto& t : depend->descriptor->dependencies()) {
+                for(auto& t : depend->descriptor->dependencies) {
                     if(reg->descriptor->matches(t.type())) {
                         ++iter;
                         goto loop_head;
@@ -170,12 +180,12 @@ QObject* StandardApplicationContext::resolveDependency(const descriptor_set &pub
                 qCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
                 return nullptr;
             }
-            depReg = new ServiceRegistration{"", new service_descriptor{d.type(), type, d.defaultConstructor}, this};
+            depReg = new ServiceRegistration{"", new service_descriptor{type, type, d.defaultConstructor}, this};
             publishedNow.push_back(depReg);
         }
         QObjectList subDep;
         QOwningList privateSubDep;
-        for(auto& dd : depReg->descriptor->dependencies()) {
+        for(auto& dd : depReg->descriptor->dependencies) {
             auto result = resolveDependency(published, publishedNow, depReg, dd, temporaryParent);
             if(!result && dd.cardinality != Cardinality::OPTIONAL) {
                 return nullptr;
@@ -270,7 +280,7 @@ bool StandardApplicationContext::isResolvable() const
         if(reg->isPublished()) {
             continue;
         }
-        for(auto& t : reg->descriptor->dependencies()) {
+        for(auto& t : reg->descriptor->dependencies) {
             bool foundMatch = false;
 
             switch(t.cardinality) {
@@ -301,7 +311,7 @@ bool StandardApplicationContext::isResolvable() const
                 continue;
             }
         }
-        for(auto& beanRef : getBeanRefs(reg->descriptor->config())) {
+        for(auto& beanRef : getBeanRefs(reg->descriptor->config)) {
 
             if(!getRegistrationByName(beanRef)) {
                 qCCritical(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
@@ -332,8 +342,8 @@ bool StandardApplicationContext::publish()
 
     qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext with " << unpublished.size() << " unpublished Objects";
 
-    //Do several rounds and publish those Services whose dependencies have already been published.
-    //For a Service with an empty set of dependencies, this means that it will be published first.
+    //Do several rounds and publish those services whose dependencies have already been published.
+    //For a service with an empty set of dependencies, this means that it will be published first.
     while(!unpublished.empty()) {
 
         for(auto iter = unpublished.begin();;) {
@@ -344,7 +354,7 @@ bool StandardApplicationContext::publish()
             auto reg = *iter;
             QObjectList dependencies;
             QOwningList privateDependencies;
-            for(auto& d : reg->descriptor->dependencies()) {
+            for(auto& d : reg->descriptor->dependencies) {
                 //If there are unpublished dependencies, skip this service:
                 if(find_by_type(unpublished, d.type())) {
                     ++iter;
@@ -360,7 +370,7 @@ bool StandardApplicationContext::publish()
                     }
                 }
             }
-            for(auto& d : reg->descriptor->dependencies()) {
+            for(auto& d : reg->descriptor->dependencies) {
                 auto result = resolveDependency(allPublished, publishedNow, reg, d, &temporaryParent);
                 if(!result && d.cardinality != Cardinality::OPTIONAL) {
                     return false;
@@ -409,7 +419,7 @@ bool StandardApplicationContext::publish()
                 break;
             }
             auto reg = *iter;
-            for(auto& beanRef : getBeanRefs(reg->descriptor->config())) {
+            for(auto& beanRef : getBeanRefs(reg->descriptor->config)) {
                 auto foundByName = std::find_if(iter, publishedNow.end(), [&beanRef](DescriptorRegistration* r) { return r->name() == beanRef;});
                 if(foundByName != publishedNow.end()) {
                     ++iter;
@@ -522,12 +532,12 @@ Registration* StandardApplicationContext::registerService(const QString& name, s
 
 Registration * StandardApplicationContext::registerObject(const QString &name, QObject *obj, service_descriptor* descriptor)
 {
-    auto registration = std::make_unique<ObjectRegistration>(name.isEmpty() ? obj->objectName() : name, obj, descriptor, this);
-
+    std::unique_ptr<service_descriptor> descriptorPtr{descriptor};
     if(!obj) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << *registration;
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << descriptor->service_type.name();
         return nullptr;
     }
+    auto registration = std::make_unique<ObjectRegistration>(name.isEmpty() ? obj->objectName() : name, obj, descriptorPtr.release(), this);
 
     auto result = registerDescriptor(registration.get());
     if(result.second) {
@@ -543,7 +553,7 @@ Registration * StandardApplicationContext::registerObject(const QString &name, Q
 
 void StandardApplicationContext::findTransitiveDependenciesOf(service_descriptor* descriptor, std::unordered_set<std::type_index>& result) const
 {
-    for(auto& t : descriptor->dependencies()) {
+    for(auto& t : descriptor->dependencies) {
         if(find_by_type(registrations, t.type())) {
             result.insert(t.type());
             for(auto reg : registrations) {
@@ -561,7 +571,7 @@ void StandardApplicationContext::findTransitiveDependenciesOf(service_descriptor
 bool StandardApplicationContext::checkTransitiveDependentsOn(service_descriptor* descriptor, const std::unordered_set<std::type_index>& dependencies) const
 {
     for(auto reg : registrations) {
-        for(auto& t : reg->descriptor->dependencies()) {
+        for(auto& t : reg->descriptor->dependencies) {
             if(descriptor->matches(t.type())) {
                 if(std::find_if(dependencies.begin(), dependencies.end(), [reg](auto dep) { return reg->matches(dep);}) != dependencies.end()) {
                    return false;
@@ -589,6 +599,7 @@ QVariant StandardApplicationContext::resolveValue(const QVariant &value)
             qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << components[0] << "'";
             return {};
         }
+
         QVariant resultValue = QVariant::fromValue(bean->getObject());
         for(unsigned pos = 1; pos < components.size(); ++pos) {
             QString propName = components[pos];
@@ -700,7 +711,7 @@ bool StandardApplicationContext::configure(DescriptorRegistration* reg, QObject*
         return false;
     }
     auto metaObject = target->metaObject();
-    auto config = reg->descriptor->config();
+    auto& config = reg->descriptor->config;
     if(metaObject) {
         std::unordered_set<QString> usedProperties;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
@@ -775,30 +786,28 @@ bool StandardApplicationContext::configure(DescriptorRegistration* reg, QObject*
     }
 
     if(!config.initMethod.isEmpty()) {
-        for(int index = 0, methodCount = metaObject->methodCount(); index < methodCount; ++index) {
-            auto method = metaObject->method(index);
-            qCInfo(loggingCategory()) << "method: " << method.name();
-            if(method.name() == config.initMethod) {
-                switch(method.parameterCount()) {
-                case 0:
-                    if(metaObject->method(index).invoke(target)) {
-                        qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method '" << config.initMethod << "' of " << *reg;
-                        return true;
-                    }
-                    break;
-                case 1:
-                    if(metaObject->method(index).invoke(target, Q_ARG(QApplicationContext*,this))) {
-                        qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method '" << config.initMethod << "' of " << *reg << ", passing the ApplicationContext";
-                        return true;
-                    }
-                    break;
-               }
-               qCCritical(loggingCategory()).nospace().noquote() << "Could not invoke init-method '" << method.methodSignature() << "' of " << *reg;
-               return false;
-            }
+        QMetaMethod method = methodByName(metaObject, config.initMethod);
+        if(!method.isValid()) {
+            qCCritical(loggingCategory()).nospace().noquote() << "Could not find init-method '" << config.initMethod << "'";
+            return false;
+
         }
-        qCCritical(loggingCategory()).nospace().noquote() << "Could not find init-method '" << config.initMethod << "'";
-        return false;
+        switch(method.parameterCount()) {
+        case 0:
+            if(method.invoke(target)) {
+                qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method '" << config.initMethod << "' of " << *reg;
+                return true;
+            }
+            break;
+        case 1:
+            if(method.invoke(target, Q_ARG(QApplicationContext*,this))) {
+                qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method '" << config.initMethod << "' of " << *reg << ", passing the ApplicationContext";
+                return true;
+            }
+            break;
+       }
+       qCCritical(loggingCategory()).nospace().noquote() << "Could not invoke init-method '" << method.methodSignature() << "' of " << *reg;
+       return false;
     }
     return true;
 }
@@ -819,17 +828,30 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key) c
     return {};
 }
 
+
 StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const QString& name, service_descriptor* desc, StandardApplicationContext* parent) :
-    Registration(parent),
+    StandardRegistration(parent),
     descriptor{desc},
     theService{nullptr},
     isAnonymous(name.isEmpty()),
     m_name(name)
     {
        if(isAnonymous) {
-           m_name = QString{descriptor->service_type().name()}+"-"+QUuid::createUuid().toString(QUuid::WithoutBraces);
+           m_name = QString{descriptor->service_type.name()}+"-"+QUuid::createUuid().toString(QUuid::WithoutBraces);
        }
     }
+
+    bool StandardApplicationContext::StandardRegistration::registerAutoWiring(const type_info &type, binder_t binder)
+    {
+
+       auto result = autowirings.insert({type, binder});
+       if(result.second) {
+           connect(this, &Registration::publishedObjectsChanged, this, TargetBinder{this, binder, applicationContext()->getRegistration(type)});
+       }
+       return result.second;
+    }
+
+
 
 
 

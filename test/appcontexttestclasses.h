@@ -126,8 +126,13 @@ public:
     {
 
     }
+    void setBase(Interface1* base) {
+        m_dependency = base;
+    }
 
     Interface1* m_dependency;
+
+
 };
 
 class CardinalityNService : public QObject {
@@ -135,6 +140,9 @@ public:
     explicit CardinalityNService(const QList<Interface1*>& bases) :
             my_bases(bases) {
 
+    }
+    void addBase(Interface1* base) {
+        my_bases.push_back(base);
     }
 
     QList<Interface1*> my_bases;
