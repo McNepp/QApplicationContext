@@ -7,7 +7,7 @@
 #include <QLoggingCategory>
 #include "cardinality.h"
 
-namespace com::neppert::context {
+namespace mcnepp::qtdi {
 
 class QApplicationContext;
 

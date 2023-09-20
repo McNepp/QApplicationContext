@@ -5,10 +5,9 @@
 #include "appcontexttestclasses.h"
 #include "qtestcase.h"
 
-namespace com::neppert::context {
+namespace mcnepp::qtdi {
 
-
-using namespace contexttest;
+using namespace qtditest;
 
 template<> struct service_factory<BaseService> {
     BaseService* operator()() const {
@@ -20,8 +19,9 @@ template<> struct service_factory<BaseService> {
     }
 
 };
+}
 
-
+namespace mcnepp::qtditest {
 
 template<typename S> class RegistrationSlot : public QObject {
 public:
@@ -839,9 +839,9 @@ private:
     QSettings* config;
 };
 
-} //com::neppert::context
+} //mcnepp::qtdi
 
 #include "testqapplicationcontext.moc"
 
 
-QTEST_MAIN(com::neppert::context::ApplicationContextTest)
+QTEST_MAIN(mcnepp::qtdi::ApplicationContextTest)

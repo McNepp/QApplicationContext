@@ -57,7 +57,7 @@ The declaration of such a component may look like this:
 
 Given the above component, here is the minimal code for creating a QApplicationContext which exposes such a RestPropFetcher:
 
-    using namespace com::neppert::context;
+    using namespace mcnepp::qtdi;
     
     QApplicationContext* context = new StandardQApplicationContext; // 1
     
@@ -140,7 +140,7 @@ There are some crucial differences between `QApplicationContext::registerService
 In our previous example, we have seen the dependency of our `RestPropFetcher` to a `QNetworkAccessManager`.  
 This constitutes a *mandatory dependency*: instantion of the `RestPropFetcher`will fail if no `QNetworkAccessManager`can be found.
 However, there are more ways to express a dependency-relation.  
-This is reflected by the enum-type `com::neppert::context::Cardinality` and its enum-constants as listed below:
+This is reflected by the enum-type `mcnepp::qtdi::Cardinality` and its enum-constants as listed below:
 
 
 ### MANDATORY
@@ -266,7 +266,7 @@ And lastly, we modify our class `PropFetcherAggregator` so that it accepts depen
 Putting it all together, we use the helper-template `Service` for specifying both an interface-type and an implementation-type:
 
 
-    using namespace com::neppert::context;
+    using namespace mcnepp::qtdi;
     
     QApplicationContext* context = new StandardQApplicationContext; 
     
@@ -290,7 +290,7 @@ This was done to demonstrate that **the order of registrations is actually compl
 
 Every service that is registered with a QApplicationContext will go through the following states, in the order shown.
 The names of these states are shown for illustration-purposes only. They are not visible outside the QApplicationContext.  
-However, some transitions trigger may have observable side-effects.
+However, some transitions may have observable side-effects.
 
 |External Trigger|Internal Step|State|Observable side-effect|
 |---|---|---|---|

@@ -2,7 +2,7 @@
 #include "qapplicationcontext.h"
 #include <unordered_set>
 
-namespace com::neppert::context {
+namespace mcnepp::qtdi {
 
 
 
@@ -55,4 +55,4 @@ const QObjectList &unwrapList(QObject *obj)
 
 }//detail
 
-}//com::neppert::context
+}//mcnepp::qtdi

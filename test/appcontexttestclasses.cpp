@@ -1,6 +1,6 @@
 #include "appcontexttestclasses.h"
 
-namespace com::neppert::contexttest {
+namespace mcnepp::qtditest {
 
 BaseService::BaseService(QObject *parent)
     : BaseService{nullptr, parent}

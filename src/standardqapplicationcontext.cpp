@@ -6,7 +6,7 @@
 #include <QSettings>
 #include "standardqapplicationcontext.h"
 
-namespace com::neppert::context {
+namespace mcnepp::qtdi {
 
 
 
@@ -863,4 +863,4 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
 
 
 
-}//com::neppert::context
+}//mcnepp::qtdi

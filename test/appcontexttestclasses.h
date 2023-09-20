@@ -3,9 +3,10 @@
 #include <QTimer>
 #include <QObject>
 
-namespace com::neppert::contexttest {
+namespace mcnepp::qtditest {
 
-using namespace context;
+using namespace qtdi;
+
 
 class Interface1 {
 public:
@@ -23,7 +24,7 @@ class CyclicDependency;
 
 class BaseService : public QObject, public Interface1
 {
-    friend struct com::neppert::context::service_factory<BaseService>;
+    friend struct mcnepp::qtdi::service_factory<BaseService>;
 
     Q_OBJECT
 public:

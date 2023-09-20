@@ -4,7 +4,7 @@
  *  @author McNepp
 */
 
-namespace com::neppert::context {
+namespace mcnepp::qtdi {
 
 /**
 * \brief Specifies the cardinality of a service-dependency.

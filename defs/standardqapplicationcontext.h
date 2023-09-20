@@ -8,7 +8,7 @@
 #include <typeindex>
 #include "qapplicationcontext.h"
 
-namespace com::neppert::context {
+namespace mcnepp::qtdi {
 
 
 ///
