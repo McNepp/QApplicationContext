@@ -44,6 +44,7 @@ public:
     ///
     [[nodiscard]] virtual QObjectList getPublishedObjects() const = 0;
 
+
     ///
     /// \brief Yields the ApplicationContext that this Registration belongs to.
     /// \return the ApplicationContext that this Registration belongs to.
@@ -386,17 +387,14 @@ using constructor_t = std::function<QObject*(const QObjectList&)>;
 
 
 struct dependency_info {
-    const std::type_info* m_type;
+    const std::type_info& type;
     Cardinality cardinality;
     constructor_t defaultConstructor;
     QString requiredName;
-    const std::type_info& type() const {
-        return *m_type;
-    }
 };
 
 inline bool operator==(const dependency_info& info1, const dependency_info& info2) {
-    return info1.type() == info2.type() && info1.cardinality == info2.cardinality && info1.requiredName == info2.requiredName;
+    return info1.type == info2.type && info1.cardinality == info2.cardinality && info1.requiredName == info2.requiredName;
 }
 
 struct service_descriptor {
@@ -472,9 +470,9 @@ const QObjectList &unwrapList(QObject *obj);
 
 
 
-template<typename S,typename I,typename F> service_descriptor* create_descriptor(F creator, const std::vector<dependency_info>& dependencies = {}, const service_config& config = service_config{}) {
+template<typename S,typename I,typename F> service_descriptor create_descriptor(F creator, const std::vector<dependency_info>& dependencies = {}, const service_config& config = service_config{}) {
     static_assert(std::is_base_of_v<QObject,I>, "Impl-type must be a sub-class of QObject");
-    return new service_descriptor{typeid(S), typeid(I), creator, dependencies, config};
+    return service_descriptor{typeid(S), typeid(I), creator, dependencies, config};
 }
 
 template<typename S> constructor_t get_default_constructor() {
@@ -512,11 +510,11 @@ template <typename S,Cardinality card> struct dependency_helper_base {
     }
 
     static dependency_info info() {
-        return { &typeid(S), card, get_default_constructor<S>() };
+        return { typeid(S), card, get_default_constructor<S>() };
     }
 
     static dependency_info info(Dependency<S,card> dep) {
-        return { &typeid(S), card, get_default_constructor<S>(), dep.requiredName };
+        return { typeid(S), card, get_default_constructor<S>(), dep.requiredName };
     }
 
 
@@ -536,11 +534,11 @@ struct dependency_helper<Dependency<S, Cardinality::N>> {
     }
 
     static dependency_info info() {
-        return { &typeid(S), Cardinality::N };
+        return { typeid(S), Cardinality::N };
     }
 
     static dependency_info info(Dependency<S,Cardinality::N> dep) {
-        return { &typeid(S), Cardinality::N, nullptr, dep.requiredName };
+        return { typeid(S), Cardinality::N, nullptr, dep.requiredName };
     }
 };
 
@@ -758,14 +756,23 @@ class QApplicationContext : public QObject
 public:
 
     ///
-    /// \brief Have all registered services been published?
+    /// \brief How many services have been published?
     /// This property will initially yield `false`, until publish() is invoked.
-    /// If that was successul, this property will yield `true`.
-    /// It will stay `true` as long as no more services are registered but not yet published.
-    /// **Note:** This property will **not** transition back to `false` upon destruction of this ApplicationContext!
-    /// \return `true` if all registered services have been published.
+    /// **Note:** This property will **not** transition back to `0` upon destruction of this ApplicationContext!
+    /// \return the number of published services.
     ///
-    Q_PROPERTY(bool published READ published NOTIFY publishedChanged)
+    Q_PROPERTY(unsigned published READ published NOTIFY publishedChanged)
+
+    ///
+    /// \brief How many services have been registered and not yet published?
+    /// This property will initially yield `0`.
+    /// Then, it will increase with every successfull registerService() invocation.
+    /// If publish() is invoked successfully, the property will again yield `0`.
+    /// **Note:** This property will **not** transition back to `0` upon destruction of this ApplicationContext!
+    /// \return the number of registered but not yet published services.
+    ///
+    Q_PROPERTY(unsigned pendingPublication READ pendingPublication NOTIFY pendingPublicationChanged)
+
 
 
     ///
@@ -920,7 +927,7 @@ public:
     ///
     template<typename S> ServiceRegistration<S>* registerObject(S* obj, const QString& objName = "") {
         static_assert(detail::could_be_qobject<S>, "Object is not convertible to QObject");
-        return ServiceRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), new service_descriptor{typeid(S), typeid(*obj)}));
+        return ServiceRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), service_descriptor{typeid(S), typeid(*obj)}));
     }
 
     ///
@@ -941,30 +948,38 @@ public:
     /// \brief Publishes this ApplicationContext.
     /// This method may be invoked multiple times.
     /// Each time it is invoked, it will attempt to instantiate all yet-unpublished services that have been registered with this ApplicationContext.
-    /// \return `true` if this ApplicationContext could be successfully published.
+    /// \return `true` if all registered services could be successfully published.
     ///
     virtual bool publish() = 0;
 
     ///
-    /// \brief Have all registered services been published?
-    /// This property will initially yield `false`, until publish() is invoked.
-    /// If that was successul, this property will yield `true`.
-    /// It will stay `true` as long as no more services are registered but not yet published.
-    /// **Note:** This property will **not** transition back to `false` upon destruction of this ApplicationContext!
-    /// \return `true` if all registered services have been published.
+    /// \brief The number of published services.
+    /// \return The number of published services.
     ///
-    virtual bool published() const = 0;
+    virtual unsigned published() const = 0;
+
+    /// \brief The number of yet unpublished services.
+    /// \return the number of services that have been registered but not (yet) published.
+    ///
+    [[nodiscard]] virtual unsigned pendingPublication() const = 0;
+
+
 
 signals:
 
     ///
     /// \brief Signals that the published() property has changed.
-    /// This signal will be emitted with a `true`value after a successful invocatin of publich().
-    /// It will be emitted with a `false` value when a new service has been registered after publication.
+    /// May be emitted upon publish().
     /// **Note:** the signal will not be emitted on destruction of this ApplicationContext!
     ///
-    void publishedChanged(bool);
+    void publishedChanged();
 
+    ///
+    /// \brief Signals that the pendingPublication() property has changed.
+    /// May be emitted upon registerService(), registerObject() or publish().
+    /// **Note:** the signal will not be emitted on destruction of this ApplicationContext!
+    ///
+    void pendingPublicationChanged();
 
 
 protected:
@@ -999,7 +1014,7 @@ protected:
     /// \param descriptor
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
-    virtual Registration* registerService(const QString& name, service_descriptor* descriptor) = 0;
+    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor) = 0;
 
     ///
     /// \brief Registers an Object with this QApplicationContext.
@@ -1008,7 +1023,7 @@ protected:
     /// \param descriptor
     /// \return a Registration for the object, or `nullptr` if it could not be registered.
     ///
-    virtual Registration* registerObject(const QString& name, QObject* obj, service_descriptor* descriptor) = 0;
+    virtual Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) = 0;
 
     ///
     /// \brief Obtains a Registration for a service_type.
@@ -1027,7 +1042,7 @@ protected:
     /// \param descriptor
     /// \return the result of registerService(const QString&, service_descriptor*).
     ///
-    static Registration* delegateRegisterService(QApplicationContext& appContext, const QString& name, service_descriptor* descriptor) {
+    static Registration* delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor) {
         return appContext.registerService(name, descriptor);
     }
 
@@ -1042,7 +1057,7 @@ protected:
     /// \param descriptor
     /// \return the result of registerObject<S>(const QString& name, QObject*, service_descriptor*).
     ///
-    static Registration* delegateRegisterObject(QApplicationContext& appContext, const QString& name, QObject* obj, service_descriptor* descriptor) {
+    static Registration* delegateRegisterObject(QApplicationContext& appContext, const QString& name, QObject* obj, const service_descriptor& descriptor) {
         return appContext.registerObject(name, obj, descriptor);
     }
 

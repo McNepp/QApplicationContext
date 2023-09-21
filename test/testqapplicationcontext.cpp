@@ -203,8 +203,11 @@ private slots:
 
     void testWithUnresolvableProperty() {
 
-        context->registerService<QTimer>("timer", {{"interval", "${timer.interval}"}});
+        context->registerService<QTimer>("timer", {{"interval", "${interval}"}});
         QVERIFY(!context->publish());
+        config->setValue("interval", 4711);
+        context->registerObject(config);
+        QVERIFY(context->publish());
     }
 
 
@@ -540,8 +543,8 @@ private slots:
         auto reg = context->registerService<Service<Interface1,BaseService>>();
         QVERIFY(reg);
         //Same Interface, same implementation, but different properties:
-        auto reg3 = context->registerService<Service<Interface1,BaseService>>("", {{"objectName", "tester"}});
-        QCOMPARE_NE(reg3, reg);
+        auto reg2 = context->registerService<Service<Interface1,BaseService>>("", {{"objectName", "tester"}});
+        QCOMPARE_NE(reg2->unwrap(), reg->unwrap());
     }
 
     void testFailRegisterTwiceSameName() {
@@ -549,8 +552,8 @@ private slots:
         QVERIFY(reg);
 
         //Everything is different, but the name:
-        auto reg5 = context->registerService<DependentService,BaseService>("base");
-        QCOMPARE(reg5->unwrap(), reg->unwrap());
+        auto reg2 = context->registerService<DependentService,BaseService>("base");
+        QVERIFY(!reg2);
     }
 
 
@@ -560,8 +563,8 @@ private slots:
         QVERIFY(reg);
 
         //Same Interface, same implementation, same properties, same name:
-        auto reg5 = context->registerService<Service<Interface1,BaseService>>();
-        QCOMPARE(reg5->unwrap(), reg->unwrap());
+        auto reg2 = context->registerService<Service<Interface1,BaseService>>();
+        QCOMPARE(reg2->unwrap(), reg->unwrap());
     }
 
 
@@ -671,6 +674,8 @@ private slots:
         auto reg = context->registerService<DependentService,Interface1>();
         QVERIFY(reg);
         QVERIFY(!context->publish());
+        context->registerService<Service<Interface1,BaseService>>();
+        QVERIFY(context->publish());
     }
 
     void testCyclicDependency() {
@@ -730,30 +735,40 @@ private slots:
 
     void testPublishAdditionalServices() {
 
-        bool contextPublished = context->published();
-        connect(context, &QApplicationContext::publishedChanged, this, [&contextPublished] (bool p) {contextPublished = p;});
+        unsigned contextPublished = context->published();
+        unsigned contextPending = context->pendingPublication();
+        connect(context, &QApplicationContext::publishedChanged, this, [this,&contextPublished] {contextPublished = context->published();});
+        connect(context, &QApplicationContext::pendingPublicationChanged, this, [this,&contextPending] {contextPending = context->pendingPublication();});
         context->registerService<Service<Interface1,BaseService>>("base");
+        QCOMPARE(contextPending, 1);
         RegistrationSlot<Interface1> baseSlot{context->getRegistration<Interface1>()};
         auto regDep = context->registerService<DependentService,Interface1>();
         RegistrationSlot<DependentService> depSlot{regDep};
-
-        QVERIFY(!contextPublished);
+        QCOMPARE(contextPending, 2);
+        QCOMPARE(contextPublished, 0);
         QVERIFY(context->publish());
-        QVERIFY(contextPublished);
+        QCOMPARE(contextPending, 0);
+        QCOMPARE(contextPublished, 2);
+
         QVERIFY(baseSlot());
         QVERIFY(depSlot());
         QCOMPARE(baseSlot.invocationCount(), 1);
         QCOMPARE(baseSlot(), baseSlot());
 
         auto anotherBaseReg = context->registerService<Service<Interface1,BaseService2>>("anotherBase");
-        QVERIFY(!contextPublished);
+        QCOMPARE(contextPending, 1);
+        QCOMPARE(contextPublished, 2);
+
         RegistrationSlot<Interface1> anotherBaseSlot{anotherBaseReg};
         auto regCard = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>();
-        QVERIFY(!contextPublished);
+        QCOMPARE(contextPending, 2);
+        QCOMPARE(contextPublished, 2);
+
 
         RegistrationSlot<CardinalityNService> cardSlot{regCard};
         QVERIFY(context->publish());
-        QVERIFY(contextPublished);
+        QCOMPARE(contextPending, 0);
+        QCOMPARE(contextPublished, 4);
         QVERIFY(cardSlot());
         QCOMPARE(cardSlot->my_bases.size(), 2);
         QCOMPARE(baseSlot.invocationCount(), 2);

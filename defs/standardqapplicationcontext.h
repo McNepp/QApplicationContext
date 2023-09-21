@@ -24,16 +24,16 @@ public:
 
     virtual bool publish() final override;
 
-    virtual bool published() const final override;
+    virtual unsigned published() const final override;
 
-
+    virtual unsigned pendingPublication() const override;
 
 
 protected:
 
-    virtual Registration* registerService(const QString& name, service_descriptor* descriptor) override;
+    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor) override;
 
-    virtual Registration* registerObject(const QString& name, QObject* obj, service_descriptor* descriptor) override;
+    virtual Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
 
     virtual Registration* getRegistration(const std::type_info& service_type) const override;
 
@@ -91,7 +91,7 @@ private:
 
     struct DescriptorRegistration : public StandardRegistration {
         const std::type_info& service_type() const override {
-            return descriptor->service_type;
+            return descriptor.service_type;
         }
 
 
@@ -99,21 +99,19 @@ private:
             return m_name;
         }
 
-        QObject* getObject() const {
-            return theService;
-        }
+        virtual QObject* getObject() const = 0;
 
-        bool isPublished() const {
-            return theService != nullptr;
-        }
+        virtual bool isPublished() const = 0;
+
+        virtual bool isEqual(const service_descriptor& descriptor, QObject* obj) const = 0;
 
 
 
 
         virtual QObjectList getPublishedObjects() const override {
             QObjectList result;
-            if(theService) {
-                result.push_back(theService);
+            if(isPublished()) {
+                    result.push_back(getObject());
             }
             return result;
         }
@@ -122,14 +120,12 @@ private:
 
 
         bool matches(const std::type_index& type) const {
-            return descriptor->matches(type);
+            return descriptor.matches(type);
         }
 
 
-        DescriptorRegistration(const QString& name, service_descriptor* desc, StandardApplicationContext* parent);
+        DescriptorRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent);
 
-
-        virtual bool operator==(const DescriptorRegistration& other) const = 0;
 
         virtual QObject* publish(const QObjectList& dependencies) = 0;
 
@@ -141,15 +137,12 @@ private:
 
 
         friend QDebug operator << (QDebug out, const DescriptorRegistration& reg) {
-            return out.nospace().noquote() << "Object '" << reg.name() << "' with service-type '" << reg.service_type().name() << "' and impl-type '" << reg.descriptor->impl_type.name() << "'";
+            return out.nospace().noquote() << "Object '" << reg.name() << "' with service-type '" << reg.service_type().name() << "' and impl-type '" << reg.descriptor.impl_type.name() << "'";
         }
 
 
-        std::unique_ptr<service_descriptor> descriptor;
-
-        QObject* theService;
+        service_descriptor descriptor;
         QString m_name;
-        bool isAnonymous;
         QVariantMap resolvedProperties;
     };
 
@@ -158,23 +151,39 @@ private:
 
     struct ServiceRegistration : public DescriptorRegistration {
 
-        ServiceRegistration(const QString& name, service_descriptor* desc, StandardApplicationContext* parent) :
-            DescriptorRegistration{name, desc, parent} {
+        ServiceRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
+            DescriptorRegistration{name, desc, parent},
+            published(false),
+            theService(nullptr) {
 
         }
 
         void notifyPublished() override {
             if(theService) {
+                published = true;
                 emit publishedObjectsChanged();
             }
         }
 
+        virtual bool isPublished() const override {
+            return published;
+        }
+
+        virtual QObject* getObject() const override {
+            return theService;
+        }
+
+
         virtual QObject* createPrivateObject(const QObjectList& dependencies) override {
-            QObject* obj = descriptor->create(dependencies);
+            QObject* obj = descriptor.create(dependencies);
             if(obj) {
                 m_privateObjects.push_back(obj);
             }
             return obj;
+        }
+
+        virtual bool isEqual(const service_descriptor& descriptor, QObject* obj) const override {
+            return descriptor == this->descriptor;
         }
 
         virtual QObjectList privateObjects() const override {
@@ -184,7 +193,7 @@ private:
 
         virtual QObject* publish(const QObjectList& dependencies) override {
             if(!theService) {
-                theService = descriptor->create(dependencies);
+                theService = descriptor.create(dependencies);
             }
             return theService;
         }
@@ -192,47 +201,51 @@ private:
 
 
         virtual bool unpublish() override {
-            if(theService) {
+            if(published) {
                 delete theService;
                 theService = nullptr;
+                published = false;
                 return true;
             }
             return false;
         }
 
-        bool operator==(const DescriptorRegistration& other) const override {
-            if(&other == this) {
-                return true;
-            }
-            if(!dynamic_cast<const ServiceRegistration*>(&other)) {
-                return false;
-            }
-
-            return *descriptor == *other.descriptor;
-        }
-
-
+    private:
+        QObject* theService;
         QObjectList m_privateObjects;
+        bool published;
     };
 
     struct ObjectRegistration : public DescriptorRegistration {
 
 
 
-        ObjectRegistration(const QString& name, QObject* obj, service_descriptor* desc, StandardApplicationContext* parent) :
-            DescriptorRegistration{name, desc, parent} {
-            theService = obj;
+        ObjectRegistration(const QString& name, const service_descriptor& desc, QObject* obj, StandardApplicationContext* parent) :
+            DescriptorRegistration{name, desc, parent},
+            theObj(obj){
         }
 
         void notifyPublished() override {
+        }
+
+        virtual bool isEqual(const service_descriptor& descriptor, QObject* obj) const override {
+            return descriptor == this->descriptor && theObj == obj;
+        }
+
+        virtual bool isPublished() const override {
+            return true;
         }
 
         virtual bool unpublish() override {
             return false;
         }
 
+        virtual QObject* getObject() const override {
+            return theObj;
+        }
+
         virtual QObject* publish(const QObjectList& dependencies) override {
-            return theService;
+            return theObj;
         }
 
         virtual QObject* createPrivateObject(const QObjectList& dependencies) override {
@@ -243,19 +256,8 @@ private:
             return {};
         }
 
-
-        bool operator==(const DescriptorRegistration& other) const override {
-            if(&other == this) {
-                return true;
-            }
-
-            if(!dynamic_cast<const ObjectRegistration*>(&other)) {
-                return false;
-            }
-
-
-            return *descriptor == *other.descriptor && theService == other.theService;
-        }
+    private:
+        QObject* const theObj;
     };
 
 
@@ -305,11 +307,9 @@ private:
 
     template<typename C> static DescriptorRegistration* find_by_type(const C& regs, const std::type_index& type);
 
-    bool checkTransitiveDependentsOn(service_descriptor* descriptor, const std::unordered_set<std::type_index>& dependencies) const;
+    bool checkTransitiveDependentsOn(const service_descriptor& descriptor, const std::unordered_set<std::type_index>& dependencies) const;
 
-    void findTransitiveDependenciesOf(service_descriptor* descriptor, std::unordered_set<std::type_index>& dependents) const;
-
-    bool isResolvable() const;
+    void findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<std::type_index>& dependents) const;
 
     void unpublish();
 
@@ -322,9 +322,9 @@ private:
     DescriptorRegistration* getRegistrationByName(const QString& name) const;
 
 
-    QObject* resolveDependency(const descriptor_set& published, std::vector<DescriptorRegistration*>& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent);
+    std::pair<QObject*,bool> resolveDependency(const descriptor_set& published, std::vector<DescriptorRegistration*>& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent);
 
-    std::pair<Registration*,bool> registerDescriptor(DescriptorRegistration* registration);
+    std::pair<DescriptorRegistration*,bool> registerDescriptor(QString name, const service_descriptor& descriptor, QObject* obj);
 
     bool configure(DescriptorRegistration*,QObject*, const QList<QApplicationContextPostProcessor*>& postProcessors);
 
@@ -337,8 +337,6 @@ private:
 
 
     mutable std::unordered_map<std::type_index,ProxyRegistration*> proxyRegistrationCache;
-
-    bool successfullyPublished;
 };
 
 
