@@ -28,7 +28,7 @@ class BaseService : public QObject, public Interface1
 
     Q_OBJECT
 public:
-    explicit BaseService(QObject *parent = nullptr);
+    BaseService();
 
 
     Q_PROPERTY(QTimer *timer READ timer WRITE setTimer NOTIFY timerChanged)

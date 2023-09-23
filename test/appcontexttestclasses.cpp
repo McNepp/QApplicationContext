@@ -2,8 +2,8 @@
 
 namespace mcnepp::qtditest {
 
-BaseService::BaseService(QObject *parent)
-    : BaseService{nullptr, parent}
+BaseService::BaseService()
+    : BaseService{nullptr, nullptr}
 {
 
 }

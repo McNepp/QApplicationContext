@@ -93,6 +93,7 @@ private slots:
 
     void init() {
         settingsFile = new QTemporaryFile;
+        settingsFile->open();
         config = new QSettings{settingsFile->fileName(), QSettings::Format::IniFormat};
         context = new StandardApplicationContext(config);
     }

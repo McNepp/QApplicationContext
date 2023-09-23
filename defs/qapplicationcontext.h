@@ -386,6 +386,7 @@ namespace detail {
 using constructor_t = std::function<QObject*(const QObjectList&)>;
 
 
+
 struct dependency_info {
     const std::type_info& type;
     Cardinality cardinality;
@@ -443,12 +444,16 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
 
  template<typename S> constexpr bool could_be_qobject = std::is_same_v<decltype(couldBeQObject(static_cast<S*>(nullptr))),QObject*>;
 
- template<typename S> auto hasServiceFactory(S*) -> std::integral_constant<int,sizeof(service_factory<S>)>;
+ template<typename S,int=sizeof(service_factory<S>)> constexpr bool hasServiceFactory(S*) {
+    return true;
+ }
 
- void hasServiceFactory(void*);
+ constexpr bool hasServiceFactory(void*) {
+    return false;
+ }
 
 
- template<typename S> constexpr bool has_service_factory = std::negation_v<std::is_same<decltype(hasServiceFactory(static_cast<S*>(nullptr))),void>>;
+ template<typename S> constexpr bool has_service_factory = hasServiceFactory(static_cast<S*>(nullptr));
 
 
 ///
@@ -562,16 +567,6 @@ template<typename S> auto convert_arg(QObject* arg) {
 
 
 
-
-template<typename D,typename...Dep> struct contains_type_traits;
-
-template<typename D,typename First,typename...Tail> struct contains_type_traits<D,First,Tail...> {
-    static constexpr bool value = std::is_same_v<typename dependency_helper<D>::type,typename dependency_helper<First>::type> || contains_type_traits<D,Tail...>::value;
-};
-
-template<typename D> struct contains_type_traits<D> {
-    static constexpr bool value = false;
-};
 
 
 
@@ -732,10 +727,6 @@ struct service_traits<Service<Srv, Impl>> {
 
     using impl_type = typename Service<Srv, Impl>::impl_type;
 };
-
-template<typename...Dep> void getRequiredName(Dep...dependencies) {
-
-}
 
 
 
