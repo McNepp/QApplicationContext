@@ -130,7 +130,7 @@ StandardApplicationContext::DescriptorRegistration *StandardApplicationContext::
 }
 
 
-std::pair<QObject*,bool> StandardApplicationContext::resolveDependency(const descriptor_set &published, std::vector<DescriptorRegistration*>& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent)
+std::pair<QObject*,StandardApplicationContext::Status> StandardApplicationContext::resolveDependency(const descriptor_set &published, std::vector<DescriptorRegistration*>& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent, bool allowPartial)
 {
     const std::type_info& type = d.type;
 
@@ -151,22 +151,29 @@ std::pair<QObject*,bool> StandardApplicationContext::resolveDependency(const des
     switch(d.cardinality) {
     case Cardinality::MANDATORY:
         if(dep.empty()) {
-            qCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
-            return {nullptr, false};
+            if(allowPartial) {
+                qWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
+                return {nullptr, Status::fixable};
+            } else {
+                qCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
+                return {nullptr, Status::fatal};
+            }
+
         }
     case Cardinality::OPTIONAL:
         switch(dep.size()) {
         case 0:
-            return {nullptr, true};
+            return {nullptr, Status::ok};
         case 1:
             qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " of " << *reg;
-            return {dep[0], true};
+            return {dep[0], Status::ok};
         default:
+            //Ambiguity is always a non-fixable error:
             qCritical(loggingCategory()).noquote().nospace() << d << "' of " << *reg << " is ambiguous";
-            return {nullptr, false};
+            return {nullptr, Status::fatal};
         }
     case Cardinality::N:
-        return {detail::wrapList(dep, temporaryParent), true};
+        return {detail::wrapList(dep, temporaryParent), Status::ok};
 
     case Cardinality::PRIVATE_COPY:
         DescriptorRegistration* depReg;
@@ -178,13 +185,20 @@ std::pair<QObject*,bool> StandardApplicationContext::resolveDependency(const des
             depReg = find_by_type(published, type);
             break;
         default:
+            //Ambiguity is always a non-fixable error:
             qCritical(loggingCategory()).noquote().nospace() << d << "' of " << *reg << " is ambiguous";
-            return {nullptr, false};
+            return {nullptr, Status::fatal};
         }
         if(!depReg) {
             if(!d.defaultConstructor) {
-                qCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
-                return {nullptr, false};
+                if(allowPartial) {
+                    qWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
+                    //Unresolvable dependencies may be fixable by registering more services:
+                    return {nullptr, Status::fixable};
+                } else {
+                    qCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
+                    return {nullptr, Status::fatal};
+                }
             }
             depReg = new ServiceRegistration{"", service_descriptor{type, type, d.defaultConstructor}, this};
             publishedNow.push_back(depReg);
@@ -192,8 +206,8 @@ std::pair<QObject*,bool> StandardApplicationContext::resolveDependency(const des
         QObjectList subDep;
         QOwningList privateSubDep;
         for(auto& dd : depReg->descriptor.dependencies) {
-            auto result = resolveDependency(published, publishedNow, depReg, dd, temporaryParent);
-            if(!result.second) {
+            auto result = resolveDependency(published, publishedNow, depReg, dd, temporaryParent, allowPartial);
+            if(result.second != Status::ok) {
                 return result;
             }
             subDep.push_back(result.first);
@@ -203,16 +217,17 @@ std::pair<QObject*,bool> StandardApplicationContext::resolveDependency(const des
         }
         QObject* service = depReg->createPrivateObject(subDep);
         if(!service) {
+            //If creation fails, this is always a non-fixable error:
             qCCritical(loggingCategory()).noquote().nospace() << "Could not create private copy of " << d << " for " << *reg;
-            return {nullptr, false};
+            return {nullptr, Status::fatal};
         }
         qCInfo(loggingCategory()).noquote().nospace() << "Created private copy of " << *depReg << " for " << *reg;
         privateSubDep.moveTo(service);
         qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " of " << *reg;
-        return {service, true};
+        return {service, Status::ok};
     }
 
-    return {nullptr, false};
+    return {nullptr, Status::fatal};
 }
 
 
@@ -282,7 +297,7 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
 
 
 
-bool StandardApplicationContext::publish()
+bool StandardApplicationContext::publish(bool allowPartial)
 {
     QObject temporaryParent;//Will manage temporary QObjects obtained by detail::wrapList(const QObjectList&).
 
@@ -309,7 +324,11 @@ bool StandardApplicationContext::publish()
             auto reg = *iter;
             for(auto& beanRef : getBeanRefs(reg->descriptor.config)) {
                 if(!getRegistrationByName(beanRef)) {
-                    qCCritical(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
+                    if(!allowPartial) {
+                        qCCritical(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
+                        return false;
+                    }
+                    qCWarning(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
                     unresolvable.insert(reg);
                     ++iter;
                     goto loop_head;
@@ -334,8 +353,14 @@ bool StandardApplicationContext::publish()
                 }
             }
             for(auto& d : reg->descriptor.dependencies) {
-                auto result = resolveDependency(allPublished, publishedNow, reg, d, &temporaryParent);
-                if(!result.second) {
+                auto result = resolveDependency(allPublished, publishedNow, reg, d, &temporaryParent, allowPartial);
+                switch(result.second) {
+                case Status::fatal:
+                    return false;
+                case Status::fixable:
+                    if(!allowPartial) {
+                        return false;
+                    }
                     unresolvable.insert(reg);
                     ++iter;
                     goto loop_head;
@@ -348,6 +373,9 @@ bool StandardApplicationContext::publish()
             auto service = reg->publish(dependencies);
             if(!service) {
                 qCCritical(loggingCategory()).nospace().noquote() << "Could not publish " << *reg;
+                if(!allowPartial) {
+                    return false;
+                }
                 ++iter;
                 goto loop_head;
             }
@@ -394,22 +422,37 @@ bool StandardApplicationContext::publish()
 
             auto service = reg->getObject();
             if(service) {
-                if(!configure(reg, service, postProcessors)) {
+                auto configResult = configure(reg, service, postProcessors, allowPartial);
+                switch(configResult) {
+                case Status::fatal:
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
+                    return false;
+                case Status::fixable:
+                    qCWarning(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
                     unresolvable.insert(reg);
                     allPublished.erase(reg);
-                } else {
+                    break;
+
+                case Status::ok:
                     qCInfo(loggingCategory()).noquote().nospace() << "Configured " << *reg;
                     ++publishedCount;
                     reg->notifyPublished();
+
                 }
             }
             for(auto privateObj : reg->privateObjects()) {
-                if(!configure(reg, privateObj, postProcessors)) {
-                    qCCritical(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
-                } else {
-                    qCInfo(loggingCategory()).noquote().nospace() << "Configured private copy of " << *reg;
+                auto configResult = configure(reg, privateObj, postProcessors, allowPartial);
+                switch(configResult) {
+                   case Status::fatal:
+                        qCCritical(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
+                        return false;
+                   case Status::fixable:
+                        qCWarning(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
+                        break;
+                   case Status::ok:
+                        qCInfo(loggingCategory()).noquote().nospace() << "Configured private copy of " << *reg;
                 }
+
             }
             iter = publishedNow.erase(iter);
         }
@@ -426,7 +469,9 @@ bool StandardApplicationContext::publish()
         emit publishedChanged();
         emit pendingPublicationChanged();
     }
-
+    if(allowPartial) {
+        return publishedCount != 0;
+    }
     return unresolvable.empty();
 }
 
@@ -555,10 +600,10 @@ bool StandardApplicationContext::checkTransitiveDependentsOn(const service_descr
     return true;
 }
 
-QVariant StandardApplicationContext::resolveValue(const QVariant &value)
+std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveValue(const QVariant &value, bool allowPartial)
 {
     if(!value.isValid()) {
-        return value;
+        return {value, Status::fatal};
     }
     QString key = value.toString();
     if(key.startsWith('&')) {
@@ -566,8 +611,12 @@ QVariant StandardApplicationContext::resolveValue(const QVariant &value)
         auto components = key.split('.');
         auto bean = getRegistrationByName(components[0]);
         if(!(bean && bean->getObject())) {
+            if(allowPartial) {
+                qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << components[0] << "'";
+                return {QVariant{}, Status::fixable};
+            }
             qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << components[0] << "'";
-            return {};
+            return {QVariant{}, Status::fatal};
         }
 
         QVariant resultValue = QVariant::fromValue(bean->getObject());
@@ -575,20 +624,25 @@ QVariant StandardApplicationContext::resolveValue(const QVariant &value)
             QString propName = components[pos];
             auto parent = resultValue.value<QObject*>();
             if(!parent) {
+                if(allowPartial) {
+                    qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
+                    return {QVariant{}, Status::fixable};
+                }
                 qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
-                return {};
+                return {QVariant{}, Status::fatal};
             }
             int propIndex = parent->metaObject()->indexOfProperty(propName.toLatin1());
             if(propIndex < 0) {
+                //Refering to a non-existing Q_PROPERTY is always non-fixable:
                 qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << parent;
-                return {};
+                return {QVariant{}, Status::fatal};
             }
             resultValue = parent->metaObject()->property(propIndex).read(parent);
 
         }
 
         qCInfo(loggingCategory()).nospace().noquote() << "Resolved reference '" << key << "' to " << resultValue;
-        return resultValue;
+        return {resultValue, Status::ok};
     }
 
 
@@ -610,7 +664,7 @@ QVariant StandardApplicationContext::resolveValue(const QVariant &value)
                     continue;
                 default:
                     qCCritical(loggingCategory()).nospace().noquote() << "Invalid placeholder '" << key << "'";
-                    return {};
+                    return {QVariant{}, Status::fatal};
                  }
             case '{':
                 switch(state) {
@@ -629,12 +683,16 @@ QVariant StandardApplicationContext::resolveValue(const QVariant &value)
                     if(!token.isEmpty()) {
                         lastResolvedValue = getConfigurationValue(token);
                         if(!lastResolvedValue.isValid()) {
-                            qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve '" << token << "'";
-                            return {};
+                            if(allowPartial) {
+                                qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve config-value '" << token << "'";
+                                return {QVariant{}, Status::fixable};
+                            }
+                            qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve config-value '" << token << "'";
+                            return {QVariant{}, Status::fatal};
                         }
                         qCInfo(loggingCategory()).nospace().noquote() << "Resolved variable '" << token << "' to " << lastResolvedValue;
                         if(resolvedString.isEmpty() && pos + 1 == key.length()) {
-                            return lastResolvedValue;
+                            return {lastResolvedValue, Status::ok};
                         }
                         resolvedString += lastResolvedValue.toString();
                         token.clear();
@@ -664,45 +722,48 @@ QVariant StandardApplicationContext::resolveValue(const QVariant &value)
         case 1:
             resolvedString += '$';
         case 0:
-            return resolvedString;
+            return {resolvedString, Status::ok};
         default:
             qCCritical(loggingCategory()).nospace().noquote() << "Unbalanced placeholder '" << key << "'";
-            return {};
+            return {QVariant{}, Status::fatal};
         }
     }
-    return value;
+    return {value, Status::ok};
 }
 
 
 
 
-bool StandardApplicationContext::configure(DescriptorRegistration* reg, QObject* target, const QList<QApplicationContextPostProcessor*>& postProcessors) {
+StandardApplicationContext::Status StandardApplicationContext::configure(DescriptorRegistration* reg, QObject* target, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial) {
     if(!target) {
-        return false;
+        return Status::fatal;
     }
     auto metaObject = target->metaObject();
     auto& config = reg->descriptor.config;
     if(metaObject) {
         std::unordered_set<QString> usedProperties;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
-            auto resolvedValue = resolveValue(value);
-            if(!resolvedValue.isValid()) {
-                return false;
+            auto result = resolveValue(value, allowPartial);
+            if(result.second != Status::ok) {
+                return result.second;
             }
+            auto resolvedValue = result.first;
             reg->resolvedProperties.insert(key, resolvedValue);
             if(!key.startsWith('.')) {
                 int index = metaObject->indexOfProperty(key.toUtf8());
                 if(index < 0) {
+                    //Refering to a non-existing Q_PROPERTY by name is always non-fixable:
                     qCCritical(loggingCategory()).nospace() << "Could not find property " << key << " of '" << metaObject->className() << "'";
-                    return false;
+                    return Status::fatal;
                 }
                 auto property = metaObject->property(index);
                 if(property.write(target, resolvedValue)) {
                     qCDebug(loggingCategory()).nospace() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
                     usedProperties.insert(key);
                 } else {
+                    //An error while setting a Q_PROPERTY is always non-fixable:
                     qCCritical(loggingCategory()).nospace() << "Could not set property '" << key << "' of " << *reg << " to value " << resolvedValue;
-                    return false;
+                    return Status::fatal;
                 }
             }
         }
@@ -758,28 +819,29 @@ bool StandardApplicationContext::configure(DescriptorRegistration* reg, QObject*
     if(!config.initMethod.isEmpty()) {
         QMetaMethod method = methodByName(metaObject, config.initMethod);
         if(!method.isValid()) {
+            //Referingi to a non-existing init-method is always non-fixable:
             qCCritical(loggingCategory()).nospace().noquote() << "Could not find init-method '" << config.initMethod << "'";
-            return false;
+            return Status::fatal;
 
         }
         switch(method.parameterCount()) {
         case 0:
             if(method.invoke(target)) {
                 qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method '" << config.initMethod << "' of " << *reg;
-                return true;
+                return Status::ok;
             }
             break;
         case 1:
             if(method.invoke(target, Q_ARG(QApplicationContext*,this))) {
                 qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method '" << config.initMethod << "' of " << *reg << ", passing the ApplicationContext";
-                return true;
+                return Status::ok;
             }
             break;
        }
        qCCritical(loggingCategory()).nospace().noquote() << "Could not invoke init-method '" << method.methodSignature() << "' of " << *reg;
-       return false;
+       return Status::fatal;
     }
-    return true;
+    return Status::ok;
 }
 
 

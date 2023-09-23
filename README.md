@@ -105,7 +105,7 @@ You could even improve on this by re-factoring the common part of the Url into i
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("berlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
     
-**Note:** Every property supplied to `QApplicationContext::registerService()` will be considered a potential Q_PROPERTY of the target-service. `QApplicationContext::publish()` will fail if no such property can be
+**Note:** Every property supplied to `QApplicationContext::registerService()` will be considered a potential Q_PROPERTY of the target-service. `QApplicationContext::publish(bool)` will fail if no such property can be
 found.  
 However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
 Such *private properties* may be passed to a `QApplicationContextPostProcessor` (see below).
@@ -124,8 +124,8 @@ There are some crucial differences between `QApplicationContext::registerService
 
 | |registerService|registerObject|
 |---|---|---|
-|Instantiation of the object|upon `QApplicationContext::publish()`|prior to the registration with the QApplicationContext|
-|When does the Q_PROPERTY `Registration::publishedObjects` become non-empty?|upon `QApplicationContext::publish()`|immediately after the registration|
+|Instantiation of the object|upon `QApplicationContext::publish(bool)`|prior to the registration with the QApplicationContext|
+|When does the Q_PROPERTY `Registration::publishedObjects` become non-empty?|upon `QApplicationContext::publish(bool)`|immediately after the registration|
 |Naming of the QObject|`QObject::objectName` is set to the name of the registration|`QObject::objectName` is not touched by QApplicationContext|
 |Handling of Properties|The key/value-pairs supplied at registration will be set as Q_PROPERTYs by QApplicationContext|All properties must be set before registration|
 |Processing by `QApplicationContextPostProcessor`|Every service will be processed by the registered QApplicationContextPostProcessors|Object is not processed|
@@ -295,7 +295,7 @@ However, some transitions may have observable side-effects.
 |External Trigger|Internal Step|State|Observable side-effect|
 |---|---|---|---|
 |ApplicationContext::registerService()||REGISTERED| |
-|ApplicationContext::publish()|Instantiation via constructor or service_factory|NEW|Invocation of Services's constructor|
+|ApplicationContext::publish(bool)|Instantiation via constructor or service_factory|NEW|Invocation of Services's constructor|
 | |Set properties|AFTER_PROPERTIES_SET|Invocation of property-setters|
 | |Apply QApplicationContextPostProcessor|PROCESSED|Invocation of user-supplied QApplicationContextPostProcessor::process()| 
 | |if exists, invoke init-method|PUBLISHED|emit signal Registration::publishedObjectsChanged|
@@ -383,7 +383,7 @@ so-called *private properties*: Just prefix the property-key with a dot.
 
 ## 'Starting' services
 
-The last step done in `ApplicationContext::publish()` for each service is the invocation of an *init-method*, should one have been 
+The last step done in `QApplicationContext::publish(bool)` for each service is the invocation of an *init-method*, should one have been 
 registered.
 
 *Init-methods* are supplied as part of the `service_config`, for example like this:
@@ -410,11 +410,11 @@ Now, we will create an instance of `Dependency` and supply a name to it:
 
 ## Publishing an ApplicationContext more than once
 
-Sometimes, it may be desirable to inovoke QApplicationContext::publish() more than once.
+Sometimes, it may be desirable to inovoke QApplicationContext::publish(bool) more than once.
 Proceeding with the previous example, there may be several independent modules that each want to supply a service of type `PropFetcher`.
 Each of these modules will rightly assume that the dependency of type `QNetworkAccessManager` will be automatically supplied by the QApplicationContext.
 
-But which module shall then invoke QApplicationContext::publish()? Do we need to coordinate this with additional code?
+But which module shall then invoke QApplicationContext::publish(bool)? Do we need to coordinate this with additional code?
 That could be a bit unwieldly. Luckily, this is not necessary.
 
 Given that each module has access to the (global) QApplicationContext, you can simply do this in some initialization-code in module A:
@@ -461,6 +461,29 @@ We've also added a member-function `addPropFetcher(PropFetcher*)`, which we'll p
     context -> publish();
 
 And that's all that is needed to get rid of any mandatory order of initialization of the modules A, B and C.
+
+## Publish-mode ('allowPartial')
+
+The function QApplicationContext::publish(bool) has a boolean argument `allowPartial` with a default-value of `false`.
+The following table shows how this argument affects the outcome of the function:
+
+### allowPartial = false:
+- If publication of one service fails for whatever reason, the function will immediately return without attempts to publish other services.
+- All errors that occur while publishing a service will be logged with the level QtMsgType::QtCriticalMessage.
+
+### allowPartial = true:
+- If publication of one service fails for reasons that may be fixed, the function will continue to publish other services. 
+  Such reasons include:
+  - unresolved dependencies (as those may be registered later).
+  - unresolved config-values (as those may be configured later).
+- Such "fixable errors" that occur while publishing a service will be logged with the level QtMsgType::QtWarningMessage.
+- If publication of one service fails for reasons that will prevail, the function will will immediately return without attempts to publish other services.
+  Such reasons include:
+  - ambiguous dependencies (as those cannot not be removed from the ApplicationContext).
+  - non-existing names of Q_PROPERTYs.
+  - syntactically erronous config-keys (such as `"$interval}"``).
+- Such "fatal errors" that occur while publishing a service will be logged with the level QtMsgType::QtCriticalMessage.
+
 
 
 

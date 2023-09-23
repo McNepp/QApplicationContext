@@ -757,7 +757,7 @@ public:
 
     ///
     /// \brief How many services have been published?
-    /// This property will initially yield `false`, until publish() is invoked.
+    /// This property will initially yield `false`, until publish(bool) is invoked.
     /// **Note:** This property will **not** transition back to `0` upon destruction of this ApplicationContext!
     /// \return the number of published services.
     ///
@@ -767,7 +767,7 @@ public:
     /// \brief How many services have been registered and not yet published?
     /// This property will initially yield `0`.
     /// Then, it will increase with every successfull registerService() invocation.
-    /// If publish() is invoked successfully, the property will again yield `0`.
+    /// If publish(bool) is invoked successfully, the property will again yield `0`.
     /// **Note:** This property will **not** transition back to `0` upon destruction of this ApplicationContext!
     /// \return the number of registered but not yet published services.
     ///
@@ -948,9 +948,17 @@ public:
     /// \brief Publishes this ApplicationContext.
     /// This method may be invoked multiple times.
     /// Each time it is invoked, it will attempt to instantiate all yet-unpublished services that have been registered with this ApplicationContext.
-    /// \return `true` if all registered services could be successfully published.
+    /// \param allowPartial has the default-value `false`, this function will return immediately when a service cannot be published (due to missing dependencies,
+    /// unresolveable properties, etc...).
+    /// Additionally, the cause of such a failure will be logged with the level QtMsgType::QtCriticalMessage.
+    /// if `allowPartial == true`, the function will attempt to publish as many pending services as possible.
+    /// Failures that may be fixed by further registrations will be logged with the level QtMsgType::QtWarningMessage.
+    /// \return `true` if there are no fatal errors and all services were published (in case `allowPartial == false`),
+    /// or at least one service was published (in case `allowPartial == true`).
     ///
-    virtual bool publish() = 0;
+    virtual bool publish(bool allowPartial = false) = 0;
+
+
 
     ///
     /// \brief The number of published services.
@@ -969,14 +977,14 @@ signals:
 
     ///
     /// \brief Signals that the published() property has changed.
-    /// May be emitted upon publish().
+    /// May be emitted upon publish(bool).
     /// **Note:** the signal will not be emitted on destruction of this ApplicationContext!
     ///
     void publishedChanged();
 
     ///
     /// \brief Signals that the pendingPublication() property has changed.
-    /// May be emitted upon registerService(), registerObject() or publish().
+    /// May be emitted upon registerService(), registerObject() or publish(bool).
     /// **Note:** the signal will not be emitted on destruction of this ApplicationContext!
     ///
     void pendingPublicationChanged();

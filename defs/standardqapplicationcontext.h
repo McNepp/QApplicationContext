@@ -22,7 +22,7 @@ public:
 
     ~StandardApplicationContext();
 
-    virtual bool publish() final override;
+    virtual bool publish(bool allowPartial = false) final override;
 
     virtual unsigned published() const final override;
 
@@ -304,6 +304,11 @@ private:
 
 
 
+    enum class Status {
+        ok,
+        fixable,
+        fatal
+    };
 
     template<typename C> static DescriptorRegistration* find_by_type(const C& regs, const std::type_index& type);
 
@@ -322,13 +327,13 @@ private:
     DescriptorRegistration* getRegistrationByName(const QString& name) const;
 
 
-    std::pair<QObject*,bool> resolveDependency(const descriptor_set& published, std::vector<DescriptorRegistration*>& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent);
+    std::pair<QObject*,Status> resolveDependency(const descriptor_set& published, std::vector<DescriptorRegistration*>& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent, bool allowPartial);
 
     std::pair<DescriptorRegistration*,bool> registerDescriptor(QString name, const service_descriptor& descriptor, QObject* obj);
 
-    bool configure(DescriptorRegistration*,QObject*, const QList<QApplicationContextPostProcessor*>& postProcessors);
+    Status configure(DescriptorRegistration*,QObject*, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial);
 
-    QVariant resolveValue(const QVariant& value);
+    std::pair<QVariant,Status> resolveValue(const QVariant& value, bool allowPartial);
 
     descriptor_set registrations;
 
