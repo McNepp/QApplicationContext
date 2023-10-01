@@ -112,11 +112,13 @@ void StandardApplicationContext::unpublish()
 {
     descriptor_list published;
     //Unpublish in revers order:
-    std::copy_if(registrations.rbegin(), registrations.rend(), std::inserter(published, published.begin()), std::mem_fn(&DescriptorRegistration::isPublished));
+    std::copy_if(registrations.rbegin(), registrations.rend(), std::inserter(published, published.begin()), [](DescriptorRegistration* reg) { return reg->isPublished() && reg->isManaged();});
 
-    qCInfo(loggingCategory()).noquote().nospace() << "Un-publish ApplicationContext with " << published.size() << " published Objects";
+
+    qCInfo(loggingCategory()).noquote().nospace() << "Un-publish ApplicationContext with " << published.size() << " managed published Objects";
 
     DescriptorRegistration* reg = nullptr;
+    unsigned unpublished = 0;
     //Do several rounds and delete those services on which no other published Services depend:
     while(!published.empty()) {
         reg = pop_front(published);
@@ -141,10 +143,11 @@ void StandardApplicationContext::unpublish()
             }
         }
         if(reg->unpublish()) {
+            ++unpublished;
             qCInfo(loggingCategory()).nospace().noquote() << "Un-published " << *reg;
         }
     }
-    qCInfo(loggingCategory()) << "ApplicationContext has been un-published";
+    qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has been un-published. " << unpublished << " Object have been successfully destroyed.";
 }
 
 StandardApplicationContext::DescriptorRegistration *StandardApplicationContext::getRegistrationByName(const QString &name) const
@@ -312,6 +315,7 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
         auto reg = *iter;
         if(reg->getObject() == obj) {
             iter = registrations.erase(iter);
+            qCInfo(loggingCategory()).noquote().nospace() << "Registered Object " << *reg << " has been destroyed externally";
             delete reg;
         } else {
             ++iter;
@@ -473,9 +477,8 @@ bool StandardApplicationContext::publish(bool allowPartial)
         }
     }
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has published " << publishedCount << " objects";
-    if(publishedCount != allPublished.size()) {
-        qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has a total number of " << allPublished.size() << " published objects.";
-    }
+    unsigned managed = std::count_if(registrations.begin(), registrations.end(), std::mem_fn(&DescriptorRegistration::isManaged));
+    qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has a total number of " << allPublished.size() << " published objects of which " << managed << " are managed.";
     if(!unpublished.empty()) {
         qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has " << unpublished.size() << " unpublished objects";
     }

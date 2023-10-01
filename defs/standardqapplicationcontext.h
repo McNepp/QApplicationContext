@@ -104,6 +104,8 @@ private:
 
         virtual bool isPublished() const = 0;
 
+        virtual bool isManaged() const = 0;
+
         virtual bool isEqual(const service_descriptor& descriptor, QObject* obj) const = 0;
 
 
@@ -178,6 +180,10 @@ private:
             return theService;
         }
 
+        virtual bool isManaged() const override {
+            return true;
+        }
+
 
         virtual QObject* createPrivateObject(const QObjectList& dependencies) override {
             QObject* obj = descriptor.create(dependencies);
@@ -242,6 +248,11 @@ private:
         virtual bool unpublish() override {
             return false;
         }
+
+        virtual bool isManaged() const override {
+            return false;
+        }
+
 
         virtual QObject* getObject() const override {
             return theObj;
