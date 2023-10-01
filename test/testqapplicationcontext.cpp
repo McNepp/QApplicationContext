@@ -817,12 +817,11 @@ private slots:
 
         QCOMPARE(publishedInOrder.size(), 7);
 
-        //We cannot say anything about the initialization-order of the 3 Services that have no dependencies:
-        //BaseService, BaseService2, and IConfiguration.
-        //However, what we can say is:
-        //1. DependentService must be initialized after both BaseService.
-        //2. DependentService must be initialized before DependentServiceLevel2.
-        //3. ServiceWithThreeArgs must be initialized after BaseService, BaseService2 and DependentService
+        //1. BaseService must be initialized before BaseService2 (because the order of registration shall be kept, barring other restrictions).
+        //2. DependentService must be initialized after both BaseService.
+        //3. DependentService must be initialized before DependentServiceLevel2.
+        //4. ServiceWithThreeArgs must be initialized after BaseService, BaseService2 and DependentService
+        QVERIFY(publishedInOrder.indexOf(base()) < publishedInOrder.indexOf(base2()));
         QVERIFY(publishedInOrder.indexOf(dependent()) < publishedInOrder.indexOf(dependent2()));
         QVERIFY(publishedInOrder.indexOf(base()) < publishedInOrder.indexOf(three()));
         QVERIFY(publishedInOrder.indexOf(dependent()) < publishedInOrder.indexOf(three()));
@@ -834,12 +833,13 @@ private slots:
 
         QCOMPARE(destroyedInOrder.size(), 7);
 
-        //We cannot say anything about the destruction-order of the 3 Services that have no dependencies:
-        //BaseService, BaseService2, and IConfiguration.
+        //We cannot say anything about the destruction-order of the Services that have no dependencies:
+        //BaseService and BaseService2
         //However, what we can say is:
         //1. DependentService must be destroyed before both BaseService.
         //2. DependentService must be destroyed after DependentServiceLevel2.
         //3. ServiceWithThreeArgs must be destroyed before BaseService, BaseService2 and DependentService
+        //4. BaseService2 must destroyed before BaseService (because the order of registration shall be kept, barring other restrictions).
 
         QVERIFY(destroyedInOrder.indexOf(dependent()) > destroyedInOrder.indexOf(dependent2()));
         QVERIFY(destroyedInOrder.indexOf(base()) > destroyedInOrder.indexOf(three()));
@@ -847,6 +847,7 @@ private slots:
         QVERIFY(destroyedInOrder.indexOf(base2()) > destroyedInOrder.indexOf(three()));
         QVERIFY(destroyedInOrder.indexOf(three()) > destroyedInOrder.indexOf(four()));
         QVERIFY(destroyedInOrder.indexOf(four()) > destroyedInOrder.indexOf(five()));
+        QVERIFY(destroyedInOrder.indexOf(base2()) < destroyedInOrder.indexOf(base()));
     }
 
 private:

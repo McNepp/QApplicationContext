@@ -40,6 +40,25 @@ QMetaMethod methodByName(const QMetaObject* metaObject, const QString& name) {
         }
         return {};
     }
+
+
+    template<typename C,typename P> auto erase_if(C& container, P predicate) -> std::enable_if_t<std::is_pointer_v<typename C::value_type>,typename C::value_type> {
+        auto iterator = std::find_if(container.begin(), container.end(), predicate);
+        if(iterator != container.end()) {
+            auto value = *iterator;
+            container.erase(iterator);
+            return value;
+        }
+        return nullptr;
+}
+
+template<typename C> auto pop_front(C& container) -> typename C::value_type {
+        auto value = container.front();
+        container.pop_front();
+        return value;
+}
+
+
 }
 
 inline QString cardinalityToString(Cardinality card) {
@@ -84,39 +103,45 @@ StandardApplicationContext::~StandardApplicationContext() {
 }
 
 template<typename C> StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::find_by_type(const C& regs, const std::type_index& type) {
-    auto found = std::find_if(regs.begin(), regs.end(), [&type](DescriptorRegistration* reg) {return reg->matches(type);} );
+    auto found = std::find_if(regs.begin(), regs.end(), DescriptorRegistration::matcher(type));
     return found != regs.end() ? *found : nullptr;
 }
 
 
 void StandardApplicationContext::unpublish()
 {
-    std::unordered_set<DescriptorRegistration*> published;
-    std::copy_if(registrations.begin(), registrations.end(), std::inserter(published, published.begin()), std::mem_fn(&DescriptorRegistration::isPublished));
+    descriptor_list published;
+    //Unpublish in revers order:
+    std::copy_if(registrations.rbegin(), registrations.rend(), std::inserter(published, published.begin()), std::mem_fn(&DescriptorRegistration::isPublished));
 
     qCInfo(loggingCategory()).noquote().nospace() << "Un-publish ApplicationContext with " << published.size() << " published Objects";
 
+    DescriptorRegistration* reg = nullptr;
     //Do several rounds and delete those services on which no other published Services depend:
     while(!published.empty()) {
-
-        for(auto iter = published.begin();;) {
-            loop_head:
-            if(iter == published.end()) {
-                break;
-            }
-            auto reg = *iter;
-            for(auto& depend : published) {
-                for(auto& t : depend->descriptor.dependencies) {
-                    if(reg->descriptor.matches(t.type)) {
-                        ++iter;
-                        goto loop_head;
-                    }
+        reg = pop_front(published);
+    next_published:
+        for(auto depend = published.begin(); depend != published.end(); ++depend) {
+            auto dep = *depend;
+            for(auto& t : dep->descriptor.dependencies) {
+                if(reg->descriptor.matches(t.type)) {
+                    published.erase(depend);
+                    published.push_front(reg);
+                    reg = dep;
+                    goto next_published;
                 }
             }
-            if(reg->unpublish()) {
-                qCInfo(loggingCategory()).nospace().noquote() << "Un-published " << *reg;
+            for(auto& beanRef : getBeanRefs(reg->descriptor.config)) {
+                if(beanRef == reg->name()) {
+                    published.erase(depend);
+                    published.push_front(reg);
+                    reg = dep;
+                    goto next_published;
+                }
             }
-            iter = published.erase(iter);
+        }
+        if(reg->unpublish()) {
+            qCInfo(loggingCategory()).nospace().noquote() << "Un-published " << *reg;
         }
     }
     qCInfo(loggingCategory()) << "ApplicationContext has been un-published";
@@ -130,7 +155,7 @@ StandardApplicationContext::DescriptorRegistration *StandardApplicationContext::
 }
 
 
-std::pair<QObject*,StandardApplicationContext::Status> StandardApplicationContext::resolveDependency(const descriptor_set &published, std::vector<DescriptorRegistration*>& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent, bool allowPartial)
+std::pair<QObject*,StandardApplicationContext::Status> StandardApplicationContext::resolveDependency(const descriptor_list &published, descriptor_list& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent, bool allowPartial)
 {
     const std::type_info& type = d.type;
 
@@ -296,98 +321,94 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
 
 
 
-
 bool StandardApplicationContext::publish(bool allowPartial)
 {
     QObject temporaryParent;//Will manage temporary QObjects obtained by detail::wrapList(const QObjectList&).
 
-    descriptor_set allPublished;
-    std::vector<DescriptorRegistration*> publishedNow;//Keep order of publication
+    descriptor_list allPublished;
+    descriptor_list publishedNow;//Keep order of publication
 
     std::copy_if(registrations.begin(), registrations.end(), std::inserter(allPublished, allPublished.begin()), std::mem_fn(&DescriptorRegistration::isPublished));
 
-    descriptor_set unpublished;
+    descriptor_list unpublished;
     descriptor_set unresolvable;
     std::copy_if(registrations.begin(), registrations.end(), std::inserter(unpublished, unpublished.begin()), std::not_fn(std::mem_fn(&DescriptorRegistration::isPublished)));
 
     qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext with " << unpublished.size() << " unpublished Objects";
-
+    std::vector<std::size_t> posStack;
+    DescriptorRegistration* reg = nullptr;
     //Do several rounds and publish those services whose dependencies have already been published.
     //For a service with an empty set of dependencies, this means that it will be published first.
-    while(unpublished != unresolvable) {
+    while(!unpublished.empty()) {
+        reg = pop_front(unpublished);
 
-        for(auto iter = unpublished.begin();;) {
-            loop_head:
-            if(iter == unpublished.end()) {
-                break;
-            }
-            auto reg = *iter;
-            for(auto& beanRef : getBeanRefs(reg->descriptor.config)) {
-                if(!getRegistrationByName(beanRef)) {
-                    if(!allowPartial) {
-                        qCCritical(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
-                        return false;
-                    }
-                    qCWarning(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
-                    unresolvable.insert(reg);
-                    ++iter;
-                    goto loop_head;
-                }
-            }
-
-            QObjectList dependencies;
-            QOwningList privateDependencies;
-            for(auto& d : reg->descriptor.dependencies) {
-                //If there are unpublished dependencies, skip this service:
-                if(find_by_type(unpublished, d.type)) {
-                    ++iter;
-                    goto loop_head;
-                }
-                if(!find_by_type(allPublished, d.type) && d.cardinality == Cardinality::MANDATORY && d.defaultConstructor) {
-                    auto def = registerDescriptor("", service_descriptor{d.type, d.type, d.defaultConstructor}, nullptr);
-                    if(def.second) {
-                        iter = unpublished.insert(unpublished.begin(), def.first);
-                        qCInfo(loggingCategory()).noquote().nospace() << "Creating default-instance of " << d << " for " << *reg;
-                        goto loop_head;
-                    }
-                }
-            }
-            for(auto& d : reg->descriptor.dependencies) {
-                auto result = resolveDependency(allPublished, publishedNow, reg, d, &temporaryParent, allowPartial);
-                switch(result.second) {
-                case Status::fatal:
+        next_unpublished:
+        for(auto& beanRef : getBeanRefs(reg->descriptor.config)) {
+            if(!getRegistrationByName(beanRef)) {
+                if(!allowPartial) {
+                    qCCritical(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
                     return false;
-                case Status::fixable:
-                    if(!allowPartial) {
-                        return false;
-                    }
-                    unresolvable.insert(reg);
-                    ++iter;
-                    goto loop_head;
                 }
-                dependencies.push_back(result.first);
-                if(d.cardinality == Cardinality::PRIVATE_COPY) {
-                    privateDependencies.push_back(result.first);
+                qCWarning(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
+                unresolvable.insert(reg);
+                reg = pop_front(unpublished);
+                goto next_unpublished;
+            }
+        }
+
+        QObjectList dependencies;
+        QOwningList privateDependencies;
+        for(auto& d : reg->descriptor.dependencies) {
+            //If we find an unpublished dependency, we continue with that:
+            auto foundReg = erase_if(unpublished, DescriptorRegistration::matcher(d.type));
+            if(foundReg) {
+                unpublished.push_front(reg); //Put the current Registration back where it came from. Will be processed after the dependency.
+                reg = foundReg;
+                goto next_unpublished;
+            }
+            //If we find a mandatory dependency for which there is a default-constructor, we continue with that:
+            if(!find_by_type(allPublished, d.type) && d.cardinality == Cardinality::MANDATORY && d.defaultConstructor) {
+                auto def = registerDescriptor("", service_descriptor{d.type, d.type, d.defaultConstructor}, nullptr);
+                if(def.second) {
+                    unpublished.push_front(reg);
+                    reg = def.first;
+                    qCInfo(loggingCategory()).noquote().nospace() << "Creating default-instance of " << d << " for " << *reg;
+                    goto next_unpublished;
                 }
             }
-            auto service = reg->publish(dependencies);
-            if(!service) {
-                qCCritical(loggingCategory()).nospace().noquote() << "Could not publish " << *reg;
+        }
+        for(auto& d : reg->descriptor.dependencies) {
+            auto result = resolveDependency(allPublished, publishedNow, reg, d, &temporaryParent, allowPartial);
+            switch(result.second) {
+            case Status::fatal:
+                return false;
+            case Status::fixable:
                 if(!allowPartial) {
                     return false;
                 }
-                ++iter;
-                goto loop_head;
+                unresolvable.insert(reg);
+                reg = pop_front(unpublished);
+                goto next_unpublished;
             }
-            privateDependencies.moveTo(service);
-            if(service->objectName().isEmpty()) {
-                service->setObjectName(reg->name());
+            dependencies.push_back(result.first);
+            if(d.cardinality == Cardinality::PRIVATE_COPY) {
+                privateDependencies.push_back(result.first);
             }
-            qCInfo(loggingCategory()).nospace().noquote() << "Published " << *reg;
-            allPublished.insert(reg);
-            publishedNow.push_back(reg);
-            iter = unpublished.erase(iter);
         }
+        auto service = reg->publish(dependencies);
+        if(!service) {
+            qCCritical(loggingCategory()).nospace().noquote() << "Could not publish " << *reg;
+            return false;
+        }
+        privateDependencies.moveTo(service);
+        if(service->objectName().isEmpty()) {
+            service->setObjectName(reg->name());
+        }
+        qCInfo(loggingCategory()).nospace().noquote() << "Published " << *reg;
+        publishedNow.push_back(reg);
+        //By building the list of published services from scratch, we guarantee that they'll end up in Cardinality::N-dependencies in the right order:
+        allPublished.clear();
+        std::copy_if(registrations.begin(), registrations.end(), std::inserter(allPublished, allPublished.begin()), std::mem_fn(&DescriptorRegistration::isPublished));
     }
     qsizetype publishedCount = 0;
     QList<QApplicationContextPostProcessor*> postProcessors;
@@ -406,55 +427,49 @@ bool StandardApplicationContext::publish(bool allowPartial)
     //The services that have been instantiated during this methd-invocation will be configured in the order they have have been
     //instantiated. However, if their configuration has bean-refs, this order may need to be modified.
     while(!publishedNow.empty()) {
-        for(auto iter = publishedNow.begin();;) {
-            next_published:
-            if(iter == publishedNow.end()) {
-                break;
+        reg = pop_front(publishedNow);
+        next_published:
+        for(auto& beanRef : getBeanRefs(reg->descriptor.config)) {
+            auto foundReg = erase_if(publishedNow, [&beanRef](DescriptorRegistration* r) { return r->name() == beanRef;});
+            if(foundReg) {
+                publishedNow.push_front(reg);//Put the current Registration back where it came from. Will be processed after the dependency.
+                reg = foundReg;
+                goto next_published;
             }
-            auto reg = *iter;
-            for(auto& beanRef : getBeanRefs(reg->descriptor.config)) {
-                auto foundByName = std::find_if(iter, publishedNow.end(), [&beanRef](DescriptorRegistration* r) { return r->name() == beanRef;});
-                if(foundByName != publishedNow.end()) {
-                    ++iter;
-                    goto next_published;
-                }
-            }
+        }
 
-            auto service = reg->getObject();
-            if(service) {
-                auto configResult = configure(reg, service, postProcessors, allowPartial);
-                switch(configResult) {
-                case Status::fatal:
-                    qCCritical(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
+        auto service = reg->getObject();
+        if(service) {
+            auto configResult = configure(reg, service, postProcessors, allowPartial);
+            switch(configResult) {
+            case Status::fatal:
+                qCCritical(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
+                return false;
+            case Status::fixable:
+                qCWarning(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
+                unresolvable.insert(reg);
+                erase_if(allPublished, [reg](DescriptorRegistration* arg) { return arg == reg; });
+                continue;
+
+            case Status::ok:
+                qCInfo(loggingCategory()).noquote().nospace() << "Configured " << *reg;
+                ++publishedCount;
+                reg->notifyPublished();
+            }
+        }
+        for(auto privateObj : reg->privateObjects()) {
+            auto configResult = configure(reg, privateObj, postProcessors, allowPartial);
+            switch(configResult) {
+               case Status::fatal:
+                    qCCritical(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
                     return false;
-                case Status::fixable:
-                    qCWarning(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
-                    unresolvable.insert(reg);
-                    allPublished.erase(reg);
+               case Status::fixable:
+                    qCWarning(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
                     break;
-
-                case Status::ok:
-                    qCInfo(loggingCategory()).noquote().nospace() << "Configured " << *reg;
-                    ++publishedCount;
-                    reg->notifyPublished();
-
-                }
+               case Status::ok:
+                    qCInfo(loggingCategory()).noquote().nospace() << "Configured private copy of " << *reg;
             }
-            for(auto privateObj : reg->privateObjects()) {
-                auto configResult = configure(reg, privateObj, postProcessors, allowPartial);
-                switch(configResult) {
-                   case Status::fatal:
-                        qCCritical(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
-                        return false;
-                   case Status::fixable:
-                        qCWarning(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
-                        break;
-                   case Status::ok:
-                        qCInfo(loggingCategory()).noquote().nospace() << "Configured private copy of " << *reg;
-                }
 
-            }
-            iter = publishedNow.erase(iter);
         }
     }
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has published " << publishedCount << " objects";
@@ -531,7 +546,7 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
         registration = new ServiceRegistration{name, descriptor, this};
     }
     registrationsByName.insert({name, registration});
-    registrations.insert(registration);
+    registrations.push_back(registration);
     auto proxy = proxyRegistrationCache.find(registration->service_type());
     if(proxy != proxyRegistrationCache.end()) {
         proxy->second->add(registration);

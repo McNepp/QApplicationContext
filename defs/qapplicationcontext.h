@@ -53,6 +53,9 @@ public:
 
 signals:
 
+    ///
+    /// \brief Signals when a service has been published.
+    ///
     void publishedObjectsChanged();
 
 protected:
@@ -119,6 +122,10 @@ public:
         return unwrap()->getPublishedObjects();
     }
 
+    /// \brief The List of published services managed by this Registration.
+    /// This is a type-safe version of Registration::getPublishedObjects().
+    /// \return the List of published services.
+    ///
     [[nodiscard]] QList<S*> getPublishedServices() const {
         QList<S*> result;
         for(auto obj : getPublishedObjects()) {

@@ -5,6 +5,7 @@
 #include <atomic>
 #include <unordered_set>
 #include <unordered_map>
+#include <deque>
 #include <typeindex>
 #include "qapplicationcontext.h"
 
@@ -123,6 +124,10 @@ private:
             return descriptor.matches(type);
         }
 
+        static auto matcher(const std::type_index& type) {
+            return [type](DescriptorRegistration* reg) { return reg->matches(type); };
+        }
+
 
         DescriptorRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent);
 
@@ -148,25 +153,25 @@ private:
 
     using descriptor_set = std::unordered_set<DescriptorRegistration*>;
 
+    using descriptor_list = std::deque<DescriptorRegistration*>;
+
 
     struct ServiceRegistration : public DescriptorRegistration {
 
         ServiceRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
             DescriptorRegistration{name, desc, parent},
-            published(false),
             theService(nullptr) {
 
         }
 
         void notifyPublished() override {
             if(theService) {
-                published = true;
                 emit publishedObjectsChanged();
             }
         }
 
         virtual bool isPublished() const override {
-            return published;
+            return theService != nullptr;
         }
 
         virtual QObject* getObject() const override {
@@ -201,10 +206,9 @@ private:
 
 
         virtual bool unpublish() override {
-            if(published) {
+            if(theService) {
                 delete theService;
                 theService = nullptr;
-                published = false;
                 return true;
             }
             return false;
@@ -213,7 +217,6 @@ private:
     private:
         QObject* theService;
         QObjectList m_privateObjects;
-        bool published;
     };
 
     struct ObjectRegistration : public DescriptorRegistration {
@@ -290,7 +293,8 @@ private:
         }
 
         void add(DescriptorRegistration* reg) {
-            if(registrations.insert(reg).second) {
+            if(std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
+                registrations.push_back(reg);
                 connect(reg, &Registration::publishedObjectsChanged, this, &ProxyRegistration::publishedObjectsChanged);
             }
         }
@@ -299,7 +303,7 @@ private:
 
     private:
 
-        descriptor_set registrations;
+        descriptor_list registrations;
     };
 
 
@@ -327,7 +331,7 @@ private:
     DescriptorRegistration* getRegistrationByName(const QString& name) const;
 
 
-    std::pair<QObject*,Status> resolveDependency(const descriptor_set& published, std::vector<DescriptorRegistration*>& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent, bool allowPartial);
+    std::pair<QObject*,Status> resolveDependency(const descriptor_list& published, descriptor_list& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent, bool allowPartial);
 
     std::pair<DescriptorRegistration*,bool> registerDescriptor(QString name, const service_descriptor& descriptor, QObject* obj);
 
@@ -335,7 +339,7 @@ private:
 
     std::pair<QVariant,Status> resolveValue(const QVariant& value, bool allowPartial);
 
-    descriptor_set registrations;
+    descriptor_list registrations;
 
     std::unordered_map<QString,DescriptorRegistration*> registrationsByName;
 

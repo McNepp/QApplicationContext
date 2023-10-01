@@ -181,6 +181,10 @@ The following statement will do the trick:
 
     context -> registerService<PropFetcherAggregator,Dependency<RestPropFetcher,Cardinality::N>>("propFetcherAggregation");
 
+**Note:**, while constructing the `QList` with dependencies, the ordering of registrations of **non-interdependent services** will be honoured as much as possible.
+In the above example, the services "hamburgWeather" and "berlinWeather" will appear in that order in the `QList` that is passed to the `PropFetcherAggreator`.
+    
+
 ### PRIVATE_COPY
 
 Sometime, you may want to ensure that every instance of your service will get its own instance of a dependency. This might be necessary if the dependency shall be configured (i.e. modified) by the
@@ -283,8 +287,9 @@ Two noteworthy things:
 The reason for this is that the class has an accessible default-constructor. `QApplicationContext` makes sure that whenever a dependency
 for a specific type is resolved and a matching service has not been explicitly registered, a default-instance will be created if possible.
 2. The order of registrations has been switched: now, the dependent service `PropFetcherAggregator` is registered before the services it depends on.
-This was done to demonstrate that **the order of registrations is actually completely irrelevant**!  
+This was done to demonstrate that, **regardless of the ordering of registrations**, the dependencies will be resolved correctly!  
 `QApplicationContext` figures out automatically what the correct order must be.
+
 
 ## The Service-lifefycle
 
