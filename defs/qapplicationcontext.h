@@ -794,91 +794,14 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
-    template<typename S,typename D1,Kind c1> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        return registerServiceWithDependencies<S>(objectName, config, dep1);
-    }
-
-    ///
-    /// \brief Registers a service with this ApplicationContext.
-    /// \see registerService(const QString&,std::initializer_list<service_config::entry_type>,bool,const QString&).
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \param config the Configuration for the service.
-    /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
-    ///
-    template<typename S,typename D1,Kind c1,typename D2,Kind c2> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        return registerServiceWithDependencies<S>(objectName, config, dep1, dep2);
-    }
-
-    ///
-    /// \brief Registers a service with this ApplicationContext.
-    /// \see registerService(const QString&,std::initializer_list<service_config::entry_type>,bool,const QString&).
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \param config the Configuration for the service.
-    /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
-    ///
-    template<typename S,typename D1,Kind c1,typename D2,Kind c2,typename D3,Kind c3> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        return registerServiceWithDependencies<S>(objectName, config, dep1, dep2, dep3);
-    }
-
-    ///
-    /// \brief Registers a service with this ApplicationContext.
-    /// \see registerService(const QString&,std::initializer_list<service_config::entry_type>,bool,const QString&).
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \param config the Configuration for the service.
-    /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
-    ///
-    template<typename S,typename D1,Kind c1,typename D2,Kind c2,typename D3,Kind c3,typename D4,Kind c4> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3, Dependency<D4,c4> dep4) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        return registerServiceWithDependencies<S>(objectName, config, dep1, dep2, dep3, dep4);
-    }
-
-    ///
-    /// \brief Registers a service with this ApplicationContext.
-    /// \see registerService(const QString&,std::initializer_list<service_config::entry_type>,bool,const QString&).
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \param config the Configuration for the service.
-    /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
-    ///
-    template<typename S,typename D1,Kind c1,typename D2,Kind c2,typename D3,Kind c3,typename D4,Kind c4,typename D5,Kind c5> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3, Dependency<D4,c4> dep4, Dependency<D5,c5> dep5) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        return registerServiceWithDependencies<S>(objectName, config, dep1, dep2, dep3, dep4, dep5);
-    }
-
-
-    ///
-    /// \brief Registers a service with this ApplicationContext.
-    ///
-    /// There are two alternatives for specifying the service-type:
-    /// 1. Use a QObject-derived class directly as the service-type:
-    ///
-    ///     context -> registerService<QNetworkAccessManager>();
-    ///
-    /// 2. Use the template Service, which helps separate the service-interface from its implementation:
-    ///
-    ///     context -> registerService<Service<QAbstractItemModel,QStringListModel>>();
-    ///
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \param properties the configuration-properties for the service.
-    /// \param autowire determines whether the service's properties shall be autowired.
-    /// \param initMethod the Q_INVOKABLE method to call before publishing this service.
-    /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
-    ///
-    template<typename S,typename...Dep> auto registerService(const QString& objectName = "", std::initializer_list<service_config::entry_type> properties = {}, bool autowire = false, const QString& initMethod = "") -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        return registerService<S,Dep...>(objectName, service_config{properties, autowire, initMethod});
-    }
+    template<typename S,typename...Dep> auto registerService(const QString& objectName, const service_config& config, Dep...deps) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
+        using service_type = typename detail::service_traits<S>::service_type;
+        using impl_type = typename detail::service_traits<S>::impl_type;
+        using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
+        auto dependencies = descriptor_helper::dependencies(deps...);
+        auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies, config));
+        return ServiceRegistration<service_type>::wrap(result);
+     }
 
     ///
     /// \brief Registers a service with this ApplicationContext.
@@ -899,7 +822,7 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
-    template<typename S,typename...Dep> auto registerService(const QString& objectName, const service_config& config) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
+    template<typename S,typename...Dep> auto registerService(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         using service_type = typename detail::service_traits<S>::service_type;
         using impl_type = typename detail::service_traits<S>::impl_type;
         using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
@@ -907,6 +830,31 @@ public:
         auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies, config));
         return ServiceRegistration<service_type>::wrap(result);
     }
+
+    ///
+    /// \brief Registers a service with this ApplicationContext.
+    ///
+    /// There are two alternatives for specifying the service-type:
+    /// 1. Use a QObject-derived class directly as the service-type:
+    ///
+    ///     context -> registerService<QNetworkAccessManager>();
+    ///
+    /// 2. Use the template Service, which helps separate the service-interface from its implementation:
+    ///
+    ///     context -> registerService<Service<QAbstractItemModel,QStringListModel>>();
+    ///
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param properties properties for the configuration of the service.
+    /// \tparam S the service-type.
+    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
+    ///
+    template<typename S,typename...Dep> auto registerService(const QString& objectName, std::initializer_list<service_config::entry_type> properties) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
+        return registerService<S,Dep...>(objectName, service_config{properties});
+    }
+
+
 
 
 
@@ -990,21 +938,6 @@ signals:
 
 protected:
 
-
-    ///
-    /// \brief Registers a service with this QApplicationContext.
-    /// \param objectName
-    /// \param config
-    /// \param dependencyInfos
-    ///
-    template<typename S,typename...Dep> auto registerServiceWithDependencies(const QString& objectName, const service_config& config, Dep... dependencyInfos) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        using service_type = typename detail::service_traits<S>::service_type;
-        using impl_type = typename detail::service_traits<S>::impl_type;
-        using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
-        auto dependencies = descriptor_helper::dependencies(dependencyInfos...);
-        auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies, config));
-        return ServiceRegistration<service_type>::wrap(result);
-    }
 
 
     ///

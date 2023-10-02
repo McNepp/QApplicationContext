@@ -3,7 +3,7 @@ A DI-Container for Qt-based applications, inspired by Spring
 
 ## Motivation
 
-As an experienced developer, you know how crucial it is to follow the SOC*  (**S**eparation **O**f **C**oncern) - principle:  
+As an experienced developer, you know how crucial it is to follow the SOC (Separation Of Concern) - principle:  
 Each component shall be responsible for "one task" only, (or, at least, for one set of related tasks).  
 Things that are outside of a component's realm shall be delegated to other components.  
 This, of course, means that some components will need to get references to those other components, commonly referred to as "Dependencies".  
