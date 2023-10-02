@@ -1,13 +1,13 @@
 #pragma once
-/** @file cardinality.h
- *  @brief Declares the enum-class that specifies the type of a dependency.
+/** @file dependencykind.h
+ *  @brief Declares the enum-class that specifies the kind of dependency.
  *  @author McNepp
 */
 
 namespace mcnepp::qtdi {
 
 /**
-* \brief Specifies the cardinality of a service-dependency.
+* \brief Specifies the kind of a service-dependency.
 * Will be used as a non-type argument to Dependency, when registering a service.
 * The following table sums up the characteristics of each type of dependency:
 * <table><tr><th>&nbsp;</th><th>Normal behaviour</th><th>What if no dependency can be found?</th><th>What if more than one dependency can be found?</th></tr>
@@ -25,7 +25,7 @@ namespace mcnepp::qtdi {
 * <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
 * </table>
 */
-enum class Cardinality {
+enum class Kind {
     ///
     /// This dependency must be present in the ApplicationContext.
     MANDATORY,

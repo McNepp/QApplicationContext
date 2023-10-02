@@ -5,7 +5,7 @@
 #include <QObject>
 #include <QVariant>
 #include <QLoggingCategory>
-#include "cardinality.h"
+#include "dependencykind.h"
 
 namespace mcnepp::qtdi {
 
@@ -326,11 +326,11 @@ template<typename Srv,typename Impl> struct Service {
 ///
 ///     context->registerService<Reader,DatabaseAccess>("reader");
 ///
-///     context->registerService<Reader,Dependency<DatabaseAccess,Cardinality::MANDATORY>>("reader");
+///     context->registerService<Reader,Dependency<DatabaseAccess,Kind::MANDATORY>>("reader");
 ///
 /// However, if your service can do without a `DatabaseAccess`, you should register it like this:
 ///
-///     context->registerService<Reader,Dependency<DatabaseAccess,Cardinality::OPTIONAL>>("reader");
+///     context->registerService<Reader,Dependency<DatabaseAccess,Kind::OPTIONAL>>("reader");
 ///
 /// Consider the case where your `Reader` takes a List of `DatabaseAccess` instances:
 ///
@@ -341,7 +341,7 @@ template<typename Srv,typename Impl> struct Service {
 ///
 /// In that case, it would be registered in an ApplicationContext using the following line:
 ///
-///     context->registerService<Reader,Dependency<DatabaseAccess,Cardinality::N>>("reader");
+///     context->registerService<Reader,Dependency<DatabaseAccess,Kind::N>>("reader");
 ///
 /// As you can see from the previous examples, the type `Dependency` was never actually instantiated!
 ///
@@ -356,10 +356,10 @@ template<typename Srv,typename Impl> struct Service {
 /// Please note that now you **do not** have to specify the type-argument for the Dependency anymore, as it will be deduced from the supplied
 /// function-argument:
 ///
-///     context->registerService<Reader>("reader", Dependency<DatabaseAccess,Cardinality::N>{"oracleDatabaseAccess"});
+///     context->registerService<Reader>("reader", Dependency<DatabaseAccess,Kind::N>{"oracleDatabaseAccess"});
 ///
 ///
-template<typename S,Cardinality c=Cardinality::MANDATORY> struct Dependency {
+template<typename S,Kind c=Kind::MANDATORY> struct Dependency {
     ///
     /// \brief the required name for this dependency.
     /// The default-value is the empty String, with the implied meaning <em>"any dependency of the correct type may be used"</em>.
@@ -396,13 +396,13 @@ using constructor_t = std::function<QObject*(const QObjectList&)>;
 
 struct dependency_info {
     const std::type_info& type;
-    Cardinality cardinality;
+    Kind kind;
     constructor_t defaultConstructor;
     QString requiredName;
 };
 
 inline bool operator==(const dependency_info& info1, const dependency_info& info2) {
-    return info1.type == info2.type && info1.cardinality == info2.cardinality && info1.requiredName == info2.requiredName;
+    return info1.type == info2.type && info1.kind == info2.kind && info1.requiredName == info2.requiredName;
 }
 
 struct service_descriptor {
@@ -512,7 +512,7 @@ inline QObjectList convertQList<QObject>(const QObjectList &list) {
     return list;
 }
 
-template <typename S,Cardinality card> struct dependency_helper_base {
+template <typename S,Kind card> struct dependency_helper_base {
 
     using type = S;
 
@@ -533,11 +533,11 @@ template <typename S,Cardinality card> struct dependency_helper_base {
 };
 
 template <typename S>
-struct dependency_helper : dependency_helper_base<S,Cardinality::MANDATORY> {
+struct dependency_helper : dependency_helper_base<S,Kind::MANDATORY> {
 };
 
 template <typename S>
-struct dependency_helper<Dependency<S, Cardinality::N>> {
+struct dependency_helper<Dependency<S, Kind::N>> {
     using type = S;
 
 
@@ -546,24 +546,24 @@ struct dependency_helper<Dependency<S, Cardinality::N>> {
     }
 
     static dependency_info info() {
-        return { typeid(S), Cardinality::N };
+        return { typeid(S), Kind::N };
     }
 
-    static dependency_info info(Dependency<S,Cardinality::N> dep) {
-        return { typeid(S), Cardinality::N, nullptr, dep.requiredName };
+    static dependency_info info(Dependency<S,Kind::N> dep) {
+        return { typeid(S), Kind::N, nullptr, dep.requiredName };
     }
 };
 
 template <typename S>
-struct dependency_helper<Dependency<S, Cardinality::OPTIONAL>> : dependency_helper_base<S,Cardinality::OPTIONAL>  {
+struct dependency_helper<Dependency<S, Kind::OPTIONAL>> : dependency_helper_base<S,Kind::OPTIONAL>  {
 };
 
 template <typename S>
-struct dependency_helper<Dependency<S, Cardinality::MANDATORY>> : dependency_helper_base<S,Cardinality::MANDATORY> {
+struct dependency_helper<Dependency<S, Kind::MANDATORY>> : dependency_helper_base<S,Kind::MANDATORY> {
 };
 
 template <typename S>
-struct dependency_helper<Dependency<S, Cardinality::PRIVATE_COPY>> : dependency_helper_base<S,Cardinality::PRIVATE_COPY> {
+struct dependency_helper<Dependency<S, Kind::PRIVATE_COPY>> : dependency_helper_base<S,Kind::PRIVATE_COPY> {
 };
 
 
@@ -794,7 +794,7 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
-    template<typename S,typename D1,Cardinality c1> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
+    template<typename S,typename D1,Kind c1> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerServiceWithDependencies<S>(objectName, config, dep1);
     }
 
@@ -808,7 +808,7 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
-    template<typename S,typename D1,Cardinality c1,typename D2,Cardinality c2> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
+    template<typename S,typename D1,Kind c1,typename D2,Kind c2> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerServiceWithDependencies<S>(objectName, config, dep1, dep2);
     }
 
@@ -822,7 +822,7 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
-    template<typename S,typename D1,Cardinality c1,typename D2,Cardinality c2,typename D3,Cardinality c3> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
+    template<typename S,typename D1,Kind c1,typename D2,Kind c2,typename D3,Kind c3> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerServiceWithDependencies<S>(objectName, config, dep1, dep2, dep3);
     }
 
@@ -836,7 +836,7 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
-    template<typename S,typename D1,Cardinality c1,typename D2,Cardinality c2,typename D3,Cardinality c3,typename D4,Cardinality c4> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3, Dependency<D4,c4> dep4) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
+    template<typename S,typename D1,Kind c1,typename D2,Kind c2,typename D3,Kind c3,typename D4,Kind c4> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3, Dependency<D4,c4> dep4) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerServiceWithDependencies<S>(objectName, config, dep1, dep2, dep3, dep4);
     }
 
@@ -850,7 +850,7 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
-    template<typename S,typename D1,Cardinality c1,typename D2,Cardinality c2,typename D3,Cardinality c3,typename D4,Cardinality c4,typename D5,Cardinality c5> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3, Dependency<D4,c4> dep4, Dependency<D5,c5> dep5) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
+    template<typename S,typename D1,Kind c1,typename D2,Kind c2,typename D3,Kind c3,typename D4,Kind c4,typename D5,Kind c5> auto registerService(const QString& objectName, const service_config& config, Dependency<D1,c1> dep1, Dependency<D2,c2> dep2, Dependency<D3,c3> dep3, Dependency<D4,c4> dep4, Dependency<D5,c5> dep5) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
         return registerServiceWithDependencies<S>(objectName, config, dep1, dep2, dep3, dep4, dep5);
     }
 

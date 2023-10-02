@@ -140,7 +140,7 @@ There are some crucial differences between `QApplicationContext::registerService
 In our previous example, we have seen the dependency of our `RestPropFetcher` to a `QNetworkAccessManager`.  
 This constitutes a *mandatory dependency*: instantion of the `RestPropFetcher`will fail if no `QNetworkAccessManager`can be found.
 However, there are more ways to express a dependency-relation.  
-This is reflected by the enum-type `mcnepp::qtdi::Cardinality` and its enum-constants as listed below:
+This is reflected by the enum-type `mcnepp::qtdi::Kind` and its enum-constants as listed below:
 
 
 ### MANDATORY
@@ -153,14 +153,14 @@ Mandatory dependencies can be specified by simply listing the type of the depend
 
 Just for the sake of consistency, you could also use the `Dependency` helper-template, even though this is not recommended:
 
-    registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Cardinality::MANDATORY>>();
+    registerService<RestPropFetcher,Dependency<QNetworkAccessManager>>();
 
 ### OPTIONAL
 A service that has an *optional dependency* to another service may be instantiated even when no matching other service can be found in the ApplicationContext.
 In that case, `nullptr` will be passed to the service's constructor.  
 Optional dependencies are specified the `Dependency` helper-template. Suppose it were possible to create our `RestPropFetcher` without a `QNetworkAccessManage`:
 
-    registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Cardinality::OPTIONAL>>();
+    registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Kind::OPTIONAL>>();
 
 ### N (one-to-many)
 
@@ -179,7 +179,7 @@ Note that the above component comprises a one-to-,any relationship with its depe
 We must notify the QApplicationContext about this, so that it can correctly inject all the matching dependencies into the component's constructor.  
 The following statement will do the trick:
 
-    context -> registerService<PropFetcherAggregator,Dependency<RestPropFetcher,Cardinality::N>>("propFetcherAggregation");
+    context -> registerService<PropFetcherAggregator,Dependency<RestPropFetcher,Kind::N>>("propFetcherAggregation");
 
 **Note:**, while constructing the `QList` with dependencies, the ordering of registrations of **non-interdependent services** will be honoured as much as possible.
 In the above example, the services "hamburgWeather" and "berlinWeather" will appear in that order in the `QList` that is passed to the `PropFetcherAggreator`.
@@ -191,8 +191,8 @@ Sometime, you may want to ensure that every instance of your service will get it
 dependent service, thus potentially affecting other dependent services.  
 QApplicationContext defines the dependency-type PRIVATE_COPY for this. Applied to our example, you would enfore a private `QNetworkAccessManager` for both `RestPropFetcher`s like this:
 
-    context -> registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Cardinality::PRIVATE_COPY>("berlinWeather"); 
-    context -> registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Cardinality::PRIVATE_COPY>("hamburgWeather"); 
+    context -> registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Kind::PRIVATE_COPY>("berlinWeather"); 
+    context -> registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Kind::PRIVATE_COPY>("hamburgWeather"); 
     
 **Note:** The life-cycle of instances created with PRIVATE_COPY will not be managed by the ApplicationContext! Rather, the ApplicationContext will set the dependent object's `QObject::parent()` to the dependent service, thus it will be destructed when its parent is destructed.
     
@@ -274,7 +274,7 @@ Putting it all together, we use the helper-template `Service` for specifying bot
     
     QApplicationContext* context = new StandardQApplicationContext; 
     
-    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Cardinality::N>>("propFetcherAggration");
+    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Kind::N>>("propFetcherAggration");
     
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}}); 
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
@@ -341,7 +341,7 @@ However, we could introduce a Q_PROPERTY like this:
 And here's how this property will be automatically set to the ApplicationContext's `PropFetcherAggregator`. Note the ampersand in the property-value that means *reference to another member*:
 
 
-    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Cardinality::N>>("propFetcherAggregator");
+    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Kind::N>>("propFetcherAggregator");
     
     context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {
       {"url", "${weatherUrl}${hamburgStationId}"},
@@ -393,11 +393,11 @@ registered.
 
 *Init-methods* are supplied as part of the `service_config`, for example like this:
 
-    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Cardinality::N>>("propFetcherAggregator", service_config{{}, false, "init"});
+    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Kind::N>>("propFetcherAggregator", service_config{{}, false, "init"});
 
 or, more conveniently:
 
-    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Cardinality::N>>("propFetcherAggregator", {}, false, "init");
+    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Kind::N>>("propFetcherAggregator", {}, false, "init");
 
 Suitable *init-methods* are `Q_INVOKABLE`-methods with either no arguments, or with one argument of type `QApplicationContext*`.
 
@@ -411,7 +411,7 @@ The name of a dependency can be supplied to the helper-class `Dependency`. Previ
 rather used it as a type-argument only.  
 Now, we will create an instance of `Dependency` and supply a name to it:
 
-    context -> registerService<PropFetcherAggregator>("propFetcherAggregator", service_config{{}, false, "init"}, Dependency<PropFetcher,Cardinality::N>{"hamburgWeather"});
+    context -> registerService<PropFetcherAggregator>("propFetcherAggregator", service_config{{}, false, "init"}, Dependency<PropFetcher,Kind::N>{"hamburgWeather"});
 
 ## Publishing an ApplicationContext more than once
 
@@ -438,7 +438,7 @@ This will work <b>regardless of the order in which the modules are initialized</
 
 Now let's get back to our class `PropFetcherAggregator` from above. We'll assume that a third module C contains this initialization-code:
 
-    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Cardinality::N>>("propFetcherAggregator");
+    context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Kind::N>>("propFetcherAggregator");
     context -> publish();
 
 Unfortunately, this code will only have the desired effect of injecting all `PropFetchers` into the `PropFetcherAggregator` if it is executed after the code in modules A and B.

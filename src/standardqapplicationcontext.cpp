@@ -61,15 +61,15 @@ template<typename C> auto pop_front(C& container) -> typename C::value_type {
 
 }
 
-inline QString cardinalityToString(Cardinality card) {
-    switch(card) {
-    case Cardinality::N:
+inline QString kindToString(Kind kind) {
+    switch(kind) {
+    case Kind::N:
         return "N";
-    case Cardinality::OPTIONAL:
+    case Kind::OPTIONAL:
         return "optional";
-    case Cardinality::MANDATORY:
+    case Kind::MANDATORY:
         return "mandatory";
-    case Cardinality::PRIVATE_COPY:
+    case Kind::PRIVATE_COPY:
         return "private copy";
     default:
         return "unknown";
@@ -78,7 +78,7 @@ inline QString cardinalityToString(Cardinality card) {
 }
 
 inline QDebug operator<<(QDebug out, const QApplicationContext::dependency_info& info) {
-    QDebug tmp = out.noquote().nospace() << "Dependency '" << info.type.name() << "' [" << cardinalityToString(info.cardinality) << ']';
+    QDebug tmp = out.noquote().nospace() << "Dependency '" << info.type.name() << "' [" << kindToString(info.kind) << ']';
     if(!info.requiredName.isEmpty()) {
         return tmp << "] with required name '" << info.requiredName << "'";
     }
@@ -176,8 +176,8 @@ std::pair<QObject*,StandardApplicationContext::Status> StandardApplicationContex
         }
     }
 
-    switch(d.cardinality) {
-    case Cardinality::MANDATORY:
+    switch(d.kind) {
+    case Kind::MANDATORY:
         if(dep.empty()) {
             if(allowPartial) {
                 qWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
@@ -188,7 +188,7 @@ std::pair<QObject*,StandardApplicationContext::Status> StandardApplicationContex
             }
 
         }
-    case Cardinality::OPTIONAL:
+    case Kind::OPTIONAL:
         switch(dep.size()) {
         case 0:
             return {nullptr, Status::ok};
@@ -200,10 +200,10 @@ std::pair<QObject*,StandardApplicationContext::Status> StandardApplicationContex
             qCritical(loggingCategory()).noquote().nospace() << d << "' of " << *reg << " is ambiguous";
             return {nullptr, Status::fatal};
         }
-    case Cardinality::N:
+    case Kind::N:
         return {detail::wrapList(dep, temporaryParent), Status::ok};
 
-    case Cardinality::PRIVATE_COPY:
+    case Kind::PRIVATE_COPY:
         DescriptorRegistration* depReg;
         switch(dep.size()) {
         case 0:
@@ -239,7 +239,7 @@ std::pair<QObject*,StandardApplicationContext::Status> StandardApplicationContex
                 return result;
             }
             subDep.push_back(result.first);
-            if(dd.cardinality == Cardinality::PRIVATE_COPY) {
+            if(dd.kind == Kind::PRIVATE_COPY) {
                 privateSubDep.push_back(result.first);
             }
         }
@@ -371,7 +371,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
                 goto next_unpublished;
             }
             //If we find a mandatory dependency for which there is a default-constructor, we continue with that:
-            if(!find_by_type(allPublished, d.type) && d.cardinality == Cardinality::MANDATORY && d.defaultConstructor) {
+            if(!find_by_type(allPublished, d.type) && d.kind == Kind::MANDATORY && d.defaultConstructor) {
                 auto def = registerDescriptor("", service_descriptor{d.type, d.type, d.defaultConstructor}, nullptr);
                 if(def.second) {
                     unpublished.push_front(reg);
@@ -395,7 +395,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
                 goto next_unpublished;
             }
             dependencies.push_back(result.first);
-            if(d.cardinality == Cardinality::PRIVATE_COPY) {
+            if(d.kind == Kind::PRIVATE_COPY) {
                 privateDependencies.push_back(result.first);
             }
         }
@@ -410,7 +410,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         }
         qCInfo(loggingCategory()).nospace().noquote() << "Published " << *reg;
         publishedNow.push_back(reg);
-        //By building the list of published services from scratch, we guarantee that they'll end up in Cardinality::N-dependencies in the right order:
+        //By building the list of published services from scratch, we guarantee that they'll end up in Kind::N-dependencies in the right order:
         allPublished.clear();
         std::copy_if(registrations.begin(), registrations.end(), std::inserter(allPublished, allPublished.begin()), std::mem_fn(&DescriptorRegistration::isPublished));
     }

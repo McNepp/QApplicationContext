@@ -319,7 +319,7 @@ private slots:
     }
 
     void testOptionalDependency() {
-        auto reg = context->registerService<DependentService,Dependency<Interface1,Cardinality::OPTIONAL>>();
+        auto reg = context->registerService<DependentService,Dependency<Interface1,Kind::OPTIONAL>>();
         QVERIFY(reg);
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> service{reg};
@@ -327,7 +327,7 @@ private slots:
     }
 
     void testOptionalDependencyWithAutowire() {
-        auto reg = context->registerService<DependentService,Dependency<Interface1,Cardinality::OPTIONAL>>();
+        auto reg = context->registerService<DependentService,Dependency<Interface1,Kind::OPTIONAL>>();
         QVERIFY(reg->autowire(&DependentService::setBase));
         QVERIFY(!reg->autowire(&DependentService::setBase)); //Should report false on the second time.
         RegistrationSlot<DependentService> service{reg};
@@ -341,7 +341,7 @@ private slots:
     }
 
     void testCardinalityNDependencyWithAutowire() {
-        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>();
+        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Kind::N>>();
         QVERIFY(reg->autowire(&CardinalityNService::addBase));
         QVERIFY(!reg->autowire(&CardinalityNService::addBase)); //Should report false on the second time.
         RegistrationSlot<CardinalityNService> service{reg};
@@ -391,7 +391,7 @@ private slots:
         context->registerObject<Interface1>(&base, "base");
         BaseService myBase;
         context->registerObject<Interface1>(&myBase, "myBase");
-        context->registerService<DependentService,Dependency<Interface1,Cardinality::OPTIONAL>>();
+        context->registerService<DependentService,Dependency<Interface1,Kind::OPTIONAL>>();
         QVERIFY(!context->publish());
     }
 
@@ -410,8 +410,8 @@ private slots:
     void testNamedOptionalDependency() {
         BaseService base;
         context->registerObject<Interface1>(&base, "base");
-        auto depReg = context->registerService<DependentService>("", service_config{}, Dependency<Interface1,Cardinality::OPTIONAL>{"myBase"});
-        auto depReg2 = context->registerService<DependentService>("", service_config{}, Dependency<Interface1,Cardinality::OPTIONAL>{"base"});
+        auto depReg = context->registerService<DependentService>("", service_config{}, Dependency<Interface1,Kind::OPTIONAL>{"myBase"});
+        auto depReg2 = context->registerService<DependentService>("", service_config{}, Dependency<Interface1,Kind::OPTIONAL>{"base"});
 
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> depSlot{depReg};
@@ -424,8 +424,8 @@ private slots:
 
 
     void testPrivateCopyDependency() {
-        auto depReg = context->registerService<DependentService,Dependency<BaseService,Cardinality::PRIVATE_COPY>>("dependent");
-        auto threeReg = context->registerService<ServiceWithThreeArgs,BaseService,Dependency<DependentService,Cardinality::PRIVATE_COPY>,BaseService2>("three");
+        auto depReg = context->registerService<DependentService,Dependency<BaseService,Kind::PRIVATE_COPY>>("dependent");
+        auto threeReg = context->registerService<ServiceWithThreeArgs,BaseService,Dependency<DependentService,Kind::PRIVATE_COPY>,BaseService2>("three");
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> dependentSlot{depReg};
         RegistrationSlot<BaseService> baseSlot{context->getRegistration<BaseService>()};
@@ -442,7 +442,7 @@ private slots:
     void testInvalidPrivateCopyDependency() {
         BaseService base;
         context->registerObject<Interface1>(&base, "base");
-        context->registerService<DependentService,Dependency<Interface1,Cardinality::PRIVATE_COPY>>("dependent");
+        context->registerService<DependentService,Dependency<Interface1,Kind::PRIVATE_COPY>>("dependent");
         QVERIFY(!context->publish());
     }
 
@@ -579,7 +579,7 @@ private slots:
     void testCardinalityNService() {
         auto reg1 = context->registerService<Service<Interface1,BaseService>>("base1");
         auto reg2 = context->registerService<Service<Interface1,BaseService2>>("base2");
-        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>();
+        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Kind::N>>();
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
         RegistrationSlot<Interface1> base1{reg1};
@@ -601,7 +601,7 @@ private slots:
     void testCardinalityNServiceWithRequiredName() {
         auto reg1 = context->registerService<Service<Interface1,BaseService>>("base1");
         auto reg2 = context->registerService<Service<Interface1,BaseService2>>("base2");
-        auto reg = context->registerService<CardinalityNService>("", service_config{}, Dependency<Interface1,Cardinality::N>{"base2"});
+        auto reg = context->registerService<CardinalityNService>("", service_config{}, Dependency<Interface1,Kind::N>{"base2"});
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
         RegistrationSlot<Interface1> base1{reg1};
@@ -622,7 +622,7 @@ private slots:
         auto processReg = context->registerService<PostProcessor>();
         auto reg1 = context->registerService<Service<Interface1,BaseService>>("base1", {{".store", true}});
         auto reg2 = context->registerService<Service<Interface1,BaseService2>>("base2");
-        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>("card", {{".store", true}});
+        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Kind::N>>("card", {{".store", true}});
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
         RegistrationSlot<Interface1> base1{reg1};
@@ -645,7 +645,7 @@ private slots:
 
 
     void testCardinalityNServiceEmpty() {
-        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>();
+        auto reg = context->registerService<CardinalityNService,Dependency<Interface1,Kind::N>>();
         QVERIFY(context->publish());
         RegistrationSlot<CardinalityNService> service{reg};
         QCOMPARE(service->my_bases.size(), 0);
@@ -761,7 +761,7 @@ private slots:
         QCOMPARE(contextPublished, 2);
 
         RegistrationSlot<Interface1> anotherBaseSlot{anotherBaseReg};
-        auto regCard = context->registerService<CardinalityNService,Dependency<Interface1,Cardinality::N>>();
+        auto regCard = context->registerService<CardinalityNService,Dependency<Interface1,Kind::N>>();
         QCOMPARE(contextPending, 2);
         QCOMPARE(contextPublished, 2);
 
