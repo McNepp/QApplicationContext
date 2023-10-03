@@ -30,7 +30,7 @@ How do I create application-wide "singletons" (without resorting to C++ singleti
 ## An example
 
 Suppose you have created a component named 'RestPropFetcher'. This component fetches a String-value from a Website, using http-GET and exposes this value as a Q_PROPERTY.
-Naturally, this component will make use of a `QNetworkAccessManager`. Also, it will have a writable String-property for setting the URL.
+Naturally, this component will make use of a `QNetworkAccessManager`. Also, a URL will be passed into the constructor.
 The declaration of such a component may look like this:
 
     class RestPropFetcher : public QObject {
@@ -38,21 +38,18 @@ The declaration of such a component may look like this:
 
       Q_PROPERTY(QString value READ value NOTIFY valueChanged)
 
-      Q_PROPERTY(QString url READ url WRITE setURl NOTIFY urlChanged)
       
       public:
       
-      explicit RestPropFetcher(QNetworkAccessManager* networkManager, QObject* parent = nullptr);
+      RestPropFetcher(const QString& url, QNetworkAccessManager* networkManager, QObject* parent = nullptr);
 
       QString value() const;
 
       QString url() const;
 
-      void setUrl(const QString&);
 
       signals:
       void valueChanged();
-      void urlChanged();
     };
 
 Given the above component, here is the minimal code for creating a QApplicationContext which exposes such a RestPropFetcher:
@@ -62,27 +59,15 @@ Given the above component, here is the minimal code for creating a QApplicationC
     QApplicationContext* context = new StandardQApplicationContext; // 1
     
     context -> registerService<QNetworkAccessManager>(); // 2
-    context -> registerService<RestPropFetcher,QNetworkAccessManager>("hamburgWeather"); // 3
+    context -> registerService<RestPropFetcher>("hamburgWeather", service_config{}, QString{"https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}, Dependency<QNetworkAccessManager>{}); // 3
     
     context -> publish(); // 4
 
 1. Creates a StandardQApplicationContext on the heap. Note that we assign it to a pointer of the interface QApplicationContext. This avoids accidental use of non-public API.
 2. Registers a QNetworkAccessManager with the context. We are supplying no parameters here, so the component will get an auto-generated name!
-3. Registers a RestPropFetcher with the context. Since the constructor requires an argument of type `QNetworkAccessManager*`, we simply supply the type as the second argument to the function.
+3. Registers a RestPropFetcher with the context. Its constructor requires two arguments: the first one being the URL, and the second one being a "placeholder" for the dependencency (a `QNetworkAccessManager*`).
    Everything else is taken care of automatically. We assign the name "hamburgWeather" to this service.
 4. The context is published. It will instantiate a QNetworkAccessManager first, then a RestPropFetcher, injecting the QNetworkAccessManager.
-
-
-However, something is actually missing from the above code: the RestPropFetcher must be configured with a Url before it can be used!  
-Let's assume we want to use the Url `"https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"`.  
-How do we do this?
-The answer is simple: we supply the required property-name and value at registration:
-
-    context -> registerService<RestPropFetcher,QNetworkAccessManager>("hamburgWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}}); 
-
-Likewise, we could register a second service that will fetch the weather-information for Berlin:
-
-    context -> registerService<RestPropFetcher,QNetworkAccessManager>("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
 
 
 ## Externalized Configuration
@@ -96,19 +81,65 @@ This is what it looks like if you out-source the "url" configuration-value into 
 
     context -> registerObject(new QSettings{"application.ini", QSettings::IniFormat, context});
     
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${hamburgWeatherUrl}"}}); 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("berlinWeather", {{"url", "${hamburgBerlinUrl}"}}); 
+    context -> registerService<RestPropFetcher>("hamburgWeather", service_config{}, QString{"${hamburgWeatherUrl}"}, Dependency<QNetworkAccessManager>{}); 
+    context -> registerService<RestPropFetcher>("berlinWeather", service_config{}, QString{"${berlinWeatherUrl}"}, Dependency<QNetworkAccessManager>{}); 
 
 
 You could even improve on this by re-factoring the common part of the Url into its own configuration-value:
 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("berlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
+    context -> registerService<RestPropFetcher>("hamburgWeather", service_config{}, QString{"${baseUrl}?stationIds=${hamburgStationId}"}, Dependency<QNetworkAccessManager>{}); 
+    context -> registerService<RestPropFetcher>("berlinWeather", service_config{}, QString{"${baseUrl}?stationIds=${berlinStationId}"}, Dependency<QNetworkAccessManager>{}); 
     
 **Note:** Every property supplied to `QApplicationContext::registerService()` will be considered a potential Q_PROPERTY of the target-service. `QApplicationContext::publish(bool)` will fail if no such property can be
 found.  
 However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
 Such *private properties* may be passed to a `QApplicationContextPostProcessor` (see below).
+
+
+## Configuring services with Q_PROPERTY
+
+We have seen how we can inject configuration-values into Service-constructors. Another way of configuring Services is to use Q_PROPERTY declarations.
+Suppose we modify the declaration of `RestPropFetcher` like this:
+
+    class RestPropFetcher : public QObject {
+      Q_OBJECT
+
+      Q_PROPERTY(QString value READ value NOTIFY valueChanged)
+      
+      Q_PROPERTY(QString url READ url WRITE setUrl NOTIFY urlChanged)
+
+      
+      public:
+      
+      explicit RestPropFetcher(QNetworkAccessManager* networkManager, QObject* parent = nullptr);
+
+      QString value() const;
+
+      QString url() const;
+      
+      void setUrl(const QString&);
+
+      signals:
+      void valueChanged();
+      void urlChanged();
+    };
+
+
+Now, the "url" cannot be injected into the constructor. Rather, it must be set explicitly via the corresponding Q_PROPERTY.
+For this, the yet unused `service_config` argument comes into play: It contains a `QVariantMap` with the names and values of properties to set:
+
+    context -> registerService<RestPropFetcher,Dependency<QNetworkAccessManager>>("hamburgWeather", service_config{{{"url", "${baseUrl}?stationIds=${hamburgStationId}"}}}); 
+    context -> registerService<RestPropFetcher,Dependency<QNetworkAccessManager>>("berlinWeather", service_config{{{"url", "${baseUrl}?stationIds=${berlinStationId}"}}}); 
+
+As you can see, the code has changed quite significantly: a different overload of `registerService` is used, where no constructor-arguments are passed to anymore. 
+Rahter, the Dependency is supplied solely as a type-argument to the function.
+
+Actually, the above can be simplified slightly by using another overload of `registerService` that accepts a `std::initializer_list<std::pair<QString,QVariant>>`:
+
+    context -> registerService<RestPropFetcher,Dependency<QNetworkAccessManager>>("hamburgWeather", {{"url", "${baseUrl}?stationIds=${hamburgStationId}"}}); 
+    context -> registerService<RestPropFetcher,Dependency<QNetworkAccessManager>>("berlinWeather", {{"url", "${baseUrl}?stationIds=${berlinStationId}"}}); 
+
+
 
 
 ## Managed Services vs. Un-managed Objects
@@ -149,11 +180,11 @@ As stated before, mandatory dependencies enforce that there is exactly one servi
 Otherwise, publication will fail.
 Mandatory dependencies can be specified by simply listing the type of the dependency as a template-argument:
 
-    registerService<RestPropFetcher,QNetworkAccessManager>();
-
-Just for the sake of consistency, you could also use the `Dependency` helper-template, even though this is not recommended:
-
     registerService<RestPropFetcher,Dependency<QNetworkAccessManager>>();
+
+Just for the sake of consistency, you could also use the explicit `Kind::MANDATORY`:
+
+    registerService<RestPropFetcher,Dependency<QNetworkAccessManager,Kind::MANDATORY>>();
 
 ### OPTIONAL
 A service that has an *optional dependency* to another service may be instantiated even when no matching other service can be found in the ApplicationContext.
@@ -276,8 +307,8 @@ Putting it all together, we use the helper-template `Service` for specifying bot
     
     context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Kind::N>>("propFetcherAggration");
     
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}}); 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,Dependency<QNetworkAccessManager>>("hamburgWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,Dependency<QNetworkAccessManager>>("berlinWeather", {{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}); 
     
     context -> publish(); 
 
@@ -343,7 +374,7 @@ And here's how this property will be automatically set to the ApplicationContext
 
     context -> registerService<PropFetcherAggregator,Dependency<PropFetcher,Kind::N>>("propFetcherAggregator");
     
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,Dependency<QNetworkAccessManager>>("hamburgWeather", {
       {"url", "${weatherUrl}${hamburgStationId}"},
       {"summary", "&propFetcherAggregator"}
     }); 
@@ -359,7 +390,7 @@ Therefore, it it strongly recommended to use the method `ServiceRegistration::su
 In addition to being type-safe, this method has the advantage that is will automatically notify you if you subscribe after the service has already been published.  
 This code shows how to do this:
 
-    auto registration = context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
+    auto registration = context -> registerService<Service<PropFetcher,RestPropFetcher>,Dependency<QNetworkAccessManager>>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
     
     registration -> subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got the PropFether!"; });
 
@@ -424,12 +455,12 @@ That could be a bit unwieldly. Luckily, this is not necessary.
 
 Given that each module has access to the (global) QApplicationContext, you can simply do this in some initialization-code in module A:
 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,Dependency<QNetworkAccessManager>>("hamburgWeather", {{"url", "${weatherUrl}${hamburgStationId}"}}); 
     context -> publish();
 
 ...and this in module B:
 
-    context -> registerService<Service<PropFetcher,RestPropFetcher>,QNetworkAccessManager>("berlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
+    context -> registerService<Service<PropFetcher,RestPropFetcher>,Dependency<QNetworkAccessManager>>("berlinWeather", {{"url", "${weatherUrl}${berlinStationId}"}}); 
     context -> publish();
 
 At the first `publish()`, an instance of `QNetworkAccessManager` will be instantiated. It will be injected into both `RestPropFetchers`.

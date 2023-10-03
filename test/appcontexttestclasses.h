@@ -112,9 +112,12 @@ public:
 
     }
 
+
     virtual QString foo() const override {
         return "BaseService";
     }
+
+
 };
 
 
@@ -123,8 +126,15 @@ public:
 class DependentService : public QObject {
 public:
     explicit DependentService(Interface1* dependency) :
-    m_dependency(dependency)
+        DependentService(0, "", dependency)
     {
+
+    }
+
+    DependentService(int id, const QString& url, Interface1* dependency) :
+        m_dependency(dependency),
+        m_id(id),
+        m_url(url) {
 
     }
     void setBase(Interface1* base) {
@@ -132,6 +142,8 @@ public:
     }
 
     Interface1* m_dependency;
+    const int m_id;
+    const QString m_url;
 
 
 };

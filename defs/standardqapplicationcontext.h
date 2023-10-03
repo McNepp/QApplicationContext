@@ -134,13 +134,13 @@ private:
         DescriptorRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent);
 
 
-        virtual QObject* publish(const QObjectList& dependencies) = 0;
+        virtual QObject* publish(const QVariantList& dependencies) = 0;
 
         virtual bool unpublish() = 0;
 
         virtual QObjectList privateObjects() const = 0;
 
-        virtual QObject* createPrivateObject(const QObjectList& dependencies) = 0;
+        virtual QObject* createPrivateObject(const QVariantList& dependencies) = 0;
 
 
         friend QDebug operator << (QDebug out, const DescriptorRegistration& reg) {
@@ -185,7 +185,7 @@ private:
         }
 
 
-        virtual QObject* createPrivateObject(const QObjectList& dependencies) override {
+        virtual QObject* createPrivateObject(const QVariantList& dependencies) override {
             QObject* obj = descriptor.create(dependencies);
             if(obj) {
                 m_privateObjects.push_back(obj);
@@ -202,7 +202,7 @@ private:
         }
 
 
-        virtual QObject* publish(const QObjectList& dependencies) override {
+        virtual QObject* publish(const QVariantList& dependencies) override {
             if(!theService) {
                 theService = descriptor.create(dependencies);
             }
@@ -258,11 +258,11 @@ private:
             return theObj;
         }
 
-        virtual QObject* publish(const QObjectList& dependencies) override {
+        virtual QObject* publish(const QVariantList& dependencies) override {
             return theObj;
         }
 
-        virtual QObject* createPrivateObject(const QObjectList& dependencies) override {
+        virtual QObject* createPrivateObject(const QVariantList& dependencies) override {
             return nullptr;
         }
 
@@ -342,7 +342,7 @@ private:
     DescriptorRegistration* getRegistrationByName(const QString& name) const;
 
 
-    std::pair<QObject*,Status> resolveDependency(const descriptor_list& published, descriptor_list& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent, bool allowPartial);
+    std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, descriptor_list& publishedNow, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial);
 
     std::pair<DescriptorRegistration*,bool> registerDescriptor(QString name, const service_descriptor& descriptor, QObject* obj);
 

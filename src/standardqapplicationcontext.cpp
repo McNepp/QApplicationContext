@@ -12,19 +12,27 @@ namespace mcnepp::qtdi {
 
 
 namespace {
-struct QOwningList : QObjectList {
+struct QOwningList {
+    QObjectList list;
+
     QOwningList() = default;
 
     QOwningList(const QOwningList&) = delete;
 
     ~QOwningList() {
-        for(auto iter = begin(); iter != end(); iter = erase(iter)) {
+        for(auto iter = list.begin(); iter != list.end(); iter = list.erase(iter)) {
             delete *iter;
         }
     }
 
+    void push_back(QObject* ptr) {
+        if(ptr) {
+            list.push_back(ptr);
+        }
+    }
+
     void moveTo(QObject* newParent) {
-        for(auto iter = begin(); iter != end(); iter = erase(iter)) {
+        for(auto iter = list.begin(); iter != list.end(); iter = list.erase(iter)) {
             (*iter)->setParent(newParent);
         }
 
@@ -61,16 +69,18 @@ template<typename C> auto pop_front(C& container) -> typename C::value_type {
 
 }
 
-inline QString kindToString(Kind kind) {
+inline QString kindToString(int kind) {
     switch(kind) {
-    case Kind::N:
+        case static_cast<int>(Kind::N):
         return "N";
-    case Kind::OPTIONAL:
+    case static_cast<int>(Kind::OPTIONAL):
         return "optional";
-    case Kind::MANDATORY:
+    case static_cast<int>(Kind::MANDATORY):
         return "mandatory";
-    case Kind::PRIVATE_COPY:
+    case static_cast<int>(Kind::PRIVATE_COPY):
         return "private copy";
+    case detail::VALUE_KIND:
+        return "value";
     default:
         return "unknown";
 
@@ -158,7 +168,7 @@ StandardApplicationContext::DescriptorRegistration *StandardApplicationContext::
 }
 
 
-std::pair<QObject*,StandardApplicationContext::Status> StandardApplicationContext::resolveDependency(const descriptor_list &published, descriptor_list& publishedNow, DescriptorRegistration* reg, const dependency_info& d, QObject* temporaryParent, bool allowPartial)
+std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveDependency(const descriptor_list &published, descriptor_list& publishedNow, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial)
 {
     const std::type_info& type = d.type;
 
@@ -177,33 +187,37 @@ std::pair<QObject*,StandardApplicationContext::Status> StandardApplicationContex
     }
 
     switch(d.kind) {
-    case Kind::MANDATORY:
+    case detail::VALUE_KIND:
+        return resolveValue(d.value, allowPartial);
+
+
+    case static_cast<int>(Kind::MANDATORY):
         if(dep.empty()) {
             if(allowPartial) {
                 qWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
-                return {nullptr, Status::fixable};
+                return {QVariant{}, Status::fixable};
             } else {
                 qCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
-                return {nullptr, Status::fatal};
+                return {QVariant{}, Status::fatal};
             }
 
         }
-    case Kind::OPTIONAL:
+    case static_cast<int>(Kind::OPTIONAL):
         switch(dep.size()) {
         case 0:
-            return {nullptr, Status::ok};
+            return {QVariant{}, Status::ok};
         case 1:
             qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " of " << *reg;
-            return {dep[0], Status::ok};
+            return {QVariant::fromValue(dep[0]), Status::ok};
         default:
             //Ambiguity is always a non-fixable error:
             qCritical(loggingCategory()).noquote().nospace() << d << "' of " << *reg << " is ambiguous";
-            return {nullptr, Status::fatal};
+            return {QVariant{}, Status::fatal};
         }
-    case Kind::N:
-        return {detail::wrapList(dep, temporaryParent), Status::ok};
+    case static_cast<int>(Kind::N):
+        return {QVariant::fromValue(dep), Status::ok};
 
-    case Kind::PRIVATE_COPY:
+    case static_cast<int>(Kind::PRIVATE_COPY):
         DescriptorRegistration* depReg;
         switch(dep.size()) {
         case 0:
@@ -215,47 +229,47 @@ std::pair<QObject*,StandardApplicationContext::Status> StandardApplicationContex
         default:
             //Ambiguity is always a non-fixable error:
             qCritical(loggingCategory()).noquote().nospace() << d << "' of " << *reg << " is ambiguous";
-            return {nullptr, Status::fatal};
+            return {QVariant{}, Status::fatal};
         }
         if(!depReg) {
             if(!d.defaultConstructor) {
                 if(allowPartial) {
                     qWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
                     //Unresolvable dependencies may be fixable by registering more services:
-                    return {nullptr, Status::fixable};
+                    return {QVariant{}, Status::fixable};
                 } else {
                     qCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
-                    return {nullptr, Status::fatal};
+                    return {QVariant{}, Status::fatal};
                 }
             }
             depReg = new ServiceRegistration{"", service_descriptor{type, type, d.defaultConstructor}, this};
             publishedNow.push_back(depReg);
         }
-        QObjectList subDep;
+        QVariantList subDep;
         QOwningList privateSubDep;
         for(auto& dd : depReg->descriptor.dependencies) {
-            auto result = resolveDependency(published, publishedNow, depReg, dd, temporaryParent, allowPartial);
+            auto result = resolveDependency(published, publishedNow, depReg, dd, allowPartial);
             if(result.second != Status::ok) {
                 return result;
             }
             subDep.push_back(result.first);
-            if(dd.kind == Kind::PRIVATE_COPY) {
-                privateSubDep.push_back(result.first);
+            if(dd.kind == static_cast<int>(Kind::PRIVATE_COPY)) {
+                privateSubDep.push_back(result.first.value<QObject*>());
             }
         }
         QObject* service = depReg->createPrivateObject(subDep);
         if(!service) {
             //If creation fails, this is always a non-fixable error:
             qCCritical(loggingCategory()).noquote().nospace() << "Could not create private copy of " << d << " for " << *reg;
-            return {nullptr, Status::fatal};
+            return {QVariant{}, Status::fatal};
         }
         qCInfo(loggingCategory()).noquote().nospace() << "Created private copy of " << *depReg << " for " << *reg;
         privateSubDep.moveTo(service);
         qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " of " << *reg;
-        return {service, Status::ok};
+        return {QVariant::fromValue(service), Status::ok};
     }
 
-    return {nullptr, Status::fatal};
+    return {QVariant{}, Status::fatal};
 }
 
 
@@ -327,8 +341,6 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
 
 bool StandardApplicationContext::publish(bool allowPartial)
 {
-    QObject temporaryParent;//Will manage temporary QObjects obtained by detail::wrapList(const QObjectList&).
-
     descriptor_list allPublished;
     descriptor_list publishedNow;//Keep order of publication
 
@@ -360,7 +372,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
             }
         }
 
-        QObjectList dependencies;
+        QVariantList dependencies;
         QOwningList privateDependencies;
         for(auto& d : reg->descriptor.dependencies) {
             //If we find an unpublished dependency, we continue with that:
@@ -371,7 +383,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
                 goto next_unpublished;
             }
             //If we find a mandatory dependency for which there is a default-constructor, we continue with that:
-            if(!find_by_type(allPublished, d.type) && d.kind == Kind::MANDATORY && d.defaultConstructor) {
+            if(!find_by_type(allPublished, d.type) && d.kind == static_cast<int>(Kind::MANDATORY) && d.defaultConstructor) {
                 auto def = registerDescriptor("", service_descriptor{d.type, d.type, d.defaultConstructor}, nullptr);
                 if(def.second) {
                     unpublished.push_front(reg);
@@ -382,7 +394,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
             }
         }
         for(auto& d : reg->descriptor.dependencies) {
-            auto result = resolveDependency(allPublished, publishedNow, reg, d, &temporaryParent, allowPartial);
+            auto result = resolveDependency(allPublished, publishedNow, reg, d, allowPartial);
             switch(result.second) {
             case Status::fatal:
                 return false;
@@ -395,8 +407,8 @@ bool StandardApplicationContext::publish(bool allowPartial)
                 goto next_unpublished;
             }
             dependencies.push_back(result.first);
-            if(d.kind == Kind::PRIVATE_COPY) {
-                privateDependencies.push_back(result.first);
+            if(d.kind == static_cast<int>(Kind::PRIVATE_COPY)) {
+                privateDependencies.push_back(result.first.value<QObject*>());
             }
         }
         auto service = reg->publish(dependencies);

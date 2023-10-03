@@ -11,6 +11,15 @@ namespace mcnepp::qtdi {
 
 class QApplicationContext;
 
+namespace detail {
+template<typename S> auto couldBeQObject(S* ptr) -> decltype(dynamic_cast<QObject*>(ptr));
+
+void couldBeQObject(void*);
+
+
+template<typename S> constexpr bool could_be_qobject = std::is_same_v<decltype(couldBeQObject(static_cast<S*>(nullptr))),QObject*>;
+}
+
 ///
 /// \brief A  type that serves as a "handle" for registrations in a QApplicationContext.
 /// This class has a read-only Q_PROPERTY `publishedObjects' with a corresponding signal `publishedObjectsChanged`.
@@ -315,7 +324,7 @@ template<typename Srv,typename Impl> struct Service {
 ///
 /// \brief Specifies a dependency of a service.
 /// Can by used as a type-argument for QApplicationContext::registerService().
-/// In the standard-case of a mandatory relationship, the use of `Dependency` is optional.
+/// In the standard-case of a mandatory relationship, the use of the `kind` argument is optional.
 /// Suppose you have a service-type `Reader` that needs a mandatory pointer to a `DatabaseAccess` in its constructor:
 ///     class Reader : public QObject {
 ///       public:
@@ -324,7 +333,7 @@ template<typename Srv,typename Impl> struct Service {
 ///
 /// In that case, the following two lines would be completely equivalent:
 ///
-///     context->registerService<Reader,DatabaseAccess>("reader");
+///     context->registerService<Reader,Dependency<DatabaseAccess>>("reader");
 ///
 ///     context->registerService<Reader,Dependency<DatabaseAccess,Kind::MANDATORY>>("reader");
 ///
@@ -360,6 +369,7 @@ template<typename Srv,typename Impl> struct Service {
 ///
 ///
 template<typename S,Kind c=Kind::MANDATORY> struct Dependency {
+    static_assert(detail::could_be_qobject<S>, "Dependency must be potentially convertible to QObject");
     ///
     /// \brief the required name for this dependency.
     /// The default-value is the empty String, with the implied meaning <em>"any dependency of the correct type may be used"</em>.
@@ -390,15 +400,16 @@ namespace detail {
 
 
 
-using constructor_t = std::function<QObject*(const QObjectList&)>;
+using constructor_t = std::function<QObject*(const QVariantList&)>;
 
-
+constexpr int VALUE_KIND = 0x10;
 
 struct dependency_info {
     const std::type_info& type;
-    Kind kind;
+    int kind;
     constructor_t defaultConstructor;
     QString requiredName;
+    QVariant value;
 };
 
 inline bool operator==(const dependency_info& info1, const dependency_info& info2) {
@@ -408,7 +419,7 @@ inline bool operator==(const dependency_info& info1, const dependency_info& info
 struct service_descriptor {
 
 
-    QObject* create(const QObjectList& dependencies) const {
+    QObject* create(const QVariantList& dependencies) const {
         return constructor ? constructor(dependencies) : nullptr;
     }
 
@@ -445,11 +456,6 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
 
 
 
- template<typename S> auto couldBeQObject(S* ptr) -> decltype(dynamic_cast<QObject*>(ptr));
-
- void couldBeQObject(void*);
-
- template<typename S> constexpr bool could_be_qobject = std::is_same_v<decltype(couldBeQObject(static_cast<S*>(nullptr))),QObject*>;
 
  template<typename S,int=sizeof(service_factory<S>)> constexpr bool hasServiceFactory(S*) {
     return true;
@@ -463,23 +469,6 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
  template<typename S> constexpr bool has_service_factory = hasServiceFactory(static_cast<S*>(nullptr));
 
 
-///
-/// \brief Wraps a QList into a QObject.
-/// The type of the QObject needs not be known to the caller, as it will only be passed to unwrapList(QObject*) again!
-/// \param list will be wrapped by the QObject.
-/// \param parent will become the returned object's parent.
-/// \return a QObject that wraps the supplied list.
-///
-QObject *wrapList(const QObjectList &list, QObject *parent = nullptr);
-
-///
-/// \brief Un-wraps the QList that is wrapped b the supplied object.
-/// \param obj the object. Must be obtained using wrapList(const QObjectList&).
-/// \return a reference to the list wrapped by the obj.
-///
-const QObjectList &unwrapList(QObject *obj);
-
-
 
 
 template<typename S,typename I,typename F> service_descriptor create_descriptor(F creator, const std::vector<dependency_info>& dependencies = {}, const service_config& config = service_config{}) {
@@ -489,7 +478,7 @@ template<typename S,typename I,typename F> service_descriptor create_descriptor(
 
 template<typename S> constructor_t get_default_constructor() {
     if constexpr(std::conjunction_v<std::is_base_of<QObject,S>,std::is_default_constructible<S>>) {
-        return [](const QObjectList&) { return new S;};
+        return [](const QVariantList&) { return new S;};
     }
     return nullptr;
 }
@@ -512,45 +501,53 @@ inline QObjectList convertQList<QObject>(const QObjectList &list) {
     return list;
 }
 
-template <typename S,Kind card> struct dependency_helper_base {
+template <typename S>
+struct dependency_helper {
+    using type = S;
+
+    static S convert(const QVariant& arg) {
+        return arg.value<S>();
+    }
+
+
+    static dependency_info info(S dep) {
+        return { typeid(S), VALUE_KIND, constructor_t{}, "", QVariant::fromValue(dep) };
+    }
+
+    static dependency_info info() {
+        //This is supposed to fail for all types that are being used as dependencies:
+        static_assert(std::is_same_v<S,void>, "value must be provided for value-dependency");
+        return dependency_info{typeid(S)};
+    }
+};
+
+template <typename S,Kind kind> struct dependency_helper_base {
 
     using type = S;
 
 
-    static S* convert(QObject *arg) {
-        return dynamic_cast<S*>(arg);
+    static S* convert(const QVariant& arg) {
+        return dynamic_cast<S*>(arg.value<QObject*>());
     }
 
     static dependency_info info() {
-        return { typeid(S), card, get_default_constructor<S>() };
+        return { typeid(S), static_cast<int>(kind), get_default_constructor<S>() };
     }
 
-    static dependency_info info(Dependency<S,card> dep) {
-        return { typeid(S), card, get_default_constructor<S>(), dep.requiredName };
+    static dependency_info info(Dependency<S,kind> dep) {
+        return { typeid(S), static_cast<int>(kind), get_default_constructor<S>(), dep.requiredName };
     }
 
 
 };
 
-template <typename S>
-struct dependency_helper : dependency_helper_base<S,Kind::MANDATORY> {
-};
+
 
 template <typename S>
-struct dependency_helper<Dependency<S, Kind::N>> {
-    using type = S;
+struct dependency_helper<Dependency<S, Kind::N>> : dependency_helper_base<S,Kind::N>  {
 
-
-    static QList<S*> convert(QObject *arg) {
-        return detail::convertQList<S>(detail::unwrapList(arg));
-    }
-
-    static dependency_info info() {
-        return { typeid(S), Kind::N };
-    }
-
-    static dependency_info info(Dependency<S,Kind::N> dep) {
-        return { typeid(S), Kind::N, nullptr, dep.requiredName };
+    static QList<S*> convert(const QVariant& arg) {
+        return convertQList<S>(arg.value<QObjectList>());
     }
 };
 
@@ -568,7 +565,7 @@ struct dependency_helper<Dependency<S, Kind::PRIVATE_COPY>> : dependency_helper_
 
 
 
-template<typename S> auto convert_arg(QObject* arg) {
+template<typename S> auto convert_arg(const QVariant& arg) {
     return dependency_helper<S>::convert(arg);
 }
 
@@ -614,7 +611,7 @@ template <typename T, typename... D> struct descriptor_helper;
 template <typename T>
 struct descriptor_helper<T> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) {
+        return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}();
             } else {
@@ -631,7 +628,7 @@ struct descriptor_helper<T> {
 template <typename T, typename D1>
 struct descriptor_helper<T, D1> : descriptor_helper_base<D1> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) {
+        return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(convert_arg<D1>(dependencies[0]));
             } else {
@@ -645,7 +642,7 @@ struct descriptor_helper<T, D1> : descriptor_helper_base<D1> {
 template <typename T, typename D1, typename D2>
 struct descriptor_helper<T, D1, D2>  : descriptor_helper_base<D1,D2> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) {
+        return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(convert_arg<D1>(dependencies[0]), convert_arg<D2>(dependencies[1]));
             } else {
@@ -658,7 +655,7 @@ struct descriptor_helper<T, D1, D2>  : descriptor_helper_base<D1,D2> {
 template <typename T, typename D1, typename D2, typename D3>
 struct descriptor_helper<T, D1, D2, D3> :  descriptor_helper_base<D1,D2,D3> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) {
+        return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(
                         convert_arg<D1>(dependencies[0]),
@@ -678,7 +675,7 @@ struct descriptor_helper<T, D1, D2, D3> :  descriptor_helper_base<D1,D2,D3> {
 template <typename T, typename D1, typename D2, typename D3, typename D4>
 struct descriptor_helper<T, D1, D2, D3, D4>  : descriptor_helper_base<D1,D2,D3,D4> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) {
+        return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(
                         convert_arg<D1>(dependencies[0]),
@@ -700,7 +697,7 @@ struct descriptor_helper<T, D1, D2, D3, D4>  : descriptor_helper_base<D1,D2,D3,D
 template <typename T, typename D1, typename D2, typename D3, typename D4, typename D5>
 struct descriptor_helper<T, D1, D2, D3, D4, D5>  : descriptor_helper_base<D1,D2,D3,D4,D5> {
     static constexpr auto creator() {
-        return [](const QObjectList &dependencies) {
+        return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(convert_arg<D1>(dependencies[0]),
                         convert_arg<D2>(dependencies[1]),
