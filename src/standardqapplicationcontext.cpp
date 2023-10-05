@@ -73,6 +73,11 @@ QString makeConfigPath(const QString& group, const QString& key) {
         return group+"/"+key;
 }
 
+QString makeName(const std::type_info& type) {
+    QString typeName{type.name()};
+    typeName.replace(' ', '-');
+    return typeName+"-"+QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
 
 }
 
@@ -165,6 +170,15 @@ void StandardApplicationContext::unpublish()
         }
     }
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has been un-published. " << unpublished << " Object have been successfully destroyed.";
+    QStringList remainingNames;
+    for(auto reg : registrations) {
+        if(reg->isPublished() && !reg->isManaged()) {
+            remainingNames.push_back(reg->name());
+        }
+    }
+    if(!remainingNames.isEmpty()) {
+        qCInfo(loggingCategory()).noquote().nospace() << "Remaining un-managed Objects: " << remainingNames.join(',');
+    }
 }
 
 StandardApplicationContext::DescriptorRegistration *StandardApplicationContext::getRegistrationByName(const QString &name) const
@@ -346,7 +360,7 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
         auto reg = *iter;
         if(reg->getObject() == obj) {
             iter = registrations.erase(iter);
-            qCInfo(loggingCategory()).noquote().nospace() << "Registered Object " << *reg << " has been destroyed externally";
+            qCInfo(loggingCategory()).noquote().nospace() << *reg << " has been destroyed externally";
             delete reg;
         } else {
             ++iter;
@@ -535,7 +549,7 @@ unsigned int StandardApplicationContext::pendingPublication() const
 std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, QObject* obj) {
     bool isAnonymous = name.isEmpty();
     if(isAnonymous) {
-        name = QString{descriptor.service_type.name()}+"-"+QUuid::createUuid().toString(QUuid::WithoutBraces);
+        name = makeName(descriptor.service_type);
     } else {
         auto found = getRegistrationByName(name);
         if(found) {
@@ -583,6 +597,7 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
     if(proxy != proxyRegistrationCache.end()) {
         proxy->second->add(registration);
     }
+    qCInfo(loggingCategory()).noquote().nospace() << "Registered " << *registration;
     emit pendingPublicationChanged();
     return {registration, true};
 

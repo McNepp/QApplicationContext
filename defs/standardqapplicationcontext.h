@@ -142,9 +142,11 @@ private:
 
         virtual QObject* createPrivateObject(const QVariantList& dependencies) = 0;
 
+        virtual QDebug print(QDebug out) const = 0;
+
 
         friend QDebug operator << (QDebug out, const DescriptorRegistration& reg) {
-            return out.nospace().noquote() << "Object '" << reg.name() << "' with service-type '" << reg.service_type().name() << "' and impl-type '" << reg.descriptor.impl_type.name() << "'";
+            return reg.print(out);
         }
 
 
@@ -183,6 +185,11 @@ private:
         virtual bool isManaged() const override {
             return true;
         }
+
+        virtual QDebug print(QDebug out) const override  {
+            return out.nospace().noquote() << "Service '" << name() << "' with service-type '" << service_type().name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
+        }
+
 
 
         virtual QObject* createPrivateObject(const QVariantList& dependencies) override {
@@ -269,6 +276,11 @@ private:
         virtual QObjectList privateObjects() const override {
             return {};
         }
+
+        virtual QDebug print(QDebug out) const override  {
+            return out.nospace().noquote() << "Object '" << name() << "' with service-type '" << service_type().name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
+        }
+
 
     private:
         QObject* const theObj;
