@@ -66,6 +66,13 @@ template<typename C> auto pop_front(C& container) -> typename C::value_type {
         return value;
 }
 
+QString makeConfigPath(const QString& group, const QString& key) {
+        if(group.isEmpty()) {
+            return key;
+        }
+        return group+"/"+key;
+}
+
 
 }
 
@@ -190,7 +197,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
     switch(d.kind) {
     case detail::VALUE_KIND:
-        return resolveProperty(d.value, allowPartial);
+        return resolveProperty(reg->descriptor.config.group, d.value, allowPartial);
 
 
     case static_cast<int>(Kind::MANDATORY):
@@ -640,7 +647,7 @@ bool StandardApplicationContext::checkTransitiveDependentsOn(const service_descr
     return true;
 }
 
-std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveValue(const QVariant &value, bool allowPartial)
+std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveBeanRef(const QVariant &value, bool allowPartial, bool* resolved)
 {
     if(!value.isValid()) {
         return {value, Status::fatal};
@@ -682,15 +689,20 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
         }
 
         qCInfo(loggingCategory()).nospace().noquote() << "Resolved reference '" << key << "' to " << resultValue;
+        if(resolved) {
+            *resolved = true;
+        }
         return {resultValue, Status::ok};
     }
-
-    return resolveProperty(value, allowPartial);
+    if(resolved) {
+        *resolved = false;
+    }
+    return {value, Status::ok};
 
 }
 
 
-std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveProperty(const QVariant &value, bool allowPartial)
+std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveProperty(const QString& group, const QVariant &value, bool allowPartial)
 {
     if(!value.isValid()) {
         return {value, Status::fatal};
@@ -730,16 +742,17 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 switch(state) {
                 case 2:
                     if(!token.isEmpty()) {
-                        lastResolvedValue = getConfigurationValue(token);
+                        QString path = makeConfigPath(group, token);
+                        lastResolvedValue = getConfigurationValue(path);
                         if(!lastResolvedValue.isValid()) {
                             if(allowPartial) {
-                                qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve config-value '" << token << "'";
+                                qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve config-value '" << path << "'";
                                 return {QVariant{}, Status::fixable};
                             }
-                            qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve config-value '" << token << "'";
+                            qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve config-value '" << path << "'";
                             return {QVariant{}, Status::fatal};
                         }
-                        qCInfo(loggingCategory()).nospace().noquote() << "Resolved variable '" << token << "' to " << lastResolvedValue;
+                        qCInfo(loggingCategory()).nospace().noquote() << "Resolved variable '" << path << "' to " << lastResolvedValue;
                         if(resolvedString.isEmpty() && pos + 1 == key.length()) {
                             return {lastResolvedValue, Status::ok};
                         }
@@ -790,9 +803,16 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
     if(metaObject) {
         std::unordered_set<QString> usedProperties;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
-            auto result = resolveValue(value, allowPartial);
+            bool resolved;
+            auto result = resolveBeanRef(value, allowPartial, &resolved);
             if(result.second != Status::ok) {
                 return result.second;
+            }
+            if(!resolved) {
+                result = resolveProperty(reg->descriptor.config.group, value, allowPartial);
+                if(result.second != Status::ok) {
+                    return result.second;
+                }
             }
             auto resolvedValue = result.first;
             reg->resolvedProperties.insert(key, resolvedValue);
@@ -898,7 +918,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
 QVariant StandardApplicationContext::getConfigurationValue(const QString& key) const {
     for(auto reg : registrations) {
         if(QSettings* settings = dynamic_cast<QSettings*>(reg->getObject())) {
-           auto value = settings->value(key);
+            auto value = settings->value(key);
            if(value.isValid()) {
                 return value;
            }

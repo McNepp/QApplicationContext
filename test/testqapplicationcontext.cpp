@@ -194,8 +194,8 @@ private slots:
         config->setValue("timers/single", "true");
         context->registerObject(config);
 
-        auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${timers/interval}"},
-                                                                          {"singleShot", "${timers/single}"}}));
+        auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${interval}"},
+                                                                          {"singleShot", "${single}"}}, "timers"));
         QVERIFY(context->publish());
         RegistrationSlot<QTimer> slot{reg};
         QCOMPARE(slot->interval(), 4711);
@@ -245,7 +245,7 @@ private slots:
         QTimer timer;
         timer.setObjectName("timer");
         context->registerObject(&timer);
-        auto reg = context->registerService<BaseService>("base", make_config({}, true));
+        auto reg = context->registerService<BaseService>("base", make_config({}, "", true));
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{reg};
@@ -256,7 +256,7 @@ private slots:
         QTimer timer;
         timer.setObjectName("IAmTheRealTimer");
         context->registerObject(&timer);
-        auto reg = context->registerService<BaseService>("base", service_config{{}, true});
+        auto reg = context->registerService<BaseService>("base", make_config({}, "", true));
         context->registerService<BaseService2>("timer");
 
         QVERIFY(context->publish());
@@ -268,7 +268,7 @@ private slots:
     void testExplicitPropertyOverridesAutowired() {
         auto regBase = context->registerService<BaseService>("dependency");
         auto regBaseToUse = context->registerService<BaseService>("baseToUse");
-        auto regCyclic = context->registerService<CyclicDependency>("cyclic", service_config{{{"dependency", "&baseToUse"}}, true});
+        auto regCyclic = context->registerService<CyclicDependency>("cyclic", make_config({{"dependency", "&baseToUse"}}, "", true));
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{regBase};
@@ -282,7 +282,7 @@ private slots:
         QObject timer;
         timer.setObjectName("timer");
         context->registerObject(&timer);
-        auto reg = context->registerService<BaseService>("base", service_config{{}, true});
+        auto reg = context->registerService<BaseService>("base", make_config({}, "", true));
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{reg};
@@ -360,7 +360,7 @@ private slots:
 
 
     void testInitMethod() {
-        auto baseReg = context->registerService<BaseService>("base", service_config{{}, false, "init"});
+        auto baseReg = context->registerService<BaseService>("base", make_config({}, "", false, "init"));
         QVERIFY(context->publish());
 
         RegistrationSlot<BaseService> baseSlot{baseReg};
@@ -368,7 +368,7 @@ private slots:
     }
 
     void testInitMethodWithContext() {
-        auto baseReg = context->registerService<BaseService>("base", service_config{{}, false, "initContext"});
+        auto baseReg = context->registerService<BaseService>("base", make_config({}, "", false, "initContext"));
         QVERIFY(context->publish());
 
         RegistrationSlot<BaseService> baseSlot{baseReg};
@@ -420,16 +420,17 @@ private slots:
     }
 
     void testResolveConstructorValues() {
-        config->setValue("url", "https://web.de");
+        config->setValue("section/url", "https://google.de/search");
+        config->setValue("section/term", "something");
         context->registerObject(config);
         BaseService base;
-        auto reg = context->registerService<DependentService>("dep", service_config{}, 4711, QString{"${url}"}, &base);
+        auto reg = context->registerService<DependentService>("dep", make_config({}, "section"), 4711, QString{"${url}?q=${term}"}, &base);
         QVERIFY(reg);
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> service{reg};
         QCOMPARE(service->m_dependency, &base);
         QCOMPARE(service->m_id, 4711);
-        QCOMPARE(service->m_url, QString{"https://web.de"});
+        QCOMPARE(service->m_url, QString{"https://google.de/search?q=something"});
     }
 
     void testFailResolveConstructorValues() {
@@ -784,7 +785,7 @@ private slots:
 
 
 
-        auto regCyclic = context->registerService<CyclicDependency>("cyclic", service_config{{}, true});
+        auto regCyclic = context->registerService<CyclicDependency>("cyclic", make_config({}, "", true));
         QVERIFY(regCyclic);
 
         QVERIFY(context->publish());

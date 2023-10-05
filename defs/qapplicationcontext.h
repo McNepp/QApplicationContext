@@ -465,19 +465,21 @@ struct service_config final {
 
 
     QVariantMap properties;
+    QString group;
     bool autowire = false;
     QString initMethod;
 };
 
 ///
 /// \brief Makes a service_config.
-/// \param properties
-/// \param autowire
-/// \param initMethod
+/// \param properties the keys and value to be applied as Q_PROPERTYs.
+/// \param section the QSettings::group() to be used.
+/// \param autowire if `true`, the QApplicationContext will attempt to initialize all Q_PROPERTYs of `QObject*`-type with the corresponding services.
+/// \param initMethod if not empty, will be invoked during publication of the service.
 /// \return the service_config.
 ///
-inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties = {}, bool autowire = false, const QString& initMethod = "") {
-    return service_config{properties, autowire, initMethod};
+inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties = {}, const QString& group = "", bool autowire = false, const QString& initMethod = "") {
+    return service_config{properties, group, autowire, initMethod};
 }
 
 

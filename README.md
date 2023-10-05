@@ -448,7 +448,7 @@ registered.
 
 *Init-methods* are supplied as part of the `service_config`, for example like this:
 
-    context -> registerService<PropFetcherAggregator>("propFetcherAggregator", make_config({}, false, "init"), injectAll<PropFetcher>());
+    context -> registerService<PropFetcherAggregator>("propFetcherAggregator", make_config({}, "", false, "init"), injectAll<PropFetcher>());
 
 Suitable *init-methods* are `Q_INVOKABLE`-methods with either no arguments, or with one argument of type `QApplicationContext*`.
 
@@ -461,7 +461,7 @@ Well, using the name of the registered service seems like a good idea.
 The following code will still provide a `QList<PropFetcher*>` to the `PropFetcherAggregator`. However, the List will
 contain solely the service that was registered under the name "hamburgWeather":  
 
-    context -> registerService<PropFetcherAggregator>("propFetcherAggregator", make_config({}, false, "init"), injectAll<PropFetcher,Kind::N>("hamburgWeather"));
+    context -> registerService<PropFetcherAggregator>("propFetcherAggregator", injectAll<PropFetcher,Kind::N>("hamburgWeather"));
 
 ## Publishing an ApplicationContext more than once
 

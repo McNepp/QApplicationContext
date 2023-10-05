@@ -348,9 +348,9 @@ private:
 
     Status configure(DescriptorRegistration*,QObject*, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial);
 
-    std::pair<QVariant,Status> resolveValue(const QVariant& value, bool allowPartial);
+    std::pair<QVariant,Status> resolveBeanRef(const QVariant& value, bool allowPartial, bool* resolved);
 
-    std::pair<QVariant,Status> resolveProperty(const QVariant& value, bool allowPartial);
+    std::pair<QVariant,Status> resolveProperty(const QString& group, const QVariant& value, bool allowPartial);
 
     descriptor_list registrations;
 
