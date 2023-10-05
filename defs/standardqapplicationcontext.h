@@ -111,7 +111,7 @@ private:
 
 
 
-        virtual QObjectList getPublishedObjects() const override {
+        virtual QObjectList publishedObjects() const override {
             QObjectList result;
             if(isPublished()) {
                     result.push_back(getObject());
@@ -293,7 +293,7 @@ private:
             return m_type;
         }
 
-        virtual QObjectList getPublishedObjects() const override {
+        virtual QObjectList publishedObjects() const override {
             QObjectList result;
             for(auto reg : registrations) {
                 if(reg->getObject()) {
@@ -342,13 +342,15 @@ private:
     DescriptorRegistration* getRegistrationByName(const QString& name) const;
 
 
-    std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, descriptor_list& publishedNow, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial);
+    std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial);
 
     std::pair<DescriptorRegistration*,bool> registerDescriptor(QString name, const service_descriptor& descriptor, QObject* obj);
 
     Status configure(DescriptorRegistration*,QObject*, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial);
 
     std::pair<QVariant,Status> resolveValue(const QVariant& value, bool allowPartial);
+
+    std::pair<QVariant,Status> resolveProperty(const QVariant& value, bool allowPartial);
 
     descriptor_list registrations;
 

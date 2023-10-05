@@ -168,10 +168,11 @@ StandardApplicationContext::DescriptorRegistration *StandardApplicationContext::
 }
 
 
-std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveDependency(const descriptor_list &published, descriptor_list& publishedNow, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial)
+std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveDependency(const descriptor_list &published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial)
 {
     const std::type_info& type = d.type;
 
+    QList<DescriptorRegistration*> depRegs;
     QObjectList dep;
 
     for(auto pub : published) {
@@ -182,13 +183,14 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                     continue;
                 }
             }
+            depRegs.push_back(pub);
             dep.push_back(pub->getObject());
         }
     }
 
     switch(d.kind) {
     case detail::VALUE_KIND:
-        return resolveValue(d.value, allowPartial);
+        return resolveProperty(d.value, allowPartial);
 
 
     case static_cast<int>(Kind::MANDATORY):
@@ -218,18 +220,27 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
         return {QVariant::fromValue(dep), Status::ok};
 
     case static_cast<int>(Kind::PRIVATE_COPY):
-        DescriptorRegistration* depReg;
+        DescriptorRegistration* depReg = nullptr;
         switch(dep.size()) {
         case 0:
-            depReg = find_by_type(publishedNow, type);
             break;
         case 1:
-            depReg = find_by_type(published, type);
+            depReg = depRegs[0];
             break;
         default:
-            //Ambiguity is always a non-fixable error:
-            qCritical(loggingCategory()).noquote().nospace() << d << "' of " << *reg << " is ambiguous";
-            return {QVariant{}, Status::fatal};
+            if(!d.requiredName.isEmpty()) {
+                for(auto r : depRegs) {
+                    if(r->name() == d.requiredName) {
+                        depReg = r;
+                        break;
+                    }
+                }
+            }
+            if(!depReg) {
+                //Ambiguity is always a non-fixable error:
+                qCritical(loggingCategory()).noquote().nospace() << d << "' of " << *reg << " is ambiguous";
+                return {QVariant{}, Status::fatal};
+            }
         }
         if(!depReg) {
             if(!d.defaultConstructor) {
@@ -243,12 +254,11 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 }
             }
             depReg = new ServiceRegistration{"", service_descriptor{type, type, d.defaultConstructor}, this};
-            publishedNow.push_back(depReg);
         }
         QVariantList subDep;
         QOwningList privateSubDep;
         for(auto& dd : depReg->descriptor.dependencies) {
-            auto result = resolveDependency(published, publishedNow, depReg, dd, allowPartial);
+            auto result = resolveDependency(published, depReg, dd, allowPartial);
             if(result.second != Status::ok) {
                 return result;
             }
@@ -394,7 +404,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
             }
         }
         for(auto& d : reg->descriptor.dependencies) {
-            auto result = resolveDependency(allPublished, publishedNow, reg, d, allowPartial);
+            auto result = resolveDependency(allPublished, reg, d, allowPartial);
             switch(result.second) {
             case Status::fatal:
                 return false;
@@ -675,8 +685,17 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
         return {resultValue, Status::ok};
     }
 
+    return resolveProperty(value, allowPartial);
+
+}
 
 
+std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveProperty(const QVariant &value, bool allowPartial)
+{
+    if(!value.isValid()) {
+        return {value, Status::fatal};
+    }
+    QString key = value.toString();
     if(key.contains("${")) {
         QVariant lastResolvedValue;
         QString resolvedString;
@@ -695,7 +714,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 default:
                     qCCritical(loggingCategory()).nospace().noquote() << "Invalid placeholder '" << key << "'";
                     return {QVariant{}, Status::fatal};
-                 }
+                }
             case '{':
                 switch(state) {
                 case 1:
@@ -760,8 +779,6 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     }
     return {value, Status::ok};
 }
-
-
 
 
 StandardApplicationContext::Status StandardApplicationContext::configure(DescriptorRegistration* reg, QObject* target, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial) {

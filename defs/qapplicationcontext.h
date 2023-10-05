@@ -1,11 +1,15 @@
 #pragma once
+/** @file qapplicationcontext.h
+ *  @brief Contains the class QApplicationContext and other related types and functions.
+ *  @author McNepp
+*/
+
 #include <utility>
 #include <typeindex>
 #include <unordered_set>
 #include <QObject>
 #include <QVariant>
 #include <QLoggingCategory>
-#include "dependencykind.h"
 
 namespace mcnepp::qtdi {
 
@@ -19,6 +23,8 @@ void couldBeQObject(void*);
 
 template<typename S> constexpr bool could_be_qobject = std::is_same_v<decltype(couldBeQObject(static_cast<S*>(nullptr))),QObject*>;
 }
+
+
 
 ///
 /// \brief A  type that serves as a "handle" for registrations in a QApplicationContext.
@@ -36,7 +42,7 @@ class Registration : public QObject {
     /// However, if the Registration was obtained by QApplicationContext::getRegistration(),
     /// it may comprise multiple objects of the supplied service-type.
     ///
-    Q_PROPERTY(QObjectList publishedObjects READ getPublishedObjects NOTIFY publishedObjectsChanged)
+    Q_PROPERTY(QObjectList publishedObjects READ publishedObjects NOTIFY publishedObjectsChanged)
 
 public:
     ///
@@ -51,7 +57,7 @@ public:
     /// However, if the Registration was obtained by QApplicationContext::getRegistration(),
     /// it may comprise multiple objects of the supplied service-type.
     ///
-    [[nodiscard]] virtual QObjectList getPublishedObjects() const = 0;
+    [[nodiscard]] virtual QObjectList publishedObjects() const = 0;
 
 
     ///
@@ -87,7 +93,7 @@ protected:
         }
 
         void operator()() const {
-            for(auto obj : m_source->getPublishedObjects()) {
+            for(auto obj : m_source->publishedObjects()) {
                 if(publishedObjects.insert(obj).second) {
                     notify(obj);
                 }
@@ -127,17 +133,17 @@ public:
 
 
 
-    [[nodiscard]] virtual QObjectList getPublishedObjects() const override {
-        return unwrap()->getPublishedObjects();
+    [[nodiscard]] virtual QObjectList publishedObjects() const override {
+        return unwrap()->publishedObjects();
     }
 
     /// \brief The List of published services managed by this Registration.
-    /// This is a type-safe version of Registration::getPublishedObjects().
+    /// This is a type-safe version of Registration::publishedObjects().
     /// \return the List of published services.
     ///
-    [[nodiscard]] QList<S*> getPublishedServices() const {
+    [[nodiscard]] QList<S*> publishedServices() const {
         QList<S*> result;
-        for(auto obj : getPublishedObjects()) {
+        for(auto obj : publishedObjects()) {
             if(S* ptr = dynamic_cast<S*>(obj)) {
                 result.push_back(ptr);
             }
@@ -157,7 +163,7 @@ public:
     /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
     /// Type `F` is assumed to be a Callable that accepts an argument of type `S*`.
     /// If the ApplicationContext has already been published, this method
-    /// will invoke the callable immediately with the current getPublishedObjects().
+    /// will invoke the callable immediately with the current publishedObjects().
     /// \param context the target-context.
     /// \param callable the piece of code to execute.
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
@@ -173,7 +179,7 @@ public:
     /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
     /// Type `F` is assumed to be a Callable that accepts an argument of type `S*`.
     /// If the ApplicationContext has already been published, this method
-    /// will invoke the setter immediately with the current getPublishedObjects().
+    /// will invoke the setter immediately with the current publishedObjects().
     /// \param target the object on which the setter will be invoked.
     /// \param setter the method that will be invoked.
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
@@ -319,6 +325,45 @@ template<typename Srv,typename Impl> struct Service {
     using impl_type = Impl;
 };
 
+/**
+* \brief Specifies the kind of a service-dependency.
+* Will be used as a non-type argument to Dependency, when registering a service.
+* The following table sums up the characteristics of each type of dependency:
+* <table><tr><th>&nbsp;</th><th>Normal behaviour</th><th>What if no dependency can be found?</th><th>What if more than one dependency can be found?</th></tr>
+* <tr><td>MANDATORY</td><td>Injects one dependency into the dependent service.</td><td>If the dependency-type has an accessible default-constructor, this will be used to register and create an instance of that type.
+* <br>If no default-constructor exists, publication of the ApplicationContext will fail.</td>
+* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+* <tr><td>OPTIONAL</td><td>Injects one dependency into the dependent service</td><td>Injects `nullptr` into the dependent service.</td>
+* td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+* <tr><td>N</td><td>Injects all dependencies of the dependency-type that have been registered into the dependent service, using a `QList`</td>
+* <td>Injects an empty `QList` into the dependent service.</td>
+* <td>See 'Normal behaviour'</td></tr>
+* <tr><td>PRIVATE_COPY</td><td>Injects a newly created instance of the dependency-type and sets its `QObject::parent()` to the dependent service.</td>
+* <td>If the dependency-type has an accessible default-constructor, this will be used to create an instance of that type.<br>
+* If no default-constructor exists, publication of the ApplicationContext will fail.</td>
+* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+* </table>
+*/
+enum class Kind {
+    ///
+    /// This dependency must be present in the ApplicationContext.
+    MANDATORY,
+    /// This dependency need not be present in the ApplicationContext.
+    /// If not, `nullptr` will be provided.
+    OPTIONAL,
+    ///
+    /// All Objects with the required service_type will be pushed into QList
+    /// and provided to the constructor of the service that depends on them.
+    N,
+    ///
+    /// This dependency must be present in the ApplicationContext.
+    /// A copy will be made and provided to the constructor of the service that depends on them.
+    /// This copy will not be published in the ApplicationContext.
+    /// After construction, the QObject::parent() of the dependency will
+    /// be set to the service that owns it.
+    ///
+    PRIVATE_COPY
+};
 
 
 ///
@@ -331,15 +376,18 @@ template<typename Srv,typename Impl> struct Service {
 ///         explicit Update(DatabaseAccess* dao, QObject* parent = nullptr);
 ///     };
 ///
-/// In that case, the following two lines would be completely equivalent:
+/// Usually, you will not instantiate `Dependency`directly. Rather, you will use one of the functions
+/// inject(), injectIfPresent() or injectAll().
 ///
-///     context->registerService<Reader,Dependency<DatabaseAccess>>("reader");
+/// Thus, the following two lines would be completely equivalent:
 ///
-///     context->registerService<Reader,Dependency<DatabaseAccess,Kind::MANDATORY>>("reader");
+///     context->registerService<Reader>("reader", Dependency<DatabaseAccess>{});
+///
+///     context->registerService<Reader>("reader", inject<DatabaseAccess>());
 ///
 /// However, if your service can do without a `DatabaseAccess`, you should register it like this:
 ///
-///     context->registerService<Reader,Dependency<DatabaseAccess,Kind::OPTIONAL>>("reader");
+///     context->registerService<Reader>("reader", injectIfPresent<DatabaseAccess>());
 ///
 /// Consider the case where your `Reader` takes a List of `DatabaseAccess` instances:
 ///
@@ -350,22 +398,7 @@ template<typename Srv,typename Impl> struct Service {
 ///
 /// In that case, it would be registered in an ApplicationContext using the following line:
 ///
-///     context->registerService<Reader,Dependency<DatabaseAccess,Kind::N>>("reader");
-///
-/// As you can see from the previous examples, the type `Dependency` was never actually instantiated!
-///
-/// Usually, it is sufficient to specify it as a type-argument to the function QApplicationContext::registerService(const QString&,const service_config&).
-/// All necessary information can be gained by just looking at `Dependency`'s template-arguments.
-///
-/// There is, however, one use-case where Dependency must be instantiated: if you want to specify the required name for a dependency, in order
-/// to disambiguate it.
-///
-/// In that case, you'll use one of the other overloads of QApplicationContext::registerService(), as shown in the following example.
-///
-/// Please note that now you **do not** have to specify the type-argument for the Dependency anymore, as it will be deduced from the supplied
-/// function-argument:
-///
-///     context->registerService<Reader>("reader", Dependency<DatabaseAccess,Kind::N>{"oracleDatabaseAccess"});
+///     context->registerService<Reader>("reader", injectAll<DatabaseAccess>());
 ///
 ///
 template<typename S,Kind c=Kind::MANDATORY> struct Dependency {
@@ -375,7 +408,48 @@ template<typename S,Kind c=Kind::MANDATORY> struct Dependency {
     /// The default-value is the empty String, with the implied meaning <em>"any dependency of the correct type may be used"</em>.
     ///
     QString requiredName;
+
+
 };
+
+
+///
+/// \brief Injects a mandatory Dependency.
+/// \param the required name of the dependency. If empty, no name is required.
+/// \return a mandatory Dependency on the supplied type.
+///
+template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const QString& requiredName = "") {
+    return Dependency<S,Kind::MANDATORY>{requiredName};
+}
+
+///
+/// \brief Injects an optional Dependency.
+/// \param the required name of the dependency. If empty, no name is required.
+/// \return an optional Dependency on the supplied type.
+///
+template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const QString& requiredName = "") {
+    return Dependency<S,Kind::OPTIONAL>{requiredName};
+}
+
+///
+/// \brief Injects a 1-to-N Dependency.
+/// \param the required name of the dependency. If empty, no name is required.
+/// \return a 1-to-N Dependency on the supplied type.
+///
+template<typename S> constexpr Dependency<S,Kind::N> injectAll(const QString& requiredName = "") {
+    return Dependency<S,Kind::N>{requiredName};
+}
+
+///
+/// \brief Injects a Dependency of type Cardinality::PRIVATE_COPY
+/// \param the required name of the dependency. If empty, no name is required.
+/// \return a Dependency of the supplied type that will create its own private copy.
+///
+template<typename S> constexpr Dependency<S,Kind::PRIVATE_COPY> injectPrivateCopy(const QString& requiredName = "") {
+    return Dependency<S,Kind::PRIVATE_COPY>{requiredName};
+}
+
+
 
 
 ///
@@ -394,6 +468,17 @@ struct service_config final {
     bool autowire = false;
     QString initMethod;
 };
+
+///
+/// \brief Makes a service_config.
+/// \param properties
+/// \param autowire
+/// \param initMethod
+/// \return the service_config.
+///
+inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties = {}, bool autowire = false, const QString& initMethod = "") {
+    return service_config{properties, autowire, initMethod};
+}
 
 
 namespace detail {
@@ -514,24 +599,14 @@ struct dependency_helper {
         return { typeid(S), VALUE_KIND, constructor_t{}, "", QVariant::fromValue(dep) };
     }
 
-    static dependency_info info() {
-        //This is supposed to fail for all types that are being used as dependencies:
-        static_assert(std::is_same_v<S,void>, "value must be provided for value-dependency");
-        return dependency_info{typeid(S)};
-    }
 };
 
-template <typename S,Kind kind> struct dependency_helper_base {
-
+template <typename S,Kind kind>
+struct dependency_helper<Dependency<S,kind>> {
     using type = S;
-
 
     static S* convert(const QVariant& arg) {
         return dynamic_cast<S*>(arg.value<QObject*>());
-    }
-
-    static dependency_info info() {
-        return { typeid(S), static_cast<int>(kind), get_default_constructor<S>() };
     }
 
     static dependency_info info(Dependency<S,kind> dep) {
@@ -543,25 +618,21 @@ template <typename S,Kind kind> struct dependency_helper_base {
 
 
 
-template <typename S>
-struct dependency_helper<Dependency<S, Kind::N>> : dependency_helper_base<S,Kind::N>  {
 
+template <typename S>
+struct dependency_helper<Dependency<S, Kind::N>> {
+
+    using type = S;
+
+
+    static dependency_info info(Dependency<S,Kind::N> dep) {
+        return { typeid(S), static_cast<int>(Kind::N), get_default_constructor<S>(), dep.requiredName };
+    }
     static QList<S*> convert(const QVariant& arg) {
         return convertQList<S>(arg.value<QObjectList>());
     }
 };
 
-template <typename S>
-struct dependency_helper<Dependency<S, Kind::OPTIONAL>> : dependency_helper_base<S,Kind::OPTIONAL>  {
-};
-
-template <typename S>
-struct dependency_helper<Dependency<S, Kind::MANDATORY>> : dependency_helper_base<S,Kind::MANDATORY> {
-};
-
-template <typename S>
-struct dependency_helper<Dependency<S, Kind::PRIVATE_COPY>> : dependency_helper_base<S,Kind::PRIVATE_COPY> {
-};
 
 
 
@@ -815,43 +886,12 @@ public:
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
-    /// \param config the configuration for the service.
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
-    template<typename S,typename...Dep> auto registerService(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        using service_type = typename detail::service_traits<S>::service_type;
-        using impl_type = typename detail::service_traits<S>::impl_type;
-        using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
-        auto dependencies = descriptor_helper::dependencies();
-        auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies, config));
-        return ServiceRegistration<service_type>::wrap(result);
+    template<typename S,typename...Dep> auto registerService(const QString& objectName = "", Dep...dep) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
+        return registerService<S,Dep...>(objectName, make_config(), dep...);
     }
-
-    ///
-    /// \brief Registers a service with this ApplicationContext.
-    ///
-    /// There are two alternatives for specifying the service-type:
-    /// 1. Use a QObject-derived class directly as the service-type:
-    ///
-    ///     context -> registerService<QNetworkAccessManager>();
-    ///
-    /// 2. Use the template Service, which helps separate the service-interface from its implementation:
-    ///
-    ///     context -> registerService<Service<QAbstractItemModel,QStringListModel>>();
-    ///
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \param properties properties for the configuration of the service.
-    /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
-    ///
-    template<typename S,typename...Dep> auto registerService(const QString& objectName, std::initializer_list<service_config::entry_type> properties) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        return registerService<S,Dep...>(objectName, service_config{properties});
-    }
-
-
 
 
 
