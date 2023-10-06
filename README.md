@@ -121,10 +121,6 @@ You could even improve on this by re-factoring the common part of the Url into i
     context -> registerService<RestPropFetcher>("hamburgWeather", QString{"${baseUrl}?stationIds=${hamburgStationId}"}, inject<QNetworkAccessManager>()); 
     context -> registerService<RestPropFetcher>("berlinWeather", QString{"${baseUrl}?stationIds=${berlinStationId}"}, inject<QNetworkAccessManager>()); 
     
-**Note:** Every property supplied to mcnepp::qtdi::QApplicationContext::registerService() will be considered a potential Q_PROPERTY of the target-service. mcnepp::qtdi::QApplicationContext::publish() will fail if no such property can be
-found.  
-However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
-Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPostProcessor (see below).
 
 
 ## Configuring services with Q_PROPERTY
@@ -162,9 +158,13 @@ For this, the yet unused `service_config` argument comes into play: It contains 
     context -> registerService<RestPropFetcher>("hamburgWeather", make_config({{"url", "${baseUrl}?stationIds=${hamburgStationId}"}}), inject<QNetworkAccessManager>());
     context -> registerService<RestPropFetcher>("berlinWeather", make_config({{"url", "${baseUrl}?stationIds=${berlinStationId}"}}), inject<QNetworkAccessManager>()); 
 
-As you can see, the code has changed quite significantly: a different overload of mcnepp::qtdi::QApplicationContext::registerService is used, where no constructor-arguments are passed to anymore. 
-Rahter, the Dependency is supplied solely as a type-argument to the function.
+As you can see, the code has changed quite significantly: instead of supplying the Url as a constructor-argument, you use mcnepp::qtdi::make_config() and pass in the key/value-pair for configuring
+the service's url as a Q_PROPERTY.
 
+**Note:** Every property supplied to mcnepp::qtdi::QApplicationContext::registerService() will be considered a potential Q_PROPERTY of the target-service. mcnepp::qtdi::QApplicationContext::publish() will fail if no such property can be
+found.  
+However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
+Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPostProcessor (see below).
 
 
 
