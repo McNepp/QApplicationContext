@@ -345,7 +345,7 @@ private:
 
     void unpublish();
 
-    QVariant getConfigurationValue(const QString& key) const;
+    QVariant getConfigurationValue(const QString& key, const QVariant& defaultValue) const;
 
     static QStringList getBeanRefs(const service_config&);
 

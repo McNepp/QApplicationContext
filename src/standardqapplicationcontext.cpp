@@ -719,6 +719,10 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
 std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveProperty(const QString& group, const QVariant &value, bool allowPartial)
 {
+    constexpr int STATE_INIT = 0;
+    constexpr int STATE_FOUND_DOLLAR = 1;
+    constexpr int STATE_FOUND_PLACEHOLDER = 2;
+    constexpr int STATE_FOUND_DEFAULT_VALUE = 3;
     if(!value.isValid()) {
         return {value, Status::fatal};
     }
@@ -727,38 +731,47 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
         QVariant lastResolvedValue;
         QString resolvedString;
         QString token;
-        int state = 0;
+        QString defaultValueToken;
+        int state = STATE_INIT;
         for(int pos = 0; pos < key.length(); ++pos) {
             auto ch = key[pos];
             switch(ch.toLatin1()) {
             case '$':
                 switch(state) {
-                case 1:
+                case STATE_FOUND_DOLLAR:
                     resolvedString += '$';
-                case 0:
-                    state = 1;
+                case STATE_INIT:
+                    state = STATE_FOUND_DOLLAR;
                     continue;
                 default:
                     qCCritical(loggingCategory()).nospace().noquote() << "Invalid placeholder '" << key << "'";
                     return {QVariant{}, Status::fatal};
                 }
+
+
             case '{':
                 switch(state) {
-                case 1:
-                    state = 2;
+                case STATE_FOUND_DOLLAR:
+                    state = STATE_FOUND_PLACEHOLDER;
                     continue;
                 default:
-                    state = 0;
+                    state = STATE_INIT;
                     resolvedString += ch;
                     continue;
                 }
 
             case '}':
+            {
+                QVariant defaultValue;
+
                 switch(state) {
-                case 2:
+                case STATE_FOUND_DEFAULT_VALUE:
+                    defaultValue = defaultValueToken;
+
+                case STATE_FOUND_PLACEHOLDER:
                     if(!token.isEmpty()) {
                         QString path = makeConfigPath(group, token);
-                        lastResolvedValue = getConfigurationValue(path);
+                        lastResolvedValue = getConfigurationValue(path, defaultValue);
                         if(!lastResolvedValue.isValid()) {
                             if(allowPartial) {
                                 qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve config-value '" << path << "'";
@@ -773,21 +786,35 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                         }
                         resolvedString += lastResolvedValue.toString();
                         token.clear();
+                        defaultValueToken.clear();
                     }
-                    state = 0;
+                    state = STATE_INIT;
                     continue;
                 default:
                     resolvedString += ch;
                     continue;
                 }
+            }
+            case ':':
+                switch(state) {
+                    case STATE_FOUND_PLACEHOLDER:
+                        state = STATE_FOUND_DEFAULT_VALUE;
+                        continue;
+                }
 
             default:
                 switch(state) {
-                case 1:
+                case STATE_FOUND_DOLLAR:
                     resolvedString += '$';
-                    state = 0;
-                case 0:
+                    state = STATE_INIT;
+                case STATE_INIT:
                     resolvedString += ch;
+                    continue;
+                case STATE_FOUND_PLACEHOLDER:
+                    token += ch;
+                    continue;
+                case STATE_FOUND_DEFAULT_VALUE:
+                    defaultValueToken += ch;
                     continue;
                 default:
                     token += ch;
@@ -796,9 +823,9 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             }
         }
         switch(state) {
-        case 1:
+        case STATE_FOUND_DOLLAR:
             resolvedString += '$';
-        case 0:
+        case STATE_INIT:
             return {resolvedString, Status::ok};
         default:
             qCCritical(loggingCategory()).nospace().noquote() << "Unbalanced placeholder '" << key << "'";
@@ -930,16 +957,16 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
 
 
 
-QVariant StandardApplicationContext::getConfigurationValue(const QString& key) const {
+QVariant StandardApplicationContext::getConfigurationValue(const QString& key, const QVariant& defaultValue) const {
     for(auto reg : registrations) {
         if(QSettings* settings = dynamic_cast<QSettings*>(reg->getObject())) {
             auto value = settings->value(key);
-           if(value.isValid()) {
+            if(value.isValid()) {
                 return value;
-           }
+            }
         }
     }
-    return {};
+    return defaultValue;
 }
 
 

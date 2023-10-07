@@ -136,6 +136,25 @@ private slots:
         QCOMPARE(slot->interval(), 4711);
     }
 
+    void testPlaceholderPropertyUsesDefaultValue() {
+
+        auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${timerInterval:4711}"}}));
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot{reg};
+        QCOMPARE(slot->interval(), 4711);
+    }
+
+    void testPlaceholderPropertyIgnoresDefaultValue() {
+        config->setValue("timerInterval", 42);
+        context->registerObject(config);
+
+        auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${timerInterval:4711}"}}));
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot{reg};
+        QCOMPARE(slot->interval(), 42);
+    }
+
+
     void testWithUnbalancedPlaceholderProperty() {
         config->setValue("timerInterval", 4711);
         context->registerObject(config);

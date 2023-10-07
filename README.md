@@ -141,6 +141,14 @@ Just for the sake of symmetry, you could pass the argument for the Url via resol
 
     context -> registerService<RestPropFetcher>("hamburgWeather", resolve<QString>("${baseUrl}?stationIds=${hamburgStationId}"), resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>()); 
 
+### Specifying default values
+
+Sometimes, you may want to provide a constructor-argument that can be externally configured, but you are unsure whether the configuration will always be present at runtime.
+
+You can provide a default-value, separated from the placeholder by a colon: `"${connectionTimeout:5000}"`.
+
+
+
 ## Configuring services with Q_PROPERTY
 
 We have seen how we can inject configuration-values into Service-constructors. Another way of configuring Services is to use Q_PROPERTY declarations.
@@ -152,6 +160,8 @@ Suppose we modify the declaration of `RestPropFetcher` like this:
       Q_PROPERTY(QString value READ value NOTIFY valueChanged)
       
       Q_PROPERTY(QString url READ url WRITE setUrl NOTIFY urlChanged)
+      
+      Q_PROPERTY(int connectionTimeout READ connectionTimeout WRITE setConnectionTimeout NOTIFY connectionTimeoutChanged)
 
       
       public:
@@ -163,21 +173,27 @@ Suppose we modify the declaration of `RestPropFetcher` like this:
       QString url() const;
       
       void setUrl(const QString&);
+      
+      void setConnectionTimeout(int);
+      
+      int connectionTimeout() const;
 
       signals:
+      
       void valueChanged();
       void urlChanged();
+      void connectionTimeoutChanged();
     };
 
 
 Now, the "url" cannot be injected into the constructor. Rather, it must be set explicitly via the corresponding Q_PROPERTY.
 For this, the yet unused `service_config` argument comes into play: It contains a `QVariantMap` with the names and values of properties to set:
 
-    context -> registerService<RestPropFetcher>("hamburgWeather", make_config({{"url", "${baseUrl}?stationIds=${hamburgStationId}"}}), inject<QNetworkAccessManager>());
-    context -> registerService<RestPropFetcher>("berlinWeather", make_config({{"url", "${baseUrl}?stationIds=${berlinStationId}"}}), inject<QNetworkAccessManager>()); 
+    context -> registerService<RestPropFetcher>("hamburgWeather", make_config({{"url", "${baseUrl}?stationIds=${hamburgStationId}"}, {"connectionTimeout", "${connectionTimeout:5000}}), inject<QNetworkAccessManager>());
+    context -> registerService<RestPropFetcher>("berlinWeather", make_config({{"url", "${baseUrl}?stationIds=${berlinStationId}"}, {"connectionTimeout", "${connectionTimeout:5000}}), inject<QNetworkAccessManager>()); 
 
-As you can see, the code has changed quite significantly: instead of supplying the Url as a constructor-argument, you use mcnepp::qtdi::make_config() and pass in the key/value-pair for configuring
-the service's url as a Q_PROPERTY.
+As you can see, the code has changed quite significantly: instead of supplying the Url as a constructor-argument, you use mcnepp::qtdi::make_config() and pass in the key/value-pairs for configuring
+the service's url and connectionTimeouts as a Q_PROPERTYs.
 
 **Note:** Every property supplied to mcnepp::qtdi::QApplicationContext::registerService() will be considered a potential Q_PROPERTY of the target-service. mcnepp::qtdi::QApplicationContext::publish() will fail if no such property can be
 found.  

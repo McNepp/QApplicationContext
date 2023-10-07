@@ -460,7 +460,7 @@ template<typename S> struct Resolvable {
 
 ///
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
-/// \param placeholder must be in the format `${identifier}`. The result of resolving the placeholder must
+/// \param placeholder must be in the format `${identifier}` or `${identifier:defaultValue}`. The result of resolving the placeholder must
 /// be a String that is convertible via `QVariant::value<T>()` to the desired type.
 /// \return a Resolvable instance for the supplied type.
 ///
