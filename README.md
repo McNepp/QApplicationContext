@@ -461,7 +461,60 @@ Well, using the name of the registered service seems like a good idea.
 The following code will still provide a `QList<PropFetcher*>` to the `PropFetcherAggregator`. However, the List will
 contain solely the service that was registered under the name "hamburgWeather":  
 
-    context -> registerService<PropFetcherAggregator>("propFetcherAggregator", injectAll<PropFetcher,Kind::N>("hamburgWeather"));
+    context -> registerService<PropFetcherAggregator>("propFetcherAggregator", injectAll<PropFetcher>("hamburgWeather"));
+
+## Customizing service-instantiation
+
+So far, we have seen that each call to mcnepp::qtdi::QApplicationContext::registerService() mirrors a corresponding constructor-invocation of the service-type.
+
+In order for this to work, several pre-conditions must be true:
+
+1. the constructor of the service must be accessible, i.e. declared `public`.
+2. The number of mandatory arguments must match the arguments provided via `QApplicationContext::registerService()`, in excess of the service-name and, optionally, the `service_config`.
+3. For each `Dependency<T>` with `Kind::MANDATORY`, `Kind::OPTIONAL` or `Kind::PRIVATE_COPY`, the argument-type must be `T*`.
+4. For each `Dependency<T>` with `Kind::N`, the argument-type must be `QList<T*>`.
+
+If any of these conditions fails, then the invocation of `QApplicationContext::registerService()` will fail compilation.
+
+However, there is a remedy: by specializing the template mcnepp::qtdi::service_factory for your service-type, you can provide your own "factory-function" that can overcome any of the above obstacles.
+
+As with all such specializations, it must reside in the namespace of the primary template, i.e. `mcnepp::qtdi`.
+
+The specialization must provide a call-operator that takes the arguments provided by QApplicationContext, adapts those arguments to the arguments expected by the
+service-type, and returns a pointer to the newly created service.
+
+Suppose that the declaration of the class `PropFetcherAggregator` has been changed in the following way:
+
+    class PropFetcherAggregator : public QObject {
+      Q_OBJECT
+      
+      public:
+      
+      static PropFetcherAggregator* create(const std::vector<PropFetcher*>& fetchers, QObject* parent = nullptr);
+      
+      private:
+      
+      explicit PropFetcherAggregator(const std::vector<PropFetcher*>& fetchers, QObject* parent = nullptr);
+    };
+
+Two things have been changed: 
+
+1. Instead of the constructor, which is now private, there is a public static factory-function "create".
+2. The list of PropFetchers is supplied as a `std::vector`, not as a `QList`.
+
+Here is all that we have to do:
+
+    namespace mcnepp::qtdi {
+      template<> struct service_factory<PropFetcherAggregator> {
+        PropFetcherAggregator* operator()(const QList<PropFetcher*> fetchers) const {
+          return PropFetcherAggregator::create(std::vector<PropFetcher*>{fetchers.begin(), fetchers.end()});
+        }
+      };
+    }
+
+And, voila: We can register our service exactly as we did before!
+
+
 
 ## Publishing an ApplicationContext more than once
 

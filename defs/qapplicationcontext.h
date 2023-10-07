@@ -647,13 +647,6 @@ template<typename S> auto convert_arg(const QVariant& arg) {
 
 
 
-template<typename First, typename...Tail> void make_dependencies(std::vector<dependency_info>& target) {
-    target.push_back(dependency_helper<First>::info());
-    if constexpr(sizeof...(Tail) > 0) {
-        make_dependencies<Tail...>(target);
-    }
-}
-
 template<typename First, typename...Tail> void make_dependencies(std::vector<dependency_info>& target, First first, Tail...tail) {
     target.push_back(dependency_helper<First>::info(first));
     if constexpr(sizeof...(Tail) > 0) {
@@ -662,22 +655,14 @@ template<typename First, typename...Tail> void make_dependencies(std::vector<dep
 }
 
 
-template<typename... D> struct descriptor_helper_base {
 
-    static std::vector<dependency_info> dependencies() {
-        std::vector<dependency_info> result;
-        make_dependencies<D...>(result);
-        return result;
+template<typename... Dep> std::vector<dependency_info> dependencies(Dep...dep) {
+    std::vector<dependency_info> result;
+    if constexpr(sizeof...(Dep) > 0) {
+        make_dependencies<Dep...>(result, dep...);
     }
-
-    static std::vector<dependency_info> dependencies(D...dep) {
-        std::vector<dependency_info> result;
-        make_dependencies<D...>(result, dep...);
-        return result;
-    }
-
-
-};
+    return result;
+}
 
 template <typename T, typename... D> struct descriptor_helper;
 
@@ -699,7 +684,7 @@ struct descriptor_helper<T> {
 };
 
 template <typename T, typename D1>
-struct descriptor_helper<T, D1> : descriptor_helper_base<D1> {
+struct descriptor_helper<T, D1> {
     static constexpr auto creator() {
         return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
@@ -713,7 +698,7 @@ struct descriptor_helper<T, D1> : descriptor_helper_base<D1> {
 };
 
 template <typename T, typename D1, typename D2>
-struct descriptor_helper<T, D1, D2>  : descriptor_helper_base<D1,D2> {
+struct descriptor_helper<T, D1, D2> {
     static constexpr auto creator() {
         return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
@@ -726,7 +711,7 @@ struct descriptor_helper<T, D1, D2>  : descriptor_helper_base<D1,D2> {
 };
 
 template <typename T, typename D1, typename D2, typename D3>
-struct descriptor_helper<T, D1, D2, D3> :  descriptor_helper_base<D1,D2,D3> {
+struct descriptor_helper<T, D1, D2, D3> {
     static constexpr auto creator() {
         return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
@@ -746,7 +731,7 @@ struct descriptor_helper<T, D1, D2, D3> :  descriptor_helper_base<D1,D2,D3> {
 };
 
 template <typename T, typename D1, typename D2, typename D3, typename D4>
-struct descriptor_helper<T, D1, D2, D3, D4>  : descriptor_helper_base<D1,D2,D3,D4> {
+struct descriptor_helper<T, D1, D2, D3, D4> {
     static constexpr auto creator() {
         return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
@@ -768,7 +753,7 @@ struct descriptor_helper<T, D1, D2, D3, D4>  : descriptor_helper_base<D1,D2,D3,D
 };
 
 template <typename T, typename D1, typename D2, typename D3, typename D4, typename D5>
-struct descriptor_helper<T, D1, D2, D3, D4, D5>  : descriptor_helper_base<D1,D2,D3,D4,D5> {
+struct descriptor_helper<T, D1, D2, D3, D4, D5> {
     static constexpr auto creator() {
         return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
@@ -868,7 +853,7 @@ public:
         using service_type = typename detail::service_traits<S>::service_type;
         using impl_type = typename detail::service_traits<S>::impl_type;
         using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
-        auto dependencies = descriptor_helper::dependencies(deps...);
+        auto dependencies = detail::dependencies(deps...);
         auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies, config));
         return ServiceRegistration<service_type>::wrap(result);
      }
