@@ -449,7 +449,24 @@ template<typename S> constexpr Dependency<S,Kind::PRIVATE_COPY> injectPrivateCop
     return Dependency<S,Kind::PRIVATE_COPY>{requiredName};
 }
 
+///
+/// \brief A placeholder for a resolvable constructor-argument.
+/// Use the function resolve(const QString&) to pass a resolvable argument to a service
+/// with QApplicationContext::registerService().
+///
+template<typename S> struct Resolvable {
+    QString placeholder;
+};
 
+///
+/// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
+/// \param placeholder must be in the format `${identifier}`. The result of resolving the placeholder must
+/// be a String that is convertible via `QVariant::value<T>()` to the desired type.
+/// \return a Resolvable instance for the supplied type.
+///
+template<typename S> constexpr Resolvable<S> resolve(const QString& placeholder) {
+    return Resolvable<S>{placeholder};
+}
 
 
 ///
@@ -635,6 +652,20 @@ struct dependency_helper<Dependency<S, Kind::N>> {
     }
 };
 
+template <typename S>
+struct dependency_helper<Resolvable<S>> {
+
+    using type = S;
+
+
+    static dependency_info info(Resolvable<S> dep) {
+        return { typeid(S), VALUE_KIND, constructor_t{}, "", QVariant{dep.placeholder} };
+    }
+
+    static S convert(const QVariant& arg) {
+        return arg.value<S>();
+    }
+};
 
 
 

@@ -120,8 +120,26 @@ You could even improve on this by re-factoring the common part of the Url into i
 
     context -> registerService<RestPropFetcher>("hamburgWeather", QString{"${baseUrl}?stationIds=${hamburgStationId}"}, inject<QNetworkAccessManager>()); 
     context -> registerService<RestPropFetcher>("berlinWeather", QString{"${baseUrl}?stationIds=${berlinStationId}"}, inject<QNetworkAccessManager>()); 
-    
 
+### Configuring values of non-String types
+
+The above code works well because the argument "url" is of type `QString`. Thus, after resolving the placeholders, the resulting QString can be passed directly to `RestPropFetcher`'s constructor.
+
+However, what if the constructor had another argument of a type other than `QString`?
+
+Let's say there was an argument of type `int` that specified the connection-timeout in milliseconds. Then, with an intended value of 5000 milliseconds, the service-registration would be:
+
+    context -> registerService<RestPropFetcher>("hamburgWeather", QString{"${baseUrl}?stationIds=${hamburgStationId}"}, 5000, inject<QNetworkAccessManager>()); 
+
+If we want to configure that value as well, there is only a small change to be done:
+
+    context -> registerService<RestPropFetcher>("hamburgWeather", QString{"${baseUrl}?stationIds=${hamburgStationId}"}, resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>()); 
+
+You will notice the use of the function-template mcnepp::qtdi::resolve(const QString&). Needless to say, the configured value for the key "connectionTimeout" must resolve to a valid integer-literal!
+
+Just for the sake of symmetry, you could pass the argument for the Url via resolve(), too:
+
+    context -> registerService<RestPropFetcher>("hamburgWeather", resolve<QString>("${baseUrl}?stationIds=${hamburgStationId}"), resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>()); 
 
 ## Configuring services with Q_PROPERTY
 

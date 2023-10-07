@@ -422,9 +422,10 @@ private slots:
     void testResolveConstructorValues() {
         config->setValue("section/url", "https://google.de/search");
         config->setValue("section/term", "something");
+        config->setValue("section/id", "4711");
         context->registerObject(config);
         BaseService base;
-        auto reg = context->registerService<DependentService>("dep", make_config({}, "section"), 4711, QString{"${url}?q=${term}"}, &base);
+        auto reg = context->registerService<DependentService>("dep", make_config({}, "section"), resolve<int>("${id}"), resolve<QString>("${url}?q=${term}"), &base);
         QVERIFY(reg);
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> service{reg};
