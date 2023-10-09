@@ -455,17 +455,21 @@ template<typename S> constexpr Dependency<S,Kind::PRIVATE_COPY> injectPrivateCop
 /// with QApplicationContext::registerService().
 ///
 template<typename S> struct Resolvable {
-    QString placeholder;
+    QString expression;
+    S defaultValue;
 };
 
 ///
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
-/// \param placeholder must be in the format `${identifier}` or `${identifier:defaultValue}`. The result of resolving the placeholder must
+/// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`. The result of resolving the placeholder must
 /// be a String that is convertible via `QVariant::value<T>()` to the desired type.
+/// \param defaultValue the value to use if the placeholder cannot be resolved.
+/// **Note:** the defaultValue will be used for all unresolved placeholders contained in the expression,
+/// unless they specify their own default using the format `${identifier:defaultValue}`.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S> constexpr Resolvable<S> resolve(const QString& placeholder) {
-    return Resolvable<S>{placeholder};
+template<typename S> constexpr Resolvable<S> resolve(const QString& expression, const S& defaultValue = S{}) {
+    return Resolvable<S>{expression, defaultValue};
 }
 
 
@@ -514,6 +518,7 @@ struct dependency_info {
     constructor_t defaultConstructor;
     QString requiredName;
     QVariant value;
+    QVariant defaultValue;
 };
 
 inline bool operator==(const dependency_info& info1, const dependency_info& info2) {
@@ -659,7 +664,7 @@ struct dependency_helper<Resolvable<S>> {
 
 
     static dependency_info info(Resolvable<S> dep) {
-        return { typeid(S), VALUE_KIND, constructor_t{}, "", QVariant{dep.placeholder} };
+        return { typeid(S), VALUE_KIND, constructor_t{}, "", QVariant{dep.expression}, QVariant::fromValue(dep.defaultValue) };
     }
 
     static S convert(const QVariant& arg) {

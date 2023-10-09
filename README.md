@@ -135,7 +135,7 @@ If we want to configure that value as well, there is only a small change to be d
 
     context -> registerService<RestPropFetcher>("hamburgWeather", QString{"${baseUrl}?stationIds=${hamburgStationId}"}, resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>()); 
 
-You will notice the use of the function-template mcnepp::qtdi::resolve(const QString&). Needless to say, the configured value for the key "connectionTimeout" must resolve to a valid integer-literal!
+You will notice the use of the function-template mcnepp::qtdi::resolve(). Needless to say, the configured value for the key "connectionTimeout" must resolve to a valid integer-literal!
 
 Just for the sake of symmetry, you could pass the argument for the Url via resolve(), too:
 
@@ -145,7 +145,11 @@ Just for the sake of symmetry, you could pass the argument for the Url via resol
 
 Sometimes, you may want to provide a constructor-argument that can be externally configured, but you are unsure whether the configuration will always be present at runtime.
 
-You can provide a default-value, separated from the placeholder by a colon: `"${connectionTimeout:5000}"`.
+There are two ways of doing this:
+
+1. You can supply a default-value to the function-template mcnepp::qtdi::resolve() as its second argument: `resolve("${connectionTimeout}", 5000)`. This is the only way to supply default-values to Q_PROPERTYs (see next section).
+2. You can put a default-value into the placeholder-expression, separated from the placeholder by a colon: `"${connectionTimeout:5000}"`. Such an embedded default-value
+takes precedence over one supplied to mqnepp::qtdi::resolve(). This works for both constructor-arguments and Q_PROPERTYs (see next section).
 
 
 

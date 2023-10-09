@@ -460,6 +460,31 @@ private slots:
         QVERIFY(!context->publish());
     }
 
+    void testResolveConstructorValuesWithDefault() {
+        BaseService base;
+        auto reg = context->registerService<DependentService>("dep", service_config{}, resolve("${id}", 4711), resolve("${url}", QString{"localhost:8080"}), &base);
+        QVERIFY(reg);
+        RegistrationSlot<DependentService> service{reg};
+
+        QVERIFY(context->publish());
+        QCOMPARE(service->m_id, 4711);
+        QCOMPARE(service->m_url, QString{"localhost:8080"});
+
+    }
+
+    void testResolveConstructorValuesPrecedence() {
+        BaseService base;
+        auto reg = context->registerService<DependentService>("dep", service_config{}, resolve("${id:42}", 4711), resolve("${url:n/a}", QString{"localhost:8080"}), &base);
+        QVERIFY(reg);
+        RegistrationSlot<DependentService> service{reg};
+
+        QVERIFY(context->publish());
+        QCOMPARE(service->m_id, 42);
+        QCOMPARE(service->m_url, QString{"n/a"});
+
+    }
+
+
     void testMixConstructorValuesWithDependency() {
         BaseService base;
         context->registerObject<Interface1>(&base, "base");

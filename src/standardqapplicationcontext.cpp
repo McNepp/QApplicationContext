@@ -211,7 +211,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
     switch(d.kind) {
     case detail::VALUE_KIND:
-        return resolveProperty(reg->descriptor.config.group, d.value, allowPartial);
+        return resolveProperty(reg->descriptor.config.group, d.value, d.defaultValue, allowPartial);
 
 
     case static_cast<int>(Kind::MANDATORY):
@@ -717,21 +717,23 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 }
 
 
-std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveProperty(const QString& group, const QVariant &value, bool allowPartial)
+std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveProperty(const QString& group, const QVariant &valueOrPlaceholder, const QVariant& defaultValue, bool allowPartial)
 {
     constexpr int STATE_INIT = 0;
     constexpr int STATE_FOUND_DOLLAR = 1;
     constexpr int STATE_FOUND_PLACEHOLDER = 2;
     constexpr int STATE_FOUND_DEFAULT_VALUE = 3;
-    if(!value.isValid()) {
-        return {value, Status::fatal};
+    if(!valueOrPlaceholder.isValid()) {
+        return {valueOrPlaceholder, Status::fatal};
     }
-    QString key = value.toString();
+    QString key = valueOrPlaceholder.toString();
     if(key.contains("${")) {
         QVariant lastResolvedValue;
         QString resolvedString;
         QString token;
         QString defaultValueToken;
+        QVariant currentDefault;
+
         int state = STATE_INIT;
         for(int pos = 0; pos < key.length(); ++pos) {
             auto ch = key[pos];
@@ -761,17 +763,15 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 }
 
             case '}':
-            {
-                QVariant defaultValue;
-
+                currentDefault = defaultValue;
                 switch(state) {
                 case STATE_FOUND_DEFAULT_VALUE:
-                    defaultValue = defaultValueToken;
+                    currentDefault = defaultValueToken;
 
                 case STATE_FOUND_PLACEHOLDER:
                     if(!token.isEmpty()) {
                         QString path = makeConfigPath(group, token);
-                        lastResolvedValue = getConfigurationValue(path, defaultValue);
+                        lastResolvedValue = getConfigurationValue(path, currentDefault);
                         if(!lastResolvedValue.isValid()) {
                             if(allowPartial) {
                                 qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve config-value '" << path << "'";
@@ -794,7 +794,6 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                     resolvedString += ch;
                     continue;
                 }
-            }
             case ':':
                 switch(state) {
                     case STATE_FOUND_PLACEHOLDER:
@@ -832,7 +831,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             return {QVariant{}, Status::fatal};
         }
     }
-    return {value, Status::ok};
+    return {valueOrPlaceholder, Status::ok};
 }
 
 
@@ -851,7 +850,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 return result.second;
             }
             if(!resolved) {
-                result = resolveProperty(reg->descriptor.config.group, value, allowPartial);
+                result = resolveProperty(reg->descriptor.config.group, value, QVariant{}, allowPartial);
                 if(result.second != Status::ok) {
                     return result.second;
                 }
