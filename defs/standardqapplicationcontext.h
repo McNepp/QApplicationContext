@@ -32,7 +32,7 @@ public:
 
 protected:
 
-    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor) override;
+    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
 
     virtual Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
 
@@ -106,9 +106,9 @@ private:
 
         virtual bool isManaged() const = 0;
 
-        virtual bool isEqual(const service_descriptor& descriptor, QObject* obj) const = 0;
+        virtual bool isEqual(const service_descriptor& descriptor, const service_config& config, QObject* obj) const = 0;
 
-
+        virtual const service_config& config() const = 0;
 
 
         virtual QObjectList publishedObjects() const override {
@@ -162,9 +162,10 @@ private:
 
     struct ServiceRegistration : public DescriptorRegistration {
 
-        ServiceRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
+        ServiceRegistration(const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
             DescriptorRegistration{name, desc, parent},
-            theService(nullptr) {
+            theService(nullptr),
+            m_config(config) {
 
         }
 
@@ -190,7 +191,9 @@ private:
             return out.nospace().noquote() << "Service '" << name() << "' with service-type '" << service_type().name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
         }
 
-
+        virtual const service_config& config() const override {
+            return m_config;
+        }
 
         virtual QObject* createPrivateObject(const QVariantList& dependencies) override {
             QObject* obj = descriptor.create(dependencies);
@@ -200,8 +203,8 @@ private:
             return obj;
         }
 
-        virtual bool isEqual(const service_descriptor& descriptor, QObject* obj) const override {
-            return descriptor == this->descriptor;
+        virtual bool isEqual(const service_descriptor& descriptor, const service_config& config, QObject* obj) const override {
+            return descriptor == this->descriptor && m_config == config;
         }
 
         virtual QObjectList privateObjects() const override {
@@ -230,6 +233,7 @@ private:
     private:
         QObject* theService;
         QObjectList m_privateObjects;
+        service_config m_config;
     };
 
     struct ObjectRegistration : public DescriptorRegistration {
@@ -244,7 +248,7 @@ private:
         void notifyPublished() override {
         }
 
-        virtual bool isEqual(const service_descriptor& descriptor, QObject* obj) const override {
+        virtual bool isEqual(const service_descriptor& descriptor, const service_config&, QObject* obj) const override {
             return descriptor == this->descriptor && theObj == obj;
         }
 
@@ -280,6 +284,12 @@ private:
         virtual QDebug print(QDebug out) const override  {
             return out.nospace().noquote() << "Object '" << name() << "' with service-type '" << service_type().name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
         }
+
+        virtual const service_config& config() const override {
+            return defaultConfig;
+        }
+
+        static const service_config defaultConfig;
 
 
     private:
@@ -356,7 +366,7 @@ private:
 
     std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial);
 
-    std::pair<DescriptorRegistration*,bool> registerDescriptor(QString name, const service_descriptor& descriptor, QObject* obj);
+    std::pair<DescriptorRegistration*,bool> registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj);
 
     Status configure(DescriptorRegistration*,QObject*, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial);
 

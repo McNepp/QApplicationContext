@@ -155,7 +155,7 @@ void StandardApplicationContext::unpublish()
                     goto next_published;
                 }
             }
-            for(auto& beanRef : getBeanRefs(reg->descriptor.config)) {
+            for(auto& beanRef : getBeanRefs(reg->config())) {
                 if(beanRef == reg->name()) {
                     published.erase(depend);
                     published.push_front(reg);
@@ -211,7 +211,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
     switch(d.kind) {
     case detail::VALUE_KIND:
-        return resolveProperty(reg->descriptor.config.group, d.value, d.defaultValue, allowPartial);
+        return resolveProperty(reg->config().group, d.value, d.defaultValue, allowPartial);
 
 
     case static_cast<int>(Kind::MANDATORY):
@@ -274,7 +274,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                     return {QVariant{}, Status::fatal};
                 }
             }
-            depReg = new ServiceRegistration{"", service_descriptor{type, type, d.defaultConstructor}, this};
+            depReg = new ServiceRegistration{"", service_descriptor{type, type, d.defaultConstructor}, service_config{}, this};
         }
         QVariantList subDep;
         QOwningList privateSubDep;
@@ -390,7 +390,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         reg = pop_front(unpublished);
 
         next_unpublished:
-        for(auto& beanRef : getBeanRefs(reg->descriptor.config)) {
+        for(auto& beanRef : getBeanRefs(reg->config())) {
             if(!getRegistrationByName(beanRef)) {
                 if(!allowPartial) {
                     qCCritical(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
@@ -415,7 +415,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
             }
             //If we find a mandatory dependency for which there is a default-constructor, we continue with that:
             if(!find_by_type(allPublished, d.type) && d.kind == static_cast<int>(Kind::MANDATORY) && d.defaultConstructor) {
-                auto def = registerDescriptor("", service_descriptor{d.type, d.type, d.defaultConstructor}, nullptr);
+                auto def = registerDescriptor("", service_descriptor{d.type, d.type, d.defaultConstructor}, service_config{}, nullptr);
                 if(def.second) {
                     unpublished.push_front(reg);
                     reg = def.first;
@@ -476,7 +476,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
     while(!publishedNow.empty()) {
         reg = pop_front(publishedNow);
         next_published:
-        for(auto& beanRef : getBeanRefs(reg->descriptor.config)) {
+        for(auto& beanRef : getBeanRefs(reg->config())) {
             auto foundReg = erase_if(publishedNow, [&beanRef](DescriptorRegistration* r) { return r->name() == beanRef;});
             if(foundReg) {
                 publishedNow.push_front(reg);//Put the current Registration back where it came from. Will be processed after the dependency.
@@ -546,14 +546,14 @@ unsigned int StandardApplicationContext::pendingPublication() const
     return std::count_if(registrations.begin(), registrations.end(), std::not_fn(std::mem_fn(&DescriptorRegistration::isPublished)));
 }
 
-std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, QObject* obj) {
+std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj) {
     bool isAnonymous = name.isEmpty();
     if(isAnonymous) {
         name = makeName(descriptor.service_type);
     } else {
         auto found = getRegistrationByName(name);
         if(found) {
-            if(found->isEqual(descriptor, obj)) {
+            if(found->isEqual(descriptor, config, obj)) {
                 qCInfo(loggingCategory()).nospace().noquote() << descriptor << " has already been registered";
                 return {found, false};
             } else {
@@ -564,7 +564,7 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
     }
 
     for(auto reg : registrations) {
-        if(reg->isEqual(descriptor, obj)) {
+        if(reg->isEqual(descriptor, config, obj)) {
             if(isAnonymous) {
                 qCInfo(loggingCategory()).nospace().noquote() << descriptor << " has already been registered";
                 return {reg, false};
@@ -589,7 +589,7 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
     if(obj) {
         registration = new ObjectRegistration{name, descriptor, obj, this};
     } else {
-        registration = new ServiceRegistration{name, descriptor, this};
+        registration = new ServiceRegistration{name, descriptor, config, this};
     }
     registrationsByName.insert({name, registration});
     registrations.push_back(registration);
@@ -604,9 +604,9 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
 
 }
 
-Registration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor)
+Registration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config)
 {
-    auto result = registerDescriptor(name, descriptor, nullptr);
+    auto result = registerDescriptor(name, descriptor, config, nullptr);
     return result.first;
 }
 
@@ -617,7 +617,7 @@ Registration * StandardApplicationContext::registerObject(const QString &name, Q
         return nullptr;
     }
 
-    auto result = registerDescriptor(name.isEmpty() ? obj->objectName() : name, descriptor, obj);
+    auto result = registerDescriptor(name.isEmpty() ? obj->objectName() : name, descriptor, ObjectRegistration::defaultConfig, obj);
     if(result.second) {
         connect(obj, &QObject::destroyed, this, &StandardApplicationContext::contextObjectDestroyed);
     }
@@ -840,7 +840,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
         return Status::fatal;
     }
     auto metaObject = target->metaObject();
-    auto& config = reg->descriptor.config;
+    auto& config = reg->config();
     if(metaObject) {
         std::unordered_set<QString> usedProperties;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
@@ -850,7 +850,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 return result.second;
             }
             if(!resolved) {
-                result = resolveProperty(reg->descriptor.config.group, value, QVariant{}, allowPartial);
+                result = resolveProperty(config.group, value, QVariant{}, allowPartial);
                 if(result.second != Status::ok) {
                     return result.second;
                 }
@@ -968,6 +968,7 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key, c
     return defaultValue;
 }
 
+const service_config StandardApplicationContext::ObjectRegistration::defaultConfig;
 
 StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
     StandardRegistration(parent),

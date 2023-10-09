@@ -541,7 +541,6 @@ struct service_descriptor {
     const std::type_info& impl_type;
     constructor_t constructor;
     std::vector<dependency_info> dependencies;
-    service_config config;
 };
 
 ///
@@ -558,8 +557,7 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
     }
     return left.service_type == right.service_type &&
            left.impl_type == right.impl_type &&
-           left.dependencies == right.dependencies &&
-           left.config == right.config;
+           left.dependencies == right.dependencies;
  }
 
 
@@ -580,9 +578,9 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
 
 
 
-template<typename S,typename I,typename F> service_descriptor create_descriptor(F creator, const std::vector<dependency_info>& dependencies = {}, const service_config& config = service_config{}) {
+template<typename S,typename I,typename F> service_descriptor create_descriptor(F creator, const std::vector<dependency_info>& dependencies = {}) {
     static_assert(std::is_base_of_v<QObject,I>, "Impl-type must be a sub-class of QObject");
-    return service_descriptor{typeid(S), typeid(I), creator, dependencies, config};
+    return service_descriptor{typeid(S), typeid(I), creator, dependencies};
 }
 
 template<typename S> constructor_t get_default_constructor() {
@@ -833,8 +831,6 @@ struct service_traits<Service<Srv, Impl>> {
 
 
 
-
-
 ///
 /// \brief A DI-Container for Qt-based applications.
 ///
@@ -890,7 +886,7 @@ public:
         using impl_type = typename detail::service_traits<S>::impl_type;
         using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
         auto dependencies = detail::dependencies(deps...);
-        auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies, config));
+        auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies), config);
         return ServiceRegistration<service_type>::wrap(result);
      }
 
@@ -1013,7 +1009,7 @@ protected:
     /// \param descriptor
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
-    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor) = 0;
+    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) = 0;
 
     ///
     /// \brief Registers an Object with this QApplicationContext.
@@ -1041,8 +1037,8 @@ protected:
     /// \param descriptor
     /// \return the result of registerService(const QString&, service_descriptor*).
     ///
-    static Registration* delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor) {
-        return appContext.registerService(name, descriptor);
+    static Registration* delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config) {
+        return appContext.registerService(name, descriptor, config);
     }
 
     ///
