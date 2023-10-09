@@ -156,7 +156,7 @@ void StandardApplicationContext::unpublish()
                 }
             }
             for(auto& beanRef : getBeanRefs(reg->config())) {
-                if(beanRef == reg->name()) {
+                if(beanRef == reg->registeredName()) {
                     published.erase(depend);
                     published.push_front(reg);
                     reg = dep;
@@ -173,7 +173,7 @@ void StandardApplicationContext::unpublish()
     QStringList remainingNames;
     for(auto reg : registrations) {
         if(reg->isPublished() && !reg->isManaged()) {
-            remainingNames.push_back(reg->name());
+            remainingNames.push_back(reg->registeredName());
         }
     }
     if(!remainingNames.isEmpty()) {
@@ -251,7 +251,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
         default:
             if(!d.requiredName.isEmpty()) {
                 for(auto r : depRegs) {
-                    if(r->name() == d.requiredName) {
+                    if(r->registeredName() == d.requiredName) {
                         depReg = r;
                         break;
                     }
@@ -449,7 +449,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         }
         privateDependencies.moveTo(service);
         if(service->objectName().isEmpty()) {
-            service->setObjectName(reg->name());
+            service->setObjectName(reg->registeredName());
         }
         qCInfo(loggingCategory()).nospace().noquote() << "Published " << *reg;
         publishedNow.push_back(reg);
@@ -477,7 +477,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         reg = pop_front(publishedNow);
         next_published:
         for(auto& beanRef : getBeanRefs(reg->config())) {
-            auto foundReg = erase_if(publishedNow, [&beanRef](DescriptorRegistration* r) { return r->name() == beanRef;});
+            auto foundReg = erase_if(publishedNow, [&beanRef](DescriptorRegistration* r) { return r->registeredName() == beanRef;});
             if(foundReg) {
                 publishedNow.push_front(reg);//Put the current Registration back where it came from. Will be processed after the dependency.
                 reg = foundReg;

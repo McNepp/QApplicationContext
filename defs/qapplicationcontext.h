@@ -44,7 +44,22 @@ class Registration : public QObject {
     ///
     Q_PROPERTY(QObjectList publishedObjects READ publishedObjects NOTIFY publishedObjectsChanged)
 
+    ///
+    /// \brief The name of this Registration.
+    /// This property will only yield a non-empty String if this Registration was obtained via QApplicationContext::registerService().
+    /// For Registrations obtained via QApplicationContext::getRegistration(), it will yield the empty String.
+    ///
+    Q_PROPERTY(QString registeredName READ registeredName CONSTANT)
+
+    /// \brief the maximum number of Objects that match this Registration.
+    /// For Registrations obtained via QApplicationContext::registerService(), this function will always yield 1.
+    /// For Registrations obtained via QApplicationContext::getRegistration(), this function may yield anything between 0 and
+    /// the number of currently registered services of this type.
+    ///
+    Q_PROPERTY(unsigned maxPublications READ maxPublications NOTIFY maxPublicationsChanged)
+
 public:
+
     ///
     /// \brief The service-type that this Registration manages.
     /// \return The service-type that this Registration manages.
@@ -66,12 +81,31 @@ public:
     ///
     [[nodiscard]] virtual QApplicationContext* applicationContext() const = 0;
 
+    ///
+    /// \brief The name of this Registration.
+    /// This property will only yield a non-empty String if this Registration was obtained via QApplicationContext::registerService().
+    /// For Registrations obtained via QApplicationContext::getRegistration(), it will yield the empty String.
+    /// \return the name of this Registration if it war obtained via QApplicationContext::registerService(), the empty String otherwise.
+    ///
+    [[nodiscard]] virtual QString registeredName() const = 0;
+
+    /// \brief the maximum number of Objects that match this Registration.
+    /// For Registrations obtained via QApplicationContext::registerService(), this function will always yield 1.
+    /// For Registrations obtained via QApplicationContext::getRegistration(), this function may yield anything between 0 and
+    /// the number of currently registered services of this type.
+    [[nodiscard]] virtual unsigned maxPublications() const = 0;
+
 signals:
 
     ///
     /// \brief Signals when a service has been published.
     ///
     void publishedObjectsChanged();
+
+    ///
+    /// \brief Signals when another service matching this Registration has been registered.
+    ///
+    void maxPublicationsChanged(unsigned);
 
 protected:
 
@@ -127,6 +161,7 @@ template<typename S> class ServiceRegistration : public Registration {
     friend class QApplicationContext;
 
 public:
+
     [[nodiscard]] virtual const std::type_info& service_type() const override {
         return unwrap()->service_type();
     }
@@ -156,6 +191,13 @@ public:
     }
 
 
+    [[nodiscard]] virtual QString registeredName() const override {
+        return unwrap()->registeredName();
+    }
+
+    [[nodiscard]] virtual unsigned maxPublications() const override {
+        return unwrap()->maxPublications();
+    }
 
 
     ///
@@ -231,6 +273,7 @@ private:
     explicit ServiceRegistration(Registration* reg) : Registration(reg)
     {
         connect(reg, &Registration::publishedObjectsChanged, this, &Registration::publishedObjectsChanged);
+        connect(reg, &Registration::maxPublicationsChanged, this, &Registration::maxPublicationsChanged);
     }
 
     static ServiceRegistration* wrap(Registration* reg) {
@@ -415,7 +458,7 @@ template<typename S,Kind c=Kind::MANDATORY> struct Dependency {
 
 ///
 /// \brief Injects a mandatory Dependency.
-/// \param the required name of the dependency. If empty, no name is required.
+/// \param requiredName the required name of the dependency. If empty, no name is required.
 /// \return a mandatory Dependency on the supplied type.
 ///
 template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const QString& requiredName = "") {
@@ -423,8 +466,23 @@ template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const QStrin
 }
 
 ///
-/// \brief Injects an optional Dependency.
-/// \param the required name of the dependency. If empty, no name is required.
+/// \brief Injects a mandatory Dependency on a ServiceRegistration.
+/// This function utilizes the Registration::registeredName() of the supplied registration.
+/// \param registration the Registration of the dependency.
+/// \return a mandatory Dependency on the supplied registration.
+///
+template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(ServiceRegistration<S>* registration) {
+    return Dependency<S,Kind::MANDATORY>{registration->registeredName()};
+}
+
+
+
+
+
+///
+/// \brief Injects an optional Dependency to another ServiceRegistration.
+/// This function will utilize the Registration::registeredName() to match the dependency.
+/// \param requiredName the required name of the dependency. If empty, no name is required.
 /// \return an optional Dependency on the supplied type.
 ///
 template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const QString& requiredName = "") {
@@ -432,13 +490,36 @@ template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(cons
 }
 
 ///
+/// \brief Injects an optional Dependency on a ServiceRegistration.
+/// This function utilizes the Registration::registeredName() of the supplied registration.
+/// \param registration the Registration of the dependency.
+/// \return an optional Dependency on the supplied registration.
+///
+template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(ServiceRegistration<S>* registration) {
+    return Dependency<S,Kind::OPTIONAL>{registration->registeredName()};
+}
+
+
+
+///
 /// \brief Injects a 1-to-N Dependency.
-/// \param the required name of the dependency. If empty, no name is required.
+/// \param requiredName the required name of the dependency. If empty, no name is required.
 /// \return a 1-to-N Dependency on the supplied type.
 ///
 template<typename S> constexpr Dependency<S,Kind::N> injectAll(const QString& requiredName = "") {
     return Dependency<S,Kind::N>{requiredName};
 }
+
+///
+/// \brief Injects a 1-to-N Dependency on a ServiceRegistration.
+/// This function utilizes the Registration::registeredName() of the supplied registration.
+/// \param registration the Registration of the dependency.
+/// \return a 1-to-N  Dependency on the supplied registration.
+///
+template<typename S> constexpr Dependency<S,Kind::N> injectAll(ServiceRegistration<S>* registration) {
+    return Dependency<S,Kind::N>{registration->registeredName()};
+}
+
 
 ///
 /// \brief Injects a Dependency of type Cardinality::PRIVATE_COPY

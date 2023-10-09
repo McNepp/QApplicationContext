@@ -96,7 +96,7 @@ private:
         }
 
 
-        const QString& name() const  {
+        QString registeredName() const override {
             return m_name;
         }
 
@@ -120,6 +120,10 @@ private:
         }
 
         virtual void notifyPublished() = 0;
+
+        virtual unsigned maxPublications() const override {
+            return 1;
+        }
 
 
         bool matches(const std::type_index& type) const {
@@ -188,7 +192,7 @@ private:
         }
 
         virtual QDebug print(QDebug out) const override  {
-            return out.nospace().noquote() << "Service '" << name() << "' with service-type '" << service_type().name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
+            return out.nospace().noquote() << "Service '" << registeredName() << "' with service-type '" << service_type().name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
         }
 
         virtual const service_config& config() const override {
@@ -282,7 +286,7 @@ private:
         }
 
         virtual QDebug print(QDebug out) const override  {
-            return out.nospace().noquote() << "Object '" << name() << "' with service-type '" << service_type().name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
+            return out.nospace().noquote() << "Object '" << registeredName() << "' with service-type '" << service_type().name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
         }
 
         virtual const service_config& config() const override {
@@ -315,6 +319,10 @@ private:
             return m_type;
         }
 
+        QString registeredName() const override {
+            return QString{};
+        }
+
         virtual QObjectList publishedObjects() const override {
             QObjectList result;
             for(auto reg : registrations) {
@@ -325,9 +333,15 @@ private:
             return result;
         }
 
+        virtual unsigned maxPublications() const override {
+            return registrations.size();
+        }
+
+
         void add(DescriptorRegistration* reg) {
             if(std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
                 registrations.push_back(reg);
+                emit maxPublicationsChanged(registrations.size());
                 connect(reg, &Registration::publishedObjectsChanged, this, &ProxyRegistration::publishedObjectsChanged);
             }
         }

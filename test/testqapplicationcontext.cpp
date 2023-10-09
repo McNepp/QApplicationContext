@@ -850,13 +850,19 @@ private slots:
 
     void testPublishAdditionalServices() {
 
+        unsigned maxPublished = 0;
         unsigned contextPublished = context->published();
         unsigned contextPending = context->pendingPublication();
         connect(context, &QApplicationContext::publishedChanged, this, [this,&contextPublished] {contextPublished = context->published();});
         connect(context, &QApplicationContext::pendingPublicationChanged, this, [this,&contextPending] {contextPending = context->pendingPublication();});
+        auto baseReg = context->getRegistration<Interface1>();
+        connect(baseReg, &Registration::maxPublicationsChanged, this, [&maxPublished](unsigned v) {maxPublished = v;});
+        QCOMPARE(baseReg->maxPublications(), 0);
         context->registerService<Service<Interface1,BaseService>>("base");
+        QCOMPARE(baseReg->maxPublications(), 1);
+        QCOMPARE(maxPublished, 1);
         QCOMPARE(contextPending, 1);
-        RegistrationSlot<Interface1> baseSlot{context->getRegistration<Interface1>()};
+        RegistrationSlot<Interface1> baseSlot{baseReg};
         auto regDep = context->registerService<DependentService>("", inject<Interface1>());
         RegistrationSlot<DependentService> depSlot{regDep};
         QCOMPARE(contextPending, 2);
@@ -871,6 +877,7 @@ private slots:
         QCOMPARE(baseSlot(), baseSlot());
 
         auto anotherBaseReg = context->registerService<Service<Interface1,BaseService2>>("anotherBase");
+        QCOMPARE(maxPublished, 2);
         QCOMPARE(contextPending, 1);
         QCOMPARE(contextPublished, 2);
 
