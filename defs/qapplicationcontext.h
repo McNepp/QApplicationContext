@@ -326,7 +326,7 @@ private:
 /// If you do so, you must define a call-operator with a pointer to your component as its return-type
 /// and as many arguments as are needed to construct an instance.
 ///
-/// For example, if you have a service-type `MyService` with an inaccessible constructor for which only a static factory-function `MySerivce::create()` exists,
+/// For example, if you have a service-type `MyService` with an inaccessible constructor for which only a static factory-function `MyService::create()` exists,
 /// you may define the corresponding service_factory like this:
 ///
 ///     template<> struct service_factory<MyService> {
@@ -347,26 +347,6 @@ private:
 template<typename S> struct service_factory;
 
 
-///
-/// \brief Describes a service by its interface and implementation.
-///
-/// Compilation will fail if either `Srv` is not a sub-class of QObject, or if `Impl` is not a sub-class of `Srv`.
-///
-/// This type can be used as a type-argument for QApplicationContext::registerService(const QString&, const QApplicationContext::Config&).
-/// Example:
-///
-///    context->registerService<Service<DatabaseAccess,OracleDatabaseAccess>>("dao");
-///
-///
-template<typename Srv,typename Impl> struct Service {
-    static_assert(std::is_base_of_v<QObject,Impl>, "Implementation-type must be a subclass of QObject");
-
-    static_assert(std::is_base_of_v<Srv,Impl>, "Implementation-type must be a subclass of Service-type");
-
-    using service_type = Srv;
-
-    using impl_type = Impl;
-};
 
 /**
 * \brief Specifies the kind of a service-dependency.
@@ -424,13 +404,13 @@ enum class Kind {
 ///
 /// Thus, the following two lines would be completely equivalent:
 ///
-///     context->registerService<Reader>("reader", Dependency<DatabaseAccess>{});
+///     context->registerService(Service<Reader>{Dependency<DatabaseAccess>{}}, "reader");
 ///
-///     context->registerService<Reader>("reader", inject<DatabaseAccess>());
+///     context->registerService(Service<Reader>{inject<DatabaseAccess>()}, "reader");
 ///
 /// However, if your service can do without a `DatabaseAccess`, you should register it like this:
 ///
-///     context->registerService<Reader>("reader", injectIfPresent<DatabaseAccess>());
+///     context->registerService(Service<Reader>{injectIfPresent<DatabaseAccess>()}, "reader");
 ///
 /// Consider the case where your `Reader` takes a List of `DatabaseAccess` instances:
 ///
@@ -441,7 +421,7 @@ enum class Kind {
 ///
 /// In that case, it would be registered in an ApplicationContext using the following line:
 ///
-///     context->registerService<Reader>("reader", injectAll<DatabaseAccess>());
+///     context->registerService(Service<Reader>{injectAll<DatabaseAccess>()}, "reader");
 ///
 ///
 template<typename S,Kind c=Kind::MANDATORY> struct Dependency {
@@ -659,10 +639,6 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
 
 
 
-template<typename S,typename I,typename F> service_descriptor create_descriptor(F creator, const std::vector<dependency_info>& dependencies = {}) {
-    static_assert(std::is_base_of_v<QObject,I>, "Impl-type must be a sub-class of QObject");
-    return service_descriptor{typeid(S), typeid(I), creator, dependencies};
-}
 
 template<typename S> constructor_t get_default_constructor() {
     if constexpr(std::conjunction_v<std::is_base_of<QObject,S>,std::is_default_constructible<S>>) {
@@ -888,6 +864,43 @@ struct descriptor_helper<T, D1, D2, D3, D4, D5> {
     }
 };
 
+
+
+
+} // namespace detail
+
+///
+/// \brief Describes a service by its interface and implementation.
+/// Compilation will fail if either `Srv` is not a sub-class of QObject, or if `Impl` is not a sub-class of `Srv`.
+
+/// You may supply arbitrary arguments to Service' constructor. Those arguments will be passed on to the
+/// constructor of the actual service when the QApplicationContext is published.
+/// Example with no arguments:
+///
+///    context->registerService(Service<DatabaseAccess,OracleDatabaseAccess>{}, "dao");
+///
+///
+template<typename Srv,typename Impl=Srv> struct Service {
+    static_assert(std::is_base_of_v<QObject,Impl>, "Implementation-type must be a subclass of QObject");
+
+    static_assert(std::is_base_of_v<Srv,Impl>, "Implementation-type must be a subclass of Service-type");
+
+    using service_type = Srv;
+
+    using impl_type = Impl;
+
+    template<typename...Dep> Service(Dep...deps) : descriptor{typeid(Srv), typeid(Impl)} {
+        using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
+        descriptor.dependencies = detail::dependencies(deps...);
+        descriptor.constructor = descriptor_helper::creator();
+    }
+
+
+    detail::service_descriptor descriptor;
+};
+
+
+namespace detail {
 template <typename T>
 struct service_traits {
     static_assert(std::is_base_of_v<QObject,T>, "Service-type must be a subclass of QObject");
@@ -905,9 +918,10 @@ struct service_traits<Service<Srv, Impl>> {
     using impl_type = typename Service<Srv, Impl>::impl_type;
 };
 
+}
 
 
-} // namespace detail
+
 
 
 
@@ -952,9 +966,26 @@ public:
     using dependency_info = detail::dependency_info;
 
 
+
+
     ///
     /// \brief Registers a service with this ApplicationContext.
-    /// \see registerService(const QString&,std::initializer_list<service_config::entry_type>,bool,const QString&).
+    /// \param serviceDeclaration denotes the Service.
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param config the Configuration for the service.
+    /// \tparam S the service-type. If you want to distinguish the service-type from the implementation-type, you should supply a Service here.
+    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
+    ///
+    template<typename S,typename Impl> auto registerService(const Service<S,Impl>& serviceDeclaration, const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S>* {
+        return ServiceRegistration<S>::wrap(registerService(objectName, serviceDeclaration.descriptor, config));
+    }
+
+
+    ///
+    /// \brief Registers a service with no dependencies with this ApplicationContext.
+    /// This is a convenience-function equivalent to `registerService(Service<S>{}, objectName, config)`.
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
@@ -962,35 +993,8 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
     ///
-    template<typename S,typename...Dep> auto registerService(const QString& objectName, const service_config& config, Dep...deps) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        using service_type = typename detail::service_traits<S>::service_type;
-        using impl_type = typename detail::service_traits<S>::impl_type;
-        using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
-        auto dependencies = detail::dependencies(deps...);
-        auto result = registerService(objectName, detail::create_descriptor<service_type,impl_type>(descriptor_helper::creator(), dependencies), config);
-        return ServiceRegistration<service_type>::wrap(result);
-     }
-
-    ///
-    /// \brief Registers a service with this ApplicationContext.
-    ///
-    /// There are two alternatives for specifying the service-type:
-    /// 1. Use a QObject-derived class directly as the service-type:
-    ///
-    ///     context -> registerService<QNetworkAccessManager>();
-    ///
-    /// 2. Use the template Service, which helps separate the service-interface from its implementation:
-    ///
-    ///     context -> registerService<Service<QAbstractItemModel,QStringListModel>>();
-    ///
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
-    ///
-    template<typename S,typename...Dep> auto registerService(const QString& objectName = "", Dep...dep) -> ServiceRegistration<typename detail::service_traits<S>::service_type>* {
-        return registerService<S,Dep...>(objectName, make_config(), dep...);
+    template<typename S> auto registerService(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S>* {
+        return registerService(Service<S>{}, objectName, config);
     }
 
 
