@@ -93,6 +93,8 @@ inline QString kindToString(int kind) {
         return "private copy";
     case detail::VALUE_KIND:
         return "value";
+    case detail::RESOLVABLE_KIND:
+        return "resolvable";
     default:
         return "unknown";
 
@@ -211,8 +213,14 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
     switch(d.kind) {
     case detail::VALUE_KIND:
-        return resolveProperty(reg->config().group, d.value, d.defaultValue, allowPartial);
+        if(!d.value.isValid()) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d << " of " << *reg;
+            return {d.value, Status::fatal};
+        }
+        return {d.value, Status::ok};
 
+    case detail::RESOLVABLE_KIND:
+        return resolveProperty(reg->config().group, d.value, d.defaultValue, allowPartial);
 
     case static_cast<int>(Kind::MANDATORY):
         if(dep.empty()) {
@@ -230,7 +238,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
         case 0:
             return {QVariant{}, Status::ok};
         case 1:
-            qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " of " << *reg;
+            qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " of " << *reg << " with " << dep[0];
             return {QVariant::fromValue(dep[0]), Status::ok};
         default:
             //Ambiguity is always a non-fixable error:
@@ -238,6 +246,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             return {QVariant{}, Status::fatal};
         }
     case static_cast<int>(Kind::N):
+        qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " of " << *reg << " with " << dep.size() << " objects.";
         return {QVariant::fromValue(dep), Status::ok};
 
     case static_cast<int>(Kind::PRIVATE_COPY):
@@ -296,7 +305,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
         }
         qCInfo(loggingCategory()).noquote().nospace() << "Created private copy of " << *depReg << " for " << *reg;
         privateSubDep.moveTo(service);
-        qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " of " << *reg;
+        qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " of " << *reg << " with " << service;
         return {QVariant::fromValue(service), Status::ok};
     }
 

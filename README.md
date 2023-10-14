@@ -110,40 +110,32 @@ By leveraging `inject()`, our code becomes this:
 In the above example, we were configuring the Url with a String-literal in the code. This is less than optimal, as we usually want to be able
 to change such configuration-values without re-compiling the program.  
 This is made possible with so-called *placeholders* in the configured values:  
-A placeholder embedded in `${   }` will be resolved by the QApplicationContext using Qt's `QSettings` class.  
+When passed to the function mcnepp::qtdi::resolve(), a placeholder embedded in `${   }` will be resolved by the QApplicationContext using Qt's `QSettings` class.  
 You simply register one or more instances of `QSettings` with the context, using mcnepp::qtdi::QApplicationContext::registerObject().
 This is what it looks like if you out-source the "url" configuration-value into an external configuration-file:
 
     context -> registerObject(new QSettings{"application.ini", QSettings::IniFormat, context});
     
-    context -> registerService(Service<RestPropFetcher>{QString{"${hamburgWeatherUrl}"}, inject<QNetworkAccessManager>()}, "hamburgWeather"); 
-    context -> registerService(Service<RestPropFetcher>{QString{"${berlinWeatherUrl}"}, inject<QNetworkAccessManager>()}, "berlinWeather"); 
+    context -> registerService(Service<RestPropFetcher>{resolve("${hamburgWeatherUrl}"), inject<QNetworkAccessManager>()}, "hamburgWeather"); 
+    context -> registerService(Service<RestPropFetcher>{resolve("${berlinWeatherUrl}"), inject<QNetworkAccessManager>()}, "berlinWeather"); 
 
 
 You could even improve on this by re-factoring the common part of the Url into its own configuration-value:
 
-    context -> registerService(Service<RestPropFetcher>{QString{"${baseUrl}?stationIds=${hamburgStationId}"}, inject<QNetworkAccessManager>()}, "hamburgWeather"); 
-    context -> registerService(Service<RestPropFetcher>{QString{"${baseUrl}?stationIds=${berlinStationId}"}, inject<QNetworkAccessManager>()}, "berlinWeather"); 
+    context -> registerService(Service<RestPropFetcher>{resolve("${baseUrl}?stationIds=${hamburgStationId}"), inject<QNetworkAccessManager>()}, "hamburgWeather"); 
+    context -> registerService(Service<RestPropFetcher>{resolve("${baseUrl}?stationIds=${berlinStationId}"), inject<QNetworkAccessManager>()}, "berlinWeather"); 
 
 ### Configuring values of non-String types
 
-The above code works well because the argument "url" is of type `QString`. Thus, after resolving the placeholders, the resulting QString can be passed directly to `RestPropFetcher`'s constructor.
+With mcnepp::qtdi::resolve(), you can also process arguments of types other than `QString`.
+You just need to specify the template-argument explicitly, or pass a default-value to be used when the expression cannot be resolved.
 
-However, what if the constructor had another argument of a type other than `QString`?
+Let's say there was an argument of type `int` that specified the connection-timeout in milliseconds. Then, the service-declaration would be:
 
-Let's say there was an argument of type `int` that specified the connection-timeout in milliseconds. Then, with an intended value of 5000 milliseconds, the service-declaration would be:
+    Service<RestPropFetcher> decl{resolve("${baseUrl}?stationIds=${hamburgStationId}"), resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>()};
 
-    Service<RestPropFetcher> decl{QString{"${baseUrl}?stationIds=${hamburgStationId}"}, 5000, inject<QNetworkAccessManager>()};
+You will notice the explicit type-argument used on mcnepp::qtdi::resolve(). Needless to say, the configured value for the key "connectionTimeout" must resolve to a valid integer-literal!
 
-If we want to configure that value as well, there is only a small change to be done:
-
-    Service<RestPropFetcher> decl{QString{"${baseUrl}?stationIds=${hamburgStationId}"}, resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>()};
-
-You will notice the use of the function-template mcnepp::qtdi::resolve(). Needless to say, the configured value for the key "connectionTimeout" must resolve to a valid integer-literal!
-
-Just for the sake of symmetry, you could pass the argument for the Url via resolve(), too:
-
-    Service<RestPropFetcher> decl{resolve<QString>("${baseUrl}?stationIds=${hamburgStationId}"), resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>()};
 
 ### Specifying default values
 
@@ -151,10 +143,18 @@ Sometimes, you may want to provide a constructor-argument that can be externally
 
 There are two ways of doing this:
 
-1. You can supply a default-value to the function-template mcnepp::qtdi::resolve() as its second argument: `resolve("${connectionTimeout}", 5000)`. This is the only way to supply default-values to Q_PROPERTYs (see next section).
+1. You can supply a default-value to the function-template mcnepp::qtdi::resolve() as its second argument: `resolve("${connectionTimeout}", 5000)`. This works only for constructor-arguments (see previous section).
 2. You can put a default-value into the placeholder-expression, separated from the placeholder by a colon: `"${connectionTimeout:5000}"`. Such an embedded default-value
 takes precedence over one supplied to mqnepp::qtdi::resolve(). This works for both constructor-arguments and Q_PROPERTYs (see next section).
 
+### Specifying an explicit Group
+
+If you structure your configuration in a hierarchical manner, you may find it useful to put your configuration-values into a `QSettings::group()`.
+Such a group can be specified for your resolvable values by means of the mcnepp::qtdi::make_config() function. In the following example, the configuration-keys "baseUrl", "hamburgStationId" and "connectionTimeout"
+are assumed to reside in the group named "mcnepp":
+
+    Service<RestPropFetcher> decl{resolve("${baseUrl}?stationIds=${hamburgStationId}"), resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>()};
+    appContext -> registerService(decl, "hamburgWeather", make_config({}, "mcnepp"));
 
 
 ## Configuring services with Q_PROPERTY
@@ -206,7 +206,7 @@ the service's url and connectionTimeouts as Q_PROPERTYs.
 **Note:** Every property supplied to mcnepp::qtdi::QApplicationContext::registerService() will be considered a potential Q_PROPERTY of the target-service. mcnepp::qtdi::QApplicationContext::publish() will fail if no such property can be
 found.  
 However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
-Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPostProcessor (see below).
+Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPostProcessor (see section "Tweaking services" below).
 
 
 
@@ -477,9 +477,9 @@ to it. These are user-supplied QObjects that implement the aforementioned interf
 
     QApplicationContextPostProcessor::process(QApplicationContext*, QObject*,const QVariantMap&)
 
-You might apply further configuration to your service there, or perform logging or monitoring tasks.
+In this method, you might apply further configuration to your service there, or perform logging or monitoring tasks.<br>
 Any information that you might want to pass to a QApplicationContextPostProcessor can be supplied as
-so-called *private properties*: Just prefix the property-key with a dot.
+so-called *private properties* via mcnepp::qtdi::make_config(). Just prefix the property-key with a dot.
 
 
 ## 'Starting' services
@@ -491,7 +491,7 @@ registered.
 
     context -> registerService(Service<PropFetcherAggregator>{injectAll<PropFetcher>()}, "propFetcherAggregator", make_config({}, "", false, "init"));
 
-Suitable *init-methods* are `Q_INVOKABLE`-methods with either no arguments, or with one argument of type `QApplicationContext*`.
+Suitable *init-methods* are must be `Q_INVOKABLE` methods with either no arguments, or with one argument of type `QApplicationContext*`.
 
 ## Resolving ambiguities
 

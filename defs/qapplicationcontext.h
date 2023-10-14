@@ -517,20 +517,40 @@ template<typename S> constexpr Dependency<S,Kind::PRIVATE_COPY> injectPrivateCop
 ///
 template<typename S> struct Resolvable {
     QString expression;
-    S defaultValue;
+    QVariant defaultValue;
 };
 
 ///
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
-/// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`. The result of resolving the placeholder must
-/// be a String that is convertible via `QVariant::value<T>()` to the desired type.
-/// \param defaultValue the value to use if the placeholder cannot be resolved.
-/// **Note:** the defaultValue will be used for all unresolved placeholders contained in the expression,
-/// unless they specify their own default using the format `${identifier:defaultValue}`.
+/// Use this function to supply resolvable arguments to the constructor of a Service.
+/// The result of resolving the placeholder must be a String that is convertible via `QVariant::value<T>()` to the desired type.
+/// ### Example
+///
+///     Service<QIODevice,QFile> service{ resolve("${filename:readme.txt}") };
+///
+/// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S> constexpr Resolvable<S> resolve(const QString& expression, const S& defaultValue = S{}) {
-    return Resolvable<S>{expression, defaultValue};
+template<typename S = QString> Resolvable<S> resolve(const QString& expression) {
+    return Resolvable<S>{expression};
+}
+
+///
+/// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
+/// The result of resolving the placeholder must
+/// be a String that is convertible via `QVariant::value<T>()` to the desired type.<br>
+/// **Note:** The expression is allowed to specify embedded default-values using the format `${identifier:defaultValue}`.
+/// However, this does not make much sense, as it would render the parameter `defaultValue` useless,
+/// since the embedded default-value would always take precedence!
+/// ### Example
+///
+///     Service<QIODevice,QFile> service{ resolve("${filename}", QString{"readme.txt"}) };
+/// \param expression may contain placeholders in the format `${identifier}`.
+/// \param defaultValue the value to use if the placeholder cannot be resolved.
+/// \return a Resolvable instance for the supplied type.
+///
+template<typename S> Resolvable<S> resolve(const QString& expression, const S& defaultValue) {
+    return Resolvable<S>{expression, QVariant::fromValue(defaultValue)};
 }
 
 
@@ -555,7 +575,7 @@ struct service_config final {
 ///
 /// \brief Makes a service_config.
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
-/// \param section the QSettings::group() to be used.
+/// \param section the `QSettings::group()` to be used.
 /// \param autowire if `true`, the QApplicationContext will attempt to initialize all Q_PROPERTYs of `QObject*`-type with the corresponding services.
 /// \param initMethod if not empty, will be invoked during publication of the service.
 /// \return the service_config.
@@ -572,6 +592,8 @@ namespace detail {
 using constructor_t = std::function<QObject*(const QVariantList&)>;
 
 constexpr int VALUE_KIND = 0x10;
+constexpr int RESOLVABLE_KIND = 0x20;
+
 
 struct dependency_info {
     const std::type_info& type;
@@ -719,7 +741,7 @@ struct dependency_helper<Resolvable<S>> {
 
 
     static dependency_info info(Resolvable<S> dep) {
-        return { typeid(S), VALUE_KIND, constructor_t{}, "", QVariant{dep.expression}, QVariant::fromValue(dep.defaultValue) };
+        return { typeid(S), RESOLVABLE_KIND, constructor_t{}, "", QVariant{dep.expression}, dep.defaultValue };
     }
 
     static S convert(const QVariant& arg) {
@@ -877,7 +899,7 @@ struct descriptor_helper<T, D1, D2, D3, D4, D5> {
 /// constructor of the actual service when the QApplicationContext is published.
 /// Example with no arguments:
 ///
-///    context->registerService(Service<DatabaseAccess,OracleDatabaseAccess>{}, "dao");
+///    context->registerService(Service<QIODevice,QFile>{QString{"readme.txt"}, "file");
 ///
 ///
 template<typename Srv,typename Impl=Srv> struct Service {

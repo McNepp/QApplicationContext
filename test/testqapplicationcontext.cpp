@@ -444,7 +444,7 @@ private slots:
         config->setValue("section/id", "4711");
         context->registerObject(config);
         BaseService base;
-        auto reg = context->registerService(Service<DependentService>{resolve<int>("${id}"), resolve<QString>("${url}?q=${term}"), &base}, "dep", make_config({}, "section"));
+        auto reg = context->registerService(Service<DependentService>{resolve<int>("${id}"), resolve("${url}?q=${term}"), &base}, "dep", make_config({}, "section"));
         QVERIFY(reg);
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> service{reg};
@@ -455,7 +455,7 @@ private slots:
 
     void testFailResolveConstructorValues() {
         BaseService base;
-        auto reg = context->registerService(Service<DependentService>{4711, QString{"${url}"}, &base}, "dep");
+        auto reg = context->registerService(Service<DependentService>{4711, resolve("${url}"), &base}, "dep");
         QVERIFY(reg);
         QVERIFY(!context->publish());
     }
