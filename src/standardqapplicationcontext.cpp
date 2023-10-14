@@ -496,6 +496,20 @@ bool StandardApplicationContext::publish(bool allowPartial)
 
         auto service = reg->getObject();
         if(service) {
+            for(auto privateObj : reg->privateObjects()) {
+                auto configResult = configure(reg, privateObj, postProcessors, allowPartial);
+                switch(configResult) {
+                case Status::fatal:
+                    qCCritical(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
+                    return false;
+                case Status::fixable:
+                    qCWarning(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
+                    break;
+                case Status::ok:
+                    qCInfo(loggingCategory()).noquote().nospace() << "Configured private copy of " << *reg;
+                }
+
+            }
             auto configResult = configure(reg, service, postProcessors, allowPartial);
             switch(configResult) {
             case Status::fatal:
@@ -512,20 +526,6 @@ bool StandardApplicationContext::publish(bool allowPartial)
                 ++publishedCount;
                 reg->notifyPublished();
             }
-        }
-        for(auto privateObj : reg->privateObjects()) {
-            auto configResult = configure(reg, privateObj, postProcessors, allowPartial);
-            switch(configResult) {
-               case Status::fatal:
-                    qCCritical(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
-                    return false;
-               case Status::fixable:
-                    qCWarning(loggingCategory()).nospace().noquote() << "Could not configure private copy of " << *reg;
-                    break;
-               case Status::ok:
-                    qCInfo(loggingCategory()).noquote().nospace() << "Configured private copy of " << *reg;
-            }
-
         }
     }
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has published " << publishedCount << " objects";
