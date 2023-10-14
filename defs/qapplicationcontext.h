@@ -562,7 +562,7 @@ struct service_config final {
 
 
     friend inline bool operator==(const service_config& left, const service_config& right) {
-        return left.properties == right.properties && left.autowire == right.autowire && left.initMethod == right.initMethod;
+        return left.properties == right.properties && left.group == right.group && left.autowire == right.autowire && left.initMethod == right.initMethod;
     }
 
 
@@ -605,7 +605,12 @@ struct dependency_info {
 };
 
 inline bool operator==(const dependency_info& info1, const dependency_info& info2) {
-    return info1.type == info2.type && info1.kind == info2.kind && info1.requiredName == info2.requiredName;
+    return info1.type == info2.type
+           && info1.kind == info2.kind
+           && info1.requiredName == info2.requiredName
+           && info1.value == info2.value;
+    //Deliberately do not use the defaultValue for comparison!
+
 }
 
 struct service_descriptor {

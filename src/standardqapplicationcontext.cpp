@@ -384,11 +384,15 @@ bool StandardApplicationContext::publish(bool allowPartial)
     descriptor_list allPublished;
     descriptor_list publishedNow;//Keep order of publication
 
-    std::copy_if(registrations.begin(), registrations.end(), std::inserter(allPublished, allPublished.begin()), std::mem_fn(&DescriptorRegistration::isPublished));
-
     descriptor_list unpublished;
     descriptor_set unresolvable;
-    std::copy_if(registrations.begin(), registrations.end(), std::inserter(unpublished, unpublished.begin()), std::not_fn(std::mem_fn(&DescriptorRegistration::isPublished)));
+    for(auto reg : registrations) {
+        if(reg->isPublished()) {
+            allPublished.push_back(reg);
+        } else {
+            unpublished.push_back(reg);
+        }
+    }
 
     qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext with " << unpublished.size() << " unpublished Objects";
     std::vector<std::size_t> posStack;
