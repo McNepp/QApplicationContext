@@ -202,6 +202,12 @@ public:
     }
 };
 
+class ServiceWithSixArgs : public QObject {
+public:
+    ServiceWithSixArgs(const QString&, BaseService2*, const QList<ServiceWithFiveArgs*>&, ServiceWithThreeArgs*, ServiceWithFourArgs*, double) {
+
+    }
+};
 
 
 } // com::neppert::contexttest

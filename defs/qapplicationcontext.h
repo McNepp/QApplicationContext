@@ -599,19 +599,38 @@ struct dependency_info {
     const std::type_info& type;
     int kind;
     constructor_t defaultConstructor;
-    QString requiredName;
-    QVariant value;
-    QVariant defaultValue;
+    QString expression; //RESOLVABLE_KIND: The resolvable expression. VALUE_KIND: empty. Otherwise: the required name of the dependency.
+    QVariant value; //VALUE_KIND: The injected value. RESOLVABLE_KIND: the default-value.
+
+    bool has_required_name() const {
+        switch(kind) {
+        case VALUE_KIND:
+        case RESOLVABLE_KIND:
+            return false;
+        default:
+            return !expression.isEmpty();
+
+        }
+    }
+
 };
 
 inline bool operator==(const dependency_info& info1, const dependency_info& info2) {
-    return info1.type == info2.type
-           && info1.kind == info2.kind
-           && info1.requiredName == info2.requiredName
-           && info1.value == info2.value;
-    //Deliberately do not use the defaultValue for comparison!
-
+    if(info1.kind != info2.kind) {
+        return false;
+    }
+    if(info1.type != info2.type) {
+        return false;
+    }
+    switch(info1.kind) {
+    case VALUE_KIND:
+        return info1.value == info2.value;
+        //In all other cases, we use only the expression. (For RESOLVABLE_KIND, value contains the default-value, which we ignore deliberately)
+    default:
+        return info1.expression == info2.expression;
+    }
 }
+
 
 struct service_descriptor {
 
@@ -746,7 +765,7 @@ struct dependency_helper<Resolvable<S>> {
 
 
     static dependency_info info(Resolvable<S> dep) {
-        return { typeid(S), RESOLVABLE_KIND, constructor_t{}, "", QVariant{dep.expression}, dep.defaultValue };
+        return { typeid(S), RESOLVABLE_KIND, constructor_t{}, dep.expression, dep.defaultValue };
     }
 
     static S convert(const QVariant& arg) {
@@ -782,28 +801,19 @@ template<typename... Dep> std::vector<dependency_info> dependencies(Dep...dep) {
     return result;
 }
 
-template <typename T, typename... D> struct descriptor_helper;
 
-template <typename T>
-struct descriptor_helper<T> {
-    static constexpr auto creator() {
-        return [](const QVariantList &dependencies) {
-            if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}();
-            } else {
-                return new T;
-            }
-        };
-    }
 
-    static std::vector<dependency_info> dependencies() {
-        return {};
-    }
-};
+template <typename T> constructor_t service_creator() {
+    return [](const QVariantList &dependencies) {
+        if constexpr(detail::has_service_factory<T>) {
+            return service_factory<T>{}();
+        } else {
+            return new T;
+        }
+    };
+}
 
-template <typename T, typename D1>
-struct descriptor_helper<T, D1> {
-    static constexpr auto creator() {
+template <typename T, typename D1> constructor_t service_creator() {
         return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(convert_arg<D1>(dependencies[0]));
@@ -813,11 +823,8 @@ struct descriptor_helper<T, D1> {
         };
     }
 
-};
-
 template <typename T, typename D1, typename D2>
-struct descriptor_helper<T, D1, D2> {
-    static constexpr auto creator() {
+    constructor_t service_creator() {
         return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(convert_arg<D1>(dependencies[0]), convert_arg<D2>(dependencies[1]));
@@ -826,11 +833,9 @@ struct descriptor_helper<T, D1, D2> {
             }
         };
     }
-};
 
 template <typename T, typename D1, typename D2, typename D3>
-struct descriptor_helper<T, D1, D2, D3> {
-    static constexpr auto creator() {
+    constructor_t service_creator() {
         return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(
@@ -846,11 +851,9 @@ struct descriptor_helper<T, D1, D2, D3> {
             }
         };
     }
-};
 
 template <typename T, typename D1, typename D2, typename D3, typename D4>
-struct descriptor_helper<T, D1, D2, D3, D4> {
-    static constexpr auto creator() {
+    constructor_t service_creator() {
         return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(
@@ -868,11 +871,9 @@ struct descriptor_helper<T, D1, D2, D3, D4> {
             }
         };
     }
-};
 
 template <typename T, typename D1, typename D2, typename D3, typename D4, typename D5>
-struct descriptor_helper<T, D1, D2, D3, D4, D5> {
-    static constexpr auto creator() {
+    constructor_t service_creator() {
         return [](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(convert_arg<D1>(dependencies[0]),
@@ -889,7 +890,27 @@ struct descriptor_helper<T, D1, D2, D3, D4, D5> {
                              convert_arg<D5>(dependencies[4])
                          }; };
     }
-};
+
+template <typename T, typename D1, typename D2, typename D3, typename D4, typename D5, typename D6>
+constructor_t service_creator() {
+        return [](const QVariantList &dependencies) {
+            if constexpr(detail::has_service_factory<T>) {
+                return service_factory<T>{}(convert_arg<D1>(dependencies[0]),
+                                            convert_arg<D2>(dependencies[1]),
+                                            convert_arg<D3>(dependencies[2]),
+                                            convert_arg<D4>(dependencies[3]),
+                                            convert_arg<D5>(dependencies[4]),
+                                            convert_arg<D6>(dependencies[5]));
+            } else
+                return new T{
+                    convert_arg<D1>(dependencies[0]),
+                    convert_arg<D2>(dependencies[1]),
+                    convert_arg<D3>(dependencies[2]),
+                    convert_arg<D4>(dependencies[3]),
+                    convert_arg<D5>(dependencies[4]),
+                    convert_arg<D6>(dependencies[5])
+                }; };
+}
 
 
 
@@ -917,9 +938,8 @@ template<typename Srv,typename Impl=Srv> struct Service {
     using impl_type = Impl;
 
     template<typename...Dep> Service(Dep...deps) : descriptor{typeid(Srv), typeid(Impl)} {
-        using descriptor_helper = detail::descriptor_helper<impl_type,Dep...>;
         descriptor.dependencies = detail::dependencies(deps...);
-        descriptor.constructor = descriptor_helper::creator();
+        descriptor.constructor = detail::service_creator<Impl,Dep...>();
     }
 
 

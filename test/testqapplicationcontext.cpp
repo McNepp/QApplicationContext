@@ -923,6 +923,8 @@ private slots:
         fourReg->subscribe(this, published);
         auto fiveReg = context->registerService(Service<ServiceWithFiveArgs>{inject<BaseService>(), inject<DependentService>(), inject<BaseService2>(), inject<ServiceWithThreeArgs>(), inject<ServiceWithFourArgs>()}, "five");
         fiveReg->subscribe(this, published);
+        auto sixReg = context->registerService(Service<ServiceWithSixArgs>{QString{"Hello"}, inject<BaseService2>(), injectAll<ServiceWithFiveArgs>(), inject<ServiceWithThreeArgs>(), inject<ServiceWithFourArgs>(), resolve("${pi}", 3.14159)}, "six");
+        sixReg->subscribe(this, published);
 
 
         QVERIFY(context->publish());
@@ -934,9 +936,10 @@ private slots:
         RegistrationSlot<ServiceWithThreeArgs> three{threeReg};
         RegistrationSlot<ServiceWithFourArgs> four{fourReg};
         RegistrationSlot<ServiceWithFiveArgs> five{fiveReg};
+        RegistrationSlot<ServiceWithSixArgs> six{sixReg};
 
 
-        QCOMPARE(publishedInOrder.size(), 7);
+        QCOMPARE(publishedInOrder.size(), 8);
 
         //1. BaseService must be initialized before BaseService2 (because the order of registration shall be kept, barring other restrictions).
         //2. DependentService must be initialized after both BaseService.
@@ -949,10 +952,11 @@ private slots:
         QVERIFY(publishedInOrder.indexOf(base2()) < publishedInOrder.indexOf(three()));
         QVERIFY(publishedInOrder.indexOf(three()) < publishedInOrder.indexOf(four()));
         QVERIFY(publishedInOrder.indexOf(four()) < publishedInOrder.indexOf(five()));
+        QVERIFY(publishedInOrder.indexOf(five()) < publishedInOrder.indexOf(six()));
         delete context;
         context = nullptr;
 
-        QCOMPARE(destroyedInOrder.size(), 7);
+        QCOMPARE(destroyedInOrder.size(), 8);
 
         //We cannot say anything about the destruction-order of the Services that have no dependencies:
         //BaseService and BaseService2
@@ -968,6 +972,7 @@ private slots:
         QVERIFY(destroyedInOrder.indexOf(base2()) > destroyedInOrder.indexOf(three()));
         QVERIFY(destroyedInOrder.indexOf(three()) > destroyedInOrder.indexOf(four()));
         QVERIFY(destroyedInOrder.indexOf(four()) > destroyedInOrder.indexOf(five()));
+        QVERIFY(destroyedInOrder.indexOf(five()) > destroyedInOrder.indexOf(six()));
         QVERIFY(destroyedInOrder.indexOf(base2()) < destroyedInOrder.indexOf(base()));
     }
 
