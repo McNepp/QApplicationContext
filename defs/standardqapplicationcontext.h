@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <deque>
 #include <typeindex>
+#include <QMetaProperty>
+#include <QBindable>
 #include "qapplicationcontext.h"
 
 namespace mcnepp::qtdi {
@@ -157,6 +159,7 @@ private:
         service_descriptor descriptor;
         QString m_name;
         QVariantMap resolvedProperties;
+        std::vector<QPropertyNotifier> bindings;
     };
 
     using descriptor_set = std::unordered_set<DescriptorRegistration*>;
@@ -361,6 +364,15 @@ private:
         fatal
     };
 
+    struct ResolvedBeanRef {
+        QVariant resolvedValue;
+        Status status;
+        bool resolved;
+        QMetaProperty sourceProperty;
+        QObject* source;
+    };
+
+
     template<typename C> static DescriptorRegistration* find_by_type(const C& regs, const std::type_index& type);
 
     bool checkTransitiveDependentsOn(const service_descriptor& descriptor, const std::unordered_set<std::type_index>& dependencies) const;
@@ -384,7 +396,8 @@ private:
 
     Status configure(DescriptorRegistration*,QObject*, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial);
 
-    std::pair<QVariant,Status> resolveBeanRef(const QVariant& value, bool allowPartial, bool* resolved);
+
+    ResolvedBeanRef resolveBeanRef(const QVariant& value, bool allowPartial);
 
     std::pair<QVariant,Status> resolveProperty(const QString& group, const QVariant& valueOrPlaceholder, const QVariant& defaultValue, bool allowPartial);
 
@@ -398,6 +411,25 @@ private:
 };
 
 
+namespace detail {
+
+class BindingProxy : public QObject {
+    Q_OBJECT
+
+    friend class mcnepp::qtdi::StandardApplicationContext;
+    BindingProxy(QMetaProperty sourceProp, QObject* source, QMetaProperty targetProp, QObject* target);
+
+    QMetaProperty m_sourceProp;
+    QObject* m_source;
+    QMetaProperty m_targetProp;
+    QObject* m_target;
+
+    static const QMetaMethod& notifySlot();
+
+private slots:
+    void notify();
+};
+}
 
 
 }

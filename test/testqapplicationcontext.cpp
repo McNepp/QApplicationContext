@@ -136,6 +136,14 @@ private slots:
         QCOMPARE(slot->interval(), 4711);
     }
 
+    void testWithEscapedPlaceholderProperty() {
+
+        auto reg = context->registerService<QTimer>("", make_config({{"objectName", "\\${timerName}"}}));
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot{reg};
+        QCOMPARE(slot->objectName(), "${timerName}");
+    }
+
     void testPlaceholderPropertyUsesDefaultValue() {
 
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${timerInterval:4711}"}}));
@@ -247,17 +255,46 @@ private slots:
         QCOMPARE(baseSlot->m_timer, &timer);
     }
 
-    void testWithBeanRefNestedProperty() {
+    void testWithEscapedBeanRefProperty() {
+        auto reg = context->registerService<QTimer>("", make_config({{"objectName", "\\&aTimer"}}));
+
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> baseSlot{reg};
+        QCOMPARE(baseSlot->objectName(), "&aTimer");
+    }
+
+
+    void testBindToBeanProperty() {
+        QTimer timer1;
+        BaseService base1;
+        base1.setTimer(&timer1);
+        context->registerObject(&base1, "base1");
+        auto reg2 = context->registerService<BaseService>("base2", make_config({{"timer", "&base1.timer"}}));
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> baseSlot2{reg2};
+        QCOMPARE(baseSlot2->timer(), &timer1);
+
+        QTimer timer2;
+        base1.setTimer(&timer2);
+
+        QCOMPARE(baseSlot2->timer(), &timer2);
+    }
+
+    void testBindToBindableBeanProperty() {
         QTimer timer1;
         timer1.setInterval(4711);
-        auto reg2 = context->registerService<QTimer>("timer2", make_config({{"interval", "&base.timer.interval"}}));
         context->registerObject(&timer1, "timer1");
-        context->registerService<BaseService>("base", make_config({{"timer", "&timer1"}}));
-
+        auto reg2 = context->registerService<QTimer>("timer2", make_config({{"interval", "&timer1.interval"}}));
         QVERIFY(context->publish());
         RegistrationSlot<QTimer> timerSlot2{reg2};
         QCOMPARE(timerSlot2->interval(), 4711);
+
+        //Modify property "interval" of the timer1 (which resides in the BaseService):
+        timer1.setInterval(1908);
+        //The property "interval" of the timer2 has been bound to "base.timer.interval", thus should change:
+        QCOMPARE(timerSlot2->interval(), 1908);
     }
+
 
     void testAutowiredPropertyByName() {
         QTimer timer;

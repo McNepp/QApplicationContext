@@ -434,7 +434,8 @@ However, we could introduce a Q_PROPERTY like this:
       void summaryChanged();
     };
 
-And here's how this property will be automatically set to the ApplicationContext's `PropFetcherAggregator`. Note the ampersand in the property-value that means *reference to another member*:
+And here's how this property will be automatically set to the ApplicationContext's `PropFetcherAggregator`. Note the ampersand as the first character of the property-value,
+which makes this a *reference to another member*:
 
 
     context -> registerService(Service<PropFetcherAggregator>{injectAll<PropFetcher>()}, "propFetcherAggregator");
@@ -442,7 +443,28 @@ And here's how this property will be automatically set to the ApplicationContext
     context -> registerService(Service<PropFetcher,RestPropFetcher>{inject<QNetworkAccessManager>()}, "hamburgWeather", make_config({
       {"url", "${weatherUrl}${hamburgStationId}"},
       {"summary", "&propFetcherAggregator"}
-    })); 
+    }));
+
+### Binding target-properties to source-properties of other members of the ApplicationContext
+
+In the preceeding example, we used a reference to another member to initialize of a Q_PROPERTY with a type of `QType*`, where `QType` is a class derived from `QObject`.
+
+Since the value of such a property is another service in the ApplicationContext, the value can never change. 
+
+However, we might also want to **bind** a target-service's property to the corresponding source-property of another service.
+This can be achieved by using a property-value with the format `"&ref.prop"`. The following example shows this:
+
+    QTimer timer1;
+    
+    context -> registerObject(&timer1, "timer1"); // 1
+    
+    context -> registerService(Service<QTimer>{}, "timer2", make_config({{"interval", "&timer1.interval"}})); // 2
+    
+    timer1.setInterval(4711); // 3
+
+1. We register a `QTimer` as "timer1".
+2. We register a second `QTimer` as "timer2". We bind the property `interval` to the first timer's propery.
+3. We change the first timer's interval. This will also change the second timer's interval!
 
 ## Accessing a service after registration
 

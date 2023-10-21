@@ -10,8 +10,34 @@ namespace mcnepp::qtdi {
 
 
 
+namespace detail {
+
+BindingProxy::BindingProxy(QMetaProperty sourceProp, QObject* source, QMetaProperty targetProp, QObject* target) : QObject(source),
+    m_source(source),
+    m_sourceProp(sourceProp),
+    m_target(target),
+    m_targetProp(targetProp){
+
+}
+
+const QMetaMethod &BindingProxy::notifySlot()
+{
+    static QMetaMethod theSlot = staticMetaObject.method(staticMetaObject.indexOfSlot("notify()"));
+    return theSlot;
+}
+
+void BindingProxy::notify()
+{
+    m_targetProp.write(m_target, m_sourceProp.read(m_source));
+}
+
+}
 
 namespace {
+
+const QRegularExpression beanRefPattern{"^&([^.]+)(\\.([^.]+))?"};
+
+
 struct QOwningList {
     QObjectList list;
 
@@ -711,57 +737,53 @@ bool StandardApplicationContext::checkTransitiveDependentsOn(const service_descr
     return true;
 }
 
-std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveBeanRef(const QVariant &value, bool allowPartial, bool* resolved)
+
+StandardApplicationContext::ResolvedBeanRef StandardApplicationContext::resolveBeanRef(const QVariant &value, bool allowPartial)
 {
     if(!value.isValid()) {
-        return {value, Status::fatal};
+        return {value, Status::fatal, false};
     }
     QString key = value.toString();
-    if(key.startsWith('&')) {
-        key = key.last(key.size()-1);
-        auto components = key.split('.');
-        auto bean = getRegistrationByName(components[0]);
+    auto match = beanRefPattern.match(key);
+    if(match.hasMatch()) {
+        key = match.captured(1);
+        auto bean = getRegistrationByName(key);
         if(!(bean && bean->getObject())) {
             if(allowPartial) {
-                qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << components[0] << "'";
-                return {QVariant{}, Status::fixable};
+                qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << key << "'";
+                return {QVariant{}, Status::fixable, false};
             }
-            qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << components[0] << "'";
-            return {QVariant{}, Status::fatal};
+            qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << key << "'";
+            return {QVariant{}, Status::fatal, false};
         }
-
+        QMetaProperty sourceProp;
+        QObject* parent = nullptr;
         QVariant resultValue = QVariant::fromValue(bean->getObject());
-        for(unsigned pos = 1; pos < components.size(); ++pos) {
-            QString propName = components[pos];
-            auto parent = resultValue.value<QObject*>();
+        if(match.hasCaptured(3)) {
+            QString propName = match.captured(3);
+            parent = resultValue.value<QObject*>();
             if(!parent) {
                 if(allowPartial) {
                     qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
-                    return {QVariant{}, Status::fixable};
+                    return {QVariant{}, Status::fixable, false};
                 }
                 qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
-                return {QVariant{}, Status::fatal};
+                return {QVariant{}, Status::fatal, false};
             }
             int propIndex = parent->metaObject()->indexOfProperty(propName.toLatin1());
             if(propIndex < 0) {
                 //Refering to a non-existing Q_PROPERTY is always non-fixable:
                 qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << parent;
-                return {QVariant{}, Status::fatal};
+                return {QVariant{}, Status::fatal, false};
             }
-            resultValue = parent->metaObject()->property(propIndex).read(parent);
-
+            sourceProp = parent->metaObject()->property(propIndex);
+            resultValue = sourceProp.read(parent);
         }
 
         qCInfo(loggingCategory()).nospace().noquote() << "Resolved reference '" << key << "' to " << resultValue;
-        if(resolved) {
-            *resolved = true;
-        }
-        return {resultValue, Status::ok};
+        return {resultValue, Status::ok, true, sourceProp, parent};
     }
-    if(resolved) {
-        *resolved = false;
-    }
-    return {value, Status::ok};
+    return {value, Status::ok, false};
 
 }
 
@@ -772,114 +794,152 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     constexpr int STATE_FOUND_DOLLAR = 1;
     constexpr int STATE_FOUND_PLACEHOLDER = 2;
     constexpr int STATE_FOUND_DEFAULT_VALUE = 3;
+    constexpr int STATE_ESCAPED = 4;
     if(!valueOrPlaceholder.isValid()) {
         return {valueOrPlaceholder, Status::fatal};
     }
     QString key = valueOrPlaceholder.toString();
-    if(key.contains("${")) {
-        QVariant lastResolvedValue;
-        QString resolvedString;
-        QString token;
-        QString defaultValueToken;
-        QVariant currentDefault;
+    QVariant lastResolvedValue;
+    QString resolvedString;
+    QString token;
+    QString defaultValueToken;
+    QVariant currentDefault;
 
-        int state = STATE_INIT;
-        for(int pos = 0; pos < key.length(); ++pos) {
-            auto ch = key[pos];
-            switch(ch.toLatin1()) {
-            case '$':
-                switch(state) {
-                case STATE_FOUND_DOLLAR:
-                    resolvedString += '$';
-                case STATE_INIT:
-                    state = STATE_FOUND_DOLLAR;
-                    continue;
-                default:
-                    qCCritical(loggingCategory()).nospace().noquote() << "Invalid placeholder '" << key << "'";
-                    return {QVariant{}, Status::fatal};
-                }
+    int lastStateBeforeEscape = STATE_INIT;
+    int state = STATE_INIT;
+    for(int pos = 0; pos < key.length(); ++pos) {
+        auto ch = key[pos];
+        switch(ch.toLatin1()) {
 
-
-            case '{':
-                switch(state) {
-                case STATE_FOUND_DOLLAR:
-                    state = STATE_FOUND_PLACEHOLDER;
-                    continue;
-                default:
-                    state = STATE_INIT;
-                    resolvedString += ch;
-                    continue;
-                }
-
-            case '}':
-                currentDefault = defaultValue;
-                switch(state) {
-                case STATE_FOUND_DEFAULT_VALUE:
-                    currentDefault = defaultValueToken;
-
-                case STATE_FOUND_PLACEHOLDER:
-                    if(!token.isEmpty()) {
-                        QString path = makeConfigPath(group, token);
-                        lastResolvedValue = getConfigurationValue(path, currentDefault);
-                        if(!lastResolvedValue.isValid()) {
-                            if(allowPartial) {
-                                qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve configuration-key '" << path << "'";
-                                return {QVariant{}, Status::fixable};
-                            }
-                            qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve configuration-key '" << path << "'";
-                            return {QVariant{}, Status::fatal};
-                        }
-                        if(resolvedString.isEmpty() && pos + 1 == key.length()) {
-                            return {lastResolvedValue, Status::ok};
-                        }
-                        resolvedString += lastResolvedValue.toString();
-                        token.clear();
-                        defaultValueToken.clear();
-                    }
-                    state = STATE_INIT;
-                    continue;
-                default:
-                    resolvedString += ch;
-                    continue;
-                }
-            case ':':
-                switch(state) {
-                    case STATE_FOUND_PLACEHOLDER:
-                        state = STATE_FOUND_DEFAULT_VALUE;
-                        continue;
-                }
-
+        case '\\':
+            switch(state) {
+            case STATE_ESCAPED:
+                resolvedString += '\\';
+                state = lastStateBeforeEscape;
+                continue;
             default:
-                switch(state) {
-                case STATE_FOUND_DOLLAR:
-                    resolvedString += '$';
-                    state = STATE_INIT;
-                case STATE_INIT:
-                    resolvedString += ch;
-                    continue;
-                case STATE_FOUND_PLACEHOLDER:
-                    token += ch;
-                    continue;
-                case STATE_FOUND_DEFAULT_VALUE:
-                    defaultValueToken += ch;
-                    continue;
-                default:
-                    token += ch;
-                    continue;
+                lastStateBeforeEscape = state;
+                state = STATE_ESCAPED;
+                continue;
+            }
+
+        case '$':
+            switch(state) {
+            case STATE_ESCAPED:
+                resolvedString += '$';
+                state = lastStateBeforeEscape;
+                continue;
+            case STATE_FOUND_DOLLAR:
+                resolvedString += '$';
+            case STATE_INIT:
+                state = STATE_FOUND_DOLLAR;
+                continue;
+            default:
+                qCCritical(loggingCategory()).nospace().noquote() << "Invalid placeholder '" << key << "'";
+                return {QVariant{}, Status::fatal};
+            }
+
+
+        case '{':
+            switch(state) {
+            case STATE_ESCAPED:
+                resolvedString += '{';
+                state = lastStateBeforeEscape;
+                continue;
+            case STATE_FOUND_DOLLAR:
+                state = STATE_FOUND_PLACEHOLDER;
+                continue;
+            default:
+                state = STATE_INIT;
+                resolvedString += ch;
+                continue;
+            }
+
+        case '}':
+            currentDefault = defaultValue;
+            switch(state) {
+            case STATE_ESCAPED:
+                resolvedString += '}';
+                state = lastStateBeforeEscape;
+                continue;
+            case STATE_FOUND_DEFAULT_VALUE:
+                currentDefault = defaultValueToken;
+
+            case STATE_FOUND_PLACEHOLDER:
+                if(!token.isEmpty()) {
+                    QString path = makeConfigPath(group, token);
+                    lastResolvedValue = getConfigurationValue(path, currentDefault);
+                    if(!lastResolvedValue.isValid()) {
+                        if(allowPartial) {
+                            qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve configuration-key '" << path << "'";
+                            return {QVariant{}, Status::fixable};
+                        }
+                        qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve configuration-key '" << path << "'";
+                        return {QVariant{}, Status::fatal};
+                    }
+                    if(resolvedString.isEmpty() && pos + 1 == key.length()) {
+                        return {lastResolvedValue, Status::ok};
+                    }
+                    resolvedString += lastResolvedValue.toString();
+                    token.clear();
+                    defaultValueToken.clear();
                 }
+                state = STATE_INIT;
+                continue;
+            default:
+                resolvedString += ch;
+                continue;
+            }
+        case ':':
+            switch(state) {
+            case STATE_ESCAPED:
+                resolvedString += ':';
+                state = lastStateBeforeEscape;
+                continue;
+                case STATE_FOUND_PLACEHOLDER:
+                    state = STATE_FOUND_DEFAULT_VALUE;
+                    continue;
+            }
+
+        default:
+            switch(state) {
+            case STATE_FOUND_DOLLAR:
+                resolvedString += '$';
+                state = STATE_INIT;
+            case STATE_INIT:
+                resolvedString += ch;
+                continue;
+            case STATE_FOUND_PLACEHOLDER:
+                token += ch;
+                continue;
+            case STATE_FOUND_DEFAULT_VALUE:
+                defaultValueToken += ch;
+                continue;
+            case STATE_ESCAPED:
+                resolvedString += ch;
+                state = lastStateBeforeEscape;
+                continue;
+            default:
+                token += ch;
+                continue;
             }
         }
-        switch(state) {
-        case STATE_FOUND_DOLLAR:
-            resolvedString += '$';
-        case STATE_INIT:
-            return {resolvedString, Status::ok};
-        default:
-            qCCritical(loggingCategory()).nospace().noquote() << "Unbalanced placeholder '" << key << "'";
-            return {QVariant{}, Status::fatal};
-        }
     }
-    return {valueOrPlaceholder, Status::ok};
+    switch(state) {
+    case STATE_FOUND_DOLLAR:
+        resolvedString += '$';
+    case STATE_INIT:
+        if(resolvedString == key) {
+            return {valueOrPlaceholder, Status::ok};
+        }
+        return {resolvedString, Status::ok};
+    case STATE_ESCAPED:
+        resolvedString += '\\';
+        return {resolvedString, Status::ok};
+    default:
+        qCCritical(loggingCategory()).nospace().noquote() << "Unbalanced placeholder '" << key << "'";
+        return {QVariant{}, Status::fatal};
+    }
 }
 
 
@@ -892,18 +952,20 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
     if(metaObject) {
         std::unordered_set<QString> usedProperties;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
-            bool resolved;
-            auto result = resolveBeanRef(value, allowPartial, &resolved);
-            if(result.second != Status::ok) {
-                return result.second;
+            auto result = resolveBeanRef(value, allowPartial);
+            if(result.status != Status::ok) {
+                return result.status;
             }
-            if(!resolved) {
-                result = resolveProperty(config.group, value, QVariant{}, allowPartial);
-                if(result.second != Status::ok) {
-                    return result.second;
+            QVariant resolvedValue;
+            if(result.resolved) {
+                resolvedValue = result.resolvedValue;
+            } else {
+                auto propertyResult = resolveProperty(config.group, value, QVariant{}, allowPartial);
+                if(propertyResult.second != Status::ok) {
+                    return propertyResult.second;
                 }
+                resolvedValue = propertyResult.first;
             }
-            auto resolvedValue = result.first;
             reg->resolvedProperties.insert(key, resolvedValue);
             if(!key.startsWith('.')) {
                 int index = metaObject->indexOfProperty(key.toUtf8());
@@ -912,10 +974,27 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not find property " << key << " of '" << metaObject->className() << "'";
                     return Status::fatal;
                 }
-                auto property = metaObject->property(index);
-                if(property.write(target, resolvedValue)) {
+                auto targetProperty = metaObject->property(index);
+                if(targetProperty.write(target, resolvedValue)) {
                     qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
                     usedProperties.insert(key);
+                    auto sourceProperty = result.sourceProperty;
+                    if(sourceProperty.isValid() && result.source) {
+                        auto source = result.source;
+                        if(sourceProperty.hasNotifySignal()) {
+                            detail::BindingProxy* proxy = new detail::BindingProxy{sourceProperty, source, targetProperty, target};
+                            QObject::connect(source, sourceProperty.notifySignal(), proxy, detail::BindingProxy::notifySlot());
+                            qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << key << "' of " << *reg << " to property '" << sourceProperty.name() << "' of " << source;
+                            continue;
+                        }
+                        if(sourceProperty.isBindable()) {
+                            auto sourceBindable = sourceProperty.bindable(source);
+                            reg->bindings.push_back(sourceBindable.addNotifier([sourceProperty,source,targetProperty,target]{
+                                targetProperty.write(target, sourceProperty.read(source));
+                            }));
+                            qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << key << "' of " << *reg << " to property '" << sourceProperty.name() << "' of " << source;
+                        }
+                    }
                 } else {
                     //An error while setting a Q_PROPERTY is always non-fixable:
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not set property '" << key << "' of " << *reg << " to value " << resolvedValue;
