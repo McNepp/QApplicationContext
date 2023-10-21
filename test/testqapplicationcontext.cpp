@@ -233,8 +233,7 @@ private slots:
 
 
     void testWithInvalidProperty() {
-        context->registerService<QTimer>("timer", make_config({{"firstName", "Max"}}));
-        QVERIFY(!context->publish());
+        QVERIFY(!context->registerService<QTimer>("timer", make_config({{"firstName", "Max"}})));
     }
 
     void testWithBeanRefProperty() {
@@ -276,6 +275,7 @@ private slots:
         timer.setObjectName("IAmTheRealTimer");
         context->registerObject(&timer);
         auto reg = context->registerService<BaseService>("base", make_config({}, "", true));
+
         context->registerService<BaseService2>("timer");
 
         QVERIFY(context->publish());
@@ -392,6 +392,10 @@ private slots:
 
         RegistrationSlot<BaseService> baseSlot{baseReg};
         QCOMPARE(baseSlot->context(), context);
+    }
+
+    void testNonExistingInitMethod() {
+        QVERIFY(!context->registerService<BaseService>("base", make_config({}, "", false, "start")));
     }
 
 

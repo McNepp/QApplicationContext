@@ -299,7 +299,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                     return {QVariant{}, Status::fatal};
                 }
             }
-            depReg = new ServiceRegistration{"", service_descriptor{type, type, d.defaultConstructor}, service_config{}, this};
+            depReg = new ServiceRegistration{"", service_descriptor{type, type, nullptr, d.defaultConstructor}, service_config{}, this};
         }
         QVariantList subDep;
         QOwningList privateSubDep;
@@ -445,7 +445,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
             }
             //If we find a mandatory dependency for which there is a default-constructor, we continue with that:
             if(!find_by_type(allPublished, d.type) && d.kind == static_cast<int>(Kind::MANDATORY) && d.defaultConstructor) {
-                auto def = registerDescriptor("", service_descriptor{d.type, d.type, d.defaultConstructor}, service_config{}, nullptr);
+                auto def = registerDescriptor("", service_descriptor{d.type, d.type, nullptr, d.defaultConstructor}, service_config{}, nullptr);
                 if(def.second) {
                     unpublished.push_front(reg);
                     reg = def.first;
@@ -613,9 +613,25 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
     findTransitiveDependenciesOf(descriptor, dependencies);
 
     if(!checkTransitiveDependentsOn(descriptor, dependencies)) {
-        qCCritical(loggingCategory()).nospace() << "Cyclic dependency in dependency-chain of " << descriptor;
+        qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register '" << name << "'. Cyclic dependency in dependency-chain of " << descriptor;
         return {nullptr, false};
 
+    }
+
+    if(descriptor.meta_object) {
+        for(auto& key : config.properties.keys()) {
+            if(!key.startsWith('.') && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
+                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register '" << name << "'. " << descriptor << " has no property '" << key << "'";
+                return {nullptr, false};
+            }
+        }
+        if(!config.initMethod.isEmpty()) {
+            auto initMethod = methodByName(descriptor.meta_object, config.initMethod);
+            if(!initMethod.isValid() || initMethod.parameterCount() > 1) {
+                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register '" << name << "'. " << descriptor << " has no invokable method '" << config.initMethod << "'";
+                return {nullptr, false};
+            }
+        }
     }
 
     DescriptorRegistration* registration;

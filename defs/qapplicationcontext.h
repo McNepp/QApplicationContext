@@ -26,6 +26,7 @@ template<typename S> constexpr bool could_be_qobject = std::is_same_v<decltype(c
 
 
 
+
 ///
 /// \brief A  type that serves as a "handle" for registrations in a QApplicationContext.
 /// This class has a read-only Q_PROPERTY `publishedObjects' with a corresponding signal `publishedObjectsChanged`.
@@ -646,7 +647,8 @@ struct service_descriptor {
 
     const std::type_info& service_type;
     const std::type_info& impl_type;
-    constructor_t constructor;
+    const QMetaObject* meta_object = nullptr;
+    constructor_t constructor = nullptr;
     std::vector<dependency_info> dependencies;
 };
 
@@ -937,7 +939,7 @@ template<typename Srv,typename Impl=Srv> struct Service {
 
     using impl_type = Impl;
 
-    template<typename...Dep> Service(Dep...deps) : descriptor{typeid(Srv), typeid(Impl)} {
+    template<typename...Dep> Service(Dep...deps) : descriptor{typeid(Srv), typeid(Impl), &Impl::staticMetaObject} {
         descriptor.dependencies = detail::dependencies(deps...);
         descriptor.constructor = detail::service_creator<Impl,Dep...>();
     }
