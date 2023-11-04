@@ -470,16 +470,17 @@ This can be achieved by using a property-value with the format `"&ref.prop"`. Th
 
 So far, we have published the ApplicationContext and let it take care of wiring all the components together.  
 In some cases, you need to obtain a reference to a member of the Context after it has been published.  
-This is where the return-value of mcnepp::qtdi::QApplicationContext::registerService() comes into play. It offers a Q_PROPERTY mcnepp::qtdi::Registration::publishedObjects() with a corresponding signal which is emitted
-when the corresponding services are published.  
-As a Q_OBJECT cannot be a class-template, the property and signal use the generic `QObject*`, which is unfortunate.  
-Therefore, it it strongly recommended to use the method mcnepp::qtdi::ServiceRegistration::subscribe() instead.  
-In addition to being type-safe, this method has the advantage that is will automatically notify you if you subscribe after the service has already been published.  
+This is where the return-value of mcnepp::qtdi::QApplicationContext::registerService() comes into play: mcnepp::qtdi::ServiceRegistration.
+
+It offers the method mcnepp::qtdi::ServiceRegistration::subscribe(), which is a type-safe version of a Qt-Signal.
+(It is actually implemented in terms of the Signal mcnepp::qtdi::Registration::publishedObjectsChanged()).
+
+In addition to being type-safe, the method mcnepp::qtdi::ServiceRegistration::subscribe() has the advantage that it will automatically inject the service if you subscribe after the service has already been published.  
 This code shows how to do this:
 
     auto registration = context -> registerService(Service<PropFetcher,RestPropFetcher>{inject<QNetworkAccessManager>()}, "hamburgWeather", make_config({{"url", "${weatherUrl}${hamburgStationId}"}})); 
     
-    registration -> subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got the PropFether!"; });
+    registration.subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got the PropFetcher!"; });
 
 ## Accessing published members of the ApplicationContext
 
@@ -490,7 +491,7 @@ This can be achieved using mcnepp::qtdi::QApplicationContext::getRegistration(),
 
     auto registration = context -> getRegistration<PropFetcher>();
     
-    registration -> subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got another PropFetcher!"; });
+    registration.subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got another PropFetcher!"; });
     
 ## Tweaking services (QApplicationContextPostProcessor)
 

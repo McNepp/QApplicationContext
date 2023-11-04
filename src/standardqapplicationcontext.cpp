@@ -31,6 +31,58 @@ void BindingProxy::notify()
     m_targetProp.write(m_target, m_sourceProp.read(m_source));
 }
 
+inline QString kindToString(int kind) {
+    switch(kind) {
+    case static_cast<int>(Kind::N):
+        return "N";
+    case static_cast<int>(Kind::OPTIONAL):
+        return "optional";
+    case static_cast<int>(Kind::MANDATORY):
+        return "mandatory";
+    case static_cast<int>(Kind::PRIVATE_COPY):
+        return "private copy";
+    case VALUE_KIND:
+        return "value";
+    case RESOLVABLE_KIND:
+        return "resolvable";
+    default:
+        return "unknown";
+
+    }
+}
+
+
+inline QDebug operator<<(QDebug out, const dependency_info& info) {
+    QDebug tmp = out.noquote().nospace() << "Dependency<" << info.type.name() << "> [" << kindToString(info.kind) << ']';
+    switch(info.kind) {
+    case detail::VALUE_KIND:
+        tmp << " with value " << info.value;
+        break;
+    case detail::RESOLVABLE_KIND:
+        tmp << " with expression '" << info.expression << "'";
+        break;
+    default:
+        if(!info.expression.isEmpty()) {
+            tmp << " with required name '" << info.expression << "'";
+        }
+    }
+    return out;
+}
+
+inline QDebug operator << (QDebug out, const service_descriptor& descriptor) {
+    QDebug tmp = out.nospace().noquote() << "Descriptor [service-type=" << descriptor.service_type.name() << "] [impl-type=" << descriptor.impl_type.name() << "]";
+    if(!descriptor.dependencies.empty()) {
+        tmp << " with " << descriptor.dependencies.size() << " dependencies ";
+        const char* sep = "";
+        for(auto& dep : descriptor.dependencies) {
+            tmp << sep << dep;
+            sep = ", ";
+        }
+    }
+    return out;
+}
+
+
 }
 
 namespace {
@@ -105,46 +157,16 @@ QString makeName(const std::type_info& type) {
     return typeName+"-"+QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
-}
-
-inline QString kindToString(int kind) {
-    switch(kind) {
-        case static_cast<int>(Kind::N):
-        return "N";
-    case static_cast<int>(Kind::OPTIONAL):
-        return "optional";
-    case static_cast<int>(Kind::MANDATORY):
-        return "mandatory";
-    case static_cast<int>(Kind::PRIVATE_COPY):
-        return "private copy";
-    case detail::VALUE_KIND:
-        return "value";
-    case detail::RESOLVABLE_KIND:
-        return "resolvable";
-    default:
-        return "unknown";
-
-    }
-}
-
-inline QDebug operator<<(QDebug out, const QApplicationContext::dependency_info& info) {
-    QDebug tmp = out.noquote().nospace() << "Dependency<" << info.type.name() << "> [" << kindToString(info.kind) << ']';
-    switch(info.kind) {
-        case detail::VALUE_KIND:
-            return tmp << " with value " << info.value;
-        case detail::RESOLVABLE_KIND:
-            return tmp << " with expression '" << info.expression << "'";
-        default:
-            if(!info.expression.isEmpty()) {
-                return tmp << " with required name '" << info.expression << "'";
-            }
-            return tmp;
-    }
 
 }
 
-inline QDebug operator << (QDebug out, const detail::service_descriptor& descriptor) {
-    return out.nospace().noquote() << "Object with service-type '" << descriptor.service_type.name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
+
+
+
+
+inline QDebug operator << (QDebug out, const Registration& reg) {
+    reg.print(out);
+    return out;
 }
 
 
@@ -613,10 +635,10 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
         auto found = getRegistrationByName(name);
         if(found) {
             if(found->isEqual(descriptor, config, obj)) {
-                qCInfo(loggingCategory()).nospace().noquote() << descriptor << " has already been registered";
+                qCInfo(loggingCategory()).nospace().noquote() << "A Service with an equivalent " << descriptor << " has already been registered as " << *found;
                 return {found, false};
             } else {
-                qCCritical(loggingCategory()).nospace().noquote() << descriptor << " has already been registered as " << *found;
+                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. That name has already been taken by " << *found;
                 return {nullptr, false};
             }
         }
@@ -625,7 +647,7 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
     for(auto reg : registrations) {
         if(reg->isEqual(descriptor, config, obj)) {
             if(isAnonymous) {
-                qCInfo(loggingCategory()).nospace().noquote() << descriptor << " has already been registered";
+                qCInfo(loggingCategory()).nospace().noquote() << "A Service with an equivalent " << descriptor << " has already been registered as " << *reg;
                 return {reg, false};
             }
             registrationsByName.insert({name, reg});
@@ -647,14 +669,14 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
     if(descriptor.meta_object) {
         for(auto& key : config.properties.keys()) {
             if(!key.startsWith('.') && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
-                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register '" << name << "'. " << descriptor << " has no property '" << key << "'";
+                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
                 return {nullptr, false};
             }
         }
         if(!config.initMethod.isEmpty()) {
             auto initMethod = methodByName(descriptor.meta_object, config.initMethod);
             if(!initMethod.isValid() || initMethod.parameterCount() > 1) {
-                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register '" << name << "'. " << descriptor << " has no invokable method '" << config.initMethod << "'";
+                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no invokable method '" << config.initMethod << "'";
                 return {nullptr, false};
             }
         }
@@ -1118,7 +1140,13 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
 
 
 
+    void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
+       out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor;
+    }
 
+    void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
+       out.nospace().noquote() << "Object '" << registeredName() << "' with " << this->descriptor;
+    }
 
 
 

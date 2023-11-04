@@ -26,9 +26,9 @@ namespace mcnepp::qtditest {
 template<typename S> class RegistrationSlot : public QObject {
 public:
 
-    explicit RegistrationSlot(ServiceRegistration<S>* registration) : m_obj(nullptr),
+    explicit RegistrationSlot(ServiceRegistration<S> registration) : m_obj(nullptr),
         m_invocationCount(0) {
-        registration->subscribe(this, &RegistrationSlot::setObj);
+        registration.subscribe(this, &RegistrationSlot::setObj);
     }
 
 
@@ -112,7 +112,7 @@ private slots:
         QVERIFY(baseHasFactory);
         auto reg = context->registerService<BaseService>();
         QVERIFY(reg);
-        QCOMPARE(reg->service_type(), typeid(BaseService));
+        QCOMPARE(reg.unwrap()->service_type(), typeid(BaseService));
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> slot{reg};
         QVERIFY(slot());
@@ -384,8 +384,8 @@ private slots:
 
     void testOptionalDependencyWithAutowire() {
         auto reg = context->registerService(Service<DependentService>{injectIfPresent<Interface1>()});
-        QVERIFY(reg->autowire(&DependentService::setBase));
-        QVERIFY(!reg->autowire(&DependentService::setBase)); //Should report false on the second time.
+        QVERIFY(reg.autowire(&DependentService::setBase));
+        QVERIFY(!reg.autowire(&DependentService::setBase)); //Should report false on the second time.
         RegistrationSlot<DependentService> service{reg};
         QVERIFY(context->publish());
         QVERIFY(!service->m_dependency);
@@ -398,8 +398,8 @@ private slots:
 
     void testCardinalityNDependencyWithAutowire() {
         auto reg = context->registerService(Service<CardinalityNService>{injectAll<Interface1>()});
-        QVERIFY(reg->autowire(&CardinalityNService::addBase));
-        QVERIFY(!reg->autowire(&CardinalityNService::addBase)); //Should report false on the second time.
+        QVERIFY(reg.autowire(&CardinalityNService::addBase));
+        QVERIFY(!reg.autowire(&CardinalityNService::addBase)); //Should report false on the second time.
         RegistrationSlot<CardinalityNService> service{reg};
         QVERIFY(context->publish());
         QCOMPARE(service->my_bases.size(), 0);
@@ -623,7 +623,7 @@ private slots:
         QVERIFY(reg);
         //Same Interface, different implementation:
         auto reg2 = context->registerService(Service<Interface1,BaseService2>{});
-        QCOMPARE_NE(reg2->unwrap(), reg->unwrap());
+        QCOMPARE_NE(reg2, reg);
     }
 
     void testRegisterTwiceDifferentName() {
@@ -631,7 +631,7 @@ private slots:
         QVERIFY(reg);
         //Same Interface, same implementation, but different name:
         auto reg4 = context->registerService(Service<Interface1,BaseService>{}, "alias");
-        QCOMPARE(reg4->unwrap(), reg->unwrap());
+        QCOMPARE(reg4, reg);
         QVERIFY(context->publish());
         RegistrationSlot<Interface1> services{context->getRegistration<Interface1>()};
         QCOMPARE(services.invocationCount(), 1);
@@ -643,7 +643,7 @@ private slots:
         auto reg = context->registerObject(&service);
         QVERIFY(reg);
         auto reg4 = context->registerObject<Interface1>(&service, "alias");
-        QCOMPARE_NE(reg4->unwrap(), reg->unwrap());
+        QCOMPARE_NE(reg4, reg);
     }
 
     void testRegisterSameObjectMultipleTimesWithDifferentNames() {
@@ -653,9 +653,9 @@ private slots:
 
         QVERIFY(reg);
         auto reg4 = context->registerObject(&service, "alias");
-        QCOMPARE(reg4->unwrap(), reg->unwrap());
+        QCOMPARE(reg4, reg);
         auto reg5 = context->registerObject(&service, "anotherAlias");
-        QCOMPARE(reg5->unwrap(), reg->unwrap());
+        QCOMPARE(reg5, reg);
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{reg};
         QCOMPARE(baseSlot, RegistrationSlot<BaseService>{reg5});
@@ -668,7 +668,7 @@ private slots:
         auto reg = context->registerObject<BaseService>(&service);
         QVERIFY(reg);
         auto reg4 = context->registerObject(&service);
-        QCOMPARE(reg4->unwrap(), reg->unwrap());
+        QCOMPARE(reg4, reg);
 
     }
 
@@ -679,7 +679,7 @@ private slots:
         auto reg2 = context->registerObject(&service2);
         QVERIFY(reg1);
         QVERIFY(reg2);
-        QCOMPARE_NE(reg1->unwrap(), reg2->unwrap());
+        QCOMPARE_NE(reg1, reg2);
 
     }
 
@@ -689,7 +689,7 @@ private slots:
         QVERIFY(reg);
         //Same Interface, same implementation, but different properties:
         auto reg2 = context->registerService(Service<Interface1,BaseService>{}, "", make_config({{"objectName", "tester"}}));
-        QCOMPARE_NE(reg2->unwrap(), reg->unwrap());
+        QCOMPARE_NE(reg2, reg);
     }
 
     void testFailRegisterTwiceSameName() {
@@ -709,10 +709,42 @@ private slots:
 
         //Same Interface, same implementation, same properties, same name:
         auto reg2 = context->registerService(Service<Interface1,BaseService>{});
-        QCOMPARE(reg2->unwrap(), reg->unwrap());
+        QCOMPARE(reg2, reg);
     }
 
 
+
+    void testServiceRegistrationEquality() {
+        auto reg = context->registerService(Service<Interface1,BaseService>{});
+        QVERIFY(reg);
+        auto anotherReg = context->registerService(Service<Interface1,BaseService>{});
+        QVERIFY(anotherReg);
+        QCOMPARE(reg, anotherReg);
+
+        QCOMPARE_NE(reg, ServiceRegistration<Interface1>{});
+    }
+
+    void testServiceRegistrationMove() {
+        auto reg = context->registerService(Service<Interface1,BaseService>{});
+        QVERIFY(reg);
+        auto wrapped = reg.unwrap();
+        auto anotherReg = std::move(reg);
+        QVERIFY(anotherReg);
+        QVERIFY(!reg);
+        QCOMPARE(anotherReg.unwrap(), wrapped);
+    }
+
+    void testInvalidServiceRegistrationEquality() {
+        ServiceRegistration<Interface1> invalidReg;
+        QVERIFY(!invalidReg);
+        QCOMPARE(invalidReg.publishedObjects().size(), 0);
+        QCOMPARE(invalidReg.registeredName(), QString{});
+        qCInfo(loggingCategory()) << invalidReg;
+
+        ServiceRegistration<Interface1> anotherInvalidReg;
+        //Two invalid registrations are never equal:
+        QCOMPARE_NE(anotherInvalidReg, invalidReg);
+    }
 
 
 
@@ -745,9 +777,9 @@ private slots:
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(regs->publishedObjects().size(), 2);
-        QVERIFY(regs->publishedServices().contains(service->my_bases[0]));
-        QVERIFY(regs->publishedServices().contains(service->my_bases[1]));
+        QCOMPARE(regs.publishedObjects().size(), 2);
+        QVERIFY(regs.publishedObjects().contains(service->my_bases[0]));
+        QVERIFY(regs.publishedObjects().contains(service->my_bases[1]));
         QVERIFY(service->my_bases.contains(base1()));
         QVERIFY(service->my_bases.contains(base2()));
 
@@ -767,7 +799,7 @@ private slots:
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(regs->publishedObjects().size(), 2);
+        QCOMPARE(regs.publishedObjects().size(), 2);
         QCOMPARE(service->my_bases[0], services());
 
     }
@@ -789,7 +821,7 @@ private slots:
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(regs->publishedObjects().size(), 2);
+        QCOMPARE(regs.publishedObjects().size(), 2);
         QCOMPARE(processSlot->processedObjects.size(), 2);
         QVERIFY(processSlot->processedObjects.contains(dynamic_cast<QObject*>(base1())));
         QVERIFY(!processSlot->processedObjects.contains(dynamic_cast<QObject*>(base2())));
@@ -820,7 +852,7 @@ private slots:
     void testRegisterByServiceType() {
         auto reg = context->registerService(Service<Interface1,BaseService>{});
         QVERIFY(reg);
-        QCOMPARE(reg->service_type(), typeid(Interface1));
+        QCOMPARE(reg.unwrap()->service_type(), typeid(Interface1));
         QVERIFY(context->publish());
     }
 
@@ -897,10 +929,10 @@ private slots:
         connect(context, &QApplicationContext::publishedChanged, this, [this,&contextPublished] {contextPublished = context->published();});
         connect(context, &QApplicationContext::pendingPublicationChanged, this, [this,&contextPending] {contextPending = context->pendingPublication();});
         auto baseReg = context->getRegistration<Interface1>();
-        connect(baseReg, &Registration::maxPublicationsChanged, this, [&maxPublished](unsigned v) {maxPublished = v;});
-        QCOMPARE(baseReg->maxPublications(), 0);
+        connect(baseReg.unwrap(), &Registration::maxPublicationsChanged, this, [&maxPublished](unsigned v) {maxPublished = v;});
+        QCOMPARE(baseReg.maxPublications(), 0);
         context->registerService(Service<Interface1,BaseService>{}, "base");
-        QCOMPARE(baseReg->maxPublications(), 1);
+        QCOMPARE(baseReg.maxPublications(), 1);
         QCOMPARE(maxPublished, 1);
         QCOMPARE(contextPending, 1);
         RegistrationSlot<Interface1> baseSlot{baseReg};
@@ -951,21 +983,21 @@ private slots:
          };
 
         auto baseReg = context->registerService<BaseService>("base");
-        baseReg->subscribe(this, published);
+        baseReg.subscribe(this, published);
         auto base2Reg = context->registerService<BaseService2>("base2");
-        base2Reg->subscribe(this, published);
+        base2Reg.subscribe(this, published);
         auto dependent2Reg = context->registerService(Service<DependentServiceLevel2>{inject<DependentService>()}, "dependent2");
-        dependent2Reg->subscribe(this, published);
+        dependent2Reg.subscribe(this, published);
         auto dependentReg = context->registerService(Service<DependentService>{inject<BaseService>()}, "dependent");
-        dependentReg->subscribe(this, published);
+        dependentReg.subscribe(this, published);
         auto threeReg = context->registerService(Service<ServiceWithThreeArgs>{inject<BaseService>(), inject<DependentService>(), inject<BaseService2>()}, "three");
-        threeReg->subscribe(this, published);
+        threeReg.subscribe(this, published);
         auto fourReg = context->registerService(Service<ServiceWithFourArgs>{inject<BaseService>(), inject<DependentService>(), inject<BaseService2>(), inject<ServiceWithThreeArgs>()}, "four");
-        fourReg->subscribe(this, published);
+        fourReg.subscribe(this, published);
         auto fiveReg = context->registerService(Service<ServiceWithFiveArgs>{inject<BaseService>(), inject<DependentService>(), inject<BaseService2>(), inject<ServiceWithThreeArgs>(), inject<ServiceWithFourArgs>()}, "five");
-        fiveReg->subscribe(this, published);
+        fiveReg.subscribe(this, published);
         auto sixReg = context->registerService(Service<ServiceWithSixArgs>{QString{"Hello"}, inject<BaseService2>(), injectAll<ServiceWithFiveArgs>(), inject<ServiceWithThreeArgs>(), inject<ServiceWithFourArgs>(), resolve("${pi}", 3.14159)}, "six");
-        sixReg->subscribe(this, published);
+        sixReg.subscribe(this, published);
 
 
         QVERIFY(context->publish());
