@@ -22,6 +22,23 @@ void couldBeQObject(void*);
 
 
 template<typename S> constexpr bool could_be_qobject = std::is_same_v<decltype(couldBeQObject(static_cast<S*>(nullptr))),QObject*>;
+
+template <typename T>
+QList<T*> convertQList(const QObjectList &list) {
+    QList<T *> result;
+    for (auto obj : list) {
+        if(T* ptr = dynamic_cast<T*>(obj)) {
+            result.push_back(ptr);
+        }
+    }
+    return result;
+}
+
+template <>
+inline QObjectList convertQList<QObject>(const QObjectList &list) {
+    return list;
+}
+
 }
 
 
@@ -61,6 +78,8 @@ class Registration : public QObject {
 
 public:
 
+    template<typename S> friend class ServiceRegistration;
+
     ///
     /// \brief The service-type that this Registration manages.
     /// \return The service-type that this Registration manages.
@@ -86,7 +105,7 @@ public:
     /// \brief The name of this Registration.
     /// This property will only yield a non-empty String if this Registration was obtained via QApplicationContext::registerService().
     /// For Registrations obtained via QApplicationContext::getRegistration(), it will yield the empty String.
-    /// \return the name of this Registration if it war obtained via QApplicationContext::registerService(), the empty String otherwise.
+    /// \return the name of this Registration if it was obtained via QApplicationContext::registerService(), the empty String otherwise.
     ///
     [[nodiscard]] virtual QString registeredName() const = 0;
 
@@ -95,6 +114,13 @@ public:
     /// For Registrations obtained via QApplicationContext::getRegistration(), this function may yield anything between 0 and
     /// the number of currently registered services of this type.
     [[nodiscard]] virtual unsigned maxPublications() const = 0;
+
+    ///
+    /// \brief Writes information about this Registration to QDebug.
+    /// \param out
+    ///
+    virtual void print(QDebug out) const = 0;
+
 
 signals:
 
@@ -145,10 +171,6 @@ protected:
     };
 
     virtual bool registerAutoWiring(const std::type_info& typ, binder_t binder) = 0;
-
-    static bool delegateRegisterAutoWiring(Registration* reg, const std::type_info& type, binder_t binder) {
-        return reg->registerAutoWiring(type, binder);
-    }
 };
 
 ///
@@ -156,89 +178,140 @@ protected:
 /// Instances of this class are being returned by the public function-templates QApplicationContext::registerService(),
 /// QApplicationContext::registerObject() and QApplicationContext::getRegistration().
 ///
-/// This class offers the type-safe function `subscribe()` which should be preferred over directly connecting to the signal `publishedObjectsChanged()`.
+/// This class offers the type-safe function `subscribe()` which should be preferred over directly connecting to the signal `Registration::publishedObjectsChanged()`.
 ///
-template<typename S> class ServiceRegistration : public Registration {
+/// A ServiceRegistration contains a *non-owning pointer* to a Registration whose lifetime of is bound
+/// to the QApplicationContext. Accessing a ServiceRegistration after the corresponding QApplicationContext has been destructed constitutes undefined behaviour!
+///
+template<typename S> class ServiceRegistration final {
     friend class QApplicationContext;
 
 public:
 
-    [[nodiscard]] virtual const std::type_info& service_type() const override {
-        return unwrap()->service_type();
+    ServiceRegistration() : registration(nullptr) {
+
+    }
+
+    ServiceRegistration(ServiceRegistration&& source) : registration(source.registration) {
+        source.registration = nullptr;
+    }
+
+    ServiceRegistration(const ServiceRegistration& source) : registration(source.registration) {
+    }
+
+    ServiceRegistration& operator=(ServiceRegistration&& source) {
+        this->registration = source.registration;
+        source.registration = nullptr;
+        return *this;
+    }
+
+    ServiceRegistration& operator=(const ServiceRegistration& source) {
+        this->registration = source.registration;
+        return *this;
     }
 
 
 
-    [[nodiscard]] virtual QObjectList publishedObjects() const override {
-        return unwrap()->publishedObjects();
-    }
 
     /// \brief The List of published services managed by this Registration.
     /// This is a type-safe version of Registration::publishedObjects().
     /// \return the List of published services.
     ///
-    [[nodiscard]] QList<S*> publishedServices() const {
-        QList<S*> result;
-        for(auto obj : publishedObjects()) {
-            if(S* ptr = dynamic_cast<S*>(obj)) {
-                result.push_back(ptr);
-            }
+    [[nodiscard]] QList<S*> publishedObjects() const {
+        if(!registration) {
+            return QList<S*>{};
         }
-        return result;
+        return detail::convertQList<S>(registration->publishedObjects());
     }
 
-    [[nodiscard]] virtual QApplicationContext* applicationContext() const override {
-        return unwrap()->applicationContext();
+    ///
+    /// \brief Yields the QApplicationContext that manages this Registration.
+    /// \return the QApplicationContext that manages this Registration, or `nullptr` if this ServiceRegistration is invalid.
+    ///
+    [[nodiscard]] QApplicationContext* applicationContext() const {
+        if(!registration) {
+            return nullptr;
+        }
+        return registration->applicationContext();
     }
 
 
-    [[nodiscard]] virtual QString registeredName() const override {
-        return unwrap()->registeredName();
+    ///
+    /// \brief The name of this Registration.
+    /// This property will only yield a non-empty String if this Registration was obtained via QApplicationContext::registerService().
+    /// For Registrations obtained via QApplicationContext::getRegistration(), it will yield the empty String.
+    /// \return the name of this Registration if it was obtained via QApplicationContext::registerService(), the empty String otherwise.
+    ///
+    [[nodiscard]] QString registeredName() const {
+        if(!registration) {
+            return QString{};
+        }
+        return registration->registeredName();
     }
 
-    [[nodiscard]] virtual unsigned maxPublications() const override {
-        return unwrap()->maxPublications();
+    /// \brief the maximum number of Objects that match this Registration.
+    /// For Registrations obtained via QApplicationContext::registerService(), this function will always yield 1.
+    /// For Registrations obtained via QApplicationContext::getRegistration(), this function may yield anything between 0 and
+    /// the number of currently registered services of this type.
+    [[nodiscard]] unsigned maxPublications() const {
+        if(!registration) {
+            return 0;
+        }
+
+        return registration->maxPublications();
     }
 
 
     ///
     /// \brief Receive all published QObjects in a type-safe way.
     /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
-    /// Type `F` is assumed to be a Callable that accepts an argument of type `S*`.
     /// If the ApplicationContext has already been published, this method
     /// will invoke the callable immediately with the current publishedObjects().
+    /// \tparam F is assumed to be a Callable that accepts an argument of type `S*`.
     /// \param context the target-context.
     /// \param callable the piece of code to execute.
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
     /// \return the Connection representing this subscription.
     ///
     template<typename F> QMetaObject::Connection subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
-        auto connection = connect(this, &Registration::publishedObjectsChanged, context, CallableNotifier<F>{this, callable}, connectionType);
-        emit publishedObjectsChanged();
+        if(!registration) {
+            return QMetaObject::Connection{};
+        }
+
+        auto connection = QObject::connect(registration, &Registration::publishedObjectsChanged, context, CallableNotifier<F>{registration, callable}, connectionType);
+        emit registration -> publishedObjectsChanged();
         return connection;
     }
 
     /// \brief Receive all published QObjects in a type-safe way.
     /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
-    /// Type `F` is assumed to be a Callable that accepts an argument of type `S*`.
     /// If the ApplicationContext has already been published, this method
     /// will invoke the setter immediately with the current publishedObjects().
+    /// \tparam T the target of the subscription. Must be derived from QObject.
     /// \param target the object on which the setter will be invoked.
     /// \param setter the method that will be invoked.
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
     /// \return the Connection representing this subscription.
     ///
     template<typename T,typename R> QMetaObject::Connection subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
-        auto connection = connect(this, &Registration::publishedObjectsChanged, target, SetterNotifier<T,R>{this, target, setter}, connectionType);
-        emit publishedObjectsChanged();
+        static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
+        if(!registration) {
+            return QMetaObject::Connection{};
+        }
+        auto connection = QObject::connect(registration, &Registration::publishedObjectsChanged, target, SetterNotifier<T,R>{registration, target, setter}, connectionType);
+        emit registration -> publishedObjectsChanged();
         return connection;
 
     }
 
 
 
+    ///
+    /// \brief Yields the wrapped Registration.
+    /// \return the wrapped Registration, or `nullptr` if this ServiceRegistration wraps no valid Registration.
+    ///
     Registration* unwrap() const {
-        return static_cast<Registration*>(parent());
+        return registration;
     }
 
     ///
@@ -248,12 +321,16 @@ public:
     ///
     /// You may autowire every dependent type `<D>` at most once. This function will return `false` if you invoke
     /// it multiple times for the same type `<D>`.
+    /// \tparam D the type of service that will be injected into Services of type `<S>`.
     /// \param injectionSlot the member-function to invoke when a service of type `<D>` is published.
     /// \return `true` if this Registration was wired for the first time for the type `<D>`.
     ///
     template<typename D,typename R> bool autowire(R (S::*injectionSlot)(D*)) {
-        return registerAutoWiring(typeid(D), [injectionSlot](QObject* target) {
-            injector_t injector;
+        if(!registration) {
+            return false;
+        }
+        return registration->registerAutoWiring(typeid(D), [injectionSlot](QObject* target) {
+            Registration::injector_t injector;
             if(S* typedTarget = dynamic_cast<S*>(target)) {
                 injector = [injectionSlot,typedTarget](QObject* dependency) {
                     (typedTarget->*injectionSlot)(dynamic_cast<D*>(dependency));
@@ -265,25 +342,43 @@ public:
 
 
 
-protected:
-    virtual bool registerAutoWiring(const std::type_info& type, binder_t binder) override {
-        return delegateRegisterAutoWiring(unwrap(), type, binder);
+    ///
+    /// \brief Does this ServiceRegistration represent a valid %Registration?
+    /// \return `true` if the underlying Registration is present.
+    ///
+    bool isValid() const {
+        return registration != nullptr;
     }
+
+    ///
+    /// \brief Does this ServiceRegistration represent a valid %Registration?
+    /// Equivalent to isValid().
+    /// \return `true` if the underlying Registration is present.
+    ///
+    operator bool() const {
+        return registration != nullptr;
+    }
+
+    ///
+    /// \brief Does this ServiceRegistration represent an invalid %Registration?
+    /// Equivalent to `!isValid()`.
+    /// \return `true` if the underlying Registration is not present.
+    ///
+    bool operator!() const {
+        return registration == nullptr;
+    }
+
+
 
 private:
-    explicit ServiceRegistration(Registration* reg) : Registration(reg)
+    explicit ServiceRegistration(Registration* reg) : registration(reg)
     {
-        connect(reg, &Registration::publishedObjectsChanged, this, &Registration::publishedObjectsChanged);
-        connect(reg, &Registration::maxPublicationsChanged, this, &Registration::maxPublicationsChanged);
-    }
-
-    static ServiceRegistration* wrap(Registration* reg) {
-        return reg ? new ServiceRegistration(reg) : nullptr;
     }
 
 
 
-    template<typename F> struct CallableNotifier : public PublicationNotifier {
+
+    template<typename F> struct CallableNotifier : public Registration::PublicationNotifier {
 
         CallableNotifier(Registration* source, F c) : PublicationNotifier(source),
             callable(c) {
@@ -298,7 +393,7 @@ private:
         F callable;
     };
 
-    template<typename T,typename R> struct SetterNotifier : public PublicationNotifier {
+    template<typename T,typename R> struct SetterNotifier : public Registration::PublicationNotifier {
 
         SetterNotifier(Registration* source, T* target, R (T::*setter)(S*)) : PublicationNotifier(source),
             m_setter(setter),
@@ -316,8 +411,45 @@ private:
     };
 
 
-
+    Registration* registration;
 };
+
+///
+/// \brief Tests two ServiceRegistrations for equality.
+///
+/// Two ServiceRegistrations are deemed equal if the pointers returned by ServiceRegistration::unwrap() point to the same Registration
+/// **and** if they both report `true` via ServiceRegistration::isValid().
+/// \param reg1
+/// \param reg2
+/// \return `true` if the two ServiceRegistrations are logically equal.
+///
+template<typename S1,typename S2> bool operator==(const ServiceRegistration<S1>& reg1, const ServiceRegistration<S2>& reg2) {
+    return reg1.unwrap() == reg2.unwrap() && reg1;
+}
+
+///
+/// \brief Tests two ServiceRegistrations for difference.
+///
+/// Two ServiceRegistrations are deemed different if the pointers returned by ServiceRegistration::unwrap() do not point to the same Registration
+/// **or** if they both report `false` via ServiceRegistration::isValid().
+/// \param reg1
+/// \param reg2
+/// \return `true` if the two ServiceRegistrations are logically different.
+///
+template<typename S1,typename S2> bool operator!=(const ServiceRegistration<S1>& reg1, const ServiceRegistration<S2>& reg2) {
+    return reg1.unwrap() != reg2.unwrap() || !reg1;
+}
+
+template<typename S> QDebug operator<<(QDebug out, const ServiceRegistration<S>& reg) {
+    if(reg) {
+        reg.unwrap()->print(out);
+    } else {
+        out.noquote().nospace() << "ServiceRegistration for service-type '" << typeid(S).name() << "' [invalid]";
+    }
+    return out;
+}
+
+
 
 ///
 /// \brief A template that can be specialized to override the standard way of instantiating services.
@@ -452,8 +584,8 @@ template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const QStrin
 /// \param registration the Registration of the dependency.
 /// \return a mandatory Dependency on the supplied registration.
 ///
-template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(ServiceRegistration<S>* registration) {
-    return Dependency<S,Kind::MANDATORY>{registration->registeredName()};
+template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const ServiceRegistration<S>& registration) {
+    return Dependency<S,Kind::MANDATORY>{registration.registeredName()};
 }
 
 
@@ -476,8 +608,8 @@ template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(cons
 /// \param registration the Registration of the dependency.
 /// \return an optional Dependency on the supplied registration.
 ///
-template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(ServiceRegistration<S>* registration) {
-    return Dependency<S,Kind::OPTIONAL>{registration->registeredName()};
+template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const ServiceRegistration<S>& registration) {
+    return Dependency<S,Kind::OPTIONAL>{registration.registeredName()};
 }
 
 
@@ -497,8 +629,8 @@ template<typename S> constexpr Dependency<S,Kind::N> injectAll(const QString& re
 /// \param registration the Registration of the dependency.
 /// \return a 1-to-N  Dependency on the supplied registration.
 ///
-template<typename S> constexpr Dependency<S,Kind::N> injectAll(ServiceRegistration<S>* registration) {
-    return Dependency<S,Kind::N>{registration->registeredName()};
+template<typename S> constexpr Dependency<S,Kind::N> injectAll(const ServiceRegistration<S>& registration) {
+    return Dependency<S,Kind::N>{registration.registeredName()};
 }
 
 
@@ -697,21 +829,6 @@ template<typename S> constructor_t get_default_constructor() {
 
 
 
-template <typename T>
-QList<T*> convertQList(const QObjectList &list) {
-    QList<T *> result;
-    for (auto obj : list) {
-        if(T* ptr = dynamic_cast<T*>(obj)) {
-            result.push_back(ptr);
-        }
-    }
-    return result;
-}
-
-template <>
-inline QObjectList convertQList<QObject>(const QObjectList &list) {
-    return list;
-}
 
 template <typename S>
 struct dependency_helper {
@@ -949,25 +1066,6 @@ template<typename Srv,typename Impl=Srv> struct Service {
 };
 
 
-namespace detail {
-template <typename T>
-struct service_traits {
-    static_assert(std::is_base_of_v<QObject,T>, "Service-type must be a subclass of QObject");
-
-    using service_type = T;
-
-    using impl_type = T;
-};
-
-template <typename Srv, typename Impl>
-struct service_traits<Service<Srv, Impl>> {
-
-    using service_type = typename Service<Srv, Impl>::service_type;
-
-    using impl_type = typename Service<Srv, Impl>::impl_type;
-};
-
-}
 
 
 
@@ -1025,10 +1123,10 @@ public:
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type. If you want to distinguish the service-type from the implementation-type, you should supply a Service here.
-    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
+    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl> auto registerService(const Service<S,Impl>& serviceDeclaration, const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S>* {
-        return ServiceRegistration<S>::wrap(registerService(objectName, serviceDeclaration.descriptor, config));
+    template<typename S,typename Impl> auto registerService(const Service<S,Impl>& serviceDeclaration, const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S> {
+        return ServiceRegistration<S>{registerService(objectName, serviceDeclaration.descriptor, config)};
     }
 
 
@@ -1040,9 +1138,9 @@ public:
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type.
-    /// \return a ServiceRegistration for the registered service, or `nullptr` if it could not be registered.
+    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> auto registerService(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S>* {
+    template<typename S> auto registerService(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S> {
         return registerService(Service<S>{}, objectName, config);
     }
 
@@ -1059,11 +1157,11 @@ public:
     /// \param objName the name for this Object in the ApplicationContext.
     /// *Note*: this name will not be set as the QObject::objectName(). It will be the internal name within the ApplicationContext only.
     /// \tparam S the service-type for the object.
-    /// \return a ServiceRegistration for the registered object, or `nullptr` if it could not be registered.
+    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> ServiceRegistration<S>* registerObject(S* obj, const QString& objName = "") {
+    template<typename S> ServiceRegistration<S> registerObject(S* obj, const QString& objName = "") {
         static_assert(detail::could_be_qobject<S>, "Object is not convertible to QObject");
-        return ServiceRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), service_descriptor{typeid(S), typeid(*obj)}));
+        return ServiceRegistration<S>{registerObject(objName, dynamic_cast<QObject*>(obj), service_descriptor{typeid(S), typeid(*obj)})};
     }
 
     ///
@@ -1074,8 +1172,8 @@ public:
     /// about all those published services.
     /// \return a ServiceRegistration that manages all Services of the requested type.
     ///
-    template<typename S> [[nodiscard]] ServiceRegistration<S>* getRegistration() const {
-        return ServiceRegistration<S>::wrap(getRegistration(typeid(S)));
+    template<typename S> [[nodiscard]] ServiceRegistration<S> getRegistration() const {
+        return ServiceRegistration<S>{getRegistration(typeid(S))};
     }
 
 

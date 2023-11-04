@@ -13,7 +13,7 @@ namespace mcnepp::qtdi {
 
 
 
-Q_LOGGING_CATEGORY(loggingCategory, "qapplicationcontext");
+Q_LOGGING_CATEGORY(loggingCategory, "qtdi");
 
 QApplicationContext::QApplicationContext(QObject* parent) :
     QObject(parent) {

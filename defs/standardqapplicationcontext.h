@@ -148,12 +148,8 @@ private:
 
         virtual QObject* createPrivateObject(const QVariantList& dependencies) = 0;
 
-        virtual QDebug print(QDebug out) const = 0;
 
 
-        friend QDebug operator << (QDebug out, const DescriptorRegistration& reg) {
-            return reg.print(out);
-        }
 
 
         service_descriptor descriptor;
@@ -194,9 +190,7 @@ private:
             return true;
         }
 
-        virtual QDebug print(QDebug out) const override  {
-            return out.nospace().noquote() << "Service '" << registeredName() << "' with service-type '" << service_type().name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
-        }
+        virtual void print(QDebug out) const override;
 
         virtual const service_config& config() const override {
             return m_config;
@@ -288,9 +282,7 @@ private:
             return {};
         }
 
-        virtual QDebug print(QDebug out) const override  {
-            return out.nospace().noquote() << "Object '" << registeredName() << "' with service-type '" << service_type().name() << "' and impl-type '" << descriptor.impl_type.name() << "'";
-        }
+        virtual void print(QDebug out) const override;
 
         virtual const service_config& config() const override {
             return defaultConfig;
@@ -338,6 +330,10 @@ private:
 
         virtual unsigned maxPublications() const override {
             return registrations.size();
+        }
+
+        virtual void print(QDebug out) const override {
+            out.nospace().noquote() << "Services [" << maxPublications() << "] with service-type '" << service_type().name() << "'";
         }
 
 
