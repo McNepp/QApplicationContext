@@ -490,9 +490,15 @@ This can be achieved using mcnepp::qtdi::QApplicationContext::getRegistration(),
 
 
     auto registration = context -> getRegistration<PropFetcher>();
-    
-    registration.subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got another PropFetcher!"; });
-    
+    qInfo() << "There have been" << registration.maxPublications() << "RestPropFetchers so far!";    
+
+You may also access a specific service by name:
+
+    auto registration = context -> getRegistration<PropFetcher>("hamburgWeather");
+    if(!registration) {
+     qWarning() << "Could not obtain service 'hamburgWeather'";
+    }
+
 ## Tweaking services (QApplicationContextPostProcessor)
 
 Whenever a service has been instantiated and all properties have been set, QApplicationContext will apply all registered mcnepp::qtdi::QApplicationContextPostProcessor`s 

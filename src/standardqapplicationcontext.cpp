@@ -162,12 +162,12 @@ QString makeName(const std::type_info& type) {
 
 
 
-
-
 inline QDebug operator << (QDebug out, const Registration& reg) {
     reg.print(out);
     return out;
 }
+
+
 
 
 
@@ -227,7 +227,7 @@ void StandardApplicationContext::unpublish()
             qCInfo(loggingCategory()).nospace().noquote() << "Un-published " << *reg;
         }
     }
-    qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has been un-published. " << unpublished << " Object have been successfully destroyed.";
+    qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has been un-published. " << unpublished << " Objects have been successfully destroyed.";
     QStringList remainingNames;
     for(auto reg : registrations) {
         if(reg->isPublished() && !reg->isManaged()) {
@@ -380,8 +380,16 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
 
 
-Registration *StandardApplicationContext::getRegistration(const type_info &service_type) const
+Registration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
 {
+    if(!name.isEmpty()) {
+        auto reg = getRegistrationByName(name);
+        if(reg && reg->matches(service_type)) {
+            return reg;
+        }
+        qCCritical(loggingCategory()).noquote().nospace() << "Could not find Registration '" << name << "' for serivce-type " << service_type.name();
+        return nullptr;
+    }
     auto found = proxyRegistrationCache.find(service_type);
     ProxyRegistration* multiReg;
     if(found != proxyRegistrationCache.end()) {
@@ -429,12 +437,16 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
         }
     }
 
+
     for(auto iter = registrations.begin(); iter != registrations.end();) {
-        auto reg = *iter;
-        if(reg->getObject() == obj) {
+        if((*iter)->getObject() == obj) {
+            std::unique_ptr<DescriptorRegistration> regPtr{*iter};
             iter = registrations.erase(iter);
-            qCInfo(loggingCategory()).noquote().nospace() << *reg << " has been destroyed externally";
-            delete reg;
+            qCInfo(loggingCategory()).noquote().nospace() << *regPtr << " has been destroyed externally";
+            auto proxy = proxyRegistrationCache.find(regPtr->service_type());
+            if(proxy != proxyRegistrationCache.end()) {
+                proxy -> second->remove(regPtr.get());
+            }
         } else {
             ++iter;
         }
@@ -494,9 +506,9 @@ bool StandardApplicationContext::publish(bool allowPartial)
             //If we find a mandatory dependency for which there is a default-constructor, we continue with that:
             if(!find_by_type(allPublished, d.type) && d.kind == static_cast<int>(Kind::MANDATORY) && d.defaultConstructor) {
                 auto def = registerDescriptor("", service_descriptor{d.type, d.type, nullptr, d.defaultConstructor}, service_config{}, nullptr);
-                if(def.second) {
+                if(def) {
                     unpublished.push_front(reg);
-                    reg = def.first;
+                    reg = def;
                     qCInfo(loggingCategory()).noquote().nospace() << "Creating default-instance of " << d << " for " << *reg;
                     goto next_unpublished;
                 }
@@ -627,7 +639,7 @@ unsigned int StandardApplicationContext::pendingPublication() const
     return std::count_if(registrations.begin(), registrations.end(), std::not_fn(std::mem_fn(&DescriptorRegistration::isPublished)));
 }
 
-std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj) {
+StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj) {
     bool isAnonymous = name.isEmpty();
     if(isAnonymous) {
         name = makeName(descriptor.service_type);
@@ -636,10 +648,10 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
         if(found) {
             if(found->isEqual(descriptor, config, obj)) {
                 qCInfo(loggingCategory()).nospace().noquote() << "A Service with an equivalent " << descriptor << " has already been registered as " << *found;
-                return {found, false};
+                return found;
             } else {
                 qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. That name has already been taken by " << *found;
-                return {nullptr, false};
+                return nullptr;
             }
         }
     }
@@ -648,11 +660,11 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
         if(reg->isEqual(descriptor, config, obj)) {
             if(isAnonymous) {
                 qCInfo(loggingCategory()).nospace().noquote() << "A Service with an equivalent " << descriptor << " has already been registered as " << *reg;
-                return {reg, false};
+                return reg;
             }
             registrationsByName.insert({name, reg});
             qCInfo(loggingCategory()).nospace().noquote() << "Created alias '" << name << "' for " << *reg;
-            return {reg, false};
+            return reg;
         }
     }
 
@@ -662,7 +674,7 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
 
     if(!checkTransitiveDependentsOn(descriptor, dependencies)) {
         qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register '" << name << "'. Cyclic dependency in dependency-chain of " << descriptor;
-        return {nullptr, false};
+        return nullptr;
 
     }
 
@@ -670,14 +682,14 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
         for(auto& key : config.properties.keys()) {
             if(!key.startsWith('.') && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
                 qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
-                return {nullptr, false};
+                return nullptr;
             }
         }
         if(!config.initMethod.isEmpty()) {
             auto initMethod = methodByName(descriptor.meta_object, config.initMethod);
             if(!initMethod.isValid() || initMethod.parameterCount() > 1) {
                 qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no invokable method '" << config.initMethod << "'";
-                return {nullptr, false};
+                return nullptr;
             }
         }
     }
@@ -696,15 +708,14 @@ std::pair<StandardApplicationContext::DescriptorRegistration*,bool> StandardAppl
     }
     qCInfo(loggingCategory()).noquote().nospace() << "Registered " << *registration;
     emit pendingPublicationChanged();
-    return {registration, true};
+    return registration;
 
 
 }
 
 Registration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config)
 {
-    auto result = registerDescriptor(name, descriptor, config, nullptr);
-    return result.first;
+    return registerDescriptor(name, descriptor, config, nullptr);
 }
 
 Registration * StandardApplicationContext::registerObject(const QString &name, QObject *obj, const service_descriptor& descriptor)
@@ -714,12 +725,7 @@ Registration * StandardApplicationContext::registerObject(const QString &name, Q
         return nullptr;
     }
 
-    auto result = registerDescriptor(name.isEmpty() ? obj->objectName() : name, descriptor, ObjectRegistration::defaultConfig, obj);
-    if(result.second) {
-        connect(obj, &QObject::destroyed, this, &StandardApplicationContext::contextObjectDestroyed);
-    }
-    return result.first;
-
+    return registerDescriptor(name.isEmpty() ? obj->objectName() : name, descriptor, ObjectRegistration::defaultConfig, obj);
 }
 
 
@@ -1133,7 +1139,7 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
 
        auto result = autowirings.insert({type, binder});
        if(result.second) {
-           connect(this, &Registration::publishedObjectsChanged, this, TargetBinder{this, binder, applicationContext()->getRegistration(type)});
+           connect(this, &Registration::publishedObjectsChanged, this, TargetBinder{this, binder, applicationContext()->getRegistration(type, "")});
        }
        return result.second;
     }
@@ -1142,6 +1148,17 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
 
     void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
        out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor;
+    }
+
+    void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *srv) {
+       if(srv == theService) {
+           //Somebody has destroyed a Service that is managed by this ApplicationContext.
+           //All we can do is log an error and set theService to nullptr.
+           //Yet, it might still be in use somewhere as a dependency.
+           qCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
+           theService = nullptr;
+           emit publishedObjectsChanged();
+       }
     }
 
     void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
@@ -1154,6 +1171,4 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
 
 
 
-
-
-}//mcnepp::qtdi
+    }//mcnepp::qtdi

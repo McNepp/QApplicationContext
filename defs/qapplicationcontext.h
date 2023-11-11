@@ -9,11 +9,15 @@
 #include <unordered_set>
 #include <QObject>
 #include <QVariant>
+#include <QPointer>
 #include <QLoggingCategory>
 
 namespace mcnepp::qtdi {
 
 class QApplicationContext;
+
+Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
+
 
 namespace detail {
 template<typename S> auto couldBeQObject(S* ptr) -> decltype(dynamic_cast<QObject*>(ptr));
@@ -181,34 +185,18 @@ protected:
 /// This class offers the type-safe function `subscribe()` which should be preferred over directly connecting to the signal `Registration::publishedObjectsChanged()`.
 ///
 /// A ServiceRegistration contains a *non-owning pointer* to a Registration whose lifetime of is bound
-/// to the QApplicationContext. Accessing a ServiceRegistration after the corresponding QApplicationContext has been destructed constitutes undefined behaviour!
+/// to the QApplicationContext. The ServiceRegistration will become invalid after the corresponding QApplicationContext has been destructed.
 ///
 template<typename S> class ServiceRegistration final {
     friend class QApplicationContext;
 
 public:
 
-    ServiceRegistration() : registration(nullptr) {
+    ServiceRegistration() {
 
     }
 
-    ServiceRegistration(ServiceRegistration&& source) : registration(source.registration) {
-        source.registration = nullptr;
-    }
 
-    ServiceRegistration(const ServiceRegistration& source) : registration(source.registration) {
-    }
-
-    ServiceRegistration& operator=(ServiceRegistration&& source) {
-        this->registration = source.registration;
-        source.registration = nullptr;
-        return *this;
-    }
-
-    ServiceRegistration& operator=(const ServiceRegistration& source) {
-        this->registration = source.registration;
-        return *this;
-    }
 
 
 
@@ -218,10 +206,10 @@ public:
     /// \return the List of published services.
     ///
     [[nodiscard]] QList<S*> publishedObjects() const {
-        if(!registration) {
+        if(!registrationHolder) {
             return QList<S*>{};
         }
-        return detail::convertQList<S>(registration->publishedObjects());
+        return detail::convertQList<S>(registrationHolder->publishedObjects());
     }
 
     ///
@@ -229,10 +217,10 @@ public:
     /// \return the QApplicationContext that manages this Registration, or `nullptr` if this ServiceRegistration is invalid.
     ///
     [[nodiscard]] QApplicationContext* applicationContext() const {
-        if(!registration) {
+        if(!registrationHolder) {
             return nullptr;
         }
-        return registration->applicationContext();
+        return registrationHolder->applicationContext();
     }
 
 
@@ -243,10 +231,10 @@ public:
     /// \return the name of this Registration if it was obtained via QApplicationContext::registerService(), the empty String otherwise.
     ///
     [[nodiscard]] QString registeredName() const {
-        if(!registration) {
+        if(!registrationHolder) {
             return QString{};
         }
-        return registration->registeredName();
+        return registrationHolder->registeredName();
     }
 
     /// \brief the maximum number of Objects that match this Registration.
@@ -254,11 +242,11 @@ public:
     /// For Registrations obtained via QApplicationContext::getRegistration(), this function may yield anything between 0 and
     /// the number of currently registered services of this type.
     [[nodiscard]] unsigned maxPublications() const {
-        if(!registration) {
+        if(!registrationHolder) {
             return 0;
         }
 
-        return registration->maxPublications();
+        return registrationHolder->maxPublications();
     }
 
 
@@ -274,12 +262,13 @@ public:
     /// \return the Connection representing this subscription.
     ///
     template<typename F> QMetaObject::Connection subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
-        if(!registration) {
+        if(!registrationHolder) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
             return QMetaObject::Connection{};
         }
 
-        auto connection = QObject::connect(registration, &Registration::publishedObjectsChanged, context, CallableNotifier<F>{registration, callable}, connectionType);
-        emit registration -> publishedObjectsChanged();
+        auto connection = QObject::connect(registrationHolder, &Registration::publishedObjectsChanged, context, CallableNotifier<F>{registrationHolder, callable}, connectionType);
+        emit registrationHolder -> publishedObjectsChanged();
         return connection;
     }
 
@@ -295,11 +284,12 @@ public:
     ///
     template<typename T,typename R> QMetaObject::Connection subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
         static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
-        if(!registration) {
+        if(!registrationHolder) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
             return QMetaObject::Connection{};
         }
-        auto connection = QObject::connect(registration, &Registration::publishedObjectsChanged, target, SetterNotifier<T,R>{registration, target, setter}, connectionType);
-        emit registration -> publishedObjectsChanged();
+        auto connection = QObject::connect(registrationHolder, &Registration::publishedObjectsChanged, target, SetterNotifier<T,R>{registrationHolder, target, setter}, connectionType);
+        emit registrationHolder -> publishedObjectsChanged();
         return connection;
 
     }
@@ -311,7 +301,7 @@ public:
     /// \return the wrapped Registration, or `nullptr` if this ServiceRegistration wraps no valid Registration.
     ///
     Registration* unwrap() const {
-        return registration;
+        return registrationHolder.get();
     }
 
     ///
@@ -326,10 +316,11 @@ public:
     /// \return `true` if this Registration was wired for the first time for the type `<D>`.
     ///
     template<typename D,typename R> bool autowire(R (S::*injectionSlot)(D*)) {
-        if(!registration) {
+        if(!registrationHolder) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot autowire " << *this;
             return false;
         }
-        return registration->registerAutoWiring(typeid(D), [injectionSlot](QObject* target) {
+        return registrationHolder->registerAutoWiring(typeid(D), [injectionSlot](QObject* target) {
             Registration::injector_t injector;
             if(S* typedTarget = dynamic_cast<S*>(target)) {
                 injector = [injectionSlot,typedTarget](QObject* dependency) {
@@ -347,7 +338,7 @@ public:
     /// \return `true` if the underlying Registration is present.
     ///
     bool isValid() const {
-        return registration != nullptr;
+        return unwrap() != nullptr;
     }
 
     ///
@@ -355,8 +346,8 @@ public:
     /// Equivalent to isValid().
     /// \return `true` if the underlying Registration is present.
     ///
-    operator bool() const {
-        return registration != nullptr;
+    explicit operator bool() const {
+        return unwrap();
     }
 
     ///
@@ -365,13 +356,13 @@ public:
     /// \return `true` if the underlying Registration is not present.
     ///
     bool operator!() const {
-        return registration == nullptr;
+        return !unwrap();
     }
 
 
 
 private:
-    explicit ServiceRegistration(Registration* reg) : registration(reg)
+    explicit ServiceRegistration(Registration* reg) : registrationHolder{reg}
     {
     }
 
@@ -411,7 +402,8 @@ private:
     };
 
 
-    Registration* registration;
+
+    QPointer<Registration> registrationHolder;
 };
 
 ///
@@ -1165,16 +1157,30 @@ public:
     }
 
     ///
+    /// \brief Obtains a ServiceRegistration for a service-type and name.
+    /// \tparam the required service-type.
+    /// \param name the desired name of the registration. If an empty String is passed, a Registration representing all
+    /// services of the required type will be returned.
+    /// \return a ServiceRegistration for the required type and name (if not empty). If no Service with the requested name and service-type could be found,
+    /// an invalid ServiceRegistration will be returned.
+    ///
+    template<typename S> [[nodiscard]] ServiceRegistration<S> getRegistration(const QString& name) const {
+        return ServiceRegistration<S>{getRegistration(typeid(S), name)};
+    }
+
+    ///
     /// \brief Obtains a ServiceRegistration for a service-type.
-    /// In contrast to the ServiceRegistration that is returned by registerService(),
+    /// <br>In contrast to the ServiceRegistration that is returned by registerService(),
     /// the ServiceRegistration returned by this function manages all Services of the requested type.
     /// This means that if you subscribe to it using ServiceRegistration::subscribe(), you will be notified
     /// about all those published services.
-    /// \return a ServiceRegistration that manages all Services of the requested type.
+    /// \tparam the required service-type.
+    /// \return a ServiceRegistration that corresponds to all registration (present and future) that match the service-type.
     ///
     template<typename S> [[nodiscard]] ServiceRegistration<S> getRegistration() const {
-        return ServiceRegistration<S>{getRegistration(typeid(S))};
+        return ServiceRegistration<S>{getRegistration(typeid(S), "")};
     }
+
 
 
 
@@ -1255,9 +1261,11 @@ protected:
     ///
     /// \brief Obtains a Registration for a service_type.
     /// \param service_type
+    /// \param name the desired name of the service. If an empty name is passed, a "Proxy" for all Services (present and future)
+    /// of the service-type will be returned.
     /// \return a Registration for the supplied service_type.
     ///
-    virtual Registration* getRegistration(const std::type_info& service_type) const = 0;
+    virtual Registration* getRegistration(const std::type_info& service_type, const QString& name) const = 0;
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
@@ -1297,8 +1305,8 @@ protected:
     /// \param service_type
     /// \return the result of getRegistration(const std::type_info&) const.
     ///
-    static Registration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type) {
-        return appContext.getRegistration(service_type);
+    static Registration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QString& name) {
+        return appContext.getRegistration(service_type, name);
     }
 
 
@@ -1325,6 +1333,5 @@ public:
 
 
 
-Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 
 }

@@ -14,6 +14,7 @@
 namespace mcnepp::qtdi {
 
 
+
 ///
 /// \brief A ready-to use implementation of the QApplicationContext.
 ///
@@ -38,7 +39,7 @@ protected:
 
     virtual Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
 
-    virtual Registration* getRegistration(const std::type_info& service_type) const override;
+    virtual Registration* getRegistration(const std::type_info& service_type, const QString& name) const override;
 
 
 
@@ -216,16 +217,24 @@ private:
         virtual QObject* publish(const QVariantList& dependencies) override {
             if(!theService) {
                 theService = descriptor.create(dependencies);
+                if(theService) {
+                    onDestroyed = connect(theService, &QObject::destroyed, this, &ServiceRegistration::serviceDestroyed);
+                }
             }
             return theService;
         }
 
 
+        void serviceDestroyed(QObject* srv);
+
+
 
         virtual bool unpublish() override {
             if(theService) {
-                delete theService;
+                std::unique_ptr<QObject> srv{theService};
+                QObject::disconnect(onDestroyed);
                 theService = nullptr;
+                emit publishedObjectsChanged();
                 return true;
             }
             return false;
@@ -235,6 +244,7 @@ private:
         QObject* theService;
         QObjectList m_privateObjects;
         service_config m_config;
+        QMetaObject::Connection onDestroyed;
     };
 
     struct ObjectRegistration : public DescriptorRegistration {
@@ -244,6 +254,7 @@ private:
         ObjectRegistration(const QString& name, const service_descriptor& desc, QObject* obj, StandardApplicationContext* parent) :
             DescriptorRegistration{name, desc, parent},
             theObj(obj){
+            connect(obj, &QObject::destroyed, parent, &StandardApplicationContext::contextObjectDestroyed);
         }
 
         void notifyPublished() override {
@@ -345,6 +356,17 @@ private:
             }
         }
 
+        void remove(DescriptorRegistration* reg) {
+            auto found = std::find(registrations.begin(), registrations.end(), reg);
+            if(found != registrations.end()) {
+                if((*found)->isPublished()) {
+                    emit publishedObjectsChanged();
+                }
+                registrations.erase(found);
+                emit maxPublicationsChanged(registrations.size());
+            }
+        }
+
 
 
     private:
@@ -388,7 +410,7 @@ private:
 
     std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial);
 
-    std::pair<DescriptorRegistration*,bool> registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj);
+    DescriptorRegistration* registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj);
 
     Status configure(DescriptorRegistration*,QObject*, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial);
 
