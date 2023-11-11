@@ -381,34 +381,38 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
 
 
-detail::ProxyRegistration *StandardApplicationContext::getRegistration(const type_info &service_type) const
-{
-    auto found = proxyRegistrationCache.find(service_type);
-    ProxyRegistration* multiReg;
-    if(found != proxyRegistrationCache.end()) {
-        multiReg = found->second;
-    } else {
-        multiReg = new ProxyRegistration{service_type, const_cast<StandardApplicationContext*>(this)};
-        for(auto reg : registrations) {
-            if(reg->matches(service_type)) {
-                multiReg->add(reg);
-            }
-        }
-        proxyRegistrationCache.insert({service_type, multiReg});
-    }
-    return multiReg;
-
-}
-
 detail::ServiceRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
 {
-    auto reg = getRegistrationByName(name);
+    DescriptorRegistration* reg = getRegistrationByName(name);
     if(reg && reg->matches(service_type)) {
         return reg;
     }
-    qCCritical(loggingCategory()).noquote().nospace() << "Could not find Registration '" << name << "' for serivce-type " << service_type.name();
+    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name << "' and service-type " << service_type.name();
     return nullptr;
 }
+
+detail::ProxyRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, LookupKind lookup, q_predicate_t dynamicCheck, const QMetaObject* metaObject) const
+{
+    ProxyRegistration* proxyReg;
+    auto found = proxyRegistrationCache.find({service_type, lookup});
+    if(found != proxyRegistrationCache.end()) {
+        return found->second;
+    }
+    switch(lookup) {
+    case LookupKind::STATIC:
+         proxyReg = new StaticProxyRegistration{service_type, metaObject, const_cast<StandardApplicationContext*>(this)};
+        break;
+    case LookupKind::DYNAMIC:
+        proxyReg = new DynamicProxyRegistration{service_type, dynamicCheck, metaObject, const_cast<StandardApplicationContext*>(this)};
+        break;
+    }
+    for(auto reg : registrations) {
+        proxyReg->add(reg);
+    }
+    proxyRegistrationCache.insert({{service_type, lookup}, proxyReg});
+    return proxyReg;
+}
+
 
 
 
@@ -447,9 +451,11 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
             std::unique_ptr<DescriptorRegistration> regPtr{*iter};
             iter = registrations.erase(iter);
             qCInfo(loggingCategory()).noquote().nospace() << *regPtr << " has been destroyed externally";
-            auto proxy = proxyRegistrationCache.find(regPtr->service_type());
-            if(proxy != proxyRegistrationCache.end()) {
-                proxy -> second->remove(regPtr.get());
+            for(LookupKind lookup : {LookupKind::STATIC, LookupKind::DYNAMIC}) {
+                auto proxy = proxyRegistrationCache.find({regPtr->service_type(), lookup});
+                if(proxy != proxyRegistrationCache.end()) {
+                    proxy -> second->remove(regPtr.get());
+                }
             }
         } else {
             ++iter;
@@ -706,9 +712,11 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
     }
     registrationsByName.insert({name, registration});
     registrations.push_back(registration);
-    auto proxy = proxyRegistrationCache.find(registration->service_type());
-    if(proxy != proxyRegistrationCache.end()) {
-        proxy->second->add(registration);
+    for(LookupKind lookup : {LookupKind::STATIC, LookupKind::DYNAMIC}) {
+        auto proxy = proxyRegistrationCache.find({registration->service_type(), lookup});
+        if(proxy != proxyRegistrationCache.end()) {
+            proxy->second->add(registration);
+        }
     }
     qCInfo(loggingCategory()).noquote().nospace() << "Registered " << *registration;
     emit pendingPublicationChanged();
@@ -1003,7 +1011,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 int index = metaObject->indexOfProperty(key.toUtf8());
                 if(index < 0) {
                     //Refering to a non-existing Q_PROPERTY by name is always non-fixable:
-                    qCCritical(loggingCategory()).nospace().noquote() << "Could not find property " << key << " of '" << metaObject->className() << "'";
+                    qCCritical(loggingCategory()).nospace().noquote() << "Could not find writable property " << key << " of '" << metaObject->className() << "'";
                     return Status::fatal;
                 }
                 auto targetProperty = metaObject->property(index);

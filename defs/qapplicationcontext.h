@@ -97,6 +97,21 @@ private:
     QMetaObject::Connection in_connection;
 };
 
+template<typename S> constexpr auto getMetaObject(S*) -> decltype(&S::staticMetaObject) {
+    return &S::staticMetaObject;
+}
+
+inline constexpr std::nullptr_t getMetaObject(void*) {
+    return nullptr;
+}
+
+template<typename S> constexpr const QMetaObject* getMetaObject() {
+    return getMetaObject(static_cast<S*>(nullptr));
+}
+
+
+
+
 
 
 
@@ -131,6 +146,8 @@ public:
     [[nodiscard]] virtual QApplicationContext* applicationContext() const = 0;
 
 
+
+
     ///
     /// \brief Writes information about this Registration to QDebug.
     /// \param out
@@ -159,7 +176,6 @@ protected:
     virtual ~Registration() = default;
 
 
-
     /**
      * @brief Connects this Registration with the Subscription's signal.
      * Connects Registration::objectPublished() to Subscription::objectPublished().<br>
@@ -169,6 +185,7 @@ protected:
     virtual void subscribe(detail::Subscription* subscription) {
         subscription -> connect(this);
     }
+
 
 };
 
@@ -672,6 +689,20 @@ enum class Kind {
     /// be set to the service that owns it.
     ///
     PRIVATE_COPY
+};
+
+/**
+ * @brief Specifies the strategy for looking up ServiceRegistrations in ApplicationContexts.
+ * See QApplicationContext::getRegistration().
+ */
+enum class LookupKind {
+    ///
+    /// All Services whose registered service_type match the requested type, will be looked up.
+    STATIC,
+
+    ///
+    /// All Services that are convertible to the requested type at runtime, will be looked up.
+    DYNAMIC
 };
 
 
@@ -1188,6 +1219,22 @@ constructor_t service_creator() {
 inline void Subscription::connect(Registration* reg) {
         in_connection = QObject::connect(reg, &Registration::objectPublished, this, &Subscription::objectPublished);
 }
+using q_predicate_t = std::function<bool(QObject*)>;
+
+template<typename S,LookupKind lookup> struct predicate_traits;
+
+template<typename S> struct predicate_traits<S,LookupKind::STATIC> {
+        static constexpr std::nullptr_t predicate() {
+            return nullptr;
+        }
+};
+
+template<typename S> struct predicate_traits<S,LookupKind::DYNAMIC> {
+        static q_predicate_t predicate() {
+            return [](QObject* ptr) { return dynamic_cast<S*>(ptr) != nullptr;};
+        }
+};
+
 
 } // namespace detail
 
@@ -1219,7 +1266,6 @@ template<typename Srv,typename Impl=Srv> struct Service {
 
     detail::service_descriptor descriptor;
 };
-
 
 
 
@@ -1316,33 +1362,44 @@ public:
     ///
     template<typename S> ServiceRegistration<S> registerObject(S* obj, const QString& objName = "") {
         static_assert(detail::could_be_qobject<S>, "Object is not convertible to QObject");
-        QObject* theObj = dynamic_cast<QObject*>(obj);
-        return ServiceRegistration<S>{registerObject(objName, theObj, service_descriptor{typeid(S), typeid(*obj), theObj->metaObject()})};
+        return ServiceRegistration<S>{registerObject(objName, dynamic_cast<QObject*>(obj), service_descriptor{typeid(S), typeid(*obj)})};
     }
 
     ///
     /// \brief Obtains a ServiceRegistration for a service-type and name.
-    /// \tparam the required service-type.
+    /// \tparam S the required service-type.
     /// \param name the desired name of the registration.
-    /// services of the required type will be returned.
-    /// \return a ServiceRegistration for the required type and name (if not empty). If no Service with the requested name and service-type could be found,
+    /// A valid ServiceRegistration will be returned only if exactly one Service that matches the name has been registered.
+    /// \return a ServiceRegistration for the required type and name. If no single Service with a matching name and service-type could be found,
     /// an invalid ServiceRegistration will be returned.
     ///
     template<typename S> [[nodiscard]] ServiceRegistration<S> getRegistration(const QString& name) const {
+        static_assert(detail::could_be_qobject<S>, "Type must be potentially convertible to QObject");
         return ServiceRegistration<S>{getRegistration(typeid(S), name)};
     }
 
     ///
     /// \brief Obtains a ProxyRegistration for a service-type.
     /// <br>In contrast to the ServiceRegistration that is returned by registerService(),
-    /// the ProxyRegistration returned by this function manages all Services of the requested type.
-    /// This means that if you subscribe to it using Registration::subscribe(), you will be notified
-    /// about all those published services.
-    /// \tparam the required service-type.
-    /// \return a Registration that corresponds to all registration (present and future) that match the service-type.
+    /// the ServiceRegistration returned by this function is actually a Proxy.<br>
+    /// This Proxy manages all Services of the requested type, regardless of whether they have been registered prior
+    /// to invoking getRegistration().<br>
+    /// This means that if you subscribe to it using ServiceRegistration::subscribe(), you will be notified
+    /// about all published services that match the Service-type.<br>
+    /// <table><tr><th>LookupKind</th><th>Type of managed Services</th></tr>
+    /// <tr><td><tt>LookupKind::STATIC</tt></td><td>Those Services whose Registration::service_type() matches
+    /// the requested <tt>typeid(S)</tt></td>
+    /// </tr>
+    /// <tr><td><tt>LookupKind::DYNAMIC</tt></td><td>Those Services that can be converted to the requested type using <tt>dynamic_cast&lt;S*&gt;()</tt>.</td>
+    /// </tr>
+    /// </table>
+    /// \tparam S the required service-type.
+    /// \tparam lookup determines the strategy for retrieving the ServiceRegistration-Proxy. See the table above for details!
+    /// \return a ProxyRegistration that corresponds to all registration that match the service-type.
     ///
-    template<typename S> [[nodiscard]] ProxyRegistration<S> getRegistration() const {
-        return ProxyRegistration<S>{getRegistration(typeid(S))};
+    template<typename S,LookupKind lookup = LookupKind::STATIC> [[nodiscard]] ProxyRegistration<S> getRegistration() const {
+        static_assert(detail::could_be_qobject<S>, "Type must be potentially convertible to QObject");
+        return ProxyRegistration<S>{getRegistration(typeid(S), lookup, detail::predicate_traits<S,lookup>::predicate(), detail::getMetaObject<S>())};
     }
 
 
@@ -1396,6 +1453,7 @@ signals:
 
 protected:
 
+    using q_predicate_t = detail::q_predicate_t;
 
 
     ///
@@ -1426,19 +1484,23 @@ protected:
     /// \brief Obtains a Registration for a service_type.
     /// \param service_type
     /// \param name the desired name of the service.
-    /// of the service-type will be returned.
-    /// \return a Registration for the supplied service_type.
+    /// A valid Registration will be returned only if exactly one Service of the requested type has been registered that matches
+    /// the name.
+    /// \return a Registration for the supplied service_type, or `nullptr` if no single Service with the requested type and matching name
+    /// has been registered.
     ///
     virtual detail::ServiceRegistration* getRegistration(const std::type_info& service_type, const QString& name) const = 0;
 
     ///
     /// \brief Obtains a Registration for a service_type.
-    /// \param service_type
-    /// \param name the desired name of the service. If an empty name is passed, a "Proxy" for all Services (present and future)
-    /// of the service-type will be returned.
+    /// \param service_type the service-type to match the registrations.
+    /// \param dynamicCheck This optional parameter is used to check whether a Service is actually an instance of the service_type.
+    /// If `nullptr` is passed, this function will obtain only those Registrations where the registered service_type matches.
+    /// \param metaObject the static QMetaObject for the type. If not available, `nullptr` can be passed.
     /// \return a Registration for the supplied service_type.
     ///
-    virtual detail::ProxyRegistration* getRegistration(const std::type_info& service_type) const = 0;
+    virtual detail::ProxyRegistration* getRegistration(const std::type_info& service_type, LookupKind lookup, q_predicate_t dynamicCheck, const QMetaObject* metaObject) const = 0;
+
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
@@ -1491,9 +1553,10 @@ protected:
     /// \param service_type
     /// \return the result of getRegistration(const std::type_info&) const.
     ///
-    static detail::ProxyRegistration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type) {
-        return appContext.getRegistration(service_type);
+    static detail::ProxyRegistration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, LookupKind lookup, q_predicate_t dynamicCheck, const QMetaObject* metaObject) {
+        return appContext.getRegistration(service_type, lookup, dynamicCheck, metaObject);
     }
+
 
     template<typename S> friend class ServiceRegistration;
 };

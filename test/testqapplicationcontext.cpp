@@ -651,7 +651,16 @@ private slots:
     }
 
 
-
+    void testGetRegistrationDynamic() {
+        context->registerService<BaseService>();
+        context->registerService<BaseService2>();
+        QVERIFY(context->publish());
+        RegistrationSlot<Interface1> staticSlot{context->getRegistration<Interface1>()};
+        RegistrationSlot<Interface1> dynamicSlot{context->getRegistration<Interface1,LookupKind::DYNAMIC>()};
+        QVERIFY(!staticSlot());
+        QVERIFY(dynamicSlot());
+        QCOMPARE(dynamicSlot.invocationCount(), 2);
+    }
 
 
 
@@ -661,7 +670,12 @@ private slots:
         QVERIFY(reg);
         //Same Interface, different implementation:
         auto reg2 = context->registerService(Service<Interface1,BaseService2>{});
+
         QCOMPARE_NE(reg2, reg);
+        QCOMPARE(reg, context->getRegistration<Interface1>(reg.registeredName()));
+        QCOMPARE(reg2, context->getRegistration<Interface1>(reg2.registeredName()));
+
+        QVERIFY(!context->getRegistration<Interface1>(""));
     }
 
     void testRegisterTwiceDifferentName() {
@@ -669,6 +683,10 @@ private slots:
         QVERIFY(reg);
         //Same Interface, same implementation, but different name:
         auto reg4 = context->registerService(Service<Interface1,BaseService>{}, "alias");
+        QCOMPARE(reg, context->getRegistration<Interface1>("base"));
+        QCOMPARE(reg, context->getRegistration<Interface1>("alias"));
+        QVERIFY(!context->getRegistration<Interface1>(""));
+
         QCOMPARE(reg4, reg);
         QVERIFY(context->publish());
         RegistrationSlot<Interface1> services{context->getRegistration<Interface1>()};

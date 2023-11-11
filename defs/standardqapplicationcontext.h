@@ -41,7 +41,7 @@ protected:
 
     virtual detail::ServiceRegistration* getRegistration(const std::type_info& service_type, const QString& name) const override;
 
-    virtual detail::ProxyRegistration* getRegistration(const std::type_info& service_type) const override;
+    virtual detail::ProxyRegistration* getRegistration(const std::type_info& service_type, LookupKind lookup, q_predicate_t dynamicCheck, const QMetaObject* metaObject) const override;
 
 
 private:
@@ -82,9 +82,14 @@ private:
         virtual void notifyPublished() = 0;
 
 
+
         bool matches(const std::type_index& type) const {
             return descriptor.matches(type);
         }
+
+
+
+
 
         static auto matcher(const std::type_index& type) {
             return [type](DescriptorRegistration* reg) { return reg->matches(type); };
@@ -101,6 +106,9 @@ private:
         virtual QObjectList privateObjects() const = 0;
 
         virtual QObject* createPrivateObject(const QVariantList& dependencies) = 0;
+
+
+
 
 
         service_descriptor descriptor;
@@ -269,14 +277,15 @@ private:
         QObject* const theObj;
     };
 
-
     struct ProxyRegistration : public detail::ProxyRegistration {
 
 
 
-        ProxyRegistration(const std::type_info& type, StandardApplicationContext* parent) :
+
+        ProxyRegistration(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent) :
             detail::ProxyRegistration{parent},
-                m_type(type){
+                m_type(type),
+            m_meta(metaObject) {
         }
 
         virtual StandardApplicationContext* applicationContext() const final override {
@@ -287,32 +296,8 @@ private:
             return QList<detail::ServiceRegistration*>{registrations.begin(), registrations.end()};
         }
 
-        const std::type_info& m_type;
+        virtual bool add(DescriptorRegistration* reg) = 0;
 
-
-        const type_info &service_type() const override {
-            return m_type;
-        }
-
-
-
-
-
-        virtual void print(QDebug out) const override {
-            out.nospace().noquote() << "Services [" << registrations.size() << "] with service-type '" << service_type().name() << "'";
-        }
-
-
-        void add(DescriptorRegistration* reg) {
-            if(std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
-                registrations.push_back(reg);
-                if(reg->isPublished()) {
-                    emit objectPublished(reg->getObject());
-                } else {
-                    connect(reg, &Registration::objectPublished, this, &ProxyRegistration::objectPublished);
-                }
-            }
-        }
 
         void remove(DescriptorRegistration* reg) {
             auto found = std::find(registrations.begin(), registrations.end(), reg);
@@ -320,6 +305,51 @@ private:
                 registrations.erase(found);
             }
         }
+
+
+        const type_info &service_type() const final override {
+            return m_type;
+        }
+
+
+
+        virtual void print(QDebug out) const final override {
+            out.nospace().noquote() << "Services [" << registrations.size() << "] with service-type '" << service_type().name() << "'";
+        }
+
+
+        const std::type_info& m_type;
+        descriptor_list registrations;
+        const QMetaObject* m_meta;
+
+    };
+
+
+
+    struct StaticProxyRegistration : public ProxyRegistration {
+
+
+
+        StaticProxyRegistration(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent) :
+            ProxyRegistration{type, metaObject, parent} {
+        }
+
+
+
+
+        bool add(DescriptorRegistration* reg) override {
+            if(reg->matches(service_type()) && std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
+                registrations.push_back(reg);
+                if(reg->isPublished()) {
+                    emit objectPublished(reg->getObject());
+                } else {
+                    connect(reg, &Registration::objectPublished, this, &ProxyRegistration::objectPublished);
+                }
+            }
+            return false;
+        }
+
+
 
         virtual void subscribe(detail::Subscription* subscription) override {
             Registration::subscribe(subscription);
@@ -332,11 +362,61 @@ private:
         }
 
 
+    };
+
+
+    struct DynamicProxyRegistration : public ProxyRegistration {
+
+
+
+        DynamicProxyRegistration(const std::type_info& type, q_predicate_t check, const QMetaObject* metaObject, StandardApplicationContext* parent) :
+            ProxyRegistration{type, metaObject, parent},
+            dynamicCheck(check) {
+        }
+
+
+
+
+
+
+
+
+        virtual bool add(DescriptorRegistration* reg) override {
+            if(std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
+                registrations.push_back(reg);
+                if(reg->isPublished() && dynamicCheck(reg->getObject())) {
+                    emit objectPublished(reg->getObject());
+                } else {
+                    QObject::connect(reg, &Registration::objectPublished, this, &DynamicProxyRegistration::objectPublishedSlot);
+                }
+                return true;
+            }
+            return false;
+        }
+
+
+        virtual void subscribe(detail::Subscription* subscription) override {
+            Registration::subscribe(subscription);
+            for(auto reg : registrations) {
+                auto obj = reg->getObject();
+                if(dynamicCheck(obj)) {
+                    emit subscription->objectPublished(obj);
+                }
+            }
+        }
+
+
+
 
 
     private:
+        void objectPublishedSlot(QObject* obj) {
+            if(dynamicCheck(obj)) {
+                emit objectPublished(obj);
+            }
+        }
 
-        descriptor_list registrations;
+        q_predicate_t dynamicCheck;
     };
 
 
@@ -389,9 +469,15 @@ private:
 
     std::unordered_map<QString,DescriptorRegistration*> registrationsByName;
 
+    using proxy_key_t = std::pair<std::type_index,LookupKind>;
 
+    struct proxy_hash {
+        std::size_t operator()(const proxy_key_t& arg) const {
+            return arg.first.hash_code() ^ static_cast<std::size_t>(arg.second);
+        }
+    };
 
-    mutable std::unordered_map<std::type_index,ProxyRegistration*> proxyRegistrationCache;
+    mutable std::unordered_map<proxy_key_t,ProxyRegistration*,proxy_hash> proxyRegistrationCache;
 };
 
 
