@@ -133,7 +133,9 @@ private slots:
         context->registerObject(config);
 
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${timerInterval}"}}));
+        QCOMPARE(reg.registeredProperties()["interval"], "${timerInterval}");
         QVERIFY(context->publish());
+        QCOMPARE(reg.registeredProperties()["interval"], 4711);
         RegistrationSlot<QTimer> slot{reg};
         QCOMPARE(slot->interval(), 4711);
     }
@@ -297,7 +299,119 @@ private slots:
         QCOMPARE(timerSlot2->interval(), 1908);
     }
 
+    void testBindServiceRegistrationToProperty() {
 
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer);
+        auto regBase = context->registerService<BaseService>("base");
+        RegistrationSlot<BaseService> baseSlot{regBase};
+
+
+        auto subscription = bind(regTimer, "objectName", regBase, "foo");
+        QVERIFY(subscription);
+
+
+        QVERIFY(context->publish());
+
+        QCOMPARE(baseSlot->foo(), "timer");
+        timer.setObjectName("another timer");
+        QCOMPARE(baseSlot->foo(), "another timer");
+        subscription.cancel();
+        timer.setObjectName("back to timer");
+        QCOMPARE(baseSlot->foo(), "another timer");
+    }
+
+    void testBindServiceRegistrationToPropertyOfSelf() {
+
+
+        auto regBase = context->registerService<BaseService>("base");
+        RegistrationSlot<BaseService> baseSlot{regBase};
+
+
+        auto subscription = bind(regBase, "objectName", regBase, "foo");
+        QVERIFY(subscription);
+
+
+        QVERIFY(context->publish());
+
+        QCOMPARE(baseSlot->foo(), "base");
+        baseSlot->setObjectName("another base");
+        QCOMPARE(baseSlot->foo(), "another base");
+        subscription.cancel();
+        baseSlot->setObjectName("back to base");
+        QCOMPARE(baseSlot->foo(), "another base");
+    }
+
+    void testBindServiceRegistrationToSamePropertyFails() {
+
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer);
+        auto regBase = context->registerService<BaseService>("base");
+
+
+        QVERIFY(bind(regTimer, "objectName", regBase, "objectName"));
+        //Binding the same property twice must fail:
+        QVERIFY(!bind(regTimer, "objectName", regBase, "objectName"));
+
+    }
+
+    void testBindServiceRegistrationToSelfFails() {
+
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer);
+
+
+        QVERIFY(!bind(regTimer, "objectName", regTimer, "objectName"));
+
+
+    }
+
+    void testBindServiceRegistrationToProxyRegistration() {
+
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer);
+        BaseService base;
+        context->registerObject(&base, "base");
+        auto regBase = context->getRegistration<BaseService>();
+        QVERIFY(bind(regTimer, "objectName", regBase, "foo"));
+        QVERIFY(context->publish());
+        QCOMPARE(base.foo(), "timer");
+
+        RegistrationSlot<BaseService> base2{context->registerService<BaseService>("base2")};
+
+        QVERIFY(context->publish());
+
+        QCOMPARE(base2->foo(), "timer");
+
+        timer.setObjectName("another timer");
+        QCOMPARE(base.foo(), "another timer");
+        QCOMPARE(base2->foo(), "another timer");
+    }
+
+
+
+
+
+
+
+
+    void testBindServiceRegistrationToSetter() {
+
+        BaseService base;
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer);
+        auto regBase = context->registerObject(&base, "base");
+        auto regInterface = context->getRegistration<Interface1,LookupKind::DYNAMIC>();
+        QVERIFY(bind(regTimer, "objectName", regInterface, &Interface1::setFoo));
+        QCOMPARE(base.foo(), "timer");
+        timer.setObjectName("another timer");
+        QCOMPARE(base.foo(), "another timer");
+    }
 
 
 

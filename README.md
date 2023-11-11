@@ -445,7 +445,7 @@ which makes this a *reference to another member*:
       {"summary", "&propFetcherAggregator"}
     }));
 
-### Binding target-properties to source-properties of other members of the ApplicationContext
+## Binding source-properties to target-properties of other members of the ApplicationContext
 
 In the preceeding example, we used a reference to another member to initialize of a Q_PROPERTY with a type of `QType*`, where `QType` is a class derived from `QObject`.
 
@@ -456,15 +456,39 @@ This can be achieved by using a property-value with the format `"&ref.prop"`. Th
 
     QTimer timer1;
     
-    context -> registerObject(&timer1, "timer1"); // 1
+    auto reg1 = context -> registerObject(&timer1, "timer1"); // 1
     
-    context -> registerService(Service<QTimer>{}, "timer2", make_config({{"interval", "&timer1.interval"}})); // 2
+    auto reg2 = context -> registerService<QTimer>("timer2", make_config({{"interval", "&timer1.interval"}})); // 2
+    
+    context -> publish(); 
     
     timer1.setInterval(4711); // 3
 
 1. We register a `QTimer` as "timer1".
-2. We register a second `QTimer` as "timer2". We bind the property `interval` to the first timer's propery.
+2. We register a second `QTimer` as "timer2". We use mcnepp::qtdi::make_config() to bind the property `interval` of the second timer to the first timer's propery.
 3. We change the first timer's interval. This will also change the second timer's interval!
+
+There is a second, more explicit way of achieving the same result:
+
+    QTimer timer1;
+    
+    auto reg1 = context -> registerObject(&timer1, "timer1"); // 1
+    
+    auto reg2 = context -> registerService<QTimer>("timer2"); // 2
+    
+    bind(reg1, "interval", reg2, "interval"); // 3
+    
+    context -> publish(); 
+    
+    timer1.setInterval(4711); // 4
+
+1. We register a `QTimer` as "timer1".
+2. We register a second `QTimer` as "timer2". 
+3. We bind the property `interval` of the second timer to the first timer's propery.
+4. We change the first timer's interval. This will also change the second timer's interval!
+
+The second approach of binding properties has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), 
+aka those that represent more than one service. The source-property will be bound to every target-service automatically!
 
 ## Accessing a service after registration
 
@@ -485,10 +509,10 @@ This code shows how to utilize it:
 The function mcnepp::qtdi::ServiceRegistration::subscribe() does return a value of type mcnepp::qtdi::Subscription.
 Usually, you may ignore this return-value. However, it can be used for error-checking and for cancelling a subscription, should that be necessary.
 
-## Accessing published members of the ApplicationContext
+## Accessing published services of the ApplicationContext
 
 In the previous paragraph, we used the mcnepp::qtdi::ServiceRegistration obtained by mcnepp::qtdi::QApplicationContext::registerService(), which refers to a single member of the ApplicationContext.
-However, we might be interested in all members of a certain service-type.  
+However, we might be interested in all services of a certain service-type.  
 This can be achieved using mcnepp::qtdi::QApplicationContext::getRegistration(), which yields a mcnepp::qtdi::ServiceRegistration that represents *all services of the requested service-type*.
 
 
@@ -501,6 +525,42 @@ You may also access a specific service by name:
     if(!registration) {
      qWarning() << "Could not obtain service 'hamburgWeather'";
     }
+    
+
+### Accessing published services by implemented interface
+
+Sometimes, the interface that we use to register a Service might not be the same interface by which we would like to access the Service later.
+
+Applied to our example, it is conceivable that the class `PropFetcher` extends a non-QObject-interface named `QNetworkManagerAware` with a single method:
+
+    class QNetworkManagerAware {
+       virtual ~QNetworkManagerAware() = default;
+       
+       virtual setNetworkManager(QNetworkAccessManager*) = 0;
+    };
+    
+    class PropFetcher : public QObject, public QNetworkManagerAware {
+    
+    explicit PropFetcher(const QString& url, QObject* parent = nulptr);
+    
+    virtual setNetworkManager(QNetworkAccessManager*) override;
+    ...//same as before
+    };
+
+    context -> registerService(Service<PropFetcher,RestPropFetcher>{"hamburgWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
+    context -> registerService(Service<PropFetcher,RestPropFetcher>{"berlinWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}));
+    
+    auto networkManagerAware = context -> getRegistration<QNetworkManagerAware>(); //WRONG: 
+
+As you can see from the comment in the last line, this will not work, as it will only check against the registered interface, which is `PropFetcher`.
+<br>Fortunately, you only need to change one little bit:
+
+    auto networkManagerAware = context -> getRegistration<QNetworkManagerAware,LookupKind::DYNAMIC>(); //RIGHT: 
+    
+    networkManagerAware.autowire(&QNetworkManagerAware::setNetworkManager); //Will inject the QNetworkManager from the Context into all services that implement the interface.
+
+This will instruct to perform a runtime-check on every published service, in order to check whether it implements the interface `QNetworkManagerAware`.
+
 
 ## Tweaking services (QApplicationContextPostProcessor)
 

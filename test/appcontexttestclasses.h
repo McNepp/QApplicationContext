@@ -14,6 +14,8 @@ public:
     virtual ~Interface1() = default;
 
     virtual QString foo() const = 0;
+
+    virtual void setFoo(const QString&) = 0;
 };
 
 
@@ -39,7 +41,7 @@ public:
         return m_foo;
     }
 
-    void setFoo(const QString& foo) {
+    void setFoo(const QString& foo) override {
         if(foo != m_foo) {
             this->m_foo = foo;
             emit fooChanged();
@@ -128,6 +130,10 @@ public:
 
     virtual QString foo() const override {
         return "BaseService";
+    }
+
+    virtual void setFoo(const QString& foo) override {
+
     }
 
 
