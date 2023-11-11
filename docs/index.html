@@ -436,10 +436,13 @@ registration.subscribe(this, [](PropFetcher* fetcher) { qInfo() &lt;&lt; "I got 
 </pre> <h1><a class="anchor" id="autotoc_md22"></a>
 Accessing published members of the ApplicationContext</h1>
 <p>In the previous paragraph, we used the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">mcnepp::qtdi::ServiceRegistration</a> obtained by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">mcnepp::qtdi::QApplicationContext::registerService()</a>, which refers to a single member of the ApplicationContext. However, we might be interested in all members of a certain service-type. <br  />
- This can be achieved using <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a24aa71a5bfe784ae004051390a87744d" title="Obtains a ServiceRegistration for a service-type. In contrast to the ServiceRegistration that is retu...">mcnepp::qtdi::QApplicationContext::getRegistration()</a>, which yields a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">mcnepp::qtdi::ServiceRegistration</a> that represents <em>all services of the requested service-type</em>.</p>
+ This can be achieved using <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">mcnepp::qtdi::QApplicationContext::getRegistration()</a>, which yields a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">mcnepp::qtdi::ServiceRegistration</a> that represents <em>all services of the requested service-type</em>.</p>
 <pre class="fragment">auto registration = context -&gt; getRegistration&lt;PropFetcher&gt;();
-
-registration.subscribe(this, [](PropFetcher* fetcher) { qInfo() &lt;&lt; "I got another PropFetcher!"; });
+qInfo() &lt;&lt; "There have been" &lt;&lt; registration.maxPublications() &lt;&lt; "RestPropFetchers so far!";    
+</pre><p> You may also access a specific service by name: </p><pre class="fragment">auto registration = context -&gt; getRegistration&lt;PropFetcher&gt;("hamburgWeather");
+if(!registration) {
+ qWarning() &lt;&lt; "Could not obtain service 'hamburgWeather'";
+}
 </pre> <h1><a class="anchor" id="autotoc_md23"></a>
 Tweaking services (QApplicationContextPostProcessor)</h1>
 <p>Whenever a service has been instantiated and all properties have been set, QApplicationContext will apply all registered <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html" title="A mix-in interface for classes that may modify services before publication. The method process(QAppli...">mcnepp::qtdi::QApplicationContextPostProcessor</a>`s to it. These are user-supplied QObjects that implement the aforementioned interface which comprises a single method: </p><pre class="fragment">QApplicationContextPostProcessor::process(QApplicationContext*, QObject*,const QVariantMap&amp;)
