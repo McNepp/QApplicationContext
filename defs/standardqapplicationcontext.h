@@ -48,8 +48,68 @@ private:
 
 
 
+    class StandardRegistrationImpl {
+        class PropertyBindingSubscription : public detail::Subscription {
+        public:
+            PropertyBindingSubscription(detail::Registration* source, detail::Registration* target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(target, Qt::AutoConnection),
+                m_sourceProperty(sourceProperty),
+                m_setter(setter),
+                m_source(source) {
 
-    struct DescriptorRegistration : public detail::ServiceRegistration {
+            }
+
+
+            void notify(QObject* obj) override;
+
+            void cancel() override;
+            detail::Registration* m_source;
+            QMetaProperty m_sourceProperty;
+            detail::property_descriptor m_setter;
+            std::vector<QPointer<Subscription>> subscriptions;
+        };
+
+        class PropertyInjector : public detail::Subscription {
+            friend class PropertyBindingSubscription;
+
+            PropertyInjector(QObject* boundTarget, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(boundTarget, Qt::AutoConnection),
+                m_sourceProperty(sourceProperty),
+                m_setter(setter),
+                m_boundTarget(boundTarget) {
+
+            }
+
+
+            void notify(QObject* obj) override;
+
+            void cancel() override;
+            QMetaProperty m_sourceProperty;
+            detail::property_descriptor m_setter;
+            QObject* m_boundTarget;
+            std::vector<QPropertyNotifier> bindings;
+            std::vector<QMetaObject::Connection> connections;
+        };
+
+    public:
+        detail::Subscription* createBindingTo(detail::Registration* source, const char* sourcePropertyName, const detail::property_descriptor& targetProperty);
+
+        virtual QMetaProperty getProperty(const char* name) const = 0;
+        virtual detail::Registration* asRegistration() = 0;
+    private:
+        std::unordered_set<QString> boundProperties;
+    };
+
+    struct DescriptorRegistration : public detail::ServiceRegistration, public StandardRegistrationImpl {
+
+
+        virtual detail::Registration* asRegistration() override {
+            return this;
+        }
+
+        virtual detail::Subscription* createBindingTo(Registration* source, const char* sourcePropertyName, const detail::property_descriptor& targetProperty) override {
+            return StandardRegistrationImpl::createBindingTo(source, sourcePropertyName, targetProperty);
+        }
+
+
         const std::type_info& service_type() const override {
             return descriptor.service_type;
         }
@@ -192,6 +252,13 @@ private:
             Registration::subscribe(subscription);
         }
 
+        virtual QMetaProperty getProperty(const char* name) const override {
+            if(descriptor.meta_object) {
+                return descriptor.meta_object->property(descriptor.meta_object->indexOfProperty(name));
+            }
+            return QMetaProperty{};
+        }
+
         void serviceDestroyed(QObject* srv);
 
 
@@ -270,6 +337,12 @@ private:
             emit subscription->objectPublished(theObj);
         }
 
+        virtual QMetaProperty getProperty(const char* name) const override {
+            auto meta = theObj->metaObject();
+            return meta->property(meta->indexOfProperty(name));
+        }
+
+
         static const service_config defaultConfig;
 
 
@@ -277,7 +350,7 @@ private:
         QObject* const theObj;
     };
 
-    struct ProxyRegistration : public detail::ProxyRegistration {
+    struct ProxyRegistration : public detail::ProxyRegistration, public StandardRegistrationImpl {
 
 
 
@@ -288,12 +361,30 @@ private:
             m_meta(metaObject) {
         }
 
+        virtual detail::Registration* asRegistration() override {
+            return this;
+        }
+
+        virtual detail::Subscription* createBindingTo(Registration* source, const char* sourcePropertyName, const detail::property_descriptor& targetProperty) override {
+            return StandardRegistrationImpl::createBindingTo(source, sourcePropertyName, targetProperty);
+        }
+
         virtual StandardApplicationContext* applicationContext() const final override {
             return static_cast<StandardApplicationContext*>(parent());
         }
 
         virtual QList<detail::ServiceRegistration*> registeredServices() const override {
             return QList<detail::ServiceRegistration*>{registrations.begin(), registrations.end()};
+        }
+
+
+
+
+        virtual QMetaProperty getProperty(const char* name) const override {
+            if(m_meta) {
+                return m_meta->property(m_meta->indexOfProperty(name));
+            }
+            return QMetaProperty{};
         }
 
         virtual bool add(DescriptorRegistration* reg) = 0;
@@ -487,18 +578,18 @@ class BindingProxy : public QObject {
     Q_OBJECT
 
 public:
-    BindingProxy(QMetaProperty sourceProp, QObject* source, QMetaProperty targetProp, QObject* target);
+    BindingProxy(QMetaProperty sourceProp, QObject* source, const detail::property_descriptor& setter, QObject* target);
 
     static const QMetaMethod& notifySlot();
+
 
 private slots:
     void notify();
 private:
     QMetaProperty m_sourceProp;
     QObject* m_source;
-    QMetaProperty m_targetProp;
     QObject* m_target;
-
+    detail::property_descriptor m_setter;
 };
 }
 

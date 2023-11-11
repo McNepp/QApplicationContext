@@ -24,6 +24,10 @@ class QApplicationContext;
 
 template<typename S> class Registration;
 
+template<typename S> class ServiceRegistration;
+
+class Subscription;
+
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 
 
@@ -83,6 +87,7 @@ protected:
 
     virtual void notify(QObject*) = 0;
 
+    static void subscribe(detail::Registration* reg, detail::Subscription* subscription);
 
 
 signals:
@@ -109,6 +114,19 @@ template<typename S> constexpr const QMetaObject* getMetaObject() {
     return getMetaObject(static_cast<S*>(nullptr));
 }
 
+    using q_setter_t = std::function<void(QObject*,QVariant)>;
+
+struct property_descriptor {
+    QByteArray name;
+    q_setter_t setter;
+};
+
+inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
+    if(!descriptor.name.isEmpty()) {
+        out.noquote().nospace() << "property '" << descriptor.name << "'";
+    }
+    return out;
+}
 
 
 
@@ -125,11 +143,12 @@ template<typename S> constexpr const QMetaObject* getMetaObject() {
 class Registration : public QObject {
     Q_OBJECT
 
-
+    friend class Subscription;
 
 public:
 
     template<typename S> friend class mcnepp::qtdi::Registration;
+    template<typename S> friend class mcnepp::qtdi::ServiceRegistration;
 
     ///
     /// \brief The service-type that this Registration manages.
@@ -156,6 +175,7 @@ public:
 
 
 
+
 signals:
 
     ///
@@ -175,6 +195,7 @@ protected:
 
     virtual ~Registration() = default;
 
+     virtual detail::Subscription* createBindingTo(Registration* source, const char* sourcePropertyName, const detail::property_descriptor& targetProperty) = 0;
 
     /**
      * @brief Connects this Registration with the Subscription's signal.
@@ -186,8 +207,14 @@ protected:
         subscription -> connect(this);
     }
 
-
+    static void subscribe(Registration* reg, detail::Subscription* subscription) {
+        reg->subscribe(subscription);
+    }
 };
+
+inline void detail::Subscription::subscribe(detail::Registration* reg, detail::Subscription* subscription) {
+    reg->subscribe(subscription);
+}
 
 class ServiceRegistration : public Registration {
     Q_OBJECT
@@ -264,7 +291,7 @@ protected:
 class Subscription final {
 public:
 
-    explicit Subscription(detail::Subscription* subscription = nullptr) :
+     explicit Subscription(detail::Subscription* subscription = nullptr) :
         m_subscription(subscription) {
 
     }
@@ -412,6 +439,12 @@ public:
 
 
 
+
+
+
+
+
+
     ///
     /// \brief Does this Registration represent a valid %Registration?
     /// \return `true` if the underlying Registration is present.
@@ -426,7 +459,7 @@ public:
     /// \return `true` if the underlying Registration is present.
     ///
     explicit operator bool() const {
-        return unwrap();
+        return isValid();
     }
 
     ///
@@ -448,6 +481,7 @@ protected:
     ~Registration() {
 
     }
+private:
 
     template<typename F> class CallableSubscription : public detail::Subscription {
         friend class Registration;
@@ -468,7 +502,7 @@ protected:
 
 
 
-    template<typename T,typename R> struct SetterSubscription : public detail::Subscription {
+    template<typename T,typename R> class SetterSubscription : public detail::Subscription {
         friend class Registration;
 
         SetterSubscription(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType) : Subscription(target, connectionType),
@@ -486,7 +520,8 @@ protected:
         R (T::*m_setter)(S*);
     };
 
-    template<typename D,typename R> struct AutowireSubscription : public detail::Subscription {
+    template<typename D,typename R> class AutowireSubscription : public detail::Subscription {
+        friend class Registration;
 
         AutowireSubscription(detail::Registration* target, R (S::*setter)(D*), QObject* parent) : Subscription(parent, Qt::AutoConnection),
                m_setter(setter),
@@ -525,6 +560,11 @@ template<typename S> class ServiceRegistration final : public Registration<S> {
     friend class QApplicationContext;
     template<typename U> friend class ProxyRegistration;
 
+
+    template<typename F,typename T> friend Subscription bind(const ServiceRegistration<F>&, const char*, Registration<T>&, const char*);
+
+    template<typename F,typename T,typename A,typename R> friend Subscription bind(const ServiceRegistration<F>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A));
+
 public:
     [[nodiscard]] QString registeredName() const {
         if(auto reg = unwrap()) {
@@ -549,6 +589,49 @@ private:
     explicit ServiceRegistration(detail::ServiceRegistration* reg) : Registration<S>{reg} {
 
     }
+
+    template<typename T> Subscription bind(const char* sourceProperty, Registration<T>& target, const char* targetProperty) const {
+        static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
+        static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
+        if(!target || !*this) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << *this << " to " << target;
+            return Subscription{};
+        }
+        auto subscription = target.unwrap() -> createBindingTo(unwrap(), sourceProperty, {targetProperty, nullptr});
+        if(!subscription) {
+            return Subscription{};
+        }
+        target.unwrap()->subscribe(subscription);
+
+        return Subscription{subscription};
+    }
+
+    template<typename T,typename A,typename R> Subscription bind(const char* sourceProperty, Registration<T>& target, R(T::*setter)(A)) const {
+        static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
+        if(!target || !*this) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << *this << " to " << target;
+            return Subscription{};
+        }
+        if(!setter) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << *this << " to null";
+            return Subscription{};
+        }
+        detail::q_setter_t theSetter = [setter](QObject* target,QVariant arg) {
+            if(T* srv = dynamic_cast<T*>(target)) {
+                (srv->*setter)(arg.value<std::remove_cv_t<std::remove_reference_t<A>>>());
+            }
+        };
+        auto subscription = target.unwrap() -> createBindingTo(unwrap(), sourceProperty, {"", theSetter});
+        if(!subscription) {
+            return Subscription{};
+        }
+        target.unwrap()->subscribe(subscription);
+
+        return Subscription{subscription};
+    }
+
+
+
 };
 
 template<typename S> class ProxyRegistration final : public Registration<S> {
@@ -595,6 +678,34 @@ template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, 
     return reg1.unwrap() == reg2.unwrap() && reg1;
 }
 
+
+
+///
+/// \brief Binds a property of one ServiceRegistration to a property from  another ServiceRegistration.
+/// <br>All changes made to the source-property will be propagated to the target-property.
+/// For each target-property, there can be only successful call to bind().
+/// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
+/// \param target the Registration with the target-property to which the source-property shall be bound.
+/// \return the Subscription established by this binding.
+///
+template<typename S,typename T> inline Subscription bind(const ServiceRegistration<S>& source, const char* sourceProperty, Registration<T>& target, const char* targetProperty) {
+    return source.bind(sourceProperty, target, targetProperty);
+}
+
+///
+/// \brief Binds a property of one ServiceRegistration to a Setter from  another ServiceRegistration.
+/// <br>All changes made to the source-property will be propagated to all Services represented by the target.
+/// For each target-property, there can be only successful call to bind().
+/// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
+/// \param target the Registration with the target-property to which the source-property shall be bound.
+/// \return the Subscription established by this binding.
+///
+template<typename S,typename T,typename A,typename R> inline Subscription bind(const ServiceRegistration<S>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A)) {
+    return source.bind(sourceProperty, target, setter);
+}
+
+
+
 ///
 /// \brief Tests two ServiceRegistrations for difference.
 ///
@@ -616,7 +727,6 @@ template<typename S> QDebug operator<<(QDebug out, const Registration<S>& reg) {
     }
     return out;
 }
-
 
 
 
