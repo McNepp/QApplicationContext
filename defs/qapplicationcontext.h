@@ -10,11 +10,14 @@
 #include <QObject>
 #include <QVariant>
 #include <QPointer>
+#include <QUuid>
 #include <QLoggingCategory>
 
 namespace mcnepp::qtdi {
 
 class QApplicationContext;
+
+class Registration;
 
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 
@@ -43,8 +46,39 @@ inline QObjectList convertQList<QObject>(const QObjectList &list) {
     return list;
 }
 
-}
 
+///
+/// \brief The Subscription used by Registrations.
+/// This is an internal Q_OBJECT whose sole purpose it is to provide a signal
+/// for publishing the current set of published Services.
+///
+class Subscription : public QObject {
+    Q_OBJECT
+
+    friend class mcnepp::qtdi::Registration;
+    template<typename S> friend class ServiceRegistration;
+
+protected:
+    explicit Subscription(QObject* context, Qt::ConnectionType connectionType) : QObject(context),
+        m_connectionType(connectionType) {
+        connect(this, &Subscription::objectPublished, context, [this](QObject* obj) { notify(obj); }, connectionType);
+    }
+
+
+    virtual void notify(QObject*) = 0;
+
+    Qt::ConnectionType connectionType() const {
+        return m_connectionType;
+    }
+
+signals:
+
+    void objectPublished(QObject*);
+private:
+    Qt::ConnectionType m_connectionType;
+};
+
+}
 
 
 
@@ -58,13 +92,6 @@ inline QObjectList convertQList<QObject>(const QObjectList &list) {
 class Registration : public QObject {
     Q_OBJECT
 
-    /// \brief The List of published Objects managed by this Registration.
-    /// If this is a Registration obtained by QApplicationContext::registerService(), the List
-    /// can comprise of at most one Object.
-    /// However, if the Registration was obtained by QApplicationContext::getRegistration(),
-    /// it may comprise multiple objects of the supplied service-type.
-    ///
-    Q_PROPERTY(QObjectList publishedObjects READ publishedObjects NOTIFY publishedObjectsChanged)
 
     ///
     /// \brief The name of this Registration.
@@ -73,12 +100,6 @@ class Registration : public QObject {
     ///
     Q_PROPERTY(QString registeredName READ registeredName CONSTANT)
 
-    /// \brief the maximum number of Objects that match this Registration.
-    /// For Registrations obtained via QApplicationContext::registerService(), this function will always yield 1.
-    /// For Registrations obtained via QApplicationContext::getRegistration(), this function may yield anything between 0 and
-    /// the number of currently registered services of this type.
-    ///
-    Q_PROPERTY(unsigned maxPublications READ maxPublications NOTIFY maxPublicationsChanged)
 
 public:
 
@@ -113,12 +134,6 @@ public:
     ///
     [[nodiscard]] virtual QString registeredName() const = 0;
 
-    /// \brief the maximum number of Objects that match this Registration.
-    /// For Registrations obtained via QApplicationContext::registerService(), this function will always yield 1.
-    /// For Registrations obtained via QApplicationContext::getRegistration(), this function may yield anything between 0 and
-    /// the number of currently registered services of this type.
-    [[nodiscard]] virtual unsigned maxPublications() const = 0;
-
     ///
     /// \brief Writes information about this Registration to QDebug.
     /// \param out
@@ -126,56 +141,34 @@ public:
     virtual void print(QDebug out) const = 0;
 
 
+
 signals:
 
     ///
     /// \brief Signals when a service has been published.
     ///
-    void publishedObjectsChanged();
+    void objectPublished(QObject*);
 
-    ///
-    /// \brief Signals when another service matching this Registration has been registered.
-    ///
-    void maxPublicationsChanged(unsigned);
+
+
 
 protected:
 
+
     explicit Registration(QObject* parent = nullptr) : QObject(parent) {
 
-    }
+     }
 
     virtual ~Registration() = default;
 
-    using injector_t = std::function<void(QObject*)>;
-    using binder_t = std::function<injector_t(QObject*)>;
 
 
+    virtual QMetaObject::Connection subscribe(detail::Subscription* subscription) = 0;
 
-    class PublicationNotifier {
-    public:
-        explicit PublicationNotifier(Registration* source) :
-            m_source(source){
-        }
 
-        void operator()() const {
-            for(auto obj : m_source->publishedObjects()) {
-                if(publishedObjects.insert(obj).second) {
-                    notify(obj);
-                }
-            }
-        }
-    protected:
-
-        ~PublicationNotifier() = default; //We never want to delete polymorphically
-
-        virtual void notify(QObject*) const = 0;
-    private:
-        Registration* const m_source;
-        mutable std::unordered_set<QObject*> publishedObjects;
-    };
-
-    virtual bool registerAutoWiring(const std::type_info& typ, binder_t binder) = 0;
 };
+
+
 
 ///
 /// \brief A type-safe wrapper for a Registration.
@@ -195,10 +188,6 @@ public:
     ServiceRegistration() {
 
     }
-
-
-
-
 
 
     /// \brief The List of published services managed by this Registration.
@@ -237,17 +226,6 @@ public:
         return registrationHolder->registeredName();
     }
 
-    /// \brief the maximum number of Objects that match this Registration.
-    /// For Registrations obtained via QApplicationContext::registerService(), this function will always yield 1.
-    /// For Registrations obtained via QApplicationContext::getRegistration(), this function may yield anything between 0 and
-    /// the number of currently registered services of this type.
-    [[nodiscard]] unsigned maxPublications() const {
-        if(!registrationHolder) {
-            return 0;
-        }
-
-        return registrationHolder->maxPublications();
-    }
 
 
     ///
@@ -267,9 +245,8 @@ public:
             return QMetaObject::Connection{};
         }
 
-        auto connection = QObject::connect(registrationHolder, &Registration::publishedObjectsChanged, context, CallableNotifier<F>{registrationHolder, callable}, connectionType);
-        emit registrationHolder -> publishedObjectsChanged();
-        return connection;
+        auto subscription = new CallableSubscription<F>{callable, context, connectionType};
+        return registrationHolder -> subscribe(subscription);
     }
 
     /// \brief Receive all published QObjects in a type-safe way.
@@ -284,14 +261,12 @@ public:
     ///
     template<typename T,typename R> QMetaObject::Connection subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
         static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
-        if(!registrationHolder) {
+        if(!registrationHolder || !setter) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
             return QMetaObject::Connection{};
         }
-        auto connection = QObject::connect(registrationHolder, &Registration::publishedObjectsChanged, target, SetterNotifier<T,R>{registrationHolder, target, setter}, connectionType);
-        emit registrationHolder -> publishedObjectsChanged();
-        return connection;
-
+        auto subscription = new SetterSubscription<T,R>{target, setter, connectionType};
+        return registrationHolder -> subscribe(subscription);
     }
 
 
@@ -309,27 +284,11 @@ public:
     /// Whenever a service of the type `<D>` is published, it will be injected into every service
     /// of type `<S>`, using the supplied member-function.
     ///
-    /// You may autowire every dependent type `<D>` at most once. This function will return `false` if you invoke
-    /// it multiple times for the same type `<D>`.
     /// \tparam D the type of service that will be injected into Services of type `<S>`.
     /// \param injectionSlot the member-function to invoke when a service of type `<D>` is published.
-    /// \return `true` if this Registration was wired for the first time for the type `<D>`.
+    /// \return `true` if this Registration could be successfully wired to the Registration of the type `<D>`.
     ///
-    template<typename D,typename R> bool autowire(R (S::*injectionSlot)(D*)) {
-        if(!registrationHolder) {
-            qCCritical(loggingCategory()).noquote().nospace() << "Cannot autowire " << *this;
-            return false;
-        }
-        return registrationHolder->registerAutoWiring(typeid(D), [injectionSlot](QObject* target) {
-            Registration::injector_t injector;
-            if(S* typedTarget = dynamic_cast<S*>(target)) {
-                injector = [injectionSlot,typedTarget](QObject* dependency) {
-                    (typedTarget->*injectionSlot)(dynamic_cast<D*>(dependency));
-                };
-            }
-            return injector;
-        });
-    }
+    template<typename D,typename R> bool autowire(R (S::*injectionSlot)(D*));
 
 
 
@@ -366,32 +325,34 @@ private:
     {
     }
 
+    template<typename F> class CallableSubscription : public detail::Subscription {
+        friend class ServiceRegistration;
 
+        explicit CallableSubscription(F callable, QObject* context, Qt::ConnectionType connectionType) : Subscription(context, connectionType),
+            m_callable(callable) {
 
-
-    template<typename F> struct CallableNotifier : public Registration::PublicationNotifier {
-
-        CallableNotifier(Registration* source, F c) : PublicationNotifier(source),
-            callable(c) {
         }
 
-        void notify(QObject* obj) const override {
-            if(S* ptr = dynamic_cast<S*>(obj)) {
-               callable(ptr);
+        virtual void notify(QObject* obj) {
+            if(S* srv = dynamic_cast<S*>(obj)) {
+                m_callable(srv);
             }
         }
-
-        F callable;
+        F m_callable;
     };
 
-    template<typename T,typename R> struct SetterNotifier : public Registration::PublicationNotifier {
 
-        SetterNotifier(Registration* source, T* target, R (T::*setter)(S*)) : PublicationNotifier(source),
+
+
+    template<typename T,typename R> struct SetterSubscription : public detail::Subscription {
+        friend class ServiceRegistration;
+
+        SetterSubscription(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType) : Subscription(target, connectionType),
             m_setter(setter),
             m_target(target){
         }
 
-        void notify(QObject* obj) const override {
+        virtual void notify(QObject* obj) override {
             if(S* ptr = dynamic_cast<S*>(obj)) {
                (m_target->*m_setter)(ptr);
             }
@@ -399,6 +360,24 @@ private:
 
         T* const m_target;
         R (T::*m_setter)(S*);
+    };
+
+    template<typename D,typename R> struct AutowireSubscription : public detail::Subscription {
+
+        AutowireSubscription(ServiceRegistration<D>&& target, R (S::*setter)(D*), QObject* parent) : Subscription(parent, Qt::AutoConnection),
+               m_setter(setter),
+            m_target(std::move(target))
+        {
+        }
+
+        void notify(QObject* obj) override {
+            if(S* srv = dynamic_cast<S*>(obj)) {
+               m_target.subscribe(srv, m_setter);
+            }
+        }
+
+        R (S::*m_setter)(D*);
+        ServiceRegistration<D> m_target;
     };
 
 
@@ -1153,7 +1132,8 @@ public:
     ///
     template<typename S> ServiceRegistration<S> registerObject(S* obj, const QString& objName = "") {
         static_assert(detail::could_be_qobject<S>, "Object is not convertible to QObject");
-        return ServiceRegistration<S>{registerObject(objName, dynamic_cast<QObject*>(obj), service_descriptor{typeid(S), typeid(*obj)})};
+        QObject* theObj = dynamic_cast<QObject*>(obj);
+        return ServiceRegistration<S>{registerObject(objName, theObj, service_descriptor{typeid(S), typeid(*obj), theObj->metaObject()})};
     }
 
     ///
@@ -1309,8 +1289,20 @@ protected:
         return appContext.getRegistration(service_type, name);
     }
 
-
+    template<typename S> friend class ServiceRegistration;
 };
+
+template<typename S> template<typename D,typename R> bool ServiceRegistration<S>::autowire(R (S::*injectionSlot)(D*)) {
+    if(!registrationHolder || !injectionSlot) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot autowire " << *this;
+        return false;
+    }
+    auto subscription = new AutowireSubscription<D,R>{applicationContext()->template getRegistration<D>(), injectionSlot, registrationHolder};
+    registrationHolder -> subscribe(subscription);
+    return true;
+}
+
+
 
 
 ///

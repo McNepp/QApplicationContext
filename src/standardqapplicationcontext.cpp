@@ -410,6 +410,7 @@ Registration *StandardApplicationContext::getRegistration(const type_info &servi
 
 
 
+
 QStringList StandardApplicationContext::getBeanRefs(const service_config& config)
 {
     QStringList result;
@@ -1131,18 +1132,12 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
     StandardRegistration(parent),
     descriptor{desc},
     m_name(name)
-    {
-    }
+{
+}
 
-    bool StandardApplicationContext::StandardRegistration::registerAutoWiring(const type_info &type, binder_t binder)
-    {
 
-       auto result = autowirings.insert({type, binder});
-       if(result.second) {
-           connect(this, &Registration::publishedObjectsChanged, this, TargetBinder{this, binder, applicationContext()->getRegistration(type, "")});
-       }
-       return result.second;
-    }
+
+
 
 
 
@@ -1157,15 +1152,12 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
            //Yet, it might still be in use somewhere as a dependency.
            qCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
            theService = nullptr;
-           emit publishedObjectsChanged();
        }
     }
 
     void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
        out.nospace().noquote() << "Object '" << registeredName() << "' with " << this->descriptor;
     }
-
-
 
 
 

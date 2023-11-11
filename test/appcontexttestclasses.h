@@ -33,8 +33,17 @@ public:
 
     Q_PROPERTY(QTimer *timer READ timer WRITE setTimer NOTIFY timerChanged)
 
+    Q_PROPERTY(QString foo READ foo WRITE setFoo NOTIFY fooChanged)
+
     virtual QString foo() const override {
-        return "BaseService";
+        return m_foo;
+    }
+
+    void setFoo(const QString& foo) {
+        if(foo != m_foo) {
+            this->m_foo = foo;
+            emit fooChanged();
+        }
     }
 
 
@@ -43,6 +52,7 @@ public:
     QTimer *timer() const;
     void setTimer(QTimer *newTimer);
     CyclicDependency *dependency() const;
+
 
     Q_INVOKABLE void init() {
         initCalled = true;
@@ -66,6 +76,8 @@ signals:
 
     void dependencyChanged();
 
+    void fooChanged();
+
 private:
 
 
@@ -74,6 +86,7 @@ private:
     CyclicDependency* m_dependency;
     bool initCalled;
     QApplicationContext* m_appContext;
+    QString m_foo;
 };
 
 
