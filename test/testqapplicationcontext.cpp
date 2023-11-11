@@ -365,6 +365,44 @@ private slots:
         QVERIFY(!context->publish());
     }
 
+    void testDestroyRegisteredObject() {
+        std::unique_ptr<Interface1> base = std::make_unique<BaseService>();
+        auto baseReg = context->registerObject(base.get());
+        context->registerService(Service<Interface1,BaseService>{});
+        auto regs = context->getRegistration<Interface1>();
+
+        QCOMPARE(regs.maxPublications(), 2);
+        QCOMPARE(regs.publishedObjects().size(), 1);
+        QVERIFY(baseReg);
+        base.reset();
+        QVERIFY(!baseReg);
+        QCOMPARE(regs.maxPublications(), 1);
+        QCOMPARE(regs.publishedObjects().size(), 0);
+    }
+
+    void testDestroyRegisteredServiceExternally() {
+        auto reg = context->registerService(Service<Interface1,BaseService>{});
+        RegistrationSlot<Interface1> slot{reg};
+
+        QVERIFY(reg);
+        QCOMPARE(reg.maxPublications(), 1);
+        context->publish();
+        QCOMPARE(reg.publishedObjects().size(), 1);
+        QVERIFY(slot());
+        delete slot();
+        QVERIFY(reg);
+        QCOMPARE(reg.publishedObjects().size(), 0);
+    }
+
+    void testDestroyContext() {
+        auto reg = context->registerService(Service<Interface1,BaseService>{});
+
+        QVERIFY(reg);
+        QCOMPARE(reg.maxPublications(), 1);
+        delete context;
+        context = nullptr;
+        QVERIFY(!reg);
+    }
 
     void testRegisterObjectSignalsImmediately() {
         BaseService base;
