@@ -39,7 +39,7 @@ protected:
 
     virtual Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
 
-    virtual Registration* getRegistration(const std::type_info& service_type) const override;
+    virtual Registration* getRegistration(const std::type_info& service_type, const QString& name) const override;
 
 
 

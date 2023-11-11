@@ -112,6 +112,8 @@ private slots:
         QVERIFY(baseHasFactory);
         auto reg = context->registerService<BaseService>();
         QVERIFY(reg);
+        QVERIFY(!context->getRegistration<BaseService>("anotherName"));
+        QCOMPARE(context->getRegistration<BaseService>(reg.registeredName()), reg);
         QCOMPARE(reg.unwrap()->service_type(), typeid(BaseService));
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> slot{reg};

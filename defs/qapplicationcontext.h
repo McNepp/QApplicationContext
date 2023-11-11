@@ -1157,16 +1157,30 @@ public:
     }
 
     ///
+    /// \brief Obtains a ServiceRegistration for a service-type and name.
+    /// \tparam the required service-type.
+    /// \param name the desired name of the registration. If an empty String is passed, a Registration representing all
+    /// services of the required type will be returned.
+    /// \return a ServiceRegistration for the required type and name (if not empty). If no Service with the requested name and service-type could be found,
+    /// an invalid ServiceRegistration will be returned.
+    ///
+    template<typename S> [[nodiscard]] ServiceRegistration<S> getRegistration(const QString& name) const {
+        return ServiceRegistration<S>{getRegistration(typeid(S), name)};
+    }
+
+    ///
     /// \brief Obtains a ServiceRegistration for a service-type.
-    /// In contrast to the ServiceRegistration that is returned by registerService(),
+    /// <br>In contrast to the ServiceRegistration that is returned by registerService(),
     /// the ServiceRegistration returned by this function manages all Services of the requested type.
     /// This means that if you subscribe to it using ServiceRegistration::subscribe(), you will be notified
     /// about all those published services.
-    /// \return a ServiceRegistration that manages all Services of the requested type.
+    /// \tparam the required service-type.
+    /// \return a ServiceRegistration that corresponds to all registration (present and future) that match the service-type.
     ///
     template<typename S> [[nodiscard]] ServiceRegistration<S> getRegistration() const {
-        return ServiceRegistration<S>{getRegistration(typeid(S))};
+        return ServiceRegistration<S>{getRegistration(typeid(S), "")};
     }
+
 
 
 
@@ -1247,9 +1261,11 @@ protected:
     ///
     /// \brief Obtains a Registration for a service_type.
     /// \param service_type
+    /// \param name the desired name of the service. If an empty name is passed, a "Proxy" for all Services (present and future)
+    /// of the service-type will be returned.
     /// \return a Registration for the supplied service_type.
     ///
-    virtual Registration* getRegistration(const std::type_info& service_type) const = 0;
+    virtual Registration* getRegistration(const std::type_info& service_type, const QString& name) const = 0;
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
@@ -1289,8 +1305,8 @@ protected:
     /// \param service_type
     /// \return the result of getRegistration(const std::type_info&) const.
     ///
-    static Registration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type) {
-        return appContext.getRegistration(service_type);
+    static Registration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QString& name) {
+        return appContext.getRegistration(service_type, name);
     }
 
 

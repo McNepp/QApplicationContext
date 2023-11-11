@@ -380,8 +380,16 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
 
 
-Registration *StandardApplicationContext::getRegistration(const type_info &service_type) const
+Registration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
 {
+    if(!name.isEmpty()) {
+        auto reg = getRegistrationByName(name);
+        if(reg && reg->matches(service_type)) {
+            return reg;
+        }
+        qCCritical(loggingCategory()).noquote().nospace() << "Could not find Registration '" << name << "' for serivce-type " << service_type.name();
+        return nullptr;
+    }
     auto found = proxyRegistrationCache.find(service_type);
     ProxyRegistration* multiReg;
     if(found != proxyRegistrationCache.end()) {
@@ -1131,7 +1139,7 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
 
        auto result = autowirings.insert({type, binder});
        if(result.second) {
-           connect(this, &Registration::publishedObjectsChanged, this, TargetBinder{this, binder, applicationContext()->getRegistration(type)});
+           connect(this, &Registration::publishedObjectsChanged, this, TargetBinder{this, binder, applicationContext()->getRegistration(type, "")});
        }
        return result.second;
     }
