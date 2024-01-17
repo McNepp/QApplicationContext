@@ -843,6 +843,42 @@ private slots:
 
     }
 
+    void testCancelSubscription() {
+        auto reg = context->getRegistration<Interface1>();
+        QList<Interface1*> services;
+        auto subscription = reg.subscribe(this, [&services](Interface1* iface) {services.push_back(iface);});
+        context->registerService(Service<Interface1,BaseService>{}, "base1");
+        context->publish();
+        QCOMPARE(1, services.size());
+        BaseService2 base2;
+        context->registerObject<Interface1>(&base2);
+        QCOMPARE(2, services.size());
+        subscription.cancel();
+        BaseService2 base3;
+        context->registerObject<Interface1>(&base3);
+        QCOMPARE(2, services.size());
+    }
+
+    void testCancelAutowireSubscription() {
+        auto reg = context->registerService<CardinalityNService>(Service<CardinalityNService>{injectAll<Interface1>()});
+        auto subscription = reg.autowire(&CardinalityNService::addBase);
+        RegistrationSlot<CardinalityNService> slot{reg};
+        context->publish();
+        QCOMPARE(slot->my_bases.size(), 0);
+        context->registerService(Service<Interface1,BaseService>{}, "base1");
+
+        context->publish();
+
+        QCOMPARE(slot->my_bases.size(), 1);
+        BaseService2 base2;
+        context->registerObject<Interface1>(&base2);
+        QCOMPARE(slot->my_bases.size(), 2);
+        subscription.cancel();
+        BaseService2 base3;
+        context->registerObject<Interface1>(&base3);
+        QCOMPARE(slot->my_bases.size(), 2);
+    }
+
 
     void testPostProcessor() {
         auto processReg = context->registerService<PostProcessor>();

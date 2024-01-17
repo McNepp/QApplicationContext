@@ -19,6 +19,8 @@ class QApplicationContext;
 
 class Registration;
 
+class Subscription;
+
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 
 
@@ -48,38 +50,50 @@ inline QObjectList convertQList<QObject>(const QObjectList &list) {
 
 
 ///
-/// \brief The Subscription used by Registrations.
+/// \brief The Subscription created by Registrations.
 /// This is an internal Q_OBJECT whose sole purpose it is to provide a signal
-/// for publishing the current set of published Services.
+/// for publishing the current set of published Services.<br>
+/// Internally, a Subscription comprises two QMetaObject::Connections:
+/// one outgoing to the Client that wants to be informed about a Service's publication,
+/// and one incoming from the associated Registration.
 ///
 class Subscription : public QObject {
     Q_OBJECT
 
     friend class mcnepp::qtdi::Registration;
-    template<typename S> friend class ServiceRegistration;
+
+public:
+    virtual void cancel() {
+        QObject::disconnect(out_connection);
+        QObject::disconnect(in_connection);
+    }
+
+
 
 protected:
-    explicit Subscription(QObject* context, Qt::ConnectionType connectionType) : QObject(context),
-        m_connectionType(connectionType) {
-        connect(this, &Subscription::objectPublished, context, [this](QObject* obj) { notify(obj); }, connectionType);
+    Subscription(QObject* context, Qt::ConnectionType connectionType) : QObject(context)
+    {
+        out_connection = QObject::connect(this, &Subscription::objectPublished, context, [this](QObject* obj) { notify(obj); }, connectionType);
     }
 
 
     virtual void notify(QObject*) = 0;
 
-    Qt::ConnectionType connectionType() const {
-        return m_connectionType;
-    }
+
 
 signals:
 
     void objectPublished(QObject*);
+
 private:
-    Qt::ConnectionType m_connectionType;
+
+    void connect(Registration* reg);
+
+    QMetaObject::Connection out_connection;
+    QMetaObject::Connection in_connection;
 };
 
 }
-
 
 
 ///
@@ -163,11 +177,72 @@ protected:
 
 
 
-    virtual QMetaObject::Connection subscribe(detail::Subscription* subscription) = 0;
-
+    /**
+     * @brief Connects this Registration with the Subscription's signal.
+     * Connects Registration::objectPublished() to Subscription::objectPublished().<br>
+     * This is the default behaviour that may be invoked by sub-classses overriding this function.
+     * @param subscription the Subscribtion to connect to.
+     */
+    virtual void subscribe(detail::Subscription* subscription) {
+        subscription -> connect(this);
+    }
 
 };
 
+
+
+
+/**
+ * @brief An opaque handle to a detail::Subscription.
+ * Instances of this class will be returned by ServiceRegistration::subscribe().<br>
+ * The only thing you can do with a Subscription is test for validity and Subscription::cancel().
+ */
+class Subscription final {
+public:
+
+    explicit Subscription(detail::Subscription* subscription = nullptr) :
+        m_subscription(subscription) {
+
+    }
+
+    /**
+     * @brief Was this Subscription successful?
+     * Identical to isValid().
+     * @return true if this Subscription was successfully created.
+     */
+    explicit operator bool() const {
+        return isValid();
+    }
+
+    /**
+     * @brief Was this Subscription successful?
+     * @return true if this Subscription was successfully created.
+     */
+    bool isValid() const {
+        return m_subscription;
+    }
+
+    /**
+     * @brief Yields the underlying detail::Subscription.
+     * @return the underlying detail::Subscription.
+     */
+    detail::Subscription* unwrap() const {
+        return m_subscription;
+    }
+
+    /**
+     * @brief Cancels this Subscription.
+     */
+    void cancel() {
+        if(m_subscription) {
+            m_subscription->cancel();
+            m_subscription.clear();
+        }
+    }
+
+private:
+    QPointer<detail::Subscription> m_subscription;
+};
 
 
 ///
@@ -237,16 +312,18 @@ public:
     /// \param context the target-context.
     /// \param callable the piece of code to execute.
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
-    /// \return the Connection representing this subscription.
+    /// \return the Subscription.
     ///
-    template<typename F> QMetaObject::Connection subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
-        if(!registrationHolder) {
+    template<typename F> Subscription subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
+        if(!registrationHolder || !context) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
-            return QMetaObject::Connection{};
+            return Subscription{};
         }
 
+
         auto subscription = new CallableSubscription<F>{callable, context, connectionType};
-        return registrationHolder -> subscribe(subscription);
+        registrationHolder -> subscribe(subscription);
+        return Subscription{subscription};
     }
 
     /// \brief Receive all published QObjects in a type-safe way.
@@ -257,16 +334,17 @@ public:
     /// \param target the object on which the setter will be invoked.
     /// \param setter the method that will be invoked.
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
-    /// \return the Connection representing this subscription.
+    /// \return the Subscription.
     ///
-    template<typename T,typename R> QMetaObject::Connection subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
+    template<typename T,typename R> Subscription subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
         static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
-        if(!registrationHolder || !setter) {
+        if(!registrationHolder || !setter || !target) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
-            return QMetaObject::Connection{};
+            return Subscription{};
         }
         auto subscription = new SetterSubscription<T,R>{target, setter, connectionType};
-        return registrationHolder -> subscribe(subscription);
+        registrationHolder -> subscribe(subscription);
+        return Subscription{subscription};
     }
 
 
@@ -286,9 +364,9 @@ public:
     ///
     /// \tparam D the type of service that will be injected into Services of type `<S>`.
     /// \param injectionSlot the member-function to invoke when a service of type `<D>` is published.
-    /// \return `true` if this Registration could be successfully wired to the Registration of the type `<D>`.
+    /// \return the Subscription created by this autowiring.
     ///
-    template<typename D,typename R> bool autowire(R (S::*injectionSlot)(D*));
+    template<typename D,typename R> Subscription autowire(R (S::*injectionSlot)(D*));
 
 
 
@@ -372,12 +450,20 @@ private:
 
         void notify(QObject* obj) override {
             if(S* srv = dynamic_cast<S*>(obj)) {
-               m_target.subscribe(srv, m_setter);
+               subscriptions.push_back(m_target.subscribe(srv, m_setter));
+            }
+        }
+
+        void cancel() override {
+            detail::Subscription::cancel();
+            for(auto iter = subscriptions.begin(); iter != subscriptions.end(); iter = subscriptions.erase(iter)) {
+               iter->cancel();
             }
         }
 
         R (S::*m_setter)(D*);
         ServiceRegistration<D> m_target;
+        std::vector<mcnepp::qtdi::Subscription> subscriptions;
     };
 
 
@@ -1003,7 +1089,9 @@ constructor_t service_creator() {
 }
 
 
-
+inline void Subscription::connect(Registration* reg) {
+        in_connection = QObject::connect(reg, &Registration::objectPublished, this, &Subscription::objectPublished);
+}
 
 } // namespace detail
 
@@ -1292,14 +1380,14 @@ protected:
     template<typename S> friend class ServiceRegistration;
 };
 
-template<typename S> template<typename D,typename R> bool ServiceRegistration<S>::autowire(R (S::*injectionSlot)(D*)) {
+template<typename S> template<typename D,typename R> Subscription ServiceRegistration<S>::autowire(R (S::*injectionSlot)(D*)) {
     if(!registrationHolder || !injectionSlot) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot autowire " << *this;
-        return false;
+        return Subscription{};
     }
     auto subscription = new AutowireSubscription<D,R>{applicationContext()->template getRegistration<D>(), injectionSlot, registrationHolder};
     registrationHolder -> subscribe(subscription);
-    return true;
+    return Subscription{subscription};
 }
 
 

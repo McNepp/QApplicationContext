@@ -183,13 +183,13 @@ private:
             return theService;
         }
 
-        virtual QMetaObject::Connection subscribe(detail::Subscription* subscription) override {
+        virtual void subscribe(detail::Subscription* subscription) override {
             //If the Service is already present, there is no need to connect to the signal:
             if(theService) {
                 emit subscription->objectPublished(theService);
-                return QMetaObject::Connection{};
+                return;
             }
-            return connect(this, &Registration::objectPublished, subscription, &detail::Subscription::objectPublished);
+            Registration::subscribe(subscription);
         }
 
         void serviceDestroyed(QObject* srv);
@@ -265,10 +265,9 @@ private:
             return defaultConfig;
         }
 
-        virtual QMetaObject::Connection subscribe(detail::Subscription* subscription) override {
+        virtual void subscribe(detail::Subscription* subscription) override {
             //There is no need to connect to the signal, as the Object is already present
             emit subscription->objectPublished(theObj);
-            return QMetaObject::Connection{};
         }
 
         static const service_config defaultConfig;
@@ -320,7 +319,11 @@ private:
         void add(DescriptorRegistration* reg) {
             if(std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
                 registrations.push_back(reg);
-                connect(reg, &Registration::objectPublished, this, &ProxyRegistration::objectPublished);
+                if(reg->isPublished()) {
+                    emit objectPublished(reg->getObject());
+                } else {
+                    connect(reg, &Registration::objectPublished, this, &ProxyRegistration::objectPublished);
+                }
             }
         }
 
@@ -331,15 +334,14 @@ private:
             }
         }
 
-        virtual QMetaObject::Connection subscribe(detail::Subscription* subscription) override {
-            auto connection = connect(this, &Registration::objectPublished, subscription, &detail::Subscription::objectPublished);
+        virtual void subscribe(detail::Subscription* subscription) override {
+            Registration::subscribe(subscription);
             for(auto reg : registrations) {
                 auto obj = reg->getObject();
                 if(obj) {
                     emit subscription->objectPublished(obj);
                 }
             }
-            return connection;
         }
 
 
