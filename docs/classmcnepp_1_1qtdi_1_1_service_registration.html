@@ -79,11 +79,11 @@ $(function() {
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#friends">Friends</a> &#124;
 <a href="classmcnepp_1_1qtdi_1_1_service_registration-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">mcnepp::qtdi::ServiceRegistration&lt; S &gt; Class Template Reference<span class="mlabels"><span class="mlabel">final</span></span></div></div>
+  <div class="headertitle"><div class="title">mcnepp::qtdi::ServiceRegistration&lt; S &gt; Class Template Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>A type-safe wrapper for a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>. Instances of this class are being returned by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ac500bf06847e80745233dcb6bc3992da" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">QApplicationContext::getRegistration()</a>.  
+<p>A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ac500bf06847e80745233dcb6bc3992da" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">QApplicationContext::getRegistration()</a>.  
  <a href="classmcnepp_1_1qtdi_1_1_service_registration.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a>&gt;</code></p>
@@ -91,41 +91,37 @@ $(function() {
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a93698e59bc1e1c8cc8ed668c871708f7"><td class="memItemLeft" align="right" valign="top">QList&lt; S * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a93698e59bc1e1c8cc8ed668c871708f7">publishedObjects</a> () const</td></tr>
-<tr class="memdesc:a93698e59bc1e1c8cc8ed668c871708f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">The List of published services managed by this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>. This is a type-safe version of <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#af029c721d6d13c3f14db15cbe28ff9f0" title="The List of published Objects managed by this Registration. If this is a Registration obtained by QAp...">Registration::publishedObjects()</a>.  <br /></td></tr>
+<tr class="memdesc:a93698e59bc1e1c8cc8ed668c871708f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">The List of published services managed by this Registration. This is a type-safe version of Registration::publishedObjects().  <br /></td></tr>
 <tr class="separator:a93698e59bc1e1c8cc8ed668c871708f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af5d97e7a4082b36504dbb11f63603e32"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#af5d97e7a4082b36504dbb11f63603e32">applicationContext</a> () const</td></tr>
-<tr class="memdesc:af5d97e7a4082b36504dbb11f63603e32"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>.  <br /></td></tr>
+<tr class="memdesc:af5d97e7a4082b36504dbb11f63603e32"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this Registration.  <br /></td></tr>
 <tr class="separator:af5d97e7a4082b36504dbb11f63603e32"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acdca59a511c76b258438cda822414b20"><td class="memItemLeft" align="right" valign="top">QString&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#acdca59a511c76b258438cda822414b20">registeredName</a> () const</td></tr>
-<tr class="memdesc:acdca59a511c76b258438cda822414b20"><td class="mdescLeft">&#160;</td><td class="mdescRight">The name of this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>. This property will only yield a non-empty String if this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a> was obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>. For Registrations obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">QApplicationContext::getRegistration()</a>, it will yield the empty String.  <br /></td></tr>
+<tr class="memdesc:acdca59a511c76b258438cda822414b20"><td class="mdescLeft">&#160;</td><td class="mdescRight">The name of this Registration. This property will only yield a non-empty String if this Registration was obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>. For Registrations obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">QApplicationContext::getRegistration()</a>, it will yield the empty String.  <br /></td></tr>
 <tr class="separator:acdca59a511c76b258438cda822414b20"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa0a1e6e35bdfa125afbea3757e6d202e"><td class="memItemLeft" align="right" valign="top"><a id="aa0a1e6e35bdfa125afbea3757e6d202e" name="aa0a1e6e35bdfa125afbea3757e6d202e"></a>
-unsigned&#160;</td><td class="memItemRight" valign="bottom"><b>maxPublications</b> () const</td></tr>
-<tr class="memdesc:aa0a1e6e35bdfa125afbea3757e6d202e"><td class="mdescLeft">&#160;</td><td class="mdescRight">the maximum number of Objects that match this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>. For Registrations obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>, this function will always yield 1. For Registrations obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">QApplicationContext::getRegistration()</a>, this function may yield anything between 0 and the number of currently registered services of this type. <br /></td></tr>
-<tr class="separator:aa0a1e6e35bdfa125afbea3757e6d202e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1ae0d128c3d68f9d65ca536434508b9d"><td class="memTemplParams" colspan="2">template&lt;typename F &gt; </td></tr>
-<tr class="memitem:a1ae0d128c3d68f9d65ca536434508b9d"><td class="memTemplItemLeft" align="right" valign="top">QMetaObject::Connection&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a1ae0d128c3d68f9d65ca536434508b9d">subscribe</a> (QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
-<tr class="memdesc:a1ae0d128c3d68f9d65ca536434508b9d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the callable immediately with the current <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a93698e59bc1e1c8cc8ed668c871708f7" title="The List of published services managed by this Registration. This is a type-safe version of Registrat...">publishedObjects()</a>.  <br /></td></tr>
-<tr class="separator:a1ae0d128c3d68f9d65ca536434508b9d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af9ea168832838094cc47ad6ecbc74c10"><td class="memTemplParams" colspan="2">template&lt;typename T , typename R &gt; </td></tr>
-<tr class="memitem:af9ea168832838094cc47ad6ecbc74c10"><td class="memTemplItemLeft" align="right" valign="top">QMetaObject::Connection&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#af9ea168832838094cc47ad6ecbc74c10">subscribe</a> (T *target, R(T::*setter)(S *), Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
-<tr class="memdesc:af9ea168832838094cc47ad6ecbc74c10"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the setter immediately with the current <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a93698e59bc1e1c8cc8ed668c871708f7" title="The List of published services managed by this Registration. This is a type-safe version of Registrat...">publishedObjects()</a>.  <br /></td></tr>
-<tr class="separator:af9ea168832838094cc47ad6ecbc74c10"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6c4ed18aef33b3e0f3fe03d87e1c7e99"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a6c4ed18aef33b3e0f3fe03d87e1c7e99">unwrap</a> () const</td></tr>
-<tr class="memdesc:a6c4ed18aef33b3e0f3fe03d87e1c7e99"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the wrapped <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>.  <br /></td></tr>
-<tr class="separator:a6c4ed18aef33b3e0f3fe03d87e1c7e99"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aba8f5e848523953dce74596afb31b7c4"><td class="memTemplParams" colspan="2">template&lt;typename D , typename R &gt; </td></tr>
-<tr class="memitem:aba8f5e848523953dce74596afb31b7c4"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#aba8f5e848523953dce74596afb31b7c4">autowire</a> (R(S::*injectionSlot)(D *))</td></tr>
-<tr class="memdesc:aba8f5e848523953dce74596afb31b7c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects a service with another service from the same <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. Whenever a service of the type <code>&lt;D&gt;</code> is published, it will be injected into every service of type <code>&lt;S&gt;</code>, using the supplied member-function.  <br /></td></tr>
-<tr class="separator:aba8f5e848523953dce74596afb31b7c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24b0964fb6d3e00088e02a88ea712de9"><td class="memTemplParams" colspan="2">template&lt;typename F &gt; </td></tr>
+<tr class="memitem:a24b0964fb6d3e00088e02a88ea712de9"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a24b0964fb6d3e00088e02a88ea712de9">subscribe</a> (QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
+<tr class="memdesc:a24b0964fb6d3e00088e02a88ea712de9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the callable immediately with the current <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a93698e59bc1e1c8cc8ed668c871708f7" title="The List of published services managed by this Registration. This is a type-safe version of Registrat...">publishedObjects()</a>.  <br /></td></tr>
+<tr class="separator:a24b0964fb6d3e00088e02a88ea712de9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a340e54fef3530191c7a254983734630d"><td class="memTemplParams" colspan="2">template&lt;typename T , typename R &gt; </td></tr>
+<tr class="memitem:a340e54fef3530191c7a254983734630d"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a340e54fef3530191c7a254983734630d">subscribe</a> (T *target, R(T::*setter)(S *), Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
+<tr class="memdesc:a340e54fef3530191c7a254983734630d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the setter immediately with the current <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a93698e59bc1e1c8cc8ed668c871708f7" title="The List of published services managed by this Registration. This is a type-safe version of Registrat...">publishedObjects()</a>.  <br /></td></tr>
+<tr class="separator:a340e54fef3530191c7a254983734630d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a807189f587bb6f9e7e1b257f351cd219"><td class="memItemLeft" align="right" valign="top">detail::Registration *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a807189f587bb6f9e7e1b257f351cd219">unwrap</a> () const</td></tr>
+<tr class="memdesc:a807189f587bb6f9e7e1b257f351cd219"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the wrapped Registration.  <br /></td></tr>
+<tr class="separator:a807189f587bb6f9e7e1b257f351cd219"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a708db9a11aa43f0b24e3a9aa5bd83ce1"><td class="memTemplParams" colspan="2">template&lt;typename D , typename R &gt; </td></tr>
+<tr class="memitem:a708db9a11aa43f0b24e3a9aa5bd83ce1"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a708db9a11aa43f0b24e3a9aa5bd83ce1">autowire</a> (R(S::*injectionSlot)(D *))</td></tr>
+<tr class="memdesc:a708db9a11aa43f0b24e3a9aa5bd83ce1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects a service with another service from the same <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. Whenever a service of the type <code>&lt;D&gt;</code> is published, it will be injected into every service of type <code>&lt;S&gt;</code>, using the supplied member-function.  <br /></td></tr>
+<tr class="separator:a708db9a11aa43f0b24e3a9aa5bd83ce1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a95c55ff70d9a4bed4b2153639b301d72"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a95c55ff70d9a4bed4b2153639b301d72">isValid</a> () const</td></tr>
-<tr class="memdesc:a95c55ff70d9a4bed4b2153639b301d72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">ServiceRegistration</a> represent a valid Registration?  <br /></td></tr>
+<tr class="memdesc:a95c55ff70d9a4bed4b2153639b301d72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">ServiceRegistration</a> represent a valid Registration?  <br /></td></tr>
 <tr class="separator:a95c55ff70d9a4bed4b2153639b301d72"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af06fff4235fdd8704355d505fde5210c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#af06fff4235fdd8704355d505fde5210c">operator bool</a> () const</td></tr>
-<tr class="memdesc:af06fff4235fdd8704355d505fde5210c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">ServiceRegistration</a> represent a valid Registration? Equivalent to <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a95c55ff70d9a4bed4b2153639b301d72" title="Does this ServiceRegistration represent a valid Registration?">isValid()</a>.  <br /></td></tr>
+<tr class="memdesc:af06fff4235fdd8704355d505fde5210c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">ServiceRegistration</a> represent a valid Registration? Equivalent to <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a95c55ff70d9a4bed4b2153639b301d72" title="Does this ServiceRegistration represent a valid Registration?">isValid()</a>.  <br /></td></tr>
 <tr class="separator:af06fff4235fdd8704355d505fde5210c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac4b4fdcfa5f58699c1d2e3b05fee6e4d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#ac4b4fdcfa5f58699c1d2e3b05fee6e4d">operator!</a> () const</td></tr>
-<tr class="memdesc:ac4b4fdcfa5f58699c1d2e3b05fee6e4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">ServiceRegistration</a> represent an invalid Registration? Equivalent to <code>!isValid()</code>.  <br /></td></tr>
+<tr class="memdesc:ac4b4fdcfa5f58699c1d2e3b05fee6e4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">ServiceRegistration</a> represent an invalid Registration? Equivalent to <code>!isValid()</code>.  <br /></td></tr>
 <tr class="separator:ac4b4fdcfa5f58699c1d2e3b05fee6e4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
@@ -136,9 +132,9 @@ class&#160;</td><td class="memItemRight" valign="bottom"><b>QApplicationContext<
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename S&gt;<br />
-class mcnepp::qtdi::ServiceRegistration&lt; S &gt;</div><p>A type-safe wrapper for a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>. Instances of this class are being returned by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ac500bf06847e80745233dcb6bc3992da" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">QApplicationContext::getRegistration()</a>. </p>
-<p>This class offers the type-safe function <code><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a1ae0d128c3d68f9d65ca536434508b9d" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">subscribe()</a></code> which should be preferred over directly connecting to the signal <code><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aed815fb95cffed549b3fe7a2c9eebbfe" title="Signals when a service has been published.">Registration::publishedObjectsChanged()</a></code>.</p>
-<p>A <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">ServiceRegistration</a> contains a <em>non-owning pointer</em> to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a> whose lifetime of is bound to the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. The <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">ServiceRegistration</a> will become invalid after the corresponding <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> has been destructed. </p>
+class mcnepp::qtdi::ServiceRegistration&lt; S &gt;</div><p>A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ac500bf06847e80745233dcb6bc3992da" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">QApplicationContext::getRegistration()</a>. </p>
+<p>This class offers the type-safe function <code><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a24b0964fb6d3e00088e02a88ea712de9" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">subscribe()</a></code> which should be preferred over directly connecting to the signal <code>Registration::publishedObjectsChanged()</code>.</p>
+<p>A <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">ServiceRegistration</a> contains a <em>non-owning pointer</em> to a Registration whose lifetime of is bound to the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. The <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">ServiceRegistration</a> will become invalid after the corresponding <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> has been destructed. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="af5d97e7a4082b36504dbb11f63603e32" name="af5d97e7a4082b36504dbb11f63603e32"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af5d97e7a4082b36504dbb11f63603e32">&#9670;&#160;</a></span>applicationContext()</h2>
@@ -165,13 +161,13 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Yields the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>. </p>
-<dl class="section return"><dt>Returns</dt><dd>the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>, or <code>nullptr</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">ServiceRegistration</a> is invalid. </dd></dl>
+<p>Yields the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this Registration. </p>
+<dl class="section return"><dt>Returns</dt><dd>the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this Registration, or <code>nullptr</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">ServiceRegistration</a> is invalid. </dd></dl>
 
 </div>
 </div>
-<a id="aba8f5e848523953dce74596afb31b7c4" name="aba8f5e848523953dce74596afb31b7c4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aba8f5e848523953dce74596afb31b7c4">&#9670;&#160;</a></span>autowire()</h2>
+<a id="a708db9a11aa43f0b24e3a9aa5bd83ce1" name="a708db9a11aa43f0b24e3a9aa5bd83ce1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a708db9a11aa43f0b24e3a9aa5bd83ce1">&#9670;&#160;</a></span>autowire()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -179,27 +175,19 @@ template&lt;typename S &gt; </div>
 template&lt;typename S &gt; </div>
 <div class="memtemplate">
 template&lt;typename D , typename R &gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S &gt;::autowire </td>
+          <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S &gt;::autowire </td>
           <td>(</td>
           <td class="paramtype">R(S::*)(D *)&#160;</td>
           <td class="paramname"><em>injectionSlot</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 <p>Connects a service with another service from the same <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. Whenever a service of the type <code>&lt;D&gt;</code> is published, it will be injected into every service of type <code>&lt;S&gt;</code>, using the supplied member-function. </p>
-<p>You may autowire every dependent type <code>&lt;D&gt;</code> at most once. This function will return <code>false</code> if you invoke it multiple times for the same type <code>&lt;D&gt;</code>. </p><dl class="tparams"><dt>Template Parameters</dt><dd>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">D</td><td>the type of service that will be injected into Services of type <code>&lt;S&gt;</code>. </td></tr>
   </table>
@@ -211,7 +199,7 @@ template&lt;typename D , typename R &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd><code>true</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a> was wired for the first time for the type <code>&lt;D&gt;</code>. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>the <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by ServiceRegist...">Subscription</a> created by this autowiring. </dd></dl>
 
 </div>
 </div>
@@ -240,8 +228,8 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">ServiceRegistration</a> represent a valid Registration? </p>
-<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a> is present. </dd></dl>
+<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">ServiceRegistration</a> represent a valid Registration? </p>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying Registration is present. </dd></dl>
 
 </div>
 </div>
@@ -270,8 +258,8 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">ServiceRegistration</a> represent a valid Registration? Equivalent to <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a95c55ff70d9a4bed4b2153639b301d72" title="Does this ServiceRegistration represent a valid Registration?">isValid()</a>. </p>
-<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a> is present. </dd></dl>
+<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">ServiceRegistration</a> represent a valid Registration? Equivalent to <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a95c55ff70d9a4bed4b2153639b301d72" title="Does this ServiceRegistration represent a valid Registration?">isValid()</a>. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying Registration is present. </dd></dl>
 
 </div>
 </div>
@@ -300,8 +288,8 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">ServiceRegistration</a> represent an invalid Registration? Equivalent to <code>!isValid()</code>. </p>
-<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a> is not present. </dd></dl>
+<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">ServiceRegistration</a> represent an invalid Registration? Equivalent to <code>!isValid()</code>. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying Registration is not present. </dd></dl>
 
 </div>
 </div>
@@ -330,7 +318,7 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>The List of published services managed by this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>. This is a type-safe version of <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#af029c721d6d13c3f14db15cbe28ff9f0" title="The List of published Objects managed by this Registration. If this is a Registration obtained by QAp...">Registration::publishedObjects()</a>. </p>
+<p>The List of published services managed by this Registration. This is a type-safe version of Registration::publishedObjects(). </p>
 <dl class="section return"><dt>Returns</dt><dd>the List of published services. </dd></dl>
 
 </div>
@@ -360,13 +348,13 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>The name of this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>. This property will only yield a non-empty String if this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a> was obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>. For Registrations obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">QApplicationContext::getRegistration()</a>, it will yield the empty String. </p>
-<dl class="section return"><dt>Returns</dt><dd>the name of this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a> if it was obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>, the empty String otherwise. </dd></dl>
+<p>The name of this Registration. This property will only yield a non-empty String if this Registration was obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>. For Registrations obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">QApplicationContext::getRegistration()</a>, it will yield the empty String. </p>
+<dl class="section return"><dt>Returns</dt><dd>the name of this Registration if it was obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>, the empty String otherwise. </dd></dl>
 
 </div>
 </div>
-<a id="a1ae0d128c3d68f9d65ca536434508b9d" name="a1ae0d128c3d68f9d65ca536434508b9d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1ae0d128c3d68f9d65ca536434508b9d">&#9670;&#160;</a></span>subscribe() <span class="overload">[1/2]</span></h2>
+<a id="a24b0964fb6d3e00088e02a88ea712de9" name="a24b0964fb6d3e00088e02a88ea712de9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24b0964fb6d3e00088e02a88ea712de9">&#9670;&#160;</a></span>subscribe() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -379,7 +367,7 @@ template&lt;typename F &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">QMetaObject::Connection <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S &gt;::subscribe </td>
+          <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S &gt;::subscribe </td>
           <td>(</td>
           <td class="paramtype">QObject *&#160;</td>
           <td class="paramname"><em>context</em>, </td>
@@ -424,12 +412,12 @@ template&lt;typename F &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>the Connection representing this subscription. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>the <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by ServiceRegist...">Subscription</a>. </dd></dl>
 
 </div>
 </div>
-<a id="af9ea168832838094cc47ad6ecbc74c10" name="af9ea168832838094cc47ad6ecbc74c10"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af9ea168832838094cc47ad6ecbc74c10">&#9670;&#160;</a></span>subscribe() <span class="overload">[2/2]</span></h2>
+<a id="a340e54fef3530191c7a254983734630d" name="a340e54fef3530191c7a254983734630d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a340e54fef3530191c7a254983734630d">&#9670;&#160;</a></span>subscribe() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -442,7 +430,7 @@ template&lt;typename T , typename R &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">QMetaObject::Connection <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S &gt;::subscribe </td>
+          <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S &gt;::subscribe </td>
           <td>(</td>
           <td class="paramtype">T *&#160;</td>
           <td class="paramname"><em>target</em>, </td>
@@ -487,12 +475,12 @@ template&lt;typename T , typename R &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>the Connection representing this subscription. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>the <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by ServiceRegist...">Subscription</a>. </dd></dl>
 
 </div>
 </div>
-<a id="a6c4ed18aef33b3e0f3fe03d87e1c7e99" name="a6c4ed18aef33b3e0f3fe03d87e1c7e99"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6c4ed18aef33b3e0f3fe03d87e1c7e99">&#9670;&#160;</a></span>unwrap()</h2>
+<a id="a807189f587bb6f9e7e1b257f351cd219" name="a807189f587bb6f9e7e1b257f351cd219"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a807189f587bb6f9e7e1b257f351cd219">&#9670;&#160;</a></span>unwrap()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -503,7 +491,7 @@ template&lt;typename S &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a> * <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S &gt;::unwrap </td>
+          <td class="memname">detail::Registration * <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S &gt;::unwrap </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -516,8 +504,8 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Yields the wrapped <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>. </p>
-<dl class="section return"><dt>Returns</dt><dd>the wrapped <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>, or <code>nullptr</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a Registration. Instances of this class are being returned by the public func...">ServiceRegistration</a> wraps no valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type that serves as a &quot;handle&quot; for registrations in a QApplicationContext. This class has a read-on...">Registration</a>. </dd></dl>
+<p>Yields the wrapped Registration. </p>
+<dl class="section return"><dt>Returns</dt><dd>the wrapped Registration, or <code>nullptr</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">ServiceRegistration</a> wraps no valid Registration. </dd></dl>
 
 </div>
 </div>
