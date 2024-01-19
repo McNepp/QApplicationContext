@@ -35,16 +35,16 @@ public:
 
 protected:
 
-    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
+    virtual detail::Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
 
-    virtual Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
+    virtual detail::Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
 
-    virtual Registration* getRegistration(const std::type_info& service_type, const QString& name) const override;
+    virtual detail::Registration* getRegistration(const std::type_info& service_type, const QString& name) const override;
 
 
 private:
 
-    struct StandardRegistration : public Registration {
+    struct StandardRegistration : public detail::Registration {
         StandardRegistration(StandardApplicationContext* parent) : Registration(parent) {
 
         }

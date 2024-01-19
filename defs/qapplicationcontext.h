@@ -17,9 +17,11 @@ namespace mcnepp::qtdi {
 
 class QApplicationContext;
 
-class Registration;
 
-class Subscription;
+
+
+
+template<typename S> class ServiceRegistration;
 
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 
@@ -48,6 +50,7 @@ inline QObjectList convertQList<QObject>(const QObjectList &list) {
     return list;
 }
 
+class Registration;
 
 ///
 /// \brief The Subscription created by Registrations.
@@ -60,7 +63,7 @@ inline QObjectList convertQList<QObject>(const QObjectList &list) {
 class Subscription : public QObject {
     Q_OBJECT
 
-    friend class mcnepp::qtdi::Registration;
+    friend class Registration;
 
 public:
     virtual void cancel() {
@@ -93,7 +96,7 @@ private:
     QMetaObject::Connection in_connection;
 };
 
-}
+
 
 
 ///
@@ -117,7 +120,7 @@ class Registration : public QObject {
 
 public:
 
-    template<typename S> friend class ServiceRegistration;
+    template<typename S> friend class mcnepp::qtdi::ServiceRegistration;
 
     ///
     /// \brief The service-type that this Registration manages.
@@ -190,7 +193,7 @@ protected:
 };
 
 
-
+}
 
 /**
  * @brief An opaque handle to a detail::Subscription.
@@ -246,7 +249,7 @@ private:
 
 
 ///
-/// \brief A type-safe wrapper for a Registration.
+/// \brief A type-safe wrapper for a detail::Registration.
 /// Instances of this class are being returned by the public function-templates QApplicationContext::registerService(),
 /// QApplicationContext::registerObject() and QApplicationContext::getRegistration().
 ///
@@ -353,7 +356,7 @@ public:
     /// \brief Yields the wrapped Registration.
     /// \return the wrapped Registration, or `nullptr` if this ServiceRegistration wraps no valid Registration.
     ///
-    Registration* unwrap() const {
+    detail::Registration* unwrap() const {
         return registrationHolder.get();
     }
 
@@ -399,7 +402,7 @@ public:
 
 
 private:
-    explicit ServiceRegistration(Registration* reg) : registrationHolder{reg}
+    explicit ServiceRegistration(detail::Registration* reg) : registrationHolder{reg}
     {
     }
 
@@ -468,7 +471,7 @@ private:
 
 
 
-    QPointer<Registration> registrationHolder;
+    QPointer<detail::Registration> registrationHolder;
 };
 
 ///
@@ -1315,7 +1318,7 @@ protected:
     /// \param descriptor
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
-    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) = 0;
+    virtual detail::Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) = 0;
 
     ///
     /// \brief Registers an Object with this QApplicationContext.
@@ -1324,7 +1327,7 @@ protected:
     /// \param descriptor
     /// \return a Registration for the object, or `nullptr` if it could not be registered.
     ///
-    virtual Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) = 0;
+    virtual detail::Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) = 0;
 
     ///
     /// \brief Obtains a Registration for a service_type.
@@ -1333,7 +1336,7 @@ protected:
     /// of the service-type will be returned.
     /// \return a Registration for the supplied service_type.
     ///
-    virtual Registration* getRegistration(const std::type_info& service_type, const QString& name) const = 0;
+    virtual detail::Registration* getRegistration(const std::type_info& service_type, const QString& name) const = 0;
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
@@ -1345,7 +1348,7 @@ protected:
     /// \param descriptor
     /// \return the result of registerService(const QString&, service_descriptor*).
     ///
-    static Registration* delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config) {
+    static detail::Registration* delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config) {
         return appContext.registerService(name, descriptor, config);
     }
 
@@ -1360,7 +1363,7 @@ protected:
     /// \param descriptor
     /// \return the result of registerObject<S>(const QString& name, QObject*, service_descriptor*).
     ///
-    static Registration* delegateRegisterObject(QApplicationContext& appContext, const QString& name, QObject* obj, const service_descriptor& descriptor) {
+    static detail::Registration* delegateRegisterObject(QApplicationContext& appContext, const QString& name, QObject* obj, const service_descriptor& descriptor) {
         return appContext.registerObject(name, obj, descriptor);
     }
 
@@ -1373,7 +1376,7 @@ protected:
     /// \param service_type
     /// \return the result of getRegistration(const std::type_info&) const.
     ///
-    static Registration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QString& name) {
+    static detail::Registration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QString& name) {
         return appContext.getRegistration(service_type, name);
     }
 
