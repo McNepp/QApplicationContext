@@ -35,30 +35,19 @@ public:
 
 protected:
 
-    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
+    virtual detail::Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
 
-    virtual Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
+    virtual detail::Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
 
-    virtual Registration* getRegistration(const std::type_info& service_type, const QString& name) const override;
+    virtual detail::Registration* getRegistration(const std::type_info& service_type, const QString& name) const override;
 
 
 private:
 
-    struct StandardRegistration : public Registration {
-        StandardRegistration(StandardApplicationContext* parent) : Registration(parent) {
-
-        }
-
-        virtual StandardApplicationContext* applicationContext() const final override {
-            return static_cast<StandardApplicationContext*>(parent());
-        }
 
 
 
-    };
-
-
-    struct DescriptorRegistration : public StandardRegistration {
+    struct DescriptorRegistration : public detail::ServiceRegistration {
         const std::type_info& service_type() const override {
             return descriptor.service_type;
         }
@@ -68,7 +57,13 @@ private:
             return m_name;
         }
 
+        QVariantMap registeredProperties() const override {
+            return resolvedProperties;
+        }
 
+        virtual StandardApplicationContext* applicationContext() const final override {
+            return static_cast<StandardApplicationContext*>(parent());
+        }
 
         virtual QObject* getObject() const = 0;
 
@@ -80,13 +75,7 @@ private:
 
         virtual const service_config& config() const = 0;
 
-        virtual QObjectList publishedObjects() const override {
-            QObjectList result;
-            if(isPublished()) {
-                    result.push_back(getObject());
-            }
-            return result;
-        }
+
 
         virtual void notifyPublished() = 0;
 
@@ -129,6 +118,7 @@ private:
             DescriptorRegistration{name, desc, parent},
             theService(nullptr),
             m_config(config) {
+            resolvedProperties = config.properties;
 
         }
 
@@ -278,16 +268,18 @@ private:
     };
 
 
-    struct ProxyRegistration : public StandardRegistration {
+    struct ProxyRegistration : public detail::Registration {
 
 
 
         ProxyRegistration(const std::type_info& type, StandardApplicationContext* parent) :
-                StandardRegistration{parent},
+            detail::Registration{parent},
                 m_type(type){
         }
 
-
+        virtual StandardApplicationContext* applicationContext() const final override {
+            return static_cast<StandardApplicationContext*>(parent());
+        }
 
         const std::type_info& m_type;
 
@@ -296,19 +288,8 @@ private:
             return m_type;
         }
 
-        QString registeredName() const override {
-            return QString{};
-        }
 
-        virtual QObjectList publishedObjects() const override {
-            QObjectList result;
-            for(auto reg : registrations) {
-                if(reg->getObject()) {
-                    result.push_back(reg->getObject());
-                }
-            }
-            return result;
-        }
+
 
 
         virtual void print(QDebug out) const override {

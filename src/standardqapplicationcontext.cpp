@@ -83,6 +83,10 @@ inline QDebug operator << (QDebug out, const service_descriptor& descriptor) {
 }
 
 
+inline QDebug operator << (QDebug out, const Registration& reg) {
+    reg.print(out);
+    return out;
+}
 }
 
 namespace {
@@ -158,14 +162,11 @@ QString makeName(const std::type_info& type) {
 }
 
 
+
 }
 
 
 
-inline QDebug operator << (QDebug out, const Registration& reg) {
-    reg.print(out);
-    return out;
-}
 
 
 
@@ -380,7 +381,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
 
 
-Registration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
+detail::Registration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
 {
     if(!name.isEmpty()) {
         auto reg = getRegistrationByName(name);
@@ -714,12 +715,12 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
 
 }
 
-Registration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config)
+detail::Registration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config)
 {
     return registerDescriptor(name, descriptor, config, nullptr);
 }
 
-Registration * StandardApplicationContext::registerObject(const QString &name, QObject *obj, const service_descriptor& descriptor)
+detail::Registration * StandardApplicationContext::registerObject(const QString &name, QObject *obj, const service_descriptor& descriptor)
 {
     if(!obj) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << descriptor.service_type.name();
@@ -1129,7 +1130,7 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key, c
 const service_config StandardApplicationContext::ObjectRegistration::defaultConfig;
 
 StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
-    StandardRegistration(parent),
+    detail::ServiceRegistration(parent),
     descriptor{desc},
     m_name(name)
 {

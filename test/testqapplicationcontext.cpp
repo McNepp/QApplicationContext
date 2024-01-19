@@ -377,11 +377,11 @@ private slots:
         context->registerService(Service<Interface1,BaseService>{});
         auto regs = context->getRegistration<Interface1>();
 
-        QCOMPARE(regs.publishedObjects().size(), 1);
+        QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 1);
         QVERIFY(baseReg);
         base.reset();
         QVERIFY(!baseReg);
-        QCOMPARE(regs.publishedObjects().size(), 0);
+        QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 0);
     }
 
     void testDestroyRegisteredServiceExternally() {
@@ -390,11 +390,11 @@ private slots:
 
         QVERIFY(reg);
         context->publish();
-        QCOMPARE(reg.publishedObjects().size(), 1);
+        QCOMPARE(RegistrationSlot<Interface1>{reg}.invocationCount(), 1);
         QVERIFY(slot());
         delete slot();
         QVERIFY(reg);
-        QCOMPARE(reg.publishedObjects().size(), 0);
+        QCOMPARE(RegistrationSlot<Interface1>{reg}.invocationCount(), 0);
     }
 
     void testDestroyContext() {
@@ -775,7 +775,6 @@ private slots:
     void testInvalidServiceRegistrationEquality() {
         ServiceRegistration<Interface1> invalidReg;
         QVERIFY(!invalidReg);
-        QCOMPARE(invalidReg.publishedObjects().size(), 0);
         QCOMPARE(invalidReg.registeredName(), QString{});
         qCInfo(loggingCategory()) << invalidReg;
 
@@ -811,14 +810,11 @@ private slots:
         RegistrationSlot<Interface1> base2{reg2};
         RegistrationSlot<CardinalityNService> service{reg};
         QCOMPARE_NE(base1, base2);
-        QCOMPARE(regs.publishedObjects().size(), 2);
+
         QCOMPARE(service->my_bases.size(), 2);
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(regs.publishedObjects().size(), 2);
-        QVERIFY(regs.publishedObjects().contains(service->my_bases[0]));
-        QVERIFY(regs.publishedObjects().contains(service->my_bases[1]));
         QVERIFY(service->my_bases.contains(base1()));
         QVERIFY(service->my_bases.contains(base2()));
 
@@ -838,7 +834,6 @@ private slots:
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(regs.publishedObjects().size(), 2);
         QCOMPARE(service->my_bases[0], services());
 
     }
@@ -896,7 +891,6 @@ private slots:
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(regs.publishedObjects().size(), 2);
         QCOMPARE(processSlot->processedObjects.size(), 2);
         QVERIFY(processSlot->processedObjects.contains(dynamic_cast<QObject*>(base1())));
         QVERIFY(!processSlot->processedObjects.contains(dynamic_cast<QObject*>(base2())));

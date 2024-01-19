@@ -17,9 +17,11 @@ namespace mcnepp::qtdi {
 
 class QApplicationContext;
 
-class Registration;
 
-class Subscription;
+
+
+
+template<typename S> class ServiceRegistration;
 
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 
@@ -48,6 +50,7 @@ inline QObjectList convertQList<QObject>(const QObjectList &list) {
     return list;
 }
 
+class Registration;
 
 ///
 /// \brief The Subscription created by Registrations.
@@ -60,7 +63,7 @@ inline QObjectList convertQList<QObject>(const QObjectList &list) {
 class Subscription : public QObject {
     Q_OBJECT
 
-    friend class mcnepp::qtdi::Registration;
+    friend class Registration;
 
 public:
     virtual void cancel() {
@@ -93,12 +96,12 @@ private:
     QMetaObject::Connection in_connection;
 };
 
-}
+
 
 
 ///
 /// \brief A  type that serves as a "handle" for registrations in a QApplicationContext.
-/// This class has a read-only Q_PROPERTY `publishedObjects' with a corresponding signal `publishedObjectsChanged`.
+/// This class has a signal objectPublished(QObject*).
 /// However, it would be quite unwieldly to use that property directly in order to get hold of the
 /// Objects managed by this Registration.
 /// Rather, use the class-template `ServiceRegistration` and its type-safe method `ServiceRegistration::subscribe()`.
@@ -107,17 +110,10 @@ class Registration : public QObject {
     Q_OBJECT
 
 
-    ///
-    /// \brief The name of this Registration.
-    /// This property will only yield a non-empty String if this Registration was obtained via QApplicationContext::registerService().
-    /// For Registrations obtained via QApplicationContext::getRegistration(), it will yield the empty String.
-    ///
-    Q_PROPERTY(QString registeredName READ registeredName CONSTANT)
-
 
 public:
 
-    template<typename S> friend class ServiceRegistration;
+    template<typename S> friend class mcnepp::qtdi::ServiceRegistration;
 
     ///
     /// \brief The service-type that this Registration manages.
@@ -125,13 +121,6 @@ public:
     ///
     [[nodiscard]] virtual const std::type_info& service_type() const = 0;
 
-    /// \brief The List of published Objects managed by this Registration.
-    /// If this is a Registration obtained by QApplicationContext::registerService(), the List
-    /// can comprise of at most one Object.
-    /// However, if the Registration was obtained by QApplicationContext::getRegistration(),
-    /// it may comprise multiple objects of the supplied service-type.
-    ///
-    [[nodiscard]] virtual QObjectList publishedObjects() const = 0;
 
 
     ///
@@ -140,13 +129,6 @@ public:
     ///
     [[nodiscard]] virtual QApplicationContext* applicationContext() const = 0;
 
-    ///
-    /// \brief The name of this Registration.
-    /// This property will only yield a non-empty String if this Registration was obtained via QApplicationContext::registerService().
-    /// For Registrations obtained via QApplicationContext::getRegistration(), it will yield the empty String.
-    /// \return the name of this Registration if it was obtained via QApplicationContext::registerService(), the empty String otherwise.
-    ///
-    [[nodiscard]] virtual QString registeredName() const = 0;
 
     ///
     /// \brief Writes information about this Registration to QDebug.
@@ -189,8 +171,47 @@ protected:
 
 };
 
+class ServiceRegistration : public Registration {
+    Q_OBJECT
+
+    template<typename S> friend class mcnepp::qtdi::ServiceRegistration;
+public:
+    ///
+    /// \brief The name of this Registration.
+    /// This property will yield the name that was passed to QApplicationContext::registerService(),
+    /// or the synthetic name that was assigned by the ApplicationContext.
+    ///
+    Q_PROPERTY(QString registeredName READ registeredName CONSTANT)
+
+    Q_PROPERTY(QVariantMap registeredProperties READ registeredProperties CONSTANT)
 
 
+protected:
+
+
+    explicit ServiceRegistration(QObject* parent = nullptr) : Registration(parent) {
+
+    }
+
+    ///
+    /// \brief The name of this Registration.
+    /// This property will yield the name that was passed to QApplicationContext::registerService(),
+    /// or the synthetic name that was assigned by the ApplicationContext.
+    /// \return the name of this Registration.
+    ///
+    [[nodiscard]] virtual QString registeredName() const = 0;
+
+    /**
+     * @brief The properties that were supplied upon registration.
+     * @return The properties that were supplied upon registration.
+     */
+    [[nodiscard]] virtual QVariantMap registeredProperties() const = 0;
+
+
+};
+
+
+}
 
 /**
  * @brief An opaque handle to a detail::Subscription.
@@ -246,17 +267,18 @@ private:
 
 
 ///
-/// \brief A type-safe wrapper for a Registration.
+/// \brief A type-safe wrapper for a detail::Registration.
 /// Instances of this class are being returned by the public function-templates QApplicationContext::registerService(),
 /// QApplicationContext::registerObject() and QApplicationContext::getRegistration().
 ///
-/// This class offers the type-safe function `subscribe()` which should be preferred over directly connecting to the signal `Registration::publishedObjectsChanged()`.
+/// This class offers the type-safe function `subscribe()` which should be preferred over directly connecting to the signal `detail::Registration::objectPublished(QObject*)`.
 ///
 /// A ServiceRegistration contains a *non-owning pointer* to a Registration whose lifetime of is bound
 /// to the QApplicationContext. The ServiceRegistration will become invalid after the corresponding QApplicationContext has been destructed.
 ///
 template<typename S> class ServiceRegistration final {
     friend class QApplicationContext;
+    template<typename U> friend class ServiceRegistration;
 
 public:
 
@@ -265,16 +287,6 @@ public:
     }
 
 
-    /// \brief The List of published services managed by this Registration.
-    /// This is a type-safe version of Registration::publishedObjects().
-    /// \return the List of published services.
-    ///
-    [[nodiscard]] QList<S*> publishedObjects() const {
-        if(!registrationHolder) {
-            return QList<S*>{};
-        }
-        return detail::convertQList<S>(registrationHolder->publishedObjects());
-    }
 
     ///
     /// \brief Yields the QApplicationContext that manages this Registration.
@@ -295,10 +307,10 @@ public:
     /// \return the name of this Registration if it was obtained via QApplicationContext::registerService(), the empty String otherwise.
     ///
     [[nodiscard]] QString registeredName() const {
-        if(!registrationHolder) {
-            return QString{};
+        if(auto srv = dynamic_cast<detail::ServiceRegistration*>(registrationHolder.get())) {
+            return srv->registeredName();
         }
-        return registrationHolder->registeredName();
+        return QString{};
     }
 
 
@@ -353,7 +365,7 @@ public:
     /// \brief Yields the wrapped Registration.
     /// \return the wrapped Registration, or `nullptr` if this ServiceRegistration wraps no valid Registration.
     ///
-    Registration* unwrap() const {
+    detail::Registration* unwrap() const {
         return registrationHolder.get();
     }
 
@@ -399,7 +411,7 @@ public:
 
 
 private:
-    explicit ServiceRegistration(Registration* reg) : registrationHolder{reg}
+    explicit ServiceRegistration(detail::Registration* reg) : registrationHolder{reg}
     {
     }
 
@@ -442,33 +454,37 @@ private:
 
     template<typename D,typename R> struct AutowireSubscription : public detail::Subscription {
 
-        AutowireSubscription(ServiceRegistration<D>&& target, R (S::*setter)(D*), QObject* parent) : Subscription(parent, Qt::AutoConnection),
+        AutowireSubscription(detail::Registration* target, R (S::*setter)(D*), QObject* parent) : Subscription(parent, Qt::AutoConnection),
                m_setter(setter),
-            m_target(std::move(target))
+            m_target(target)
         {
         }
 
         void notify(QObject* obj) override {
             if(S* srv = dynamic_cast<S*>(obj)) {
-               subscriptions.push_back(m_target.subscribe(srv, m_setter));
+               ServiceRegistration<D> target{m_target};
+               auto subscr = target.subscribe(srv, m_setter);
+               if(subscr) {
+                   subscriptions.push_back(subscr);
+               }
             }
         }
 
         void cancel() override {
             detail::Subscription::cancel();
             for(auto iter = subscriptions.begin(); iter != subscriptions.end(); iter = subscriptions.erase(iter)) {
-               iter->cancel();
+                iter->cancel();
             }
         }
 
         R (S::*m_setter)(D*);
-        ServiceRegistration<D> m_target;
+        QPointer<detail::Registration> m_target;
         std::vector<mcnepp::qtdi::Subscription> subscriptions;
     };
 
 
 
-    QPointer<Registration> registrationHolder;
+    QPointer<detail::Registration> registrationHolder;
 };
 
 ///
@@ -1315,7 +1331,7 @@ protected:
     /// \param descriptor
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
-    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) = 0;
+    virtual detail::Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) = 0;
 
     ///
     /// \brief Registers an Object with this QApplicationContext.
@@ -1324,7 +1340,7 @@ protected:
     /// \param descriptor
     /// \return a Registration for the object, or `nullptr` if it could not be registered.
     ///
-    virtual Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) = 0;
+    virtual detail::Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) = 0;
 
     ///
     /// \brief Obtains a Registration for a service_type.
@@ -1333,7 +1349,7 @@ protected:
     /// of the service-type will be returned.
     /// \return a Registration for the supplied service_type.
     ///
-    virtual Registration* getRegistration(const std::type_info& service_type, const QString& name) const = 0;
+    virtual detail::Registration* getRegistration(const std::type_info& service_type, const QString& name) const = 0;
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
@@ -1345,7 +1361,7 @@ protected:
     /// \param descriptor
     /// \return the result of registerService(const QString&, service_descriptor*).
     ///
-    static Registration* delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config) {
+    static detail::Registration* delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config) {
         return appContext.registerService(name, descriptor, config);
     }
 
@@ -1360,7 +1376,7 @@ protected:
     /// \param descriptor
     /// \return the result of registerObject<S>(const QString& name, QObject*, service_descriptor*).
     ///
-    static Registration* delegateRegisterObject(QApplicationContext& appContext, const QString& name, QObject* obj, const service_descriptor& descriptor) {
+    static detail::Registration* delegateRegisterObject(QApplicationContext& appContext, const QString& name, QObject* obj, const service_descriptor& descriptor) {
         return appContext.registerObject(name, obj, descriptor);
     }
 
@@ -1373,7 +1389,7 @@ protected:
     /// \param service_type
     /// \return the result of getRegistration(const std::type_info&) const.
     ///
-    static Registration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QString& name) {
+    static detail::Registration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QString& name) {
         return appContext.getRegistration(service_type, name);
     }
 
@@ -1385,7 +1401,7 @@ template<typename S> template<typename D,typename R> Subscription ServiceRegistr
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot autowire " << *this;
         return Subscription{};
     }
-    auto subscription = new AutowireSubscription<D,R>{applicationContext()->template getRegistration<D>(), injectionSlot, registrationHolder};
+    auto subscription = new AutowireSubscription<D,R>{applicationContext()->template getRegistration<D>().unwrap(), injectionSlot, registrationHolder};
     registrationHolder -> subscribe(subscription);
     return Subscription{subscription};
 }
