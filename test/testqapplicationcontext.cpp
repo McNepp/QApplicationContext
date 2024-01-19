@@ -26,9 +26,9 @@ namespace mcnepp::qtditest {
 template<typename S> class RegistrationSlot : public QObject {
 public:
 
-    explicit RegistrationSlot(ServiceRegistration<S> registration) : m_obj(nullptr),
+    explicit RegistrationSlot(const Registration<S>& registration) : m_obj(nullptr),
         m_invocationCount(0) {
-        registration.subscribe(this, &RegistrationSlot::setObj);
+        const_cast<Registration<S>&>(registration).subscribe(this, &RegistrationSlot::setObj);
     }
 
 
@@ -728,6 +728,8 @@ private slots:
         //Same Interface, same implementation, but different properties:
         auto reg2 = context->registerService(Service<Interface1,BaseService>{}, "", make_config({{"objectName", "tester"}}));
         QCOMPARE_NE(reg2, reg);
+        QVariantMap expectedProperties{{"objectName", "tester"}};
+        QCOMPARE(reg2.registeredProperties(), expectedProperties);
     }
 
     void testFailRegisterTwiceSameName() {
@@ -762,15 +764,7 @@ private slots:
         QCOMPARE_NE(reg, ServiceRegistration<Interface1>{});
     }
 
-    void testServiceRegistrationMove() {
-        auto reg = context->registerService(Service<Interface1,BaseService>{});
-        QVERIFY(reg);
-        auto wrapped = reg.unwrap();
-        auto anotherReg = std::move(reg);
-        QVERIFY(anotherReg);
-        QVERIFY(!reg);
-        QCOMPARE(anotherReg.unwrap(), wrapped);
-    }
+
 
     void testInvalidServiceRegistrationEquality() {
         ServiceRegistration<Interface1> invalidReg;
@@ -806,6 +800,7 @@ private slots:
         auto reg = context->registerService(Service<CardinalityNService>{injectAll<Interface1>()});
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
+        QCOMPARE(regs.registeredServices().size(), 2);
         RegistrationSlot<Interface1> base1{reg1};
         RegistrationSlot<Interface1> base2{reg2};
         RegistrationSlot<CardinalityNService> service{reg};

@@ -21,7 +21,8 @@ class QApplicationContext;
 
 
 
-template<typename S> class ServiceRegistration;
+
+template<typename S> class Registration;
 
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 
@@ -104,7 +105,7 @@ private:
 /// This class has a signal objectPublished(QObject*).
 /// However, it would be quite unwieldly to use that property directly in order to get hold of the
 /// Objects managed by this Registration.
-/// Rather, use the class-template `ServiceRegistration` and its type-safe method `ServiceRegistration::subscribe()`.
+/// Rather, use the class-template `Registration` and its type-safe method `Registration::subscribe()`.
 ///
 class Registration : public QObject {
     Q_OBJECT
@@ -113,7 +114,7 @@ class Registration : public QObject {
 
 public:
 
-    template<typename S> friend class mcnepp::qtdi::ServiceRegistration;
+    template<typename S> friend class mcnepp::qtdi::Registration;
 
     ///
     /// \brief The service-type that this Registration manages.
@@ -174,7 +175,7 @@ protected:
 class ServiceRegistration : public Registration {
     Q_OBJECT
 
-    template<typename S> friend class mcnepp::qtdi::ServiceRegistration;
+
 public:
     ///
     /// \brief The name of this Registration.
@@ -184,14 +185,6 @@ public:
     Q_PROPERTY(QString registeredName READ registeredName CONSTANT)
 
     Q_PROPERTY(QVariantMap registeredProperties READ registeredProperties CONSTANT)
-
-
-protected:
-
-
-    explicit ServiceRegistration(QObject* parent = nullptr) : Registration(parent) {
-
-    }
 
     ///
     /// \brief The name of this Registration.
@@ -206,6 +199,39 @@ protected:
      * @return The properties that were supplied upon registration.
      */
     [[nodiscard]] virtual QVariantMap registeredProperties() const = 0;
+
+protected:
+
+
+    explicit ServiceRegistration(QObject* parent = nullptr) : Registration(parent) {
+
+    }
+
+
+
+
+};
+
+class ProxyRegistration : public Registration {
+    Q_OBJECT
+
+
+public:
+
+    /**
+     * @brief Yields the ServiceRegistrations that this proxy currently knows of.
+     * Should you register more Services that match this service_type, the QList may grow.
+     * @return the ServiceRegistrations that this proxy currently knows of.
+     */
+    [[nodiscard]] virtual QList<ServiceRegistration*> registeredServices() const = 0;
+
+
+protected:
+
+
+    explicit ProxyRegistration(QObject* parent = nullptr) : Registration(parent) {
+
+    }
 
 
 };
@@ -273,24 +299,22 @@ private:
 ///
 /// This class offers the type-safe function `subscribe()` which should be preferred over directly connecting to the signal `detail::Registration::objectPublished(QObject*)`.
 ///
-/// A ServiceRegistration contains a *non-owning pointer* to a Registration whose lifetime of is bound
-/// to the QApplicationContext. The ServiceRegistration will become invalid after the corresponding QApplicationContext has been destructed.
+/// A Registration contains a *non-owning pointer* to a Registration whose lifetime of is bound
+/// to the QApplicationContext. The Registration will become invalid after the corresponding QApplicationContext has been destructed.
 ///
-template<typename S> class ServiceRegistration final {
-    friend class QApplicationContext;
-    template<typename U> friend class ServiceRegistration;
+template<typename S> class Registration {
+
+    template<typename U> friend class Registration;
 
 public:
 
-    ServiceRegistration() {
 
-    }
 
 
 
     ///
     /// \brief Yields the QApplicationContext that manages this Registration.
-    /// \return the QApplicationContext that manages this Registration, or `nullptr` if this ServiceRegistration is invalid.
+    /// \return the QApplicationContext that manages this Registration, or `nullptr` if this Registration is invalid.
     ///
     [[nodiscard]] QApplicationContext* applicationContext() const {
         if(!registrationHolder) {
@@ -300,18 +324,7 @@ public:
     }
 
 
-    ///
-    /// \brief The name of this Registration.
-    /// This property will only yield a non-empty String if this Registration was obtained via QApplicationContext::registerService().
-    /// For Registrations obtained via QApplicationContext::getRegistration(), it will yield the empty String.
-    /// \return the name of this Registration if it was obtained via QApplicationContext::registerService(), the empty String otherwise.
-    ///
-    [[nodiscard]] QString registeredName() const {
-        if(auto srv = dynamic_cast<detail::ServiceRegistration*>(registrationHolder.get())) {
-            return srv->registeredName();
-        }
-        return QString{};
-    }
+
 
 
 
@@ -363,7 +376,7 @@ public:
 
     ///
     /// \brief Yields the wrapped Registration.
-    /// \return the wrapped Registration, or `nullptr` if this ServiceRegistration wraps no valid Registration.
+    /// \return the wrapped Registration, or `nullptr` if this Registration wraps no valid Registration.
     ///
     detail::Registration* unwrap() const {
         return registrationHolder.get();
@@ -383,7 +396,7 @@ public:
 
 
     ///
-    /// \brief Does this ServiceRegistration represent a valid %Registration?
+    /// \brief Does this Registration represent a valid %Registration?
     /// \return `true` if the underlying Registration is present.
     ///
     bool isValid() const {
@@ -391,7 +404,7 @@ public:
     }
 
     ///
-    /// \brief Does this ServiceRegistration represent a valid %Registration?
+    /// \brief Does this Registration represent a valid %Registration?
     /// Equivalent to isValid().
     /// \return `true` if the underlying Registration is present.
     ///
@@ -400,7 +413,7 @@ public:
     }
 
     ///
-    /// \brief Does this ServiceRegistration represent an invalid %Registration?
+    /// \brief Does this Registration represent an invalid %Registration?
     /// Equivalent to `!isValid()`.
     /// \return `true` if the underlying Registration is not present.
     ///
@@ -410,13 +423,17 @@ public:
 
 
 
-private:
-    explicit ServiceRegistration(detail::Registration* reg) : registrationHolder{reg}
+protected:
+    explicit Registration(detail::Registration* reg = nullptr) : registrationHolder{reg}
     {
     }
 
+    ~Registration() {
+
+    }
+
     template<typename F> class CallableSubscription : public detail::Subscription {
-        friend class ServiceRegistration;
+        friend class Registration;
 
         explicit CallableSubscription(F callable, QObject* context, Qt::ConnectionType connectionType) : Subscription(context, connectionType),
             m_callable(callable) {
@@ -435,7 +452,7 @@ private:
 
 
     template<typename T,typename R> struct SetterSubscription : public detail::Subscription {
-        friend class ServiceRegistration;
+        friend class Registration;
 
         SetterSubscription(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType) : Subscription(target, connectionType),
             m_setter(setter),
@@ -462,7 +479,7 @@ private:
 
         void notify(QObject* obj) override {
             if(S* srv = dynamic_cast<S*>(obj)) {
-               ServiceRegistration<D> target{m_target};
+               Registration<D> target{m_target};
                auto subscr = target.subscribe(srv, m_setter);
                if(subscr) {
                    subscriptions.push_back(subscr);
@@ -487,6 +504,67 @@ private:
     QPointer<detail::Registration> registrationHolder;
 };
 
+template<typename S> class ServiceRegistration final : public Registration<S> {
+    friend class QApplicationContext;
+    template<typename U> friend class ProxyRegistration;
+
+public:
+    [[nodiscard]] QString registeredName() const {
+        if(auto reg = unwrap()) {
+            return reg->registeredName();
+        }
+        return QString{};
+    }
+
+    [[nodiscard]] QVariantMap registeredProperties() const {
+        if(auto reg = unwrap()) {
+            return reg->registeredProperties();
+        }
+        return QVariantMap{};
+    }
+
+    detail::ServiceRegistration* unwrap() const {
+        return dynamic_cast<detail::ServiceRegistration*>(Registration<S>::unwrap());
+    }
+
+    ServiceRegistration() = default;
+private:
+    explicit ServiceRegistration(detail::ServiceRegistration* reg) : Registration<S>{reg} {
+
+    }
+};
+
+template<typename S> class ProxyRegistration final : public Registration<S> {
+    friend class QApplicationContext;
+public:
+
+
+    ProxyRegistration() = default;
+
+    /**
+     * @brief Yields the ServiceRegistrations that this proxy currently knows of.
+     * Should you register more Services that match this service_type, the QList may grow.
+     * @return the ServiceRegistrations that this proxy currently knows of.
+     */
+    [[nodiscard]] QList<ServiceRegistration<S>> registeredServices() const {
+        QList<ServiceRegistration<S>> result;
+        if(auto reg = unwrap()) {
+            for(auto srv : reg->registeredServices()) {
+                result.push_back(ServiceRegistration<S>{srv});
+            }
+        }
+        return result;
+    }
+
+    detail::ProxyRegistration* unwrap() const {
+        return dynamic_cast<detail::ProxyRegistration*>(Registration<S>::unwrap());
+    }
+private:
+    explicit ProxyRegistration(detail::ProxyRegistration* reg) : Registration<S>{reg} {
+
+    }
+};
+
 ///
 /// \brief Tests two ServiceRegistrations for equality.
 ///
@@ -496,7 +574,7 @@ private:
 /// \param reg2
 /// \return `true` if the two ServiceRegistrations are logically equal.
 ///
-template<typename S1,typename S2> bool operator==(const ServiceRegistration<S1>& reg1, const ServiceRegistration<S2>& reg2) {
+template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, const Registration<S2>& reg2) {
     return reg1.unwrap() == reg2.unwrap() && reg1;
 }
 
@@ -509,18 +587,20 @@ template<typename S1,typename S2> bool operator==(const ServiceRegistration<S1>&
 /// \param reg2
 /// \return `true` if the two ServiceRegistrations are logically different.
 ///
-template<typename S1,typename S2> bool operator!=(const ServiceRegistration<S1>& reg1, const ServiceRegistration<S2>& reg2) {
+template<typename S1,typename S2> bool operator!=(const Registration<S1>& reg1, const Registration<S2>& reg2) {
     return reg1.unwrap() != reg2.unwrap() || !reg1;
 }
 
-template<typename S> QDebug operator<<(QDebug out, const ServiceRegistration<S>& reg) {
+template<typename S> QDebug operator<<(QDebug out, const Registration<S>& reg) {
     if(reg) {
         reg.unwrap()->print(out);
     } else {
-        out.noquote().nospace() << "ServiceRegistration for service-type '" << typeid(S).name() << "' [invalid]";
+        out.noquote().nospace() << "Registration for service-type '" << typeid(S).name() << "' [invalid]";
     }
     return out;
 }
+
+
 
 
 
@@ -1243,7 +1323,7 @@ public:
     ///
     /// \brief Obtains a ServiceRegistration for a service-type and name.
     /// \tparam the required service-type.
-    /// \param name the desired name of the registration. If an empty String is passed, a Registration representing all
+    /// \param name the desired name of the registration.
     /// services of the required type will be returned.
     /// \return a ServiceRegistration for the required type and name (if not empty). If no Service with the requested name and service-type could be found,
     /// an invalid ServiceRegistration will be returned.
@@ -1253,16 +1333,16 @@ public:
     }
 
     ///
-    /// \brief Obtains a ServiceRegistration for a service-type.
+    /// \brief Obtains a ProxyRegistration for a service-type.
     /// <br>In contrast to the ServiceRegistration that is returned by registerService(),
-    /// the ServiceRegistration returned by this function manages all Services of the requested type.
-    /// This means that if you subscribe to it using ServiceRegistration::subscribe(), you will be notified
+    /// the ProxyRegistration returned by this function manages all Services of the requested type.
+    /// This means that if you subscribe to it using Registration::subscribe(), you will be notified
     /// about all those published services.
     /// \tparam the required service-type.
-    /// \return a ServiceRegistration that corresponds to all registration (present and future) that match the service-type.
+    /// \return a Registration that corresponds to all registration (present and future) that match the service-type.
     ///
-    template<typename S> [[nodiscard]] ServiceRegistration<S> getRegistration() const {
-        return ServiceRegistration<S>{getRegistration(typeid(S), "")};
+    template<typename S> [[nodiscard]] ProxyRegistration<S> getRegistration() const {
+        return ProxyRegistration<S>{getRegistration(typeid(S))};
     }
 
 
@@ -1331,7 +1411,7 @@ protected:
     /// \param descriptor
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
-    virtual detail::Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) = 0;
+    virtual detail::ServiceRegistration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) = 0;
 
     ///
     /// \brief Registers an Object with this QApplicationContext.
@@ -1340,7 +1420,16 @@ protected:
     /// \param descriptor
     /// \return a Registration for the object, or `nullptr` if it could not be registered.
     ///
-    virtual detail::Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) = 0;
+    virtual detail::ServiceRegistration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) = 0;
+
+    ///
+    /// \brief Obtains a Registration for a service_type.
+    /// \param service_type
+    /// \param name the desired name of the service.
+    /// of the service-type will be returned.
+    /// \return a Registration for the supplied service_type.
+    ///
+    virtual detail::ServiceRegistration* getRegistration(const std::type_info& service_type, const QString& name) const = 0;
 
     ///
     /// \brief Obtains a Registration for a service_type.
@@ -1349,7 +1438,7 @@ protected:
     /// of the service-type will be returned.
     /// \return a Registration for the supplied service_type.
     ///
-    virtual detail::Registration* getRegistration(const std::type_info& service_type, const QString& name) const = 0;
+    virtual detail::ProxyRegistration* getRegistration(const std::type_info& service_type) const = 0;
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
@@ -1361,7 +1450,7 @@ protected:
     /// \param descriptor
     /// \return the result of registerService(const QString&, service_descriptor*).
     ///
-    static detail::Registration* delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config) {
+    static detail::ServiceRegistration* delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config) {
         return appContext.registerService(name, descriptor, config);
     }
 
@@ -1376,8 +1465,21 @@ protected:
     /// \param descriptor
     /// \return the result of registerObject<S>(const QString& name, QObject*, service_descriptor*).
     ///
-    static detail::Registration* delegateRegisterObject(QApplicationContext& appContext, const QString& name, QObject* obj, const service_descriptor& descriptor) {
+    static detail::ServiceRegistration* delegateRegisterObject(QApplicationContext& appContext, const QString& name, QObject* obj, const service_descriptor& descriptor) {
         return appContext.registerObject(name, obj, descriptor);
+    }
+
+    ///
+    /// \brief Allows you to invoke a protected virtual function on another target.
+    /// If you are implementing getRegistration(const std::type_info&) const and want to delegate
+    /// to another implementation, access-rules will not allow you to invoke the function on another target.
+    ///
+    /// \param appContext the target on which to invoke getRegistration(const std::type_info&) const.
+    /// \param service_type
+    /// \return the result of getRegistration(const std::type_info&,const QString&) const.
+    ///
+    static detail::ServiceRegistration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QString& name) {
+        return appContext.getRegistration(service_type, name);
     }
 
     ///
@@ -1389,14 +1491,14 @@ protected:
     /// \param service_type
     /// \return the result of getRegistration(const std::type_info&) const.
     ///
-    static detail::Registration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QString& name) {
-        return appContext.getRegistration(service_type, name);
+    static detail::ProxyRegistration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type) {
+        return appContext.getRegistration(service_type);
     }
 
     template<typename S> friend class ServiceRegistration;
 };
 
-template<typename S> template<typename D,typename R> Subscription ServiceRegistration<S>::autowire(R (S::*injectionSlot)(D*)) {
+template<typename S> template<typename D,typename R> Subscription Registration<S>::autowire(R (S::*injectionSlot)(D*)) {
     if(!registrationHolder || !injectionSlot) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot autowire " << *this;
         return Subscription{};

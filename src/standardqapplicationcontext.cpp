@@ -381,16 +381,8 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
 
 
-detail::Registration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
+detail::ProxyRegistration *StandardApplicationContext::getRegistration(const type_info &service_type) const
 {
-    if(!name.isEmpty()) {
-        auto reg = getRegistrationByName(name);
-        if(reg && reg->matches(service_type)) {
-            return reg;
-        }
-        qCCritical(loggingCategory()).noquote().nospace() << "Could not find Registration '" << name << "' for serivce-type " << service_type.name();
-        return nullptr;
-    }
     auto found = proxyRegistrationCache.find(service_type);
     ProxyRegistration* multiReg;
     if(found != proxyRegistrationCache.end()) {
@@ -406,6 +398,16 @@ detail::Registration *StandardApplicationContext::getRegistration(const type_inf
     }
     return multiReg;
 
+}
+
+detail::ServiceRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
+{
+    auto reg = getRegistrationByName(name);
+    if(reg && reg->matches(service_type)) {
+        return reg;
+    }
+    qCCritical(loggingCategory()).noquote().nospace() << "Could not find Registration '" << name << "' for serivce-type " << service_type.name();
+    return nullptr;
 }
 
 
@@ -715,12 +717,12 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
 
 }
 
-detail::Registration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config)
+detail::ServiceRegistration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config)
 {
     return registerDescriptor(name, descriptor, config, nullptr);
 }
 
-detail::Registration * StandardApplicationContext::registerObject(const QString &name, QObject *obj, const service_descriptor& descriptor)
+detail::ServiceRegistration * StandardApplicationContext::registerObject(const QString &name, QObject *obj, const service_descriptor& descriptor)
 {
     if(!obj) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << descriptor.service_type.name();

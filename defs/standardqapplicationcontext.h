@@ -35,11 +35,13 @@ public:
 
 protected:
 
-    virtual detail::Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
+    virtual detail::ServiceRegistration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
 
-    virtual detail::Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
+    virtual detail::ServiceRegistration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
 
-    virtual detail::Registration* getRegistration(const std::type_info& service_type, const QString& name) const override;
+    virtual detail::ServiceRegistration* getRegistration(const std::type_info& service_type, const QString& name) const override;
+
+    virtual detail::ProxyRegistration* getRegistration(const std::type_info& service_type) const override;
 
 
 private:
@@ -268,17 +270,21 @@ private:
     };
 
 
-    struct ProxyRegistration : public detail::Registration {
+    struct ProxyRegistration : public detail::ProxyRegistration {
 
 
 
         ProxyRegistration(const std::type_info& type, StandardApplicationContext* parent) :
-            detail::Registration{parent},
+            detail::ProxyRegistration{parent},
                 m_type(type){
         }
 
         virtual StandardApplicationContext* applicationContext() const final override {
             return static_cast<StandardApplicationContext*>(parent());
+        }
+
+        virtual QList<detail::ServiceRegistration*> registeredServices() const override {
+            return QList<detail::ServiceRegistration*>{registrations.begin(), registrations.end()};
         }
 
         const std::type_info& m_type;
