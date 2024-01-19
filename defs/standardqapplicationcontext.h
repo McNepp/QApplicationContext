@@ -35,17 +35,16 @@ public:
 
 protected:
 
-    virtual Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
+    virtual detail::Registration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
 
-    virtual Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
+    virtual detail::Registration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
 
-    virtual Registration* getRegistration(const std::type_info& service_type, const QString& name) const override;
-
+    virtual detail::Registration* getRegistration(const std::type_info& service_type, const QString& name) const override;
 
 
 private:
 
-    struct StandardRegistration : public Registration {
+    struct StandardRegistration : public detail::Registration {
         StandardRegistration(StandardApplicationContext* parent) : Registration(parent) {
 
         }
@@ -54,41 +53,7 @@ private:
             return static_cast<StandardApplicationContext*>(parent());
         }
 
-        virtual bool registerAutoWiring(const std::type_info& type, binder_t binder) final override;
-    private:
-        struct Injector : public PublicationNotifier {
-            injector_t m_injector;
 
-            Injector(Registration* dependency, injector_t injector) : PublicationNotifier(dependency),
-                m_injector(injector) {
-            }
-
-            void notify(QObject* obj) const override {
-                m_injector(obj);
-            }
-        };
-
-        struct TargetBinder : public PublicationNotifier {
-            binder_t m_binder;
-            Registration* dependency;
-
-            TargetBinder(Registration* target, binder_t binder, Registration* dependency) : PublicationNotifier(target),
-                m_binder(binder) {
-                this->dependency = dependency;
-            }
-
-            void notify(QObject* obj) const override {
-                    injector_t injector = m_binder(obj);
-                    if(!injector) {
-                        qCritical(loggingCategory()).noquote().nospace() << "Cannot inject " << dependency->service_type().name() << " into " << obj;
-                        return;
-                    }
-                    connect(dependency, &Registration::publishedObjectsChanged, obj, Injector{dependency, injector});
-            }
-        };
-
-
-        std::unordered_map<std::type_index,binder_t> autowirings;
 
     };
 
@@ -103,6 +68,8 @@ private:
             return m_name;
         }
 
+
+
         virtual QObject* getObject() const = 0;
 
         virtual bool isPublished() const = 0;
@@ -113,7 +80,6 @@ private:
 
         virtual const service_config& config() const = 0;
 
-
         virtual QObjectList publishedObjects() const override {
             QObjectList result;
             if(isPublished()) {
@@ -123,10 +89,6 @@ private:
         }
 
         virtual void notifyPublished() = 0;
-
-        virtual unsigned maxPublications() const override {
-            return 1;
-        }
 
 
         bool matches(const std::type_index& type) const {
@@ -148,9 +110,6 @@ private:
         virtual QObjectList privateObjects() const = 0;
 
         virtual QObject* createPrivateObject(const QVariantList& dependencies) = 0;
-
-
-
 
 
         service_descriptor descriptor;
@@ -175,7 +134,7 @@ private:
 
         void notifyPublished() override {
             if(theService) {
-                emit publishedObjectsChanged();
+                    emit objectPublished(theService);
             }
         }
 
@@ -224,6 +183,14 @@ private:
             return theService;
         }
 
+        virtual void subscribe(detail::Subscription* subscription) override {
+            //If the Service is already present, there is no need to connect to the signal:
+            if(theService) {
+                emit subscription->objectPublished(theService);
+                return;
+            }
+            Registration::subscribe(subscription);
+        }
 
         void serviceDestroyed(QObject* srv);
 
@@ -234,7 +201,6 @@ private:
                 std::unique_ptr<QObject> srv{theService};
                 QObject::disconnect(onDestroyed);
                 theService = nullptr;
-                emit publishedObjectsChanged();
                 return true;
             }
             return false;
@@ -299,6 +265,11 @@ private:
             return defaultConfig;
         }
 
+        virtual void subscribe(detail::Subscription* subscription) override {
+            //There is no need to connect to the signal, as the Object is already present
+            emit subscription->objectPublished(theObj);
+        }
+
         static const service_config defaultConfig;
 
 
@@ -339,33 +310,40 @@ private:
             return result;
         }
 
-        virtual unsigned maxPublications() const override {
-            return registrations.size();
-        }
 
         virtual void print(QDebug out) const override {
-            out.nospace().noquote() << "Services [" << maxPublications() << "] with service-type '" << service_type().name() << "'";
+            out.nospace().noquote() << "Services [" << registrations.size() << "] with service-type '" << service_type().name() << "'";
         }
 
 
         void add(DescriptorRegistration* reg) {
             if(std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
                 registrations.push_back(reg);
-                emit maxPublicationsChanged(registrations.size());
-                connect(reg, &Registration::publishedObjectsChanged, this, &ProxyRegistration::publishedObjectsChanged);
+                if(reg->isPublished()) {
+                    emit objectPublished(reg->getObject());
+                } else {
+                    connect(reg, &Registration::objectPublished, this, &ProxyRegistration::objectPublished);
+                }
             }
         }
 
         void remove(DescriptorRegistration* reg) {
             auto found = std::find(registrations.begin(), registrations.end(), reg);
             if(found != registrations.end()) {
-                if((*found)->isPublished()) {
-                    emit publishedObjectsChanged();
-                }
                 registrations.erase(found);
-                emit maxPublicationsChanged(registrations.size());
             }
         }
+
+        virtual void subscribe(detail::Subscription* subscription) override {
+            Registration::subscribe(subscription);
+            for(auto reg : registrations) {
+                auto obj = reg->getObject();
+                if(obj) {
+                    emit subscription->objectPublished(obj);
+                }
+            }
+        }
+
 
 
 
@@ -419,6 +397,7 @@ private:
 
     std::pair<QVariant,Status> resolveProperty(const QString& group, const QVariant& valueOrPlaceholder, const QVariant& defaultValue, bool allowPartial);
 
+
     descriptor_list registrations;
 
     std::unordered_map<QString,DescriptorRegistration*> registrationsByName;
@@ -434,18 +413,19 @@ namespace detail {
 class BindingProxy : public QObject {
     Q_OBJECT
 
-    friend class mcnepp::qtdi::StandardApplicationContext;
+public:
     BindingProxy(QMetaProperty sourceProp, QObject* source, QMetaProperty targetProp, QObject* target);
-
-    QMetaProperty m_sourceProp;
-    QObject* m_source;
-    QMetaProperty m_targetProp;
-    QObject* m_target;
 
     static const QMetaMethod& notifySlot();
 
 private slots:
     void notify();
+private:
+    QMetaProperty m_sourceProp;
+    QObject* m_source;
+    QMetaProperty m_targetProp;
+    QObject* m_target;
+
 };
 }
 

@@ -298,6 +298,10 @@ private slots:
     }
 
 
+
+
+
+
     void testAutowiredPropertyByName() {
         QTimer timer;
         timer.setObjectName("timer");
@@ -373,12 +377,10 @@ private slots:
         context->registerService(Service<Interface1,BaseService>{});
         auto regs = context->getRegistration<Interface1>();
 
-        QCOMPARE(regs.maxPublications(), 2);
         QCOMPARE(regs.publishedObjects().size(), 1);
         QVERIFY(baseReg);
         base.reset();
         QVERIFY(!baseReg);
-        QCOMPARE(regs.maxPublications(), 1);
         QCOMPARE(regs.publishedObjects().size(), 0);
     }
 
@@ -387,7 +389,6 @@ private slots:
         RegistrationSlot<Interface1> slot{reg};
 
         QVERIFY(reg);
-        QCOMPARE(reg.maxPublications(), 1);
         context->publish();
         QCOMPARE(reg.publishedObjects().size(), 1);
         QVERIFY(slot());
@@ -400,7 +401,6 @@ private slots:
         auto reg = context->registerService(Service<Interface1,BaseService>{});
 
         QVERIFY(reg);
-        QCOMPARE(reg.maxPublications(), 1);
         delete context;
         context = nullptr;
         QVERIFY(!reg);
@@ -425,7 +425,6 @@ private slots:
     void testOptionalDependencyWithAutowire() {
         auto reg = context->registerService(Service<DependentService>{injectIfPresent<Interface1>()});
         QVERIFY(reg.autowire(&DependentService::setBase));
-        QVERIFY(!reg.autowire(&DependentService::setBase)); //Should report false on the second time.
         RegistrationSlot<DependentService> service{reg};
         QVERIFY(context->publish());
         QVERIFY(!service->m_dependency);
@@ -439,7 +438,6 @@ private slots:
     void testCardinalityNDependencyWithAutowire() {
         auto reg = context->registerService(Service<CardinalityNService>{injectAll<Interface1>()});
         QVERIFY(reg.autowire(&CardinalityNService::addBase));
-        QVERIFY(!reg.autowire(&CardinalityNService::addBase)); //Should report false on the second time.
         RegistrationSlot<CardinalityNService> service{reg};
         QVERIFY(context->publish());
         QCOMPARE(service->my_bases.size(), 0);
@@ -813,6 +811,7 @@ private slots:
         RegistrationSlot<Interface1> base2{reg2};
         RegistrationSlot<CardinalityNService> service{reg};
         QCOMPARE_NE(base1, base2);
+        QCOMPARE(regs.publishedObjects().size(), 2);
         QCOMPARE(service->my_bases.size(), 2);
 
         RegistrationSlot<Interface1> services{regs};
@@ -842,6 +841,42 @@ private slots:
         QCOMPARE(regs.publishedObjects().size(), 2);
         QCOMPARE(service->my_bases[0], services());
 
+    }
+
+    void testCancelSubscription() {
+        auto reg = context->getRegistration<Interface1>();
+        QList<Interface1*> services;
+        auto subscription = reg.subscribe(this, [&services](Interface1* iface) {services.push_back(iface);});
+        context->registerService(Service<Interface1,BaseService>{}, "base1");
+        context->publish();
+        QCOMPARE(1, services.size());
+        BaseService2 base2;
+        context->registerObject<Interface1>(&base2);
+        QCOMPARE(2, services.size());
+        subscription.cancel();
+        BaseService2 base3;
+        context->registerObject<Interface1>(&base3);
+        QCOMPARE(2, services.size());
+    }
+
+    void testCancelAutowireSubscription() {
+        auto reg = context->registerService<CardinalityNService>(Service<CardinalityNService>{injectAll<Interface1>()});
+        auto subscription = reg.autowire(&CardinalityNService::addBase);
+        RegistrationSlot<CardinalityNService> slot{reg};
+        context->publish();
+        QCOMPARE(slot->my_bases.size(), 0);
+        context->registerService(Service<Interface1,BaseService>{}, "base1");
+
+        context->publish();
+
+        QCOMPARE(slot->my_bases.size(), 1);
+        BaseService2 base2;
+        context->registerObject<Interface1>(&base2);
+        QCOMPARE(slot->my_bases.size(), 2);
+        subscription.cancel();
+        BaseService2 base3;
+        context->registerObject<Interface1>(&base3);
+        QCOMPARE(slot->my_bases.size(), 2);
     }
 
 
@@ -963,17 +998,12 @@ private slots:
 
     void testPublishAdditionalServices() {
 
-        unsigned maxPublished = 0;
         unsigned contextPublished = context->published();
         unsigned contextPending = context->pendingPublication();
         connect(context, &QApplicationContext::publishedChanged, this, [this,&contextPublished] {contextPublished = context->published();});
         connect(context, &QApplicationContext::pendingPublicationChanged, this, [this,&contextPending] {contextPending = context->pendingPublication();});
         auto baseReg = context->getRegistration<Interface1>();
-        connect(baseReg.unwrap(), &Registration::maxPublicationsChanged, this, [&maxPublished](unsigned v) {maxPublished = v;});
-        QCOMPARE(baseReg.maxPublications(), 0);
         context->registerService(Service<Interface1,BaseService>{}, "base");
-        QCOMPARE(baseReg.maxPublications(), 1);
-        QCOMPARE(maxPublished, 1);
         QCOMPARE(contextPending, 1);
         RegistrationSlot<Interface1> baseSlot{baseReg};
         auto regDep = context->registerService(Service<DependentService>{inject<Interface1>()});
@@ -990,7 +1020,6 @@ private slots:
         QCOMPARE(baseSlot(), baseSlot());
 
         auto anotherBaseReg = context->registerService(Service<Interface1,BaseService2>{}, "anotherBase");
-        QCOMPARE(maxPublished, 2);
         QCOMPARE(contextPending, 1);
         QCOMPARE(contextPublished, 2);
 

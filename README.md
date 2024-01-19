@@ -473,14 +473,17 @@ In some cases, you need to obtain a reference to a member of the Context after i
 This is where the return-value of mcnepp::qtdi::QApplicationContext::registerService() comes into play: mcnepp::qtdi::ServiceRegistration.
 
 It offers the method mcnepp::qtdi::ServiceRegistration::subscribe(), which is a type-safe version of a Qt-Signal.
-(It is actually implemented in terms of the Signal mcnepp::qtdi::Registration::publishedObjectsChanged()).
+(It is actually implemented in terms of the Signal mcnepp::qtdi::Registration::objectPublished(QObject*)).
 
 In addition to being type-safe, the method mcnepp::qtdi::ServiceRegistration::subscribe() has the advantage that it will automatically inject the service if you subscribe after the service has already been published.  
-This code shows how to do this:
+This code shows how to utilize it:
 
     auto registration = context -> registerService(Service<PropFetcher,RestPropFetcher>{inject<QNetworkAccessManager>()}, "hamburgWeather", make_config({{"url", "${weatherUrl}${hamburgStationId}"}})); 
     
     registration.subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got the PropFetcher!"; });
+    
+The function mcnepp::qtdi::ServiceRegistration::subscribe() does return a value of type mcnepp::qtdi::Subscription.
+Usually, you may ignore this return-value. However, it can be used for error-checking and for cancelling a subscription, should that be necessary.
 
 ## Accessing published members of the ApplicationContext
 

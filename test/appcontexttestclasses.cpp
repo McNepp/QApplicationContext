@@ -13,7 +13,8 @@ BaseService::BaseService(CyclicDependency* dependency, QObject *parent)
       m_dependency(dependency),
       m_timer(nullptr),
      initCalled(false),
-     m_appContext(nullptr)
+     m_appContext(nullptr),
+    m_foo("BaseService")
 {
 
 }
