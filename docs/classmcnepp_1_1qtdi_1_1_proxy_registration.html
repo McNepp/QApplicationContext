@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.7"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>QApplicationContext: mcnepp::qtdi::ServiceRegistration&lt; S &gt; Class Template Reference</title>
+<title>QApplicationContext: mcnepp::qtdi::ProxyRegistration&lt; S &gt; Class Template Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -70,38 +70,35 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>mcnepp</b></li><li class="navelem"><b>qtdi</b></li><li class="navelem"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a></li>  </ul>
+<li class="navelem"><b>mcnepp</b></li><li class="navelem"><b>qtdi</b></li><li class="navelem"><a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#friends">Friends</a> &#124;
-<a href="classmcnepp_1_1qtdi_1_1_service_registration-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">mcnepp::qtdi::ServiceRegistration&lt; S &gt; Class Template Reference</div></div>
+<a href="classmcnepp_1_1qtdi_1_1_proxy_registration-members.html">List of all members</a>  </div>
+  <div class="headertitle"><div class="title">mcnepp::qtdi::ProxyRegistration&lt; S &gt; Class Template Reference<span class="mlabels"><span class="mlabel">final</span></span></div></div>
 </div><!--header-->
 <div class="contents">
 <div class="dynheader">
-Inheritance diagram for mcnepp::qtdi::ServiceRegistration&lt; S &gt;:</div>
+Inheritance diagram for mcnepp::qtdi::ProxyRegistration&lt; S &gt;:</div>
 <div class="dyncontent">
  <div class="center">
-  <img src="classmcnepp_1_1qtdi_1_1_service_registration.png" usemap="#mcnepp::qtdi::ServiceRegistration_3C_20S_20_3E_map" alt=""/>
-  <map id="mcnepp::qtdi::ServiceRegistration_3C_20S_20_3E_map" name="mcnepp::qtdi::ServiceRegistration_3C_20S_20_3E_map">
-<area href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub..." alt="mcnepp::qtdi::Registration&lt; S &gt;" shape="rect" coords="0,0,229,24"/>
+  <img src="classmcnepp_1_1qtdi_1_1_proxy_registration.png" usemap="#mcnepp::qtdi::ProxyRegistration_3C_20S_20_3E_map" alt=""/>
+  <map id="mcnepp::qtdi::ProxyRegistration_3C_20S_20_3E_map" name="mcnepp::qtdi::ProxyRegistration_3C_20S_20_3E_map">
+<area href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub..." alt="mcnepp::qtdi::Registration&lt; S &gt;" shape="rect" coords="0,0,218,24"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:acdca59a511c76b258438cda822414b20"><td class="memItemLeft" align="right" valign="top"><a id="acdca59a511c76b258438cda822414b20" name="acdca59a511c76b258438cda822414b20"></a>
-QString&#160;</td><td class="memItemRight" valign="bottom"><b>registeredName</b> () const</td></tr>
-<tr class="separator:acdca59a511c76b258438cda822414b20"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a075c9188ec76a9e3efb8c68f7f03d7d0"><td class="memItemLeft" align="right" valign="top"><a id="a075c9188ec76a9e3efb8c68f7f03d7d0" name="a075c9188ec76a9e3efb8c68f7f03d7d0"></a>
-QVariantMap&#160;</td><td class="memItemRight" valign="bottom"><b>registeredProperties</b> () const</td></tr>
-<tr class="separator:a075c9188ec76a9e3efb8c68f7f03d7d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a275b652d05e3a03d73ffb5bb855e1f1d"><td class="memItemLeft" align="right" valign="top"><a id="a275b652d05e3a03d73ffb5bb855e1f1d" name="a275b652d05e3a03d73ffb5bb855e1f1d"></a>
-detail::ServiceRegistration *&#160;</td><td class="memItemRight" valign="bottom"><b>unwrap</b> () const</td></tr>
-<tr class="separator:a275b652d05e3a03d73ffb5bb855e1f1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac678484fd32771fedd2452a43e8f5706"><td class="memItemLeft" align="right" valign="top">QList&lt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html#ac678484fd32771fedd2452a43e8f5706">registeredServices</a> () const</td></tr>
+<tr class="memdesc:ac678484fd32771fedd2452a43e8f5706"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the ServiceRegistrations that this proxy currently knows of. Should you register more Services that match this service_type, the QList may grow.  <br /></td></tr>
+<tr class="separator:ac678484fd32771fedd2452a43e8f5706"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20583eea7ec38bb26bcabebc57a49653"><td class="memItemLeft" align="right" valign="top"><a id="a20583eea7ec38bb26bcabebc57a49653" name="a20583eea7ec38bb26bcabebc57a49653"></a>
+detail::ProxyRegistration *&#160;</td><td class="memItemRight" valign="bottom"><b>unwrap</b> () const</td></tr>
+<tr class="separator:a20583eea7ec38bb26bcabebc57a49653"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classmcnepp_1_1qtdi_1_1_registration"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classmcnepp_1_1qtdi_1_1_registration')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">mcnepp::qtdi::Registration&lt; S &gt;</a></td></tr>
 <tr class="memitem:a4c4c71ac5e0fb82a2af9819abae7c121 inherit pub_methods_classmcnepp_1_1qtdi_1_1_registration"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a4c4c71ac5e0fb82a2af9819abae7c121">applicationContext</a> () const</td></tr>
 <tr class="memdesc:a4c4c71ac5e0fb82a2af9819abae7c121 inherit pub_methods_classmcnepp_1_1qtdi_1_1_registration"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>.  <br /></td></tr>
@@ -136,18 +133,6 @@ Friends</h2></td></tr>
 <tr class="memitem:a04cd159ac5debc635b2a4ef737e28882"><td class="memItemLeft" align="right" valign="top"><a id="a04cd159ac5debc635b2a4ef737e28882" name="a04cd159ac5debc635b2a4ef737e28882"></a>
 class&#160;</td><td class="memItemRight" valign="bottom"><b>QApplicationContext</b></td></tr>
 <tr class="separator:a04cd159ac5debc635b2a4ef737e28882"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adc81520409c5cc4d859111d00ed58c8b"><td class="memTemplParams" colspan="2"><a id="adc81520409c5cc4d859111d00ed58c8b" name="adc81520409c5cc4d859111d00ed58c8b"></a>
-template&lt;typename U &gt; </td></tr>
-<tr class="memitem:adc81520409c5cc4d859111d00ed58c8b"><td class="memTemplItemLeft" align="right" valign="top">class&#160;</td><td class="memTemplItemRight" valign="bottom"><b>ProxyRegistration</b></td></tr>
-<tr class="separator:adc81520409c5cc4d859111d00ed58c8b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa20a8731c669382f656e4200b8d52e74"><td class="memTemplParams" colspan="2"><a id="aa20a8731c669382f656e4200b8d52e74" name="aa20a8731c669382f656e4200b8d52e74"></a>
-template&lt;typename F , typename T &gt; </td></tr>
-<tr class="memitem:aa20a8731c669382f656e4200b8d52e74"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><b>bind</b> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; F &gt; &amp;, const char *, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;, const char *)</td></tr>
-<tr class="separator:aa20a8731c669382f656e4200b8d52e74"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0a8a74d0e9ccdaa6bbae8c98374439f4"><td class="memTemplParams" colspan="2"><a id="a0a8a74d0e9ccdaa6bbae8c98374439f4" name="a0a8a74d0e9ccdaa6bbae8c98374439f4"></a>
-template&lt;typename F , typename T , typename A , typename R &gt; </td></tr>
-<tr class="memitem:a0a8a74d0e9ccdaa6bbae8c98374439f4"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><b>bind</b> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; F &gt; &amp;source, const char *sourceProperty, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, R(T::*setter)(A))</td></tr>
-<tr class="separator:a0a8a74d0e9ccdaa6bbae8c98374439f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
@@ -156,6 +141,37 @@ Additional Inherited Members</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Registration</b> (detail::Registration *reg=nullptr)</td></tr>
 <tr class="separator:a6de07d97ddcb229062f226fde7c09627 inherit pro_methods_classmcnepp_1_1qtdi_1_1_registration"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="ac678484fd32771fedd2452a43e8f5706" name="ac678484fd32771fedd2452a43e8f5706"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac678484fd32771fedd2452a43e8f5706">&#9670;&#160;</a></span>registeredServices()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename S &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">QList&lt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt; &gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">mcnepp::qtdi::ProxyRegistration</a>&lt; S &gt;::registeredServices </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Yields the ServiceRegistrations that this proxy currently knows of. Should you register more Services that match this service_type, the QList may grow. </p>
+<dl class="section return"><dt>Returns</dt><dd>the ServiceRegistrations that this proxy currently knows of. </dd></dl>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>defs/<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a></li>
 </ul>
