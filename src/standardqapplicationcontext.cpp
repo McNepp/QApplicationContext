@@ -12,11 +12,11 @@ namespace mcnepp::qtdi {
 
 namespace detail {
 
-BindingProxy::BindingProxy(QMetaProperty sourceProp, QObject* source, QMetaProperty targetProp, QObject* target) : QObject(source),
+BindingProxy::BindingProxy(QMetaProperty sourceProp, QObject* source, const detail::property_descriptor& setter, QObject* target) : QObject(source),
     m_source(source),
     m_sourceProp(sourceProp),
     m_target(target),
-    m_targetProp(targetProp){
+    m_setter(setter) {
 
 }
 
@@ -28,7 +28,12 @@ const QMetaMethod &BindingProxy::notifySlot()
 
 void BindingProxy::notify()
 {
-    m_targetProp.write(m_target, m_sourceProp.read(m_source));
+    m_setter.setter(m_target, m_sourceProp.read(m_source));
+}
+
+
+inline detail::property_descriptor propertySetter(const QMetaProperty& property) {
+    return {property.name(), [property](QObject* target, QVariant value) {property.write(target, value);}};
 }
 
 inline QString kindToString(int kind) {
@@ -82,6 +87,29 @@ inline QDebug operator << (QDebug out, const service_descriptor& descriptor) {
     return out;
 }
 
+bool isBindable(const QMetaProperty& sourceProperty) {
+    return sourceProperty.hasNotifySignal() || sourceProperty.isBindable();
+}
+
+
+std::variant<bool,QMetaObject::Connection,QPropertyNotifier> bindProperty(QObject* source, const QMetaProperty& sourceProperty, QObject* target, const detail::property_descriptor& setter) {
+    if(sourceProperty.hasNotifySignal()) {
+        detail::BindingProxy* proxy = new detail::BindingProxy{sourceProperty, source, setter, target};
+        auto connection = QObject::connect(source, sourceProperty.notifySignal(), proxy, detail::BindingProxy::notifySlot());
+        qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << sourceProperty.name() << "' of " << source << " to " << setter <<" of " << target;
+        return std::move(connection);
+    }
+    if(sourceProperty.isBindable()) {
+        auto sourceBindable = sourceProperty.bindable(source);
+        auto notifier = sourceBindable.addNotifier([sourceProperty,source,setter,target]{
+            setter.setter(target, sourceProperty.read(source));
+        });
+        qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << sourceProperty.name() << "' of " << source << " to " << setter << " of " << target;
+        return std::move(notifier);
+    }
+    qCInfo(loggingCategory()).nospace().noquote() << "Could not bind property '" << sourceProperty.name() << "' of " << source << " to " << setter << " of " << target;
+    return false;
+}
 
 inline QDebug operator << (QDebug out, const Registration& reg) {
     reg.print(out);
@@ -381,32 +409,38 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
 
 
-detail::Registration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
+detail::ServiceRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
 {
-    if(!name.isEmpty()) {
-        auto reg = getRegistrationByName(name);
-        if(reg && reg->matches(service_type)) {
-            return reg;
-        }
-        qCCritical(loggingCategory()).noquote().nospace() << "Could not find Registration '" << name << "' for serivce-type " << service_type.name();
-        return nullptr;
+    DescriptorRegistration* reg = getRegistrationByName(name);
+    if(reg && reg->matches(service_type)) {
+        return reg;
     }
-    auto found = proxyRegistrationCache.find(service_type);
-    ProxyRegistration* multiReg;
-    if(found != proxyRegistrationCache.end()) {
-        multiReg = found->second;
-    } else {
-        multiReg = new ProxyRegistration{service_type, const_cast<StandardApplicationContext*>(this)};
-        for(auto reg : registrations) {
-            if(reg->matches(service_type)) {
-                multiReg->add(reg);
-            }
-        }
-        proxyRegistrationCache.insert({service_type, multiReg});
-    }
-    return multiReg;
-
+    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name << "' and service-type " << service_type.name();
+    return nullptr;
 }
+
+detail::ProxyRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, LookupKind lookup, q_predicate_t dynamicCheck, const QMetaObject* metaObject) const
+{
+    ProxyRegistration* proxyReg;
+    auto found = proxyRegistrationCache.find({service_type, lookup});
+    if(found != proxyRegistrationCache.end()) {
+        return found->second;
+    }
+    switch(lookup) {
+    case LookupKind::STATIC:
+         proxyReg = new StaticProxyRegistration{service_type, metaObject, const_cast<StandardApplicationContext*>(this)};
+        break;
+    case LookupKind::DYNAMIC:
+        proxyReg = new DynamicProxyRegistration{service_type, dynamicCheck, metaObject, const_cast<StandardApplicationContext*>(this)};
+        break;
+    }
+    for(auto reg : registrations) {
+        proxyReg->add(reg);
+    }
+    proxyRegistrationCache.insert({{service_type, lookup}, proxyReg});
+    return proxyReg;
+}
+
 
 
 
@@ -445,9 +479,11 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
             std::unique_ptr<DescriptorRegistration> regPtr{*iter};
             iter = registrations.erase(iter);
             qCInfo(loggingCategory()).noquote().nospace() << *regPtr << " has been destroyed externally";
-            auto proxy = proxyRegistrationCache.find(regPtr->service_type());
-            if(proxy != proxyRegistrationCache.end()) {
-                proxy -> second->remove(regPtr.get());
+            for(LookupKind lookup : {LookupKind::STATIC, LookupKind::DYNAMIC}) {
+                auto proxy = proxyRegistrationCache.find({regPtr->service_type(), lookup});
+                if(proxy != proxyRegistrationCache.end()) {
+                    proxy -> second->remove(regPtr.get());
+                }
             }
         } else {
             ++iter;
@@ -704,9 +740,11 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
     }
     registrationsByName.insert({name, registration});
     registrations.push_back(registration);
-    auto proxy = proxyRegistrationCache.find(registration->service_type());
-    if(proxy != proxyRegistrationCache.end()) {
-        proxy->second->add(registration);
+    for(LookupKind lookup : {LookupKind::STATIC, LookupKind::DYNAMIC}) {
+        auto proxy = proxyRegistrationCache.find({registration->service_type(), lookup});
+        if(proxy != proxyRegistrationCache.end()) {
+            proxy->second->add(registration);
+        }
     }
     qCInfo(loggingCategory()).noquote().nospace() << "Registered " << *registration;
     emit pendingPublicationChanged();
@@ -715,12 +753,12 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
 
 }
 
-detail::Registration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config)
+detail::ServiceRegistration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config)
 {
     return registerDescriptor(name, descriptor, config, nullptr);
 }
 
-detail::Registration * StandardApplicationContext::registerObject(const QString &name, QObject *obj, const service_descriptor& descriptor)
+detail::ServiceRegistration * StandardApplicationContext::registerObject(const QString &name, QObject *obj, const service_descriptor& descriptor)
 {
     if(!obj) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << descriptor.service_type.name();
@@ -791,7 +829,7 @@ StandardApplicationContext::ResolvedBeanRef StandardApplicationContext::resolveB
         QVariant resultValue = QVariant::fromValue(bean->getObject());
         if(match.hasCaptured(3)) {
             QString propName = match.captured(3);
-            parent = resultValue.value<QObject*>();
+            parent = bean->getObject();
             if(!parent) {
                 if(allowPartial) {
                     qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
@@ -800,13 +838,12 @@ StandardApplicationContext::ResolvedBeanRef StandardApplicationContext::resolveB
                 qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
                 return {QVariant{}, Status::fatal, false};
             }
-            int propIndex = parent->metaObject()->indexOfProperty(propName.toLatin1());
-            if(propIndex < 0) {
+            sourceProp = bean->getProperty(propName.toLatin1());
+            if(!sourceProp.isValid()) {
                 //Refering to a non-existing Q_PROPERTY is always non-fixable:
                 qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << parent;
                 return {QVariant{}, Status::fatal, false};
             }
-            sourceProp = parent->metaObject()->property(propIndex);
             resultValue = sourceProp.read(parent);
         }
 
@@ -998,31 +1035,19 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
             }
             reg->resolvedProperties.insert(key, resolvedValue);
             if(!key.startsWith('.')) {
-                int index = metaObject->indexOfProperty(key.toUtf8());
-                if(index < 0) {
+                auto targetProperty = metaObject->property(metaObject->indexOfProperty(key.toLatin1()));
+                if(!targetProperty.isValid() || !targetProperty.isWritable()) {
                     //Refering to a non-existing Q_PROPERTY by name is always non-fixable:
-                    qCCritical(loggingCategory()).nospace().noquote() << "Could not find property " << key << " of '" << metaObject->className() << "'";
+                    qCCritical(loggingCategory()).nospace().noquote() << "Could not find writable property " << key << " of '" << metaObject->className() << "'";
                     return Status::fatal;
                 }
-                auto targetProperty = metaObject->property(index);
                 if(targetProperty.write(target, resolvedValue)) {
                     qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
                     usedProperties.insert(key);
-                    auto sourceProperty = result.sourceProperty;
-                    if(sourceProperty.isValid() && result.source) {
-                        auto source = result.source;
-                        if(sourceProperty.hasNotifySignal()) {
-                            detail::BindingProxy* proxy = new detail::BindingProxy{sourceProperty, source, targetProperty, target};
-                            QObject::connect(source, sourceProperty.notifySignal(), proxy, detail::BindingProxy::notifySlot());
-                            qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << key << "' of " << *reg << " to property '" << sourceProperty.name() << "' of " << source;
-                            continue;
-                        }
-                        if(sourceProperty.isBindable()) {
-                            auto sourceBindable = sourceProperty.bindable(source);
-                            reg->bindings.push_back(sourceBindable.addNotifier([sourceProperty,source,targetProperty,target]{
-                                targetProperty.write(target, sourceProperty.read(source));
-                            }));
-                            qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << key << "' of " << *reg << " to property '" << sourceProperty.name() << "' of " << source;
+                    if(result.sourceProperty.isValid() && result.source) {
+                        auto notifier = detail::bindProperty(result.source, result.sourceProperty, target, detail::propertySetter(targetProperty));
+                        if(std::holds_alternative<QPropertyNotifier>(notifier)) {
+                            reg->bindings.push_back(std::move(std::get<QPropertyNotifier>(notifier)));
                         }
                     }
                 } else {
@@ -1129,8 +1154,56 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key, c
 
 const service_config StandardApplicationContext::ObjectRegistration::defaultConfig;
 
+
+detail::Subscription* StandardApplicationContext::StandardRegistrationImpl::createBindingTo(detail::Registration *source, const char* sourcePropertyName, const detail::property_descriptor& targetProperty)
+{
+    detail::property_descriptor setter = targetProperty;
+    if(boundProperties.find(setter.name) != boundProperties.end()) {
+        qCCritical(loggingCategory()).noquote().nospace() << setter << " has already been bound to " << *asRegistration();
+        return nullptr;
+
+    }
+    auto sourceReg = dynamic_cast<DescriptorRegistration*>(source);
+    if(!sourceReg) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << source << " to " << *asRegistration();
+        return nullptr;
+    }
+    if(source->applicationContext() != asRegistration()->applicationContext()) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *source << " to " << *asRegistration() << " from different ApplicationContext";
+        return nullptr;
+    }
+
+    auto sourceProperty = sourceReg->getProperty(sourcePropertyName);
+    if(!detail::isBindable(sourceProperty)) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Property '" << sourcePropertyName << "' in " << *source << " is not bindable";
+        return nullptr;
+    }
+    if(!setter.setter) {
+        auto targetProperty = getProperty(setter.name);
+        if(!targetProperty.isValid() || !targetProperty.isWritable()) {
+            qCCritical(loggingCategory()).noquote().nospace() << setter << " is not a writable property for " << *asRegistration();
+            return nullptr;
+        }
+        if(!QMetaType::canConvert(sourceProperty.metaType(), targetProperty.metaType())) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *source << " to " << setter << " of " << *asRegistration() << " with incompatible types";
+            return nullptr;
+        }
+        setter = detail::propertySetter(targetProperty);
+    }
+
+
+    auto subscription = new PropertyBindingSubscription{source, asRegistration(), sourceProperty, setter};
+    qCInfo(loggingCategory()).noquote().nospace() << "Created Subscription for binding property '" << sourceProperty.name() << "' of " << *source << " to " << setter << " of " << *asRegistration();
+    boundProperties.insert(setter.name);
+    return subscription;
+}
+
+
+
+
+
 StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
-    StandardRegistration(parent),
+    detail::ServiceRegistration(parent),
     descriptor{desc},
     m_name(name)
 {
@@ -1163,5 +1236,44 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
 
 
 
+
+
+
+    void StandardApplicationContext::DescriptorRegistration::PropertyBindingSubscription::notify(QObject* obj) {
+       auto subscription = new PropertyInjector{obj, m_sourceProperty, m_setter};
+       detail::Subscription::subscribe(m_source, subscription);
+       subscriptions.push_back(subscription);
+    }
+
+    void StandardApplicationContext::DescriptorRegistration::PropertyBindingSubscription::cancel() {
+       Subscription::cancel();
+       for(auto iter = subscriptions.begin(); iter != subscriptions.end(); iter = subscriptions.erase(iter)) {
+           auto subscription = *iter;
+           if(subscription) {
+              subscription->cancel();
+           }
+       }
+    }
+
+    void StandardApplicationContext::DescriptorRegistration::PropertyInjector::notify(QObject* source) {
+       m_setter.setter(m_boundTarget, m_sourceProperty.read(source));
+       auto notifier = detail::bindProperty(source, m_sourceProperty, m_boundTarget, m_setter);
+       if(std::holds_alternative<QPropertyNotifier>(notifier)) {
+           bindings.push_back(std::move(std::get<QPropertyNotifier>(notifier)));
+       }
+       if(std::holds_alternative<QMetaObject::Connection>(notifier)) {
+           connections.push_back(std::get<QMetaObject::Connection>(notifier));
+       }
+
+    }
+
+    void StandardApplicationContext::DescriptorRegistration::PropertyInjector::cancel() {
+       Subscription::cancel();
+       for(auto iter = connections.begin(); iter != connections.end(); iter = connections.erase(iter)) {
+           QObject::disconnect(*iter);
+       }
+       //QPropertyNotifier will remove the binding in its destructor:
+       bindings.clear();
+    }
 
     }//mcnepp::qtdi

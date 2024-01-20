@@ -26,9 +26,9 @@ namespace mcnepp::qtditest {
 template<typename S> class RegistrationSlot : public QObject {
 public:
 
-    explicit RegistrationSlot(ServiceRegistration<S> registration) : m_obj(nullptr),
+    explicit RegistrationSlot(const Registration<S>& registration) : m_obj(nullptr),
         m_invocationCount(0) {
-        registration.subscribe(this, &RegistrationSlot::setObj);
+        const_cast<Registration<S>&>(registration).subscribe(this, &RegistrationSlot::setObj);
     }
 
 
@@ -297,7 +297,95 @@ private slots:
         QCOMPARE(timerSlot2->interval(), 1908);
     }
 
+    void testRegistrationBindToProperty() {
 
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer);
+        auto regBase = context->registerService<BaseService>("base");
+        RegistrationSlot<BaseService> baseSlot{regBase};
+
+
+        auto subscription = bind(regTimer, "objectName", regBase, "foo");
+        QVERIFY(subscription);
+        //Binding the same property twice must fail:
+        QVERIFY(!bind(regTimer, "objectName", regBase, "foo"));
+
+        QVERIFY(context->publish());
+
+        QCOMPARE(baseSlot->foo(), "timer");
+        timer.setObjectName("another timer");
+        QCOMPARE(baseSlot->foo(), "another timer");
+        subscription.cancel();
+        timer.setObjectName("back to timer");
+        QCOMPARE(baseSlot->foo(), "another timer");
+    }
+
+
+
+    void testRegistrationBindToSameProperty() {
+
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer);
+        auto regBase = context->registerService<BaseService>("base");
+        RegistrationSlot<BaseService> baseSlot{regBase};
+
+
+        QVERIFY(bind(regTimer, "objectName", regBase, "objectName"));
+        //Binding the same property twice must fail:
+        QVERIFY(!bind(regTimer, "objectName", regBase, "objectName"));
+
+        QVERIFY(context->publish());
+
+        QCOMPARE(baseSlot->objectName(), "timer");
+        timer.setObjectName("another timer");
+        QCOMPARE(baseSlot->objectName(), "another timer");
+    }
+
+    void testProxyRegistrationBindToProperty() {
+
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer);
+        BaseService base;
+        context->registerObject(&base, "base");
+        auto regBase = context->getRegistration<BaseService>();
+        QVERIFY(bind(regTimer, "objectName", regBase, "foo"));
+        QVERIFY(context->publish());
+        QCOMPARE(base.foo(), "timer");
+
+        RegistrationSlot<BaseService> base2{context->registerService<BaseService>("base2")};
+
+        QVERIFY(context->publish());
+
+        QCOMPARE(base2->foo(), "timer");
+
+        timer.setObjectName("another timer");
+        QCOMPARE(base.foo(), "another timer");
+        QCOMPARE(base2->foo(), "another timer");
+    }
+
+
+
+
+
+
+
+
+    void testRegistrationBindToSetter() {
+
+        BaseService base;
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer);
+        auto regBase = context->registerObject(&base, "base");
+        auto regInterface = context->getRegistration<Interface1,LookupKind::DYNAMIC>();
+        QVERIFY(bind(regTimer, "objectName", regInterface, &Interface1::setFoo));
+        QCOMPARE(base.foo(), "timer");
+        timer.setObjectName("another timer");
+        QCOMPARE(base.foo(), "another timer");
+    }
 
 
 
@@ -377,11 +465,11 @@ private slots:
         context->registerService(Service<Interface1,BaseService>{});
         auto regs = context->getRegistration<Interface1>();
 
-        QCOMPARE(regs.publishedObjects().size(), 1);
+        QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 1);
         QVERIFY(baseReg);
         base.reset();
         QVERIFY(!baseReg);
-        QCOMPARE(regs.publishedObjects().size(), 0);
+        QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 0);
     }
 
     void testDestroyRegisteredServiceExternally() {
@@ -390,11 +478,11 @@ private slots:
 
         QVERIFY(reg);
         context->publish();
-        QCOMPARE(reg.publishedObjects().size(), 1);
+        QCOMPARE(RegistrationSlot<Interface1>{reg}.invocationCount(), 1);
         QVERIFY(slot());
         delete slot();
         QVERIFY(reg);
-        QCOMPARE(reg.publishedObjects().size(), 0);
+        QCOMPARE(RegistrationSlot<Interface1>{reg}.invocationCount(), 0);
     }
 
     void testDestroyContext() {
@@ -651,7 +739,16 @@ private slots:
     }
 
 
-
+    void testGetRegistrationDynamic() {
+        context->registerService<BaseService>();
+        context->registerService<BaseService2>();
+        QVERIFY(context->publish());
+        RegistrationSlot<Interface1> staticSlot{context->getRegistration<Interface1>()};
+        RegistrationSlot<Interface1> dynamicSlot{context->getRegistration<Interface1,LookupKind::DYNAMIC>()};
+        QVERIFY(!staticSlot());
+        QVERIFY(dynamicSlot());
+        QCOMPARE(dynamicSlot.invocationCount(), 2);
+    }
 
 
 
@@ -661,7 +758,12 @@ private slots:
         QVERIFY(reg);
         //Same Interface, different implementation:
         auto reg2 = context->registerService(Service<Interface1,BaseService2>{});
+
         QCOMPARE_NE(reg2, reg);
+        QCOMPARE(reg, context->getRegistration<Interface1>(reg.registeredName()));
+        QCOMPARE(reg2, context->getRegistration<Interface1>(reg2.registeredName()));
+
+        QVERIFY(!context->getRegistration<Interface1>(""));
     }
 
     void testRegisterTwiceDifferentName() {
@@ -669,6 +771,10 @@ private slots:
         QVERIFY(reg);
         //Same Interface, same implementation, but different name:
         auto reg4 = context->registerService(Service<Interface1,BaseService>{}, "alias");
+        QCOMPARE(reg, context->getRegistration<Interface1>("base"));
+        QCOMPARE(reg, context->getRegistration<Interface1>("alias"));
+        QVERIFY(!context->getRegistration<Interface1>(""));
+
         QCOMPARE(reg4, reg);
         QVERIFY(context->publish());
         RegistrationSlot<Interface1> services{context->getRegistration<Interface1>()};
@@ -728,6 +834,8 @@ private slots:
         //Same Interface, same implementation, but different properties:
         auto reg2 = context->registerService(Service<Interface1,BaseService>{}, "", make_config({{"objectName", "tester"}}));
         QCOMPARE_NE(reg2, reg);
+        QVariantMap expectedProperties{{"objectName", "tester"}};
+        QCOMPARE(reg2.registeredProperties(), expectedProperties);
     }
 
     void testFailRegisterTwiceSameName() {
@@ -762,20 +870,11 @@ private slots:
         QCOMPARE_NE(reg, ServiceRegistration<Interface1>{});
     }
 
-    void testServiceRegistrationMove() {
-        auto reg = context->registerService(Service<Interface1,BaseService>{});
-        QVERIFY(reg);
-        auto wrapped = reg.unwrap();
-        auto anotherReg = std::move(reg);
-        QVERIFY(anotherReg);
-        QVERIFY(!reg);
-        QCOMPARE(anotherReg.unwrap(), wrapped);
-    }
+
 
     void testInvalidServiceRegistrationEquality() {
         ServiceRegistration<Interface1> invalidReg;
         QVERIFY(!invalidReg);
-        QCOMPARE(invalidReg.publishedObjects().size(), 0);
         QCOMPARE(invalidReg.registeredName(), QString{});
         qCInfo(loggingCategory()) << invalidReg;
 
@@ -807,18 +906,16 @@ private slots:
         auto reg = context->registerService(Service<CardinalityNService>{injectAll<Interface1>()});
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
+        QCOMPARE(regs.registeredServices().size(), 2);
         RegistrationSlot<Interface1> base1{reg1};
         RegistrationSlot<Interface1> base2{reg2};
         RegistrationSlot<CardinalityNService> service{reg};
         QCOMPARE_NE(base1, base2);
-        QCOMPARE(regs.publishedObjects().size(), 2);
+
         QCOMPARE(service->my_bases.size(), 2);
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(regs.publishedObjects().size(), 2);
-        QVERIFY(regs.publishedObjects().contains(service->my_bases[0]));
-        QVERIFY(regs.publishedObjects().contains(service->my_bases[1]));
         QVERIFY(service->my_bases.contains(base1()));
         QVERIFY(service->my_bases.contains(base2()));
 
@@ -838,7 +935,6 @@ private slots:
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(regs.publishedObjects().size(), 2);
         QCOMPARE(service->my_bases[0], services());
 
     }
@@ -896,7 +992,6 @@ private slots:
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(regs.publishedObjects().size(), 2);
         QCOMPARE(processSlot->processedObjects.size(), 2);
         QVERIFY(processSlot->processedObjects.contains(dynamic_cast<QObject*>(base1())));
         QVERIFY(!processSlot->processedObjects.contains(dynamic_cast<QObject*>(base2())));
