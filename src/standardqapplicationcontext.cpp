@@ -111,10 +111,6 @@ std::variant<std::nullptr_t,QMetaObject::Connection,QPropertyNotifier> bindPrope
     return nullptr;
 }
 
-inline QDebug operator << (QDebug out, const Registration& reg) {
-    reg.print(out);
-    return out;
-}
 }
 
 namespace {
@@ -698,6 +694,13 @@ unsigned StandardApplicationContext::published() const
 unsigned int StandardApplicationContext::pendingPublication() const
 {
     return std::count_if(registrations.begin(), registrations.end(), std::not_fn(std::mem_fn(&DescriptorRegistration::isPublished)));
+}
+
+QList<service_registration_handle_t> StandardApplicationContext::getRegistrationHandles() const
+{
+    QList<service_registration_handle_t> result;
+    std::copy(registrations.begin(), registrations.end(), std::back_inserter(result));
+    return result;
 }
 
 StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj) {

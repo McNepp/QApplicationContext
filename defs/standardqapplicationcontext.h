@@ -30,6 +30,8 @@ public:
 
     virtual unsigned pendingPublication() const override;
 
+    virtual QList<service_registration_handle_t> getRegistrationHandles() const override;
+
 
 protected:
 

@@ -1235,6 +1235,9 @@ private slots:
 
         QCOMPARE(publishedInOrder.size(), 8);
 
+        auto serviceHandles = context->getRegistrationHandles();
+        QCOMPARE(serviceHandles.size(), 8);
+
         //1. BaseService must be initialized before BaseService2 (because the order of registration shall be kept, barring other restrictions).
         //2. DependentService must be initialized after both BaseService.
         //3. DependentService must be initialized before DependentServiceLevel2.
