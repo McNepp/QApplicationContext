@@ -460,7 +460,7 @@ private slots:
 
     void testExplicitPropertyOverridesAutowired() {
         auto regBase = context->registerService<BaseService>("dependency");
-        auto regBaseToUse = context->registerService<BaseService>("baseToUse");
+        auto regBaseToUse = context->registerService<BaseService>("baseToUse", make_config({{".private", "test"}}));
         auto regCyclic = context->registerService<CyclicDependency>("cyclic", make_config({{"dependency", "&baseToUse"}}, "", true));
 
         QVERIFY(context->publish());
@@ -486,8 +486,8 @@ private slots:
     void testWithBeanRefWithAlias() {
         QTimer timer;
         timer.setObjectName("aTimer");
-        context->registerObject(&timer);
-        context->registerObject(&timer, "theTimer");
+        auto timerReg = context->registerObject(&timer);
+        QVERIFY(timerReg.registerAlias("theTimer"));
         auto reg = context->registerService<BaseService>("base", make_config({{"timer", "&theTimer"}}));
 
         QVERIFY(context->publish());
@@ -627,10 +627,10 @@ private slots:
 
     void testNamedMandatoryDependency() {
         BaseService base;
-        context->registerObject<Interface1>(&base, "base");
+        auto baseReg= context->registerObject<Interface1>(&base, "base");
         auto reg = context->registerService(Service<DependentService>{inject<Interface1>("myBase")});
         QVERIFY(!context->publish());
-        context->registerObject<Interface1>(&base, "myBase");
+        baseReg.registerAlias("myBase");
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> service{reg};
         QCOMPARE(service->m_dependency, &base);
@@ -794,6 +794,19 @@ private slots:
     }
 
 
+    void testRegisterAlias() {
+        auto reg = context->registerService(Service<Interface1,BaseService>{}, "base");
+        auto reg2 = context->registerService(Service<Interface1,BaseService2>{}, "base2");
+        QVERIFY(reg.registerAlias("Hugo"));
+        QVERIFY(reg.registerAlias("Hugo")); //Should be idempotent
+        QVERIFY(reg.registerAlias("Jill"));
+        QVERIFY(!reg.registerAlias("base2"));
+        QVERIFY(!reg2.registerAlias("base"));
+        QVERIFY(!reg2.registerAlias("Hugo"));
+        QCOMPARE(context->getRegistration<Interface1>("base"), reg);
+        QCOMPARE(context->getRegistration<Interface1>("Hugo"), reg);
+        QCOMPARE(context->getRegistration<Interface1>("Jill"), reg);
+    }
 
 
     void testRegisterTwiceDifferentImpl() {
@@ -813,15 +826,9 @@ private slots:
         auto reg = context->registerService(Service<Interface1,BaseService>{}, "base");
         QVERIFY(reg);
         //Same Interface, same implementation, but different name:
-        auto reg4 = context->registerService(Service<Interface1,BaseService>{}, "alias");
-        QCOMPARE(reg, context->getRegistration<Interface1>("base"));
-        QCOMPARE(reg, context->getRegistration<Interface1>("alias"));
-        QVERIFY(!context->getRegistration<Interface1>(""));
-
-        QCOMPARE(reg4, reg);
-        QVERIFY(context->publish());
-        RegistrationSlot<Interface1> services{context->getRegistration<Interface1>()};
-        QCOMPARE(services.invocationCount(), 1);
+        auto another = context->registerService(Service<Interface1,BaseService>{}, "alias");
+        QVERIFY(another);
+        QCOMPARE_NE(reg, another);
     }
 
     void testRegisterSameObjectTwiceWithDifferentInterfaces() {
@@ -835,27 +842,36 @@ private slots:
 
     void testRegisterSameObjectMultipleTimesWithDifferentNames() {
         BaseService service;
-        service.setObjectName("base");
-        auto reg = context->registerObject(&service);
+        auto reg = context->registerObject(&service, "base");
 
         QVERIFY(reg);
-        auto reg4 = context->registerObject(&service, "alias");
-        QCOMPARE(reg4, reg);
-        auto reg5 = context->registerObject(&service, "anotherAlias");
-        QCOMPARE(reg5, reg);
-        QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{reg};
-        QCOMPARE(baseSlot, RegistrationSlot<BaseService>{reg5});
-        QCOMPARE(baseSlot, RegistrationSlot<BaseService>{reg4});
-
+        QCOMPARE(reg.registeredName(), "base");
+        QVERIFY(!context->registerObject(&service, "alias"));
     }
 
     void testRegisterAnonymousObjectTwice() {
         BaseService service;
-        auto reg = context->registerObject<BaseService>(&service);
+        auto reg = context->registerObject(&service);
         QVERIFY(reg);
         auto reg4 = context->registerObject(&service);
         QCOMPARE(reg4, reg);
+
+    }
+
+    void testRegisterSameObjectAnonymousThenNamed() {
+        BaseService service;
+        auto reg = context->registerObject(&service);
+        QVERIFY(reg);
+        QVERIFY(!context->registerObject(&service, "base"));
+
+    }
+
+    void testRegisterSameObjectNamedThenAnonymous() {
+        BaseService service;
+        auto reg = context->registerObject(&service, "base");
+        QVERIFY(reg);
+        auto reg2 = context->registerObject(&service);
+        QCOMPARE(reg, reg2);
 
     }
 

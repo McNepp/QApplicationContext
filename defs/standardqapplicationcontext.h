@@ -44,6 +44,7 @@ protected:
 
 private:
 
+    bool registerAlias(detail::ServiceRegistration* reg, const QString& alias);
 
 
     class StandardRegistrationImpl {
@@ -132,7 +133,9 @@ private:
 
         virtual bool isManaged() const = 0;
 
-        virtual bool isEqual(const service_descriptor& descriptor, const service_config& config, QObject* obj) const = 0;
+        bool matches(const service_descriptor& descriptor, const service_config& config) const {
+            return descriptor == this->descriptor && this->config() == config;
+        }
 
         virtual const service_config& config() const = 0;
 
@@ -140,7 +143,9 @@ private:
 
         virtual void notifyPublished() = 0;
 
-
+        virtual bool registerAlias(const QString& alias) override {
+            return applicationContext()->registerAlias(this, alias);
+        }
 
         bool matches(const std::type_index& type) const {
             return descriptor.matches(type);
@@ -227,9 +232,7 @@ private:
             return obj;
         }
 
-        virtual bool isEqual(const service_descriptor& descriptor, const service_config& config, QObject* obj) const override {
-            return descriptor == this->descriptor && m_config == config;
-        }
+
 
         virtual QObjectList privateObjects() const override {
             return m_privateObjects;
@@ -297,9 +300,7 @@ private:
         void notifyPublished() override {
         }
 
-        virtual bool isEqual(const service_descriptor& descriptor, const service_config&, QObject* obj) const override {
-            return descriptor == this->descriptor && theObj == obj;
-        }
+
 
         virtual bool isPublished() const override {
             return true;

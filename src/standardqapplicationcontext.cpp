@@ -441,6 +441,29 @@ detail::ProxyRegistration *StandardApplicationContext::getRegistration(const typ
     return proxyReg;
 }
 
+bool StandardApplicationContext::registerAlias(detail::ServiceRegistration *reg, const QString &alias)
+{
+    if(!reg) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register alias '" << alias << "' for null";
+        return false;
+    }
+    auto foundIter = std::find(registrations.begin(), registrations.end(), reg);
+    if(foundIter == registrations.end()) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register alias '" << alias << "' for " << *reg << ". Not found in ApplicationContext";
+        return false;
+    }
+    auto found = getRegistrationByName(alias);
+    if(found && found != reg) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register alias '" << alias << "' for " << *reg << ". Another Service has been registered under this name: " << *found;
+        return false;
+    }
+    //At this point we know for sure that reg
+    registrationsByName.insert({alias, *foundIter});
+    qCInfo(loggingCategory()).noquote().nospace() << "Registered alias '" << alias << "' for " << *reg;
+    return true;
+
+}
+
 
 
 
@@ -678,32 +701,8 @@ unsigned int StandardApplicationContext::pendingPublication() const
 }
 
 StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj) {
-    bool isAnonymous = name.isEmpty();
-    if(isAnonymous) {
+    if(name.isEmpty()) {
         name = makeName(descriptor.service_type);
-    } else {
-        auto found = getRegistrationByName(name);
-        if(found) {
-            if(found->isEqual(descriptor, config, obj)) {
-                qCInfo(loggingCategory()).nospace().noquote() << "A Service with an equivalent " << descriptor << " has already been registered as " << *found;
-                return found;
-            } else {
-                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. That name has already been taken by " << *found;
-                return nullptr;
-            }
-        }
-    }
-
-    for(auto reg : registrations) {
-        if(reg->isEqual(descriptor, config, obj)) {
-            if(isAnonymous) {
-                qCInfo(loggingCategory()).nospace().noquote() << "A Service with an equivalent " << descriptor << " has already been registered as " << *reg;
-                return reg;
-            }
-            registrationsByName.insert({name, reg});
-            qCInfo(loggingCategory()).nospace().noquote() << "Created alias '" << name << "' for " << *reg;
-            return reg;
-        }
     }
 
     std::unordered_set<std::type_index> dependencies;
@@ -755,6 +754,17 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
 
 detail::ServiceRegistration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config)
 {
+    for(auto reg : registrations) {
+        //If a service-registration matches another one, it is only allowed if it has the same name or is anonymous:
+        if(reg->matches(descriptor, config)) {
+            if(name.isEmpty() || name == reg->registeredName()) {
+                return reg;
+            }
+        } else if(name == reg->registeredName()) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service '" << name << "'. Has already been registered as " << *reg;
+            return nullptr;
+        }
+    }
     return registerDescriptor(name, descriptor, config, nullptr);
 }
 
@@ -764,8 +774,23 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << descriptor.service_type.name();
         return nullptr;
     }
+    QString objName = name.isEmpty() ? obj->objectName() : name;
+    for(auto reg : registrations) {
+        if(obj == reg->getObject()) {
+            if(objName.isEmpty() || objName == reg->registeredName()) {
+                if(reg->matches(descriptor, ObjectRegistration::defaultConfig)) {
+                    return reg;
+                }
+            }
+        } else
+        if(objName != reg->registeredName()) {
+            continue;
+        }
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object "<< obj <<" as '" << objName << "'. Has already been registered as " << *reg;
+        return nullptr;
+    }
 
-    return registerDescriptor(name.isEmpty() ? obj->objectName() : name, descriptor, ObjectRegistration::defaultConfig, obj);
+    return registerDescriptor(objName, descriptor, ObjectRegistration::defaultConfig, obj);
 }
 
 

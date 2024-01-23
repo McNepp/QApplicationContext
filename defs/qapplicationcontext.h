@@ -269,6 +269,16 @@ protected:
 
     }
 
+    ///
+    /// \brief Registers an alias for a Service.
+    /// <br>If this function is successful, the Service can be referenced by the new name in addition to the
+    /// name it was originally registered with. There can be multiple aliases for a Service.<br>
+    /// Aliases must be unique within the ApplicationContext.
+    /// \param alias the alias to use.
+    /// \param descriptor
+    /// \return `true` if the alias could be registered. false, if this alias has already been registered before with a different registration.
+    ///
+    virtual bool registerAlias(const QString& alias) = 0;
 
    virtual detail::Subscription* createBindingTo(const char* sourcePropertyName, Registration* target, const detail::property_descriptor& targetProperty) = 0;
 
@@ -460,8 +470,6 @@ public:
 
 
 
-
-
     ///
     /// \brief Does this Registration represent a valid %Registration?
     /// \return `true` if the underlying Registration is present.
@@ -600,6 +608,24 @@ public:
     detail::ServiceRegistration* unwrap() const {
         //We can use static_cast here, as the constructor enforces the correct type:
         return static_cast<detail::ServiceRegistration*>(Registration<S>::unwrap());
+    }
+
+
+    ///
+    /// \brief Registers an alias for a Service.
+    /// <br>If this function is successful, the Service can be referenced by the new name in addition to the
+    /// name it was originally registered with. There can be multiple aliases for a Service.<br>
+    /// Aliases must be unique within the ApplicationContext.
+    /// \param alias the alias to use.
+    /// \param descriptor
+    /// \return `true` if the alias could be registered. `false` if this alias has already been registered before with a different registration.
+    ///
+    bool registerAlias(const QString& alias) {
+        if(!Registration<S>::isValid()) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register alias '" << alias << "' for " << *this;
+            return false;
+        }
+        return  unwrap()->registerAlias(alias);
     }
 
     ServiceRegistration() = default;
@@ -1480,6 +1506,8 @@ public:
 
     ///
     /// \brief Obtains a ServiceRegistration for a service-type and name.
+    /// <br>This function will look up Services by the names they were registered with.
+    /// Additionally, it will look up any alias that might have been given, using ServiceRegistration::registerAlias(const QString&).
     /// \tparam S the required service-type.
     /// \param name the desired name of the registration.
     /// A valid ServiceRegistration will be returned only if exactly one Service that matches the name has been registered.
@@ -1514,6 +1542,7 @@ public:
         static_assert(detail::could_be_qobject<S>, "Type must be potentially convertible to QObject");
         return ProxyRegistration<S>{getRegistration(typeid(S), lookup, detail::predicate_traits<S,lookup>::predicate(), detail::getMetaObject<S>())};
     }
+
 
 
 
@@ -1593,6 +1622,8 @@ protected:
     ///
     virtual detail::ServiceRegistration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) = 0;
 
+
+
     ///
     /// \brief Obtains a Registration for a service_type.
     /// \param service_type
@@ -1669,6 +1700,7 @@ protected:
     static detail::ProxyRegistration* delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, LookupKind lookup, q_predicate_t dynamicCheck, const QMetaObject* metaObject) {
         return appContext.getRegistration(service_type, lookup, dynamicCheck, metaObject);
     }
+
 
 
     template<typename S> friend class ServiceRegistration;
