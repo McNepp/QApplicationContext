@@ -26,24 +26,29 @@ namespace mcnepp::qtditest {
 template<typename S> class RegistrationSlot : public QObject {
 public:
 
-    explicit RegistrationSlot(const Registration<S>& registration) : m_obj(nullptr),
-        m_invocationCount(0) {
-        const_cast<Registration<S>&>(registration).subscribe(this, &RegistrationSlot::setObj);
+    explicit RegistrationSlot(const Registration<S>& registration)
+    {
+        m_subscription = const_cast<Registration<S>&>(registration).subscribe(this, &RegistrationSlot::setObj);
     }
 
 
     S* operator->() const {
-        return m_obj;
+        return m_obj.empty() ? nullptr : m_obj.back();
     }
 
-    S* operator()() const {
-        return m_obj;
+    S* last() const {
+        return m_obj.empty() ? nullptr : m_obj.back();
     }
+
+    explicit operator bool() const {
+        return !m_obj.empty();
+    }
+
+
 
 
     void setObj(S* obj) {
-        m_obj = obj;
-        ++m_invocationCount;
+        m_obj.push_back(obj);
     }
 
     bool operator ==(const RegistrationSlot& other) const {
@@ -55,12 +60,24 @@ public:
     }
 
     int invocationCount() const {
-        return m_invocationCount;
+        return m_obj.size();
+    }
+
+    int size() const {
+        return m_obj.size();
+    }
+
+    const QList<S*>& objects() const {
+        return m_obj;
+    }
+
+    Subscription& subscription() {
+        return m_subscription;
     }
 
 private:
-    S* m_obj;
-    int m_invocationCount;
+    QList<S*> m_obj;
+    Subscription m_subscription;
 };
 
 class PostProcessor : public QObject, public QApplicationContextPostProcessor {
@@ -117,7 +134,7 @@ private slots:
         QCOMPARE(reg.unwrap()->service_type(), typeid(BaseService));
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> slot{reg};
-        QVERIFY(slot());
+        QVERIFY(slot);
     }
 
     void testWithProperty() {
@@ -450,7 +467,7 @@ private slots:
         RegistrationSlot<BaseService> baseSlot{regBase};
         RegistrationSlot<BaseService> baseToUseSlot{regBaseToUse};
         RegistrationSlot<CyclicDependency> cyclicSlot{regCyclic};
-        QCOMPARE(cyclicSlot->dependency(), baseToUseSlot());
+        QCOMPARE(cyclicSlot->dependency(), baseToUseSlot.last());
     }
 
 
@@ -505,8 +522,8 @@ private slots:
         QVERIFY(reg);
         context->publish();
         QCOMPARE(RegistrationSlot<Interface1>{reg}.invocationCount(), 1);
-        QVERIFY(slot());
-        delete slot();
+        QVERIFY(slot);
+        delete slot.last();
         QVERIFY(reg);
         QCOMPARE(RegistrationSlot<Interface1>{reg}.invocationCount(), 0);
     }
@@ -523,7 +540,7 @@ private slots:
     void testRegisterObjectSignalsImmediately() {
         BaseService base;
         RegistrationSlot<BaseService> baseSlot{context->registerObject(&base)};
-        QVERIFY(baseSlot());
+        QVERIFY(baseSlot);
         QVERIFY(context->publish());
         QCOMPARE(baseSlot.invocationCount(), 1);
     }
@@ -546,7 +563,7 @@ private slots:
         RegistrationSlot<Interface1> baseSlot{baseReg};
         QVERIFY(context->publish());
         QVERIFY(service->m_dependency);
-        QCOMPARE(service->m_dependency, baseSlot());
+        QCOMPARE(service->m_dependency, baseSlot.last());
     }
 
     void testCardinalityNDependencyWithAutowire() {
@@ -562,8 +579,8 @@ private slots:
 
         QVERIFY(context->publish());
         QCOMPARE(service->my_bases.size(), 2);
-        QVERIFY(service->my_bases.contains(baseSlot1()));
-        QVERIFY(service->my_bases.contains(baseSlot2()));
+        QVERIFY(service->my_bases.contains(baseSlot1.last()));
+        QVERIFY(service->my_bases.contains(baseSlot2.last()));
     }
 
 
@@ -713,10 +730,10 @@ private slots:
         RegistrationSlot<BaseService> baseSlot{context->getRegistration<BaseService>()};
         RegistrationSlot<ServiceWithThreeArgs> threeSlot{threeReg};
         QVERIFY(dependentSlot->m_dependency);
-        QVERIFY(baseSlot());
-        QVERIFY(threeSlot());
-        QCOMPARE_NE(dependentSlot->m_dependency, baseSlot());
-        QCOMPARE_NE(threeSlot->m_dep, dependentSlot());
+        QVERIFY(baseSlot);
+        QVERIFY(threeSlot);
+        QCOMPARE_NE(dependentSlot->m_dependency, baseSlot.last());
+        QCOMPARE_NE(threeSlot->m_dep, dependentSlot.last());
         QCOMPARE(baseSlot.invocationCount(), 1);
         QCOMPARE(dependentSlot.invocationCount(), 1);
     }
@@ -730,8 +747,8 @@ private slots:
         RegistrationSlot<DependentService> dependentSlot{depReg};
         RegistrationSlot<Interface1> baseSlot{context->getRegistration<Interface1>()};
         QVERIFY(dependentSlot->m_dependency);
-        QVERIFY(baseSlot());
-        QCOMPARE_NE(dependentSlot->m_dependency, baseSlot());
+        QVERIFY(baseSlot);
+        QCOMPARE_NE(dependentSlot->m_dependency, baseSlot.last());
         QVERIFY(dynamic_cast<BaseService2*>(dependentSlot->m_dependency));
     }
 
@@ -748,8 +765,8 @@ private slots:
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> service{reg};
         RegistrationSlot<BaseService> baseSlot{context->getRegistration<BaseService>()};
-        QVERIFY(baseSlot());
-        QCOMPARE(service->m_dependency, baseSlot());
+        QVERIFY(baseSlot);
+        QCOMPARE(service->m_dependency, baseSlot.last());
     }
 
     void testPrefersExplicitOverAutoDependency() {
@@ -760,7 +777,7 @@ private slots:
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> service{reg};
         RegistrationSlot<BaseService> baseSlot{context->getRegistration<BaseService>()};
-        QCOMPARE(baseSlot(), &base);
+        QCOMPARE(baseSlot.last(), &base);
         QCOMPARE(service->m_dependency, &base);
     }
 
@@ -771,8 +788,8 @@ private slots:
         QVERIFY(context->publish());
         RegistrationSlot<Interface1> staticSlot{context->getRegistration<Interface1>()};
         RegistrationSlot<Interface1> dynamicSlot{context->getRegistration<Interface1,LookupKind::DYNAMIC>()};
-        QVERIFY(!staticSlot());
-        QVERIFY(dynamicSlot());
+        QVERIFY(!staticSlot);
+        QVERIFY(dynamicSlot);
         QCOMPARE(dynamicSlot.invocationCount(), 2);
     }
 
@@ -920,7 +937,7 @@ private slots:
         auto regs = context->getRegistration<Interface1>();
         RegistrationSlot<Interface1> base2{reg2};
         RegistrationSlot<DependentService> service{reg};
-        QCOMPARE(service->m_dependency, base2());
+        QCOMPARE(service->m_dependency, base2.last());
 
     }
 
@@ -942,8 +959,8 @@ private slots:
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QVERIFY(service->my_bases.contains(base1()));
-        QVERIFY(service->my_bases.contains(base2()));
+        QVERIFY(service->my_bases.contains(base1.last()));
+        QVERIFY(service->my_bases.contains(base2.last()));
 
     }
 
@@ -961,21 +978,20 @@ private slots:
 
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(service->my_bases[0], services());
+        QCOMPARE(service->my_bases[0], services.last());
 
     }
 
     void testCancelSubscription() {
         auto reg = context->getRegistration<Interface1>();
-        QList<Interface1*> services;
-        auto subscription = reg.subscribe(this, [&services](Interface1* iface) {services.push_back(iface);});
+        RegistrationSlot<Interface1> services{reg};
         context->registerService(Service<Interface1,BaseService>{}, "base1");
         context->publish();
         QCOMPARE(1, services.size());
         BaseService2 base2;
         context->registerObject<Interface1>(&base2);
         QCOMPARE(2, services.size());
-        subscription.cancel();
+        services.subscription().cancel();
         BaseService2 base3;
         context->registerObject<Interface1>(&base3);
         QCOMPARE(2, services.size());
@@ -1019,9 +1035,9 @@ private slots:
         RegistrationSlot<Interface1> services{regs};
         QCOMPARE(services.invocationCount(), 2);
         QCOMPARE(processSlot->processedObjects.size(), 2);
-        QVERIFY(processSlot->processedObjects.contains(dynamic_cast<QObject*>(base1())));
-        QVERIFY(!processSlot->processedObjects.contains(dynamic_cast<QObject*>(base2())));
-        QVERIFY(processSlot->processedObjects.contains(service()));
+        QVERIFY(processSlot->processedObjects.contains(dynamic_cast<QObject*>(base1.last())));
+        QVERIFY(!processSlot->processedObjects.contains(dynamic_cast<QObject*>(base2.last())));
+        QVERIFY(processSlot->processedObjects.contains(service.last()));
 
     }
 
@@ -1087,9 +1103,9 @@ private slots:
         RegistrationSlot<CyclicDependency> cyclicSlot{regCyclic};
         RegistrationSlot<BaseService> baseSlot{regBase};
 
-        QVERIFY(cyclicSlot());
-        QCOMPARE(cyclicSlot(), baseSlot->dependency());
-        QCOMPARE(baseSlot(), cyclicSlot->dependency());
+        QVERIFY(cyclicSlot);
+        QCOMPARE(cyclicSlot.last(), baseSlot->dependency());
+        QCOMPARE(baseSlot.last(), cyclicSlot->dependency());
 
     }
 
@@ -1107,9 +1123,9 @@ private slots:
         RegistrationSlot<CyclicDependency> cyclicSlot{regCyclic};
         RegistrationSlot<BaseService> baseSlot{regBase};
 
-        QVERIFY(cyclicSlot());
-        QCOMPARE(cyclicSlot(), baseSlot->dependency());
-        QCOMPARE(baseSlot(), cyclicSlot->dependency());
+        QVERIFY(cyclicSlot);
+        QCOMPARE(cyclicSlot.last(), baseSlot->dependency());
+        QCOMPARE(baseSlot.last(), cyclicSlot->dependency());
 
     }
 
@@ -1135,10 +1151,9 @@ private slots:
         QCOMPARE(contextPending, 0);
         QCOMPARE(contextPublished, 2);
 
-        QVERIFY(baseSlot());
-        QVERIFY(depSlot());
+        QVERIFY(baseSlot);
+        QVERIFY(depSlot);
         QCOMPARE(baseSlot.invocationCount(), 1);
-        QCOMPARE(baseSlot(), baseSlot());
 
         auto anotherBaseReg = context->registerService(Service<Interface1,BaseService2>{}, "anotherBase");
         QCOMPARE(contextPending, 1);
@@ -1154,10 +1169,10 @@ private slots:
         QVERIFY(context->publish());
         QCOMPARE(contextPending, 0);
         QCOMPARE(contextPublished, 4);
-        QVERIFY(cardSlot());
+        QVERIFY(cardSlot);
         QCOMPARE(cardSlot->my_bases.size(), 2);
         QCOMPARE(baseSlot.invocationCount(), 2);
-        QCOMPARE(baseSlot(), anotherBaseSlot());
+        QCOMPARE(baseSlot.last(), anotherBaseSlot.last());
 
     }
 
@@ -1208,14 +1223,14 @@ private slots:
         //2. DependentService must be initialized after both BaseService.
         //3. DependentService must be initialized before DependentServiceLevel2.
         //4. ServiceWithThreeArgs must be initialized after BaseService, BaseService2 and DependentService
-        QVERIFY(publishedInOrder.indexOf(base()) < publishedInOrder.indexOf(base2()));
-        QVERIFY(publishedInOrder.indexOf(dependent()) < publishedInOrder.indexOf(dependent2()));
-        QVERIFY(publishedInOrder.indexOf(base()) < publishedInOrder.indexOf(three()));
-        QVERIFY(publishedInOrder.indexOf(dependent()) < publishedInOrder.indexOf(three()));
-        QVERIFY(publishedInOrder.indexOf(base2()) < publishedInOrder.indexOf(three()));
-        QVERIFY(publishedInOrder.indexOf(three()) < publishedInOrder.indexOf(four()));
-        QVERIFY(publishedInOrder.indexOf(four()) < publishedInOrder.indexOf(five()));
-        QVERIFY(publishedInOrder.indexOf(five()) < publishedInOrder.indexOf(six()));
+        QVERIFY(publishedInOrder.indexOf(base.last()) < publishedInOrder.indexOf(base2.last()));
+        QVERIFY(publishedInOrder.indexOf(dependent.last()) < publishedInOrder.indexOf(dependent2.last()));
+        QVERIFY(publishedInOrder.indexOf(base.last()) < publishedInOrder.indexOf(three.last()));
+        QVERIFY(publishedInOrder.indexOf(dependent.last()) < publishedInOrder.indexOf(three.last()));
+        QVERIFY(publishedInOrder.indexOf(base2.last()) < publishedInOrder.indexOf(three.last()));
+        QVERIFY(publishedInOrder.indexOf(three.last()) < publishedInOrder.indexOf(four.last()));
+        QVERIFY(publishedInOrder.indexOf(four.last()) < publishedInOrder.indexOf(five.last()));
+        QVERIFY(publishedInOrder.indexOf(five.last()) < publishedInOrder.indexOf(six.last()));
         delete context;
         context = nullptr;
 
@@ -1229,14 +1244,14 @@ private slots:
         //3. ServiceWithThreeArgs must be destroyed before BaseService, BaseService2 and DependentService
         //4. BaseService2 must destroyed before BaseService (because the order of registration shall be kept, barring other restrictions).
 
-        QVERIFY(destroyedInOrder.indexOf(dependent()) > destroyedInOrder.indexOf(dependent2()));
-        QVERIFY(destroyedInOrder.indexOf(base()) > destroyedInOrder.indexOf(three()));
-        QVERIFY(destroyedInOrder.indexOf(dependent()) > destroyedInOrder.indexOf(three()));
-        QVERIFY(destroyedInOrder.indexOf(base2()) > destroyedInOrder.indexOf(three()));
-        QVERIFY(destroyedInOrder.indexOf(three()) > destroyedInOrder.indexOf(four()));
-        QVERIFY(destroyedInOrder.indexOf(four()) > destroyedInOrder.indexOf(five()));
-        QVERIFY(destroyedInOrder.indexOf(five()) > destroyedInOrder.indexOf(six()));
-        QVERIFY(destroyedInOrder.indexOf(base2()) < destroyedInOrder.indexOf(base()));
+        QVERIFY(destroyedInOrder.indexOf(dependent.last()) > destroyedInOrder.indexOf(dependent2.last()));
+        QVERIFY(destroyedInOrder.indexOf(base.last()) > destroyedInOrder.indexOf(three.last()));
+        QVERIFY(destroyedInOrder.indexOf(dependent.last()) > destroyedInOrder.indexOf(three.last()));
+        QVERIFY(destroyedInOrder.indexOf(base2.last()) > destroyedInOrder.indexOf(three.last()));
+        QVERIFY(destroyedInOrder.indexOf(three.last()) > destroyedInOrder.indexOf(four.last()));
+        QVERIFY(destroyedInOrder.indexOf(four.last()) > destroyedInOrder.indexOf(five.last()));
+        QVERIFY(destroyedInOrder.indexOf(five.last()) > destroyedInOrder.indexOf(six.last()));
+        QVERIFY(destroyedInOrder.indexOf(base2.last()) < destroyedInOrder.indexOf(base.last()));
     }
 
 private:
