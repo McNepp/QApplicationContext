@@ -92,7 +92,7 @@ bool isBindable(const QMetaProperty& sourceProperty) {
 }
 
 
-std::variant<bool,QMetaObject::Connection,QPropertyNotifier> bindProperty(QObject* source, const QMetaProperty& sourceProperty, QObject* target, const detail::property_descriptor& setter) {
+std::variant<std::nullptr_t,QMetaObject::Connection,QPropertyNotifier> bindProperty(QObject* source, const QMetaProperty& sourceProperty, QObject* target, const detail::property_descriptor& setter) {
     if(sourceProperty.hasNotifySignal()) {
         detail::BindingProxy* proxy = new detail::BindingProxy{sourceProperty, source, setter, target};
         auto connection = QObject::connect(source, sourceProperty.notifySignal(), proxy, detail::BindingProxy::notifySlot());
@@ -108,7 +108,7 @@ std::variant<bool,QMetaObject::Connection,QPropertyNotifier> bindProperty(QObjec
         return std::move(notifier);
     }
     qCInfo(loggingCategory()).nospace().noquote() << "Could not bind property '" << sourceProperty.name() << "' of " << source << " to " << setter << " of " << target;
-    return false;
+    return nullptr;
 }
 
 inline QDebug operator << (QDebug out, const Registration& reg) {
