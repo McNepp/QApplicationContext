@@ -1244,9 +1244,7 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
 
 
     void StandardApplicationContext::DescriptorRegistration::PropertyBindingSubscription::notify(QObject* obj) {
-       auto subscription = new PropertyInjector{obj, m_sourceProperty, m_setter};
-       detail::Subscription::subscribe(m_source, subscription);
-       subscriptions.push_back(subscription);
+       subscriptions.push_back(subscribe( new PropertyInjector{m_target, obj, m_sourceProperty, m_setter}));
     }
 
     void StandardApplicationContext::DescriptorRegistration::PropertyBindingSubscription::cancel() {
@@ -1259,9 +1257,9 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
        }
     }
 
-    void StandardApplicationContext::DescriptorRegistration::PropertyInjector::notify(QObject* source) {
-       m_setter.setter(m_boundTarget, m_sourceProperty.read(source));
-       auto notifier = detail::bindProperty(source, m_sourceProperty, m_boundTarget, m_setter);
+    void StandardApplicationContext::DescriptorRegistration::PropertyInjector::notify(QObject* target) {
+       m_setter.setter(target, m_sourceProperty.read(m_boundSource));
+       auto notifier = detail::bindProperty(m_boundSource, m_sourceProperty, target, m_setter);
        if(std::holds_alternative<QPropertyNotifier>(notifier)) {
            bindings.push_back(std::get<QPropertyNotifier>(std::move(notifier)));
        }

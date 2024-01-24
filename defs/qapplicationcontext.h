@@ -6,7 +6,6 @@
 
 #include <utility>
 #include <typeindex>
-#include <unordered_set>
 #include <QObject>
 #include <QVariant>
 #include <QPointer>
@@ -70,24 +69,25 @@ class Subscription : public QObject {
 
     friend class Registration;
 
+    template<typename S> friend class mcnepp::qtdi::Registration;
+
+
 public:
     virtual void cancel() {
         QObject::disconnect(out_connection);
         QObject::disconnect(in_connection);
     }
 
-
-
-protected:
-    Subscription(QObject* context, Qt::ConnectionType connectionType) : QObject(context)
-    {
-        out_connection = QObject::connect(this, &Subscription::objectPublished, context, [this](QObject* obj) { notify(obj); }, connectionType);
+    Registration* registration() const {
+        return m_registration;
     }
 
 
-    virtual void notify(QObject*) = 0;
+protected:
+    Subscription(Registration* registration, QObject* targetContext, Qt::ConnectionType connectionType);
 
-    static void subscribe(detail::Registration* reg, detail::Subscription* subscription);
+
+    virtual void notify(QObject*) = 0;
 
 
 signals:
@@ -96,10 +96,10 @@ signals:
 
 private:
 
-    void connect(Registration* reg);
 
     QMetaObject::Connection out_connection;
     QMetaObject::Connection in_connection;
+    Registration* const m_registration;
 };
 
 template<typename S> constexpr auto getMetaObject(S*) -> decltype(&S::staticMetaObject) {
@@ -198,23 +198,39 @@ protected:
 
 
     /**
-     * @brief Connects this Registration with the Subscription's signal.
-     * Connects Registration::objectPublished() to Subscription::objectPublished().<br>
-     * This is the default behaviour that may be invoked by sub-classses overriding this function.
-     * @param subscription the Subscribtion to connect to.
+     * @brief A Subscription has been connected to this Registration.
+
+     * @param subscription the Subscribtion that was connected.
      */
-    virtual void subscribe(detail::Subscription* subscription) {
-        subscription -> connect(this);
+    virtual void onSubscription(Subscription* subscription) = 0;
+
+    /**
+     * @brief Subscribes to a Subscription.
+     * <br>This function will retrieve the Subscription::registration() and invoke onSubscription(Subscription*)
+     * on it.
+     * @param subscription
+     * @return the subscription (for convenience)
+     */
+    static Subscription* subscribe(Subscription* subscription) {
+        if(subscription) {
+            subscription->registration()->onSubscription(subscription);
+        }
+        return subscription;
     }
 
-    static void subscribe(Registration* reg, detail::Subscription* subscription) {
-        reg->subscribe(subscription);
-    }
 };
 
-inline void detail::Subscription::subscribe(detail::Registration* reg, detail::Subscription* subscription) {
-    reg->subscribe(subscription);
+
+
+
+inline Subscription::Subscription(Registration* registration, QObject* targetContext, Qt::ConnectionType connectionType) :
+    QObject(targetContext),
+    m_registration(registration)
+{
+    in_connection = QObject::connect(registration, &Registration::objectPublished, this, &Subscription::objectPublished);
+    out_connection = QObject::connect(this, &Subscription::objectPublished, targetContext, [this](QObject* obj) { notify(obj); }, connectionType);
 }
+
 
 class ServiceRegistration : public Registration {
     Q_OBJECT
@@ -393,13 +409,12 @@ public:
         }
 
 
-        auto subscription = new CallableSubscription<F>{callable, context, connectionType};
-        registrationHolder -> subscribe(subscription);
-        return Subscription{subscription};
-    }
+        auto subscription = new CallableSubscription<F>{unwrap(), callable, context, connectionType};
+        return Subscription{detail::Registration::subscribe(subscription)};
+      }
 
     /// \brief Receive all published QObjects in a type-safe way.
-    /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
+    /// Connects to the `objectPublished` signal and propagates new QObjects to the callable.
     /// If the ApplicationContext has already been published, this method
     /// will invoke the setter immediately with the current publishedObjects().
     /// \tparam T the target of the subscription. Must be derived from QObject.
@@ -414,10 +429,9 @@ public:
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
             return Subscription{};
         }
-        auto subscription = new SetterSubscription<T,R>{target, setter, connectionType};
-        registrationHolder -> subscribe(subscription);
-        return Subscription{subscription};
-    }
+        auto subscription = new SetterSubscription<T,R>{unwrap(), target, setter, connectionType};
+        return Subscription{detail::Registration::subscribe(subscription)};
+     }
 
 
 
@@ -489,7 +503,7 @@ private:
     template<typename F> class CallableSubscription : public detail::Subscription {
         friend class Registration;
 
-        explicit CallableSubscription(F callable, QObject* context, Qt::ConnectionType connectionType) : Subscription(context, connectionType),
+        explicit CallableSubscription(detail::Registration* registration, F callable, QObject* context, Qt::ConnectionType connectionType) : Subscription(registration, context, connectionType),
             m_callable(callable) {
 
         }
@@ -508,7 +522,7 @@ private:
     template<typename T,typename R> class SetterSubscription : public detail::Subscription {
         friend class Registration;
 
-        SetterSubscription(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType) : Subscription(target, connectionType),
+        SetterSubscription(detail::Registration* registration, T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType) : Subscription(registration, target, connectionType),
             m_setter(setter),
             m_target(target){
         }
@@ -526,8 +540,8 @@ private:
     template<typename D,typename R> class AutowireSubscription : public detail::Subscription {
         friend class Registration;
 
-        AutowireSubscription(detail::Registration* target, R (S::*setter)(D*), QObject* parent) : Subscription(parent, Qt::AutoConnection),
-               m_setter(setter),
+        AutowireSubscription(detail::Registration* registration, R (S::*setter)(D*), detail::Registration* target) : Subscription(registration, target, Qt::AutoConnection),
+            m_setter(setter),
             m_target(target)
         {
         }
@@ -603,16 +617,9 @@ private:
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << *this << " to " << target;
             return Subscription{};
         }
-
-
         auto subscription = unwrap() -> createBindingTo(sourceProperty, target, descriptor);
-        if(!subscription) {
-            return Subscription{};
-        }
-        detail::Registration::subscribe(target, subscription);
-
-        return Subscription{subscription};
-    }
+        return Subscription{detail::Registration::subscribe(subscription)};
+     }
 
 };
 
@@ -1325,10 +1332,6 @@ constructor_t service_creator() {
                 }; };
 }
 
-
-inline void Subscription::connect(Registration* reg) {
-        in_connection = QObject::connect(reg, &Registration::objectPublished, this, &Subscription::objectPublished);
-}
 using q_predicate_t = std::function<bool(QObject*)>;
 
 template<typename S,LookupKind lookup> struct predicate_traits;
@@ -1672,13 +1675,13 @@ protected:
 };
 
 template<typename S> template<typename D,typename R> Subscription Registration<S>::autowire(R (S::*injectionSlot)(D*)) {
+    static_assert(detail::could_be_qobject<D>, "Service-type to be injected must be possible convertible to QObject");
     if(!registrationHolder || !injectionSlot) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot autowire " << *this;
         return Subscription{};
     }
-    auto subscription = new AutowireSubscription<D,R>{applicationContext()->template getRegistration<D>().unwrap(), injectionSlot, registrationHolder};
-    registrationHolder -> subscribe(subscription);
-    return Subscription{subscription};
+    auto subscription = new AutowireSubscription<D,R>{unwrap(), injectionSlot, applicationContext()->template getRegistration<D>().unwrap()};
+    return Subscription{detail::Registration::subscribe(subscription)};
 }
 
 

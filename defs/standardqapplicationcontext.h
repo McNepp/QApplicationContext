@@ -1,8 +1,6 @@
 #pragma once
 
-#include <mutex>
 #include <memory>
-#include <atomic>
 #include <unordered_set>
 #include <unordered_map>
 #include <deque>
@@ -73,13 +71,13 @@ private:
 
             void cancel() override;
         private:
-            PropertyBindingSubscription(detail::Registration* source, detail::Registration* target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(target, Qt::AutoConnection),
+            PropertyBindingSubscription(detail::Registration* source, detail::Registration* target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(source, target, Qt::AutoConnection),
                 m_sourceProperty(sourceProperty),
                 m_setter(setter),
-                m_source(source) {
+                m_target(target) {
 
             }
-            detail::Registration* m_source;
+            detail::Registration* m_target;
             QMetaProperty m_sourceProperty;
             detail::property_descriptor m_setter;
             std::vector<QPointer<Subscription>> subscriptions;
@@ -94,15 +92,15 @@ private:
             void cancel() override;
         private:
 
-            PropertyInjector(QObject* boundTarget, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(boundTarget, Qt::AutoConnection),
+            PropertyInjector(detail::Registration* parent, QObject* boundSource, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(parent, boundSource, Qt::AutoConnection),
                 m_sourceProperty(sourceProperty),
                 m_setter(setter),
-                m_boundTarget(boundTarget) {
+                m_boundSource(boundSource) {
 
             }
             QMetaProperty m_sourceProperty;
             detail::property_descriptor m_setter;
-            QObject* m_boundTarget;
+            QObject* m_boundSource;
             std::vector<QPropertyNotifier> bindings;
             std::vector<QMetaObject::Connection> connections;
         };
@@ -248,13 +246,11 @@ private:
             return theService;
         }
 
-        virtual void subscribe(detail::Subscription* subscription) override {
+        virtual void onSubscription(detail::Subscription* subscription) override {
             //If the Service is already present, there is no need to connect to the signal:
             if(theService) {
                 emit subscription->objectPublished(theService);
-                return;
             }
-            Registration::subscribe(subscription);
         }
 
         virtual QMetaProperty getProperty(const char* name) const override {
@@ -340,8 +336,7 @@ private:
             return defaultConfig;
         }
 
-        virtual void subscribe(detail::Subscription* subscription) override {
-            //There is no need to connect to the signal, as the Object is already present
+        virtual void onSubscription(detail::Subscription* subscription) override {
             emit subscription->objectPublished(theObj);
         }
 
@@ -449,8 +444,7 @@ private:
 
 
 
-        virtual void subscribe(detail::Subscription* subscription) override {
-            Registration::subscribe(subscription);
+        virtual void onSubscription(detail::Subscription* subscription) override {
             for(auto reg : registrations) {
                 auto obj = reg->getObject();
                 if(obj) {
@@ -493,9 +487,8 @@ private:
         }
 
 
-        virtual void subscribe(detail::Subscription* subscription) override {
-            Registration::subscribe(subscription);
-            for(auto reg : registrations) {
+        virtual void onSubscription(detail::Subscription* subscription) override {
+             for(auto reg : registrations) {
                 auto obj = reg->getObject();
                 if(dynamicCheck(obj)) {
                     emit subscription->objectPublished(obj);
