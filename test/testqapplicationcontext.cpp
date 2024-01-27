@@ -131,7 +131,9 @@ private slots:
         QVERIFY(reg);
         QVERIFY(!context->getRegistration<BaseService>("anotherName"));
         QCOMPARE(context->getRegistration<BaseService>(reg.registeredName()), reg);
-        QCOMPARE(reg.unwrap()->service_type(), typeid(BaseService));
+        QVERIFY(reg.matches<BaseService>());
+        QVERIFY(reg.as<BaseService>());
+        QVERIFY(!reg.as<BaseService2>());
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> slot{reg};
         QVERIFY(slot);
@@ -793,6 +795,108 @@ private slots:
         QCOMPARE(dynamicSlot.invocationCount(), 2);
     }
 
+    void testAdvertiseAs() {
+        auto reg = context->registerService(Service<BaseService>{}.advertiseAs<Interface1>());
+        auto simpleReg = context->registerService(Service<Interface1,BaseService>{});
+        QVERIFY(reg);
+        QVERIFY(simpleReg.as<Interface1>());
+        QVERIFY(simpleReg.as<BaseService>());
+        QVERIFY(!simpleReg.as<BaseService2>());
+        QCOMPARE(reg, simpleReg);
+        auto failedReg = context->registerService(Service<BaseService>{}.advertiseAs<Interface1,TimerAware>());
+        //You cannot register a Service with the same implementation-type and primary interface-type, but different addtional service-types:
+        QVERIFY(!failedReg);
+
+    }
+
+    void testAdvertiseAsNamed() {
+        auto reg = context->registerService(Service<BaseService>{}.advertiseAs<Interface1>(), "base");
+        auto simpleReg = context->registerService(Service<Interface1,BaseService>{}, "base");
+        QVERIFY(reg);
+        QCOMPARE(reg, simpleReg);
+        auto timerReg = context->registerService(Service<BaseService>{}.advertiseAs<Interface1,TimerAware>(), "timeraware");
+        QVERIFY(timerReg);
+        QVERIFY(timerReg.as<Interface1>());
+        QVERIFY(timerReg.as<BaseService>());
+        QVERIFY(timerReg.as<TimerAware>());
+        QVERIFY(!timerReg.as<BaseService2>());
+        QCOMPARE_NE(timerReg, reg);
+        auto bases = context->getRegistration<BaseService>().registeredServices();
+        QCOMPARE(bases.size(), 2);
+        int timerCount = 0;
+        for(auto& reg : bases) {
+            if(reg.as<TimerAware>()) {
+                ++timerCount;
+                QCOMPARE(reg, timerReg);
+            }
+        }
+        QCOMPARE(timerCount, 1);
+
+        auto timers = context->getRegistration<TimerAware>().registeredServices();
+        QCOMPARE(timers.size(), 1);
+        QCOMPARE(timers[0], timerReg);
+
+
+    }
+
+    void testAdvertiseAdditionalInterface() {
+        auto reg = context->registerService(Service<BaseService>{}.advertiseAs<Interface1,TimerAware>());
+        auto baseReg = context->getRegistration<BaseService>();
+        auto ifaceReg = context->getRegistration<Interface1>();
+        auto timerReg= context->getRegistration<TimerAware>();
+        QCOMPARE(ifaceReg.registeredServices().size(), 1);
+        QCOMPARE(timerReg.registeredServices().size(), 1);
+        QCOMPARE(baseReg.registeredServices().size(), 1);
+        QVERIFY(context->publish());
+        RegistrationSlot<Interface1> ifaceSlot{ifaceReg};
+        RegistrationSlot<TimerAware> timerSlot{timerReg};
+        QVERIFY(ifaceSlot);
+        QVERIFY(timerSlot);
+
+    }
+
+    void testAdvertiseObjectAsNotImplementedInterface() {
+        BaseService2 base;
+        auto failedReg = context->registerObject<Interface1,TimerAware>(&base);
+    }
+
+   void testAdvertiseObjectAs() {
+        BaseService base;
+        auto simpleReg = context->registerObject<Interface1>(&base);
+        QVERIFY(simpleReg);
+        auto failedReg = context->registerObject<Interface1,TimerAware>(&base);
+        //You cannot register the same Object with the same implementation-type and primary interface-type, but different addtional service-types:
+        QVERIFY(!failedReg);
+
+    }
+
+
+    void testAdvertiseObjectAsNamed() {
+        BaseService base;
+        auto reg = context->registerObject<Interface1>(&base, "base");
+        QVERIFY(reg);
+        auto simpleReg = context->registerObject<Interface1,TimerAware>(&base, "base");
+        QVERIFY(!simpleReg);
+
+    }
+
+    void testAdvertiseObjectWithAdditionalInterface() {
+        BaseService base;
+        auto reg = context->registerObject<Interface1,TimerAware>(&base);
+        auto baseReg = context->getRegistration<BaseService>();
+        auto ifaceReg = context->getRegistration<Interface1>();
+        auto timerReg= context->getRegistration<TimerAware>();
+        QCOMPARE(ifaceReg.registeredServices().size(), 1);
+        QCOMPARE(timerReg.registeredServices().size(), 1);
+        QCOMPARE(baseReg.registeredServices().size(), 1);
+        QVERIFY(context->publish());
+        RegistrationSlot<Interface1> ifaceSlot{ifaceReg};
+        RegistrationSlot<TimerAware> timerSlot{timerReg};
+        QVERIFY(ifaceSlot);
+        QVERIFY(timerSlot);
+
+    }
+
 
     void testRegisterAlias() {
         auto reg = context->registerService(Service<Interface1,BaseService>{}, "base");
@@ -1080,7 +1184,11 @@ private slots:
     void testRegisterByServiceType() {
         auto reg = context->registerService(Service<Interface1,BaseService>{});
         QVERIFY(reg);
-        QCOMPARE(reg.unwrap()->service_type(), typeid(Interface1));
+        QVERIFY(reg.matches<Interface1>());
+        QVERIFY(reg.matches<BaseService>());
+        QVERIFY(reg.as<Interface1>());
+        QVERIFY(reg.as<BaseService>());
+        QVERIFY(!reg.as<BaseService2>());
         QVERIFY(context->publish());
     }
 

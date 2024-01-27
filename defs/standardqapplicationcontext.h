@@ -112,9 +112,7 @@ private:
         virtual detail::Subscription* createBindingTo(const char* sourcePropertyName, Registration* target, const detail::property_descriptor& targetProperty) override;
 
 
-        const std::type_info& service_type() const override {
-            return descriptor.service_type;
-        }
+
 
 
         QString registeredName() const override {
@@ -136,7 +134,7 @@ private:
         virtual bool isManaged() const = 0;
 
         bool matches(const service_descriptor& descriptor, const service_config& config) const {
-            return descriptor == this->descriptor && this->config() == config;
+            return descriptor.matches(this->descriptor) && this->config() == config;
         }
 
         virtual const service_config& config() const = 0;
@@ -149,6 +147,10 @@ private:
             return applicationContext()->registerAlias(this, alias);
         }
 
+        bool matches(const std::type_info& type) const override {
+            return descriptor.matches(type);
+        }
+
         bool matches(const std::type_index& type) const {
             return descriptor.matches(type);
         }
@@ -157,8 +159,8 @@ private:
 
 
 
-        static auto matcher(const std::type_index& type) {
-            return [type](DescriptorRegistration* reg) { return reg->matches(type); };
+        static auto matcher(const std::type_info& type) {
+            return [&type](DescriptorRegistration* reg) { return reg->matches(type); };
         }
 
 
@@ -367,7 +369,9 @@ private:
             m_meta(metaObject) {
         }
 
-
+        bool matches(const std::type_info& type) const override {
+            return m_type == type;
+        }
 
         virtual StandardApplicationContext* applicationContext() const final override {
             return static_cast<StandardApplicationContext*>(parent());
@@ -398,14 +402,10 @@ private:
         }
 
 
-        const type_info &service_type() const final override {
-            return m_type;
-        }
-
 
 
         virtual void print(QDebug out) const final override {
-            out.nospace().noquote() << "Services [" << registrations.size() << "] with service-type '" << service_type().name() << "'";
+            out.nospace().noquote() << "Services [" << registrations.size() << "] with service-type '" << m_type.name() << "'";
         }
 
         virtual bool registerBoundProperty(const char* name) override {
@@ -434,7 +434,7 @@ private:
 
 
         bool add(DescriptorRegistration* reg) override {
-            if(reg->matches(service_type()) && std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
+            if(reg->matches(m_type) && std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
                 registrations.push_back(reg);
                 if(reg->isPublished()) {
                     emit objectPublished(reg->getObject());
@@ -530,7 +530,7 @@ private:
     };
 
 
-    template<typename C> static DescriptorRegistration* find_by_type(const C& regs, const std::type_index& type);
+    template<typename C> static DescriptorRegistration* find_by_type(const C& regs, const std::type_info& type);
 
     bool checkTransitiveDependentsOn(const service_descriptor& descriptor, const std::unordered_set<std::type_index>& dependencies) const;
 
