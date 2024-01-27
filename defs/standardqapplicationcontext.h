@@ -1,8 +1,6 @@
 #pragma once
 
-#include <mutex>
 #include <memory>
-#include <atomic>
 #include <unordered_set>
 #include <unordered_map>
 #include <deque>
@@ -32,6 +30,8 @@ public:
 
     virtual unsigned pendingPublication() const override;
 
+    virtual QList<service_registration_handle_t> getRegistrationHandles() const override;
+
 
 protected:
 
@@ -41,28 +41,46 @@ protected:
 
     virtual detail::ServiceRegistration* getRegistration(const std::type_info& service_type, const QString& name) const override;
 
-    virtual detail::ProxyRegistration* getRegistration(const std::type_info& service_type, LookupKind lookup, q_predicate_t dynamicCheck, const QMetaObject* metaObject) const override;
+    virtual detail::ProxyRegistration* getRegistration(const std::type_info& service_type, const QMetaObject* metaObject) const override;
 
 
 private:
 
+    bool registerAlias(detail::ServiceRegistration* reg, const QString& alias);
 
 
     class StandardRegistrationImpl {
+
+
+    public:
+
+        virtual QMetaProperty getProperty(const char* name) const = 0;
+
+        virtual bool registerBoundProperty(const char* name) = 0;
+
+
+    };
+
+    class DescriptorRegistration : public detail::ServiceRegistration, public StandardRegistrationImpl {
+    private:
+
+
+
         class PropertyBindingSubscription : public detail::Subscription {
+            friend class DescriptorRegistration;
         public:
-            PropertyBindingSubscription(detail::Registration* source, detail::Registration* target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(target, Qt::AutoConnection),
-                m_sourceProperty(sourceProperty),
-                m_setter(setter),
-                m_source(source) {
-
-            }
-
 
             void notify(QObject* obj) override;
 
             void cancel() override;
-            detail::Registration* m_source;
+        private:
+            PropertyBindingSubscription(detail::Registration* source, detail::Registration* target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(source, target, Qt::AutoConnection),
+                m_sourceProperty(sourceProperty),
+                m_setter(setter),
+                m_target(target) {
+
+            }
+            detail::Registration* m_target;
             QMetaProperty m_sourceProperty;
             detail::property_descriptor m_setter;
             std::vector<QPointer<Subscription>> subscriptions;
@@ -70,49 +88,31 @@ private:
 
         class PropertyInjector : public detail::Subscription {
             friend class PropertyBindingSubscription;
-
-            PropertyInjector(QObject* boundTarget, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(boundTarget, Qt::AutoConnection),
-                m_sourceProperty(sourceProperty),
-                m_setter(setter),
-                m_boundTarget(boundTarget) {
-
-            }
-
+        public:
 
             void notify(QObject* obj) override;
 
             void cancel() override;
+        private:
+
+            PropertyInjector(detail::Registration* parent, QObject* boundSource, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(parent, boundSource, Qt::AutoConnection),
+                m_sourceProperty(sourceProperty),
+                m_setter(setter),
+                m_boundSource(boundSource) {
+
+            }
             QMetaProperty m_sourceProperty;
             detail::property_descriptor m_setter;
-            QObject* m_boundTarget;
+            QObject* m_boundSource;
             std::vector<QPropertyNotifier> bindings;
             std::vector<QMetaObject::Connection> connections;
         };
 
     public:
-        detail::Subscription* createBindingTo(detail::Registration* source, const char* sourcePropertyName, const detail::property_descriptor& targetProperty);
-
-        virtual QMetaProperty getProperty(const char* name) const = 0;
-        virtual detail::Registration* asRegistration() = 0;
-    private:
-        std::unordered_set<QString> boundProperties;
-    };
-
-    struct DescriptorRegistration : public detail::ServiceRegistration, public StandardRegistrationImpl {
+        virtual detail::Subscription* createBindingTo(const char* sourcePropertyName, Registration* target, const detail::property_descriptor& targetProperty) override;
 
 
-        virtual detail::Registration* asRegistration() override {
-            return this;
-        }
 
-        virtual detail::Subscription* createBindingTo(Registration* source, const char* sourcePropertyName, const detail::property_descriptor& targetProperty) override {
-            return StandardRegistrationImpl::createBindingTo(source, sourcePropertyName, targetProperty);
-        }
-
-
-        const std::type_info& service_type() const override {
-            return descriptor.service_type;
-        }
 
 
         QString registeredName() const override {
@@ -133,7 +133,9 @@ private:
 
         virtual bool isManaged() const = 0;
 
-        virtual bool isEqual(const service_descriptor& descriptor, const service_config& config, QObject* obj) const = 0;
+        bool matches(const service_descriptor& descriptor, const service_config& config) const {
+            return descriptor.matches(this->descriptor) && this->config() == config;
+        }
 
         virtual const service_config& config() const = 0;
 
@@ -141,7 +143,13 @@ private:
 
         virtual void notifyPublished() = 0;
 
+        virtual bool registerAlias(const QString& alias) override {
+            return applicationContext()->registerAlias(this, alias);
+        }
 
+        bool matches(const std::type_info& type) const override {
+            return descriptor.matches(type);
+        }
 
         bool matches(const std::type_index& type) const {
             return descriptor.matches(type);
@@ -151,8 +159,8 @@ private:
 
 
 
-        static auto matcher(const std::type_index& type) {
-            return [type](DescriptorRegistration* reg) { return reg->matches(type); };
+        static auto matcher(const std::type_info& type) {
+            return [&type](DescriptorRegistration* reg) { return reg->matches(type); };
         }
 
 
@@ -167,14 +175,16 @@ private:
 
         virtual QObject* createPrivateObject(const QVariantList& dependencies) = 0;
 
-
-
+        virtual bool registerBoundProperty(const char* name) override {
+            return boundProperties.insert(name).second;
+        }
 
 
         service_descriptor descriptor;
         QString m_name;
         QVariantMap resolvedProperties;
         std::vector<QPropertyNotifier> bindings;
+        std::unordered_set<QString> boundProperties;
     };
 
     using descriptor_set = std::unordered_set<DescriptorRegistration*>;
@@ -183,6 +193,8 @@ private:
 
 
     struct ServiceRegistration : public DescriptorRegistration {
+
+
 
         ServiceRegistration(const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
             DescriptorRegistration{name, desc, parent},
@@ -224,9 +236,7 @@ private:
             return obj;
         }
 
-        virtual bool isEqual(const service_descriptor& descriptor, const service_config& config, QObject* obj) const override {
-            return descriptor == this->descriptor && m_config == config;
-        }
+
 
         virtual QObjectList privateObjects() const override {
             return m_privateObjects;
@@ -243,13 +253,11 @@ private:
             return theService;
         }
 
-        virtual void subscribe(detail::Subscription* subscription) override {
+        virtual void onSubscription(detail::Subscription* subscription) override {
             //If the Service is already present, there is no need to connect to the signal:
             if(theService) {
                 emit subscription->objectPublished(theService);
-                return;
             }
-            Registration::subscribe(subscription);
         }
 
         virtual QMetaProperty getProperty(const char* name) const override {
@@ -273,11 +281,14 @@ private:
             return false;
         }
 
+
+
     private:
         QObject* theService;
         QObjectList m_privateObjects;
         service_config m_config;
         QMetaObject::Connection onDestroyed;
+
     };
 
     struct ObjectRegistration : public DescriptorRegistration {
@@ -293,9 +304,7 @@ private:
         void notifyPublished() override {
         }
 
-        virtual bool isEqual(const service_descriptor& descriptor, const service_config&, QObject* obj) const override {
-            return descriptor == this->descriptor && theObj == obj;
-        }
+
 
         virtual bool isPublished() const override {
             return true;
@@ -332,8 +341,7 @@ private:
             return defaultConfig;
         }
 
-        virtual void subscribe(detail::Subscription* subscription) override {
-            //There is no need to connect to the signal, as the Object is already present
+        virtual void onSubscription(detail::Subscription* subscription) override {
             emit subscription->objectPublished(theObj);
         }
 
@@ -361,12 +369,8 @@ private:
             m_meta(metaObject) {
         }
 
-        virtual detail::Registration* asRegistration() override {
-            return this;
-        }
-
-        virtual detail::Subscription* createBindingTo(Registration* source, const char* sourcePropertyName, const detail::property_descriptor& targetProperty) override {
-            return StandardRegistrationImpl::createBindingTo(source, sourcePropertyName, targetProperty);
+        bool matches(const std::type_info& type) const override {
+            return m_type == type;
         }
 
         virtual StandardApplicationContext* applicationContext() const final override {
@@ -379,57 +383,8 @@ private:
 
 
 
-
-        virtual QMetaProperty getProperty(const char* name) const override {
-            if(m_meta) {
-                return m_meta->property(m_meta->indexOfProperty(name));
-            }
-            return QMetaProperty{};
-        }
-
-        virtual bool add(DescriptorRegistration* reg) = 0;
-
-
-        void remove(DescriptorRegistration* reg) {
-            auto found = std::find(registrations.begin(), registrations.end(), reg);
-            if(found != registrations.end()) {
-                registrations.erase(found);
-            }
-        }
-
-
-        const type_info &service_type() const final override {
-            return m_type;
-        }
-
-
-
-        virtual void print(QDebug out) const final override {
-            out.nospace().noquote() << "Services [" << registrations.size() << "] with service-type '" << service_type().name() << "'";
-        }
-
-
-        const std::type_info& m_type;
-        descriptor_list registrations;
-        const QMetaObject* m_meta;
-
-    };
-
-
-
-    struct StaticProxyRegistration : public ProxyRegistration {
-
-
-
-        StaticProxyRegistration(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent) :
-            ProxyRegistration{type, metaObject, parent} {
-        }
-
-
-
-
-        bool add(DescriptorRegistration* reg) override {
-            if(reg->matches(service_type()) && std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
+        bool add(DescriptorRegistration* reg) {
+            if(reg->matches(m_type) && std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
                 registrations.push_back(reg);
                 if(reg->isPublished()) {
                     emit objectPublished(reg->getObject());
@@ -442,8 +397,7 @@ private:
 
 
 
-        virtual void subscribe(detail::Subscription* subscription) override {
-            Registration::subscribe(subscription);
+        virtual void onSubscription(detail::Subscription* subscription) override {
             for(auto reg : registrations) {
                 auto obj = reg->getObject();
                 if(obj) {
@@ -452,63 +406,42 @@ private:
             }
         }
 
+        virtual QMetaProperty getProperty(const char* name) const override {
+            if(m_meta) {
+                return m_meta->property(m_meta->indexOfProperty(name));
+            }
+            return QMetaProperty{};
+        }
+
+
+        void remove(DescriptorRegistration* reg) {
+            auto found = std::find(registrations.begin(), registrations.end(), reg);
+            if(found != registrations.end()) {
+                registrations.erase(found);
+            }
+        }
+
+
+
+
+        virtual void print(QDebug out) const final override {
+            out.nospace().noquote() << "Services [" << registrations.size() << "] with service-type '" << m_type.name() << "'";
+        }
+
+        virtual bool registerBoundProperty(const char* name) override {
+            return boundProperties.insert(name).second;
+        }
+
+
+        const std::type_info& m_type;
+        descriptor_list registrations;
+        const QMetaObject* m_meta;
+        std::unordered_set<QString> boundProperties;
 
     };
 
 
-    struct DynamicProxyRegistration : public ProxyRegistration {
 
-
-
-        DynamicProxyRegistration(const std::type_info& type, q_predicate_t check, const QMetaObject* metaObject, StandardApplicationContext* parent) :
-            ProxyRegistration{type, metaObject, parent},
-            dynamicCheck(check) {
-        }
-
-
-
-
-
-
-
-
-        virtual bool add(DescriptorRegistration* reg) override {
-            if(std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
-                registrations.push_back(reg);
-                if(reg->isPublished() && dynamicCheck(reg->getObject())) {
-                    emit objectPublished(reg->getObject());
-                } else {
-                    QObject::connect(reg, &Registration::objectPublished, this, &DynamicProxyRegistration::objectPublishedSlot);
-                }
-                return true;
-            }
-            return false;
-        }
-
-
-        virtual void subscribe(detail::Subscription* subscription) override {
-            Registration::subscribe(subscription);
-            for(auto reg : registrations) {
-                auto obj = reg->getObject();
-                if(dynamicCheck(obj)) {
-                    emit subscription->objectPublished(obj);
-                }
-            }
-        }
-
-
-
-
-
-    private:
-        void objectPublishedSlot(QObject* obj) {
-            if(dynamicCheck(obj)) {
-                emit objectPublished(obj);
-            }
-        }
-
-        q_predicate_t dynamicCheck;
-    };
 
 
 
@@ -527,7 +460,7 @@ private:
     };
 
 
-    template<typename C> static DescriptorRegistration* find_by_type(const C& regs, const std::type_index& type);
+    template<typename C> static DescriptorRegistration* find_by_type(const C& regs, const std::type_info& type);
 
     bool checkTransitiveDependentsOn(const service_descriptor& descriptor, const std::unordered_set<std::type_index>& dependencies) const;
 
@@ -560,15 +493,9 @@ private:
 
     std::unordered_map<QString,DescriptorRegistration*> registrationsByName;
 
-    using proxy_key_t = std::pair<std::type_index,LookupKind>;
 
-    struct proxy_hash {
-        std::size_t operator()(const proxy_key_t& arg) const {
-            return arg.first.hash_code() ^ static_cast<std::size_t>(arg.second);
-        }
-    };
 
-    mutable std::unordered_map<proxy_key_t,ProxyRegistration*,proxy_hash> proxyRegistrationCache;
+    mutable std::unordered_map<std::type_index,ProxyRegistration*> proxyRegistrationCache;
 };
 
 

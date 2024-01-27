@@ -372,8 +372,8 @@ Putting it all together, we use the helper-template `Service` for specifying bot
     
     context -> registerService(Service<PropFetcherAggregator>{injectAllOf<PropFetcher>()}, "propFetcherAggration");
     
-    context -> registerService(Service<PropFetcher,RestPropFetcher>{inject<QNetworkAccessManager>()}, "hamburgWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
-    context -> registerService(Service<PropFetcher,RestPropFetcher>{inject<QNetworkAccessManager>()}, "berlinWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}));
+    /*2*/ context -> registerService(Service<PropFetcher,RestPropFetcher>{inject<QNetworkAccessManager>()}.advertiseAs<PropFetcher>(), "hamburgWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
+    /*3*/ context -> registerService(Service<RestPropFetcher>{inject<QNetworkAccessManager>()}.advertiseAs<PropFetcher>(), "berlinWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}));
     
     context -> publish(); 
 
@@ -383,9 +383,43 @@ Two noteworthy things:
 The reason for this is that the class has an accessible default-constructor. `QApplicationContext` makes sure that whenever a dependency
 for a specific type is resolved and a matching service has not been explicitly registered, a default-instance will be created if possible.
 2. The order of registrations has been switched: now, the dependent service `PropFetcherAggregator` is registered before the services it depends on.
-This was done to demonstrate that, **regardless of the ordering of registrations**, the dependencies will be resolved correctly!  
+This was done to demonstrate that, **regardless of the ordering of registrations**, the dependencies will be resolved correctly! 
+Also, there are two type-arguments for the Service now: the first specifies the type of service-interface, the second the implementatio-type.
+3. This line uses an alternative, more verbose, but also arguable more understandable syntax: The declaration of the Service is now followed by the method `advertiseAs<PropFetcher>()` which ensures that the Service will be looked up by this interface-type. 
 `QApplicationContext` figures out automatically what the correct order must be.
 
+### Multiple service-interfaces
+
+A service may be advertised under more than one service-interface. This makes sense if the service-type implements several non-QObject interfaces that 
+other services depend on.
+Suppose the class `RestPropFetcher` implements an additional interface `QNetworkManagerAware`:
+
+    class QNetworkManagerAware {
+       virtual ~QNetworkManagerAware() = default;
+       
+       virtual setNetworkManager(QNetworkAccessManager*) = 0;
+    };
+    
+    class PropFetcher : public QObject, public QNetworkManagerAware {
+    
+    explicit PropFetcher(const QString& url, QObject* parent = nulptr);
+    
+    virtual setNetworkManager(QNetworkAccessManager*) override;
+    ...//same as before
+    };
+    
+    class RestPropFetcher : public PropFetcher, public QNetworkManagerAware {
+    ...
+    };
+
+In order to advertise a `RestPropFetcher` as both a `PropFetcher` and a `QNetworkManagerAware`, we use:
+
+    auto reg = context -> registerService(Service<RestPropFetcher>{inject<QNetworkAccessManager>()}.advertiseAs<PropFetcher,QNetworkManagerAware>(), "hamburgWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
+
+**Note:** The return-value `reg` will be of type `ServiceRegistration<RestPropFetcher>`.
+
+You may convert this value to `ServiceRegistraton<PropFetcher>` as well as `ServiceRegistration<QNetworkManagerAware>`,
+using the member-function ServiceRegistration::as(). Conversions to other types will not succeed.
 
 ## The Service-lifefycle
 
@@ -487,7 +521,7 @@ There is a second, more explicit way of achieving the same result:
 3. We bind the property `interval` of the second timer to the first timer's propery.
 4. We change the first timer's interval. This will also change the second timer's interval!
 
-The second approach of binding properties together has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), 
+The second approach of binding properties has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), 
 aka those that represent more than one service. The source-property will be bound to every target-service automatically!
 
 ## Accessing a service after registration
@@ -527,39 +561,6 @@ You may also access a specific service by name:
     }
     
 
-### Accessing published services by implemented interface
-
-Sometimes, the interface that we use to register a Service might not be the same interface by which we would like to access the Service later.
-
-Applied to our example, it is conceivable that the class `PropFetcher` extends a non-QObject-interface named `QNetworkManagerAware` with a single method:
-
-    class QNetworkManagerAware {
-       virtual ~QNetworkManagerAware() = default;
-       
-       virtual setNetworkManager(QNetworkAccessManager*) = 0;
-    };
-    
-    class PropFetcher : public QObject, public QNetworkManagerAware {
-    
-    explicit PropFetcher(const QString& url, QObject* parent = nulptr);
-    
-    virtual setNetworkManager(QNetworkAccessManager*) override;
-    ...//same as before
-    };
-
-    context -> registerService(Service<PropFetcher,RestPropFetcher>{"hamburgWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
-    context -> registerService(Service<PropFetcher,RestPropFetcher>{"berlinWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}));
-    
-    auto networkManagerAware = context -> getRegistration<QNetworkManagerAware>(); //WRONG: 
-
-As you can see from the comment in the last line, this will not work, as it will only check against the registered interface, which is `PropFetcher`.
-<br>Fortunately, you only need to change one little bit:
-
-    auto networkManagerAware = context -> getRegistration<QNetworkManagerAware,LookupKind::DYNAMIC>(); //RIGHT: 
-    
-    networkManagerAware.autowire(&QNetworkManagerAware::setNetworkManager); //Will inject the QNetworkManager from the Context into all services that implement the interface.
-
-This will instruct to perform a runtime-check on every published service, in order to check whether it implements the interface `QNetworkManagerAware`.
 
 
 ## Tweaking services (QApplicationContextPostProcessor)

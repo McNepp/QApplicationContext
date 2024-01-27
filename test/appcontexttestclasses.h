@@ -18,13 +18,23 @@ public:
     virtual void setFoo(const QString&) = 0;
 };
 
+class TimerAware {
+protected:
+
+    ~TimerAware() = default;
+public:
+
+    virtual QTimer* timer() const = 0;
+
+};
+
 
 
 class CyclicDependency;
 
 
 
-class BaseService : public QObject, public Interface1
+class BaseService : public QObject, public Interface1, public TimerAware
 {
     friend struct mcnepp::qtdi::service_factory<BaseService>;
 
@@ -51,7 +61,7 @@ public:
 
 
     QTimer* m_timer;
-    QTimer *timer() const;
+    QTimer *timer() const override;
     void setTimer(QTimer *newTimer);
     CyclicDependency *dependency() const;
 
