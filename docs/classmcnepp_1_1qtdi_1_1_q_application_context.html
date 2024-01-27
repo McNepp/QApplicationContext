@@ -78,7 +78,6 @@ $(function() {
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#signals">Signals</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pro-types">Protected Types</a> &#124;
 <a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="#pro-static-methods">Static Protected Member Functions</a> &#124;
 <a href="#properties">Properties</a> &#124;
@@ -121,7 +120,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>publishedChanged</b> 
 <tr class="separator:a75153d41f99f713cdf05079870f8b3e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6a963715f0a4e7c0a3eea27acab23e13"><td class="memItemLeft" align="right" valign="top"><a id="a6a963715f0a4e7c0a3eea27acab23e13" name="a6a963715f0a4e7c0a3eea27acab23e13"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>pendingPublicationChanged</b> ()</td></tr>
-<tr class="memdesc:a6a963715f0a4e7c0a3eea27acab23e13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Signals that the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5514133528db14cb3308410984b2b2c1" title="How many services have been registered and not yet published? This property will initially yield 0....">pendingPublication()</a> property has changed. May be emitted upon <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">registerService()</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ac500bf06847e80745233dcb6bc3992da" title="Registers an object with this ApplicationContext. The object will immediately be published....">registerObject()</a> or <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a>. <b>Note:</b> the signal will not be emitted on destruction of this ApplicationContext! <br /></td></tr>
+<tr class="memdesc:a6a963715f0a4e7c0a3eea27acab23e13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Signals that the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5514133528db14cb3308410984b2b2c1" title="How many services have been registered and not yet published? This property will initially yield 0....">pendingPublication()</a> property has changed. May be emitted upon <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">registerService()</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a74b64aeda314a8514933e664b18aa654" title="Registers an object with this ApplicationContext. The object will immediately be published....">registerObject()</a> or <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a>. <b>Note:</b> the signal will not be emitted on destruction of this ApplicationContext! <br /></td></tr>
 <tr class="separator:a6a963715f0a4e7c0a3eea27acab23e13"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
@@ -134,22 +133,28 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a8f7387096bad28fa5241ff5e3a2fd9cb"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8f7387096bad28fa5241ff5e3a2fd9cb">registerService</a> (const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;config=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt;</td></tr>
 <tr class="memdesc:a8f7387096bad28fa5241ff5e3a2fd9cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with no dependencies with this ApplicationContext. This is a convenience-function equivalent to <code>registerService(<a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>&lt;S&gt;{}, objectName, config)</code>.  <br /></td></tr>
 <tr class="separator:a8f7387096bad28fa5241ff5e3a2fd9cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac500bf06847e80745233dcb6bc3992da"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:ac500bf06847e80745233dcb6bc3992da"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ac500bf06847e80745233dcb6bc3992da">registerObject</a> (S *obj, const QString &amp;objName=&quot;&quot;)</td></tr>
-<tr class="memdesc:ac500bf06847e80745233dcb6bc3992da"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers an object with this ApplicationContext. The object will immediately be published. You can either let the compiler's template-argument deduction figure out the servicetype <code>&lt;S&gt;</code> for you, or you can supply it explicitly, if it differs from the static type of the object.  <br /></td></tr>
-<tr class="separator:ac500bf06847e80745233dcb6bc3992da"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a74b64aeda314a8514933e664b18aa654"><td class="memTemplParams" colspan="2">template&lt;typename S , typename... IFaces&gt; </td></tr>
+<tr class="memitem:a74b64aeda314a8514933e664b18aa654"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a74b64aeda314a8514933e664b18aa654">registerObject</a> (S *obj, const QString &amp;objName=&quot;&quot;)</td></tr>
+<tr class="memdesc:a74b64aeda314a8514933e664b18aa654"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers an object with this ApplicationContext. The object will immediately be published. You can either let the compiler's template-argument deduction figure out the servicetype <code>&lt;S&gt;</code> for you, or you can supply it explicitly, if it differs from the static type of the object.  <br /></td></tr>
+<tr class="separator:a74b64aeda314a8514933e664b18aa654"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a961953e2d50213098e05446b5450427b"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
 <tr class="memitem:a961953e2d50213098e05446b5450427b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b">getRegistration</a> (const QString &amp;name) const</td></tr>
-<tr class="memdesc:a961953e2d50213098e05446b5450427b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> for a service-type and name.  <br /></td></tr>
+<tr class="memdesc:a961953e2d50213098e05446b5450427b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> for a service-type and name. <br  />
+This function will look up Services by the names they were registered with. Additionally, it will look up any alias that might have been given, using <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a4315bd8db4192dd851c35829f66b7232" title="Registers an alias for a Service.  If this function is successful, the Service can be referenced by t...">ServiceRegistration::registerAlias(const QString&amp;)</a>.  <br /></td></tr>
 <tr class="separator:a961953e2d50213098e05446b5450427b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad1105ea888300cc6c705e8fbf4ee5038"><td class="memTemplParams" colspan="2">template&lt;typename S , <a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5">LookupKind</a> lookup = LookupKind::STATIC&gt; </td></tr>
-<tr class="memitem:ad1105ea888300cc6c705e8fbf4ee5038"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad1105ea888300cc6c705e8fbf4ee5038">getRegistration</a> () const</td></tr>
-<tr class="memdesc:ad1105ea888300cc6c705e8fbf4ee5038"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a> for a service-type. <br  />
-In contrast to the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> that is returned by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">registerService()</a>, the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> returned by this function is actually a Proxy.<br  />
- This Proxy manages all Services of the requested type, regardless of whether they have been registered prior to invoking <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">getRegistration()</a>.<br  />
- This means that if you subscribe to it using <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">ServiceRegistration::subscribe()</a>, you will be notified about all published services that match the Service-type.<br  />
-  <br /></td></tr>
-<tr class="separator:ad1105ea888300cc6c705e8fbf4ee5038"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afce592b35526eeb43682e5acab37a63b"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
+<tr class="memitem:afce592b35526eeb43682e5acab37a63b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#afce592b35526eeb43682e5acab37a63b">getRegistration</a> () const</td></tr>
+<tr class="memdesc:afce592b35526eeb43682e5acab37a63b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> for a service-type. <br  />
+In contrast to the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> that is returned by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">registerService()</a>, the <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> returned by this function is actually a Proxy.<br  />
+ This Proxy manages all Services of the requested type, regardless of whether they have been registered prior to invoking <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">getRegistration()</a>.<br  />
+ This means that if you subscribe to it using <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">Registration::subscribe()</a>, you will be notified about all published services that match the Service-type.  <br /></td></tr>
+<tr class="separator:afce592b35526eeb43682e5acab37a63b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a805b17a76dde6d70f32d2a17d17bfd06"><td class="memItemLeft" align="right" valign="top">virtual QList&lt; <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a805b17a76dde6d70f32d2a17d17bfd06">getRegistrationHandles</a> () const =0</td></tr>
+<tr class="memdesc:a805b17a76dde6d70f32d2a17d17bfd06"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a List of all Services that have been registered. <br  />
+The element-type of the returned QList is the opaque type service_registration_handle_t. You should not de-reference it, as its API may changed without notice. <br  />
+ What you can do, though, is use one of the free functions <a class="el" href="qapplicationcontext_8h.html#ad99aa9332aee20a47057f62ed4e8f285" title="Determines whether a handle to a Registration matches a type.">matches(registration_handle_t)</a>, <a class="el" href="qapplicationcontext_8h.html#ae09e67c55a69665975a9e2371e3d0a94" title="Obtains the registeredName from a handle to a ServiceRegistration.">registeredName(service_registration_handle_t)</a>, <a class="el" href="qapplicationcontext_8h.html#afefa36bb5b7dd31e385dcd75747fd594" title="Obtains the registeredProperties from a handle to a ServiceRegistration.">registeredProperties(service_registration_handle_t)</a>. <br  />
+Additionally, you may wrap the handles in a type-safe manner, using <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a36e48f258a0e21e9e507d34439cd1913" title="Wraps a handle to a ServiceRegistration into a typesafe high-level ServiceRegistration.">ServiceRegistration::wrap(service_registration_handle_t)</a>.  <br /></td></tr>
+<tr class="separator:a805b17a76dde6d70f32d2a17d17bfd06"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad87cbddf0501c5ea8cb1ebe11176e689"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689">publish</a> (bool allowPartial=false)=0</td></tr>
 <tr class="memdesc:ad87cbddf0501c5ea8cb1ebe11176e689"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked, it will attempt to instantiate all yet-unpublished services that have been registered with this ApplicationContext.  <br /></td></tr>
 <tr class="separator:ad87cbddf0501c5ea8cb1ebe11176e689"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -160,44 +165,38 @@ In contrast to the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registrat
 <tr class="memdesc:aaa68903ec532fbeaa3975c4af668fe35"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number of yet unpublished services.  <br /></td></tr>
 <tr class="separator:aaa68903ec532fbeaa3975c4af668fe35"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-types" name="pro-types"></a>
-Protected Types</h2></td></tr>
-<tr class="memitem:ad5240be4a39e66bb22359af6a35aedb4"><td class="memItemLeft" align="right" valign="top"><a id="ad5240be4a39e66bb22359af6a35aedb4" name="ad5240be4a39e66bb22359af6a35aedb4"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>q_predicate_t</b> = detail::q_predicate_t</td></tr>
-<tr class="separator:ad5240be4a39e66bb22359af6a35aedb4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
 <tr class="memitem:a314e0b74e9841c4a310f14feb0fe21a8"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a314e0b74e9841c4a310f14feb0fe21a8">QApplicationContext</a> (QObject *parent=nullptr)</td></tr>
 <tr class="memdesc:a314e0b74e9841c4a310f14feb0fe21a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard constructor.  <br /></td></tr>
 <tr class="separator:a314e0b74e9841c4a310f14feb0fe21a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaee5ae38de1fad1d5795aeb90ce48013"><td class="memItemLeft" align="right" valign="top">virtual detail::ServiceRegistration *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aaee5ae38de1fad1d5795aeb90ce48013">registerService</a> (const QString &amp;name, const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">service_descriptor</a> &amp;descriptor, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;config)=0</td></tr>
-<tr class="memdesc:aaee5ae38de1fad1d5795aeb90ce48013"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with this <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.  <br /></td></tr>
-<tr class="separator:aaee5ae38de1fad1d5795aeb90ce48013"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5560eb625ab07821071c8d70502eae50"><td class="memItemLeft" align="right" valign="top">virtual detail::ServiceRegistration *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5560eb625ab07821071c8d70502eae50">registerObject</a> (const QString &amp;name, QObject *obj, const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">service_descriptor</a> &amp;descriptor)=0</td></tr>
-<tr class="memdesc:a5560eb625ab07821071c8d70502eae50"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers an Object with this <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.  <br /></td></tr>
-<tr class="separator:a5560eb625ab07821071c8d70502eae50"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a22256ca9a82346ca90e5e1d56d5e834c"><td class="memItemLeft" align="right" valign="top">virtual detail::ServiceRegistration *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a22256ca9a82346ca90e5e1d56d5e834c">getRegistration</a> (const std::type_info &amp;service_type, const QString &amp;name) const =0</td></tr>
-<tr class="memdesc:a22256ca9a82346ca90e5e1d56d5e834c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for a service_type.  <br /></td></tr>
-<tr class="separator:a22256ca9a82346ca90e5e1d56d5e834c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abd25c0895c0475c5e9701885f56c1538"><td class="memItemLeft" align="right" valign="top">virtual detail::ProxyRegistration *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abd25c0895c0475c5e9701885f56c1538">getRegistration</a> (const std::type_info &amp;service_type, <a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5">LookupKind</a> lookup, q_predicate_t dynamicCheck, const QMetaObject *metaObject) const =0</td></tr>
-<tr class="memdesc:abd25c0895c0475c5e9701885f56c1538"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for a service_type.  <br /></td></tr>
-<tr class="separator:abd25c0895c0475c5e9701885f56c1538"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0b8dac9fc109eae86adf7c3df96a183b"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a0b8dac9fc109eae86adf7c3df96a183b">registerService</a> (const QString &amp;name, const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">service_descriptor</a> &amp;descriptor, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;config)=0</td></tr>
+<tr class="memdesc:a0b8dac9fc109eae86adf7c3df96a183b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with this <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.  <br /></td></tr>
+<tr class="separator:a0b8dac9fc109eae86adf7c3df96a183b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07d655888051851d1c9282d209cdf731"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a07d655888051851d1c9282d209cdf731">registerObject</a> (const QString &amp;name, QObject *obj, const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">service_descriptor</a> &amp;descriptor)=0</td></tr>
+<tr class="memdesc:a07d655888051851d1c9282d209cdf731"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers an Object with this <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.  <br /></td></tr>
+<tr class="separator:a07d655888051851d1c9282d209cdf731"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d7b6ffee628c5a4e158753a5b5fe5a0"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a4d7b6ffee628c5a4e158753a5b5fe5a0">getRegistration</a> (const std::type_info &amp;service_type, const QString &amp;name) const =0</td></tr>
+<tr class="memdesc:a4d7b6ffee628c5a4e158753a5b5fe5a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for a service_type.  <br /></td></tr>
+<tr class="separator:a4d7b6ffee628c5a4e158753a5b5fe5a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac63e2d018d01e779eb6514c518a15fa6"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="qapplicationcontext_8h.html#adde781831da99ca1afd54b82f9e6d23d">proxy_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ac63e2d018d01e779eb6514c518a15fa6">getRegistration</a> (const std::type_info &amp;service_type, const QMetaObject *metaObject) const =0</td></tr>
+<tr class="memdesc:ac63e2d018d01e779eb6514c518a15fa6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for a service_type.  <br /></td></tr>
+<tr class="separator:ac63e2d018d01e779eb6514c518a15fa6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-static-methods" name="pro-static-methods"></a>
 Static Protected Member Functions</h2></td></tr>
-<tr class="memitem:add8057c04e1dd6a07203750d5622f9c6"><td class="memItemLeft" align="right" valign="top">static detail::ServiceRegistration *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#add8057c04e1dd6a07203750d5622f9c6">delegateRegisterService</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;appContext, const QString &amp;name, const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">service_descriptor</a> &amp;descriptor, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;config)</td></tr>
-<tr class="memdesc:add8057c04e1dd6a07203750d5622f9c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allows you to invoke a protected virtual function on another target. If you are implementing registerService(const QString&amp;, service_descriptor*) and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target.  <br /></td></tr>
-<tr class="separator:add8057c04e1dd6a07203750d5622f9c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa994044d3b0966880044ce98e3a2f769"><td class="memItemLeft" align="right" valign="top">static detail::ServiceRegistration *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aa994044d3b0966880044ce98e3a2f769">delegateRegisterObject</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;appContext, const QString &amp;name, QObject *obj, const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">service_descriptor</a> &amp;descriptor)</td></tr>
-<tr class="memdesc:aa994044d3b0966880044ce98e3a2f769"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allows you to invoke a protected virtual function on another target. If you are implementing registerObject(const QString&amp; name, QObject*, service_descriptor*) and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target.  <br /></td></tr>
-<tr class="separator:aa994044d3b0966880044ce98e3a2f769"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab719241d1f9ec6963947d3bc10c59482"><td class="memItemLeft" align="right" valign="top">static detail::ServiceRegistration *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ab719241d1f9ec6963947d3bc10c59482">delegateGetRegistration</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;appContext, const std::type_info &amp;service_type, const QString &amp;name)</td></tr>
-<tr class="memdesc:ab719241d1f9ec6963947d3bc10c59482"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allows you to invoke a protected virtual function on another target. If you are implementing getRegistration(const std::type_info&amp;) const and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target.  <br /></td></tr>
-<tr class="separator:ab719241d1f9ec6963947d3bc10c59482"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9e4b56e6d766aa59d88d9d8b640cd56f"><td class="memItemLeft" align="right" valign="top">static detail::ProxyRegistration *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9e4b56e6d766aa59d88d9d8b640cd56f">delegateGetRegistration</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;appContext, const std::type_info &amp;service_type, <a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5">LookupKind</a> lookup, q_predicate_t dynamicCheck, const QMetaObject *metaObject)</td></tr>
-<tr class="memdesc:a9e4b56e6d766aa59d88d9d8b640cd56f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allows you to invoke a protected virtual function on another target. If you are implementing getRegistration(const std::type_info&amp;) const and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target.  <br /></td></tr>
-<tr class="separator:a9e4b56e6d766aa59d88d9d8b640cd56f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9683d6e457c11687ac4d662cfd5144e2"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9683d6e457c11687ac4d662cfd5144e2">delegateRegisterService</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;appContext, const QString &amp;name, const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">service_descriptor</a> &amp;descriptor, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;config)</td></tr>
+<tr class="memdesc:a9683d6e457c11687ac4d662cfd5144e2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allows you to invoke a protected virtual function on another target. If you are implementing registerService(const QString&amp;, service_descriptor*) and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target.  <br /></td></tr>
+<tr class="separator:a9683d6e457c11687ac4d662cfd5144e2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af5ce51a4fa4c989e42aecfbe86c894dc"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#af5ce51a4fa4c989e42aecfbe86c894dc">delegateRegisterObject</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;appContext, const QString &amp;name, QObject *obj, const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">service_descriptor</a> &amp;descriptor)</td></tr>
+<tr class="memdesc:af5ce51a4fa4c989e42aecfbe86c894dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allows you to invoke a protected virtual function on another target. If you are implementing registerObject(const QString&amp; name, QObject*, service_descriptor*) and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target.  <br /></td></tr>
+<tr class="separator:af5ce51a4fa4c989e42aecfbe86c894dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:addcfafb006499f7c3ca7b2eb25b548d3"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#addcfafb006499f7c3ca7b2eb25b548d3">delegateGetRegistration</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;appContext, const std::type_info &amp;service_type, const QString &amp;name)</td></tr>
+<tr class="memdesc:addcfafb006499f7c3ca7b2eb25b548d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allows you to invoke a protected virtual function on another target. If you are implementing getRegistration(const std::type_info&amp;) const and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target.  <br /></td></tr>
+<tr class="separator:addcfafb006499f7c3ca7b2eb25b548d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a89c9944a68d8aec1712ef650c185005b"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="qapplicationcontext_8h.html#adde781831da99ca1afd54b82f9e6d23d">proxy_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a89c9944a68d8aec1712ef650c185005b">delegateGetRegistration</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;appContext, const std::type_info &amp;service_type, const QMetaObject *metaObject)</td></tr>
+<tr class="memdesc:a89c9944a68d8aec1712ef650c185005b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allows you to invoke a protected virtual function on another target. If you are implementing getRegistration(const std::type_info&amp;) const and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target.  <br /></td></tr>
+<tr class="separator:a89c9944a68d8aec1712ef650c185005b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="properties" name="properties"></a>
 Properties</h2></td></tr>
@@ -253,8 +252,8 @@ template&lt;typename S &gt; </td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ab719241d1f9ec6963947d3bc10c59482" name="ab719241d1f9ec6963947d3bc10c59482"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab719241d1f9ec6963947d3bc10c59482">&#9670;&#160;</a></span>delegateGetRegistration() <span class="overload">[1/2]</span></h2>
+<a id="a89c9944a68d8aec1712ef650c185005b" name="a89c9944a68d8aec1712ef650c185005b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a89c9944a68d8aec1712ef650c185005b">&#9670;&#160;</a></span>delegateGetRegistration() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -263,7 +262,59 @@ template&lt;typename S &gt; </td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">static detail::ServiceRegistration * mcnepp::qtdi::QApplicationContext::delegateGetRegistration </td>
+          <td class="memname">static <a class="el" href="qapplicationcontext_8h.html#adde781831da99ca1afd54b82f9e6d23d">proxy_registration_handle_t</a> mcnepp::qtdi::QApplicationContext::delegateGetRegistration </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;&#160;</td>
+          <td class="paramname"><em>appContext</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::type_info &amp;&#160;</td>
+          <td class="paramname"><em>service_type</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const QMetaObject *&#160;</td>
+          <td class="paramname"><em>metaObject</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Allows you to invoke a protected virtual function on another target. If you are implementing getRegistration(const std::type_info&amp;) const and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">appContext</td><td>the target on which to invoke getRegistration(const std::type_info&amp;) const. </td></tr>
+    <tr><td class="paramname">service_type</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>the result of getRegistration(const std::type_info&amp;) const. </dd></dl>
+
+</div>
+</div>
+<a id="addcfafb006499f7c3ca7b2eb25b548d3" name="addcfafb006499f7c3ca7b2eb25b548d3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#addcfafb006499f7c3ca7b2eb25b548d3">&#9670;&#160;</a></span>delegateGetRegistration() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> mcnepp::qtdi::QApplicationContext::delegateGetRegistration </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;&#160;</td>
           <td class="paramname"><em>appContext</em>, </td>
@@ -301,12 +352,12 @@ template&lt;typename S &gt; </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>the result of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a22256ca9a82346ca90e5e1d56d5e834c" title="Obtains a Registration for a service_type.">getRegistration(const std::type_info&amp;,const QString&amp;) const</a>. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>the result of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a4d7b6ffee628c5a4e158753a5b5fe5a0" title="Obtains a Registration for a service_type.">getRegistration(const std::type_info&amp;,const QString&amp;) const</a>. </dd></dl>
 
 </div>
 </div>
-<a id="a9e4b56e6d766aa59d88d9d8b640cd56f" name="a9e4b56e6d766aa59d88d9d8b640cd56f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9e4b56e6d766aa59d88d9d8b640cd56f">&#9670;&#160;</a></span>delegateGetRegistration() <span class="overload">[2/2]</span></h2>
+<a id="af5ce51a4fa4c989e42aecfbe86c894dc" name="af5ce51a4fa4c989e42aecfbe86c894dc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af5ce51a4fa4c989e42aecfbe86c894dc">&#9670;&#160;</a></span>delegateRegisterObject()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -315,71 +366,7 @@ template&lt;typename S &gt; </td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">static detail::ProxyRegistration * mcnepp::qtdi::QApplicationContext::delegateGetRegistration </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;&#160;</td>
-          <td class="paramname"><em>appContext</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::type_info &amp;&#160;</td>
-          <td class="paramname"><em>service_type</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5">LookupKind</a>&#160;</td>
-          <td class="paramname"><em>lookup</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">q_predicate_t&#160;</td>
-          <td class="paramname"><em>dynamicCheck</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const QMetaObject *&#160;</td>
-          <td class="paramname"><em>metaObject</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Allows you to invoke a protected virtual function on another target. If you are implementing getRegistration(const std::type_info&amp;) const and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">appContext</td><td>the target on which to invoke getRegistration(const std::type_info&amp;) const. </td></tr>
-    <tr><td class="paramname">service_type</td><td></td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>the result of getRegistration(const std::type_info&amp;) const. </dd></dl>
-
-</div>
-</div>
-<a id="aa994044d3b0966880044ce98e3a2f769" name="aa994044d3b0966880044ce98e3a2f769"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa994044d3b0966880044ce98e3a2f769">&#9670;&#160;</a></span>delegateRegisterObject()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">static detail::ServiceRegistration * mcnepp::qtdi::QApplicationContext::delegateRegisterObject </td>
+          <td class="memname">static <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> mcnepp::qtdi::QApplicationContext::delegateRegisterObject </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;&#160;</td>
           <td class="paramname"><em>appContext</em>, </td>
@@ -429,8 +416,8 @@ template&lt;typename S &gt; </td></tr>
 
 </div>
 </div>
-<a id="add8057c04e1dd6a07203750d5622f9c6" name="add8057c04e1dd6a07203750d5622f9c6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#add8057c04e1dd6a07203750d5622f9c6">&#9670;&#160;</a></span>delegateRegisterService()</h2>
+<a id="a9683d6e457c11687ac4d662cfd5144e2" name="a9683d6e457c11687ac4d662cfd5144e2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9683d6e457c11687ac4d662cfd5144e2">&#9670;&#160;</a></span>delegateRegisterService()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -439,7 +426,7 @@ template&lt;typename S &gt; </td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">static detail::ServiceRegistration * mcnepp::qtdi::QApplicationContext::delegateRegisterService </td>
+          <td class="memname">static <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> mcnepp::qtdi::QApplicationContext::delegateRegisterService </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> &amp;&#160;</td>
           <td class="paramname"><em>appContext</em>, </td>
@@ -488,13 +475,13 @@ template&lt;typename S &gt; </td></tr>
 
 </div>
 </div>
-<a id="ad1105ea888300cc6c705e8fbf4ee5038" name="ad1105ea888300cc6c705e8fbf4ee5038"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad1105ea888300cc6c705e8fbf4ee5038">&#9670;&#160;</a></span>getRegistration() <span class="overload">[1/4]</span></h2>
+<a id="afce592b35526eeb43682e5acab37a63b" name="afce592b35526eeb43682e5acab37a63b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afce592b35526eeb43682e5acab37a63b">&#9670;&#160;</a></span>getRegistration() <span class="overload">[1/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S , <a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5">LookupKind</a> lookup = LookupKind::STATIC&gt; </div>
+template&lt;typename S &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
@@ -513,27 +500,17 @@ template&lt;typename S , <a class="el" href="qapplicationcontext_8h.html#af49895
 </table>
 </div><div class="memdoc">
 
-<p>Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a> for a service-type. <br  />
-In contrast to the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> that is returned by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">registerService()</a>, the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> returned by this function is actually a Proxy.<br  />
- This Proxy manages all Services of the requested type, regardless of whether they have been registered prior to invoking <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.">getRegistration()</a>.<br  />
- This means that if you subscribe to it using <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">ServiceRegistration::subscribe()</a>, you will be notified about all published services that match the Service-type.<br  />
- </p>
-<table class="doxtable">
-<tr>
-<th>LookupKind</th><th>Type of managed Services </th></tr>
-<tr>
-<td><code><a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5afe6f99ef1ec99efbdc19a9786cf1facc" title="All Services whose registered service_type match the requested type, will be looked up.">LookupKind::STATIC</a></code></td><td>Those Services whose Registration::service_type() matches the requested <code>typeid(S)</code>  </td></tr>
-<tr>
-<td><code><a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5a0fcc90da4811c877ba9f9c12f7d60bc9" title="All Services that are convertible to the requested type at runtime, will be looked up.">LookupKind::DYNAMIC</a></code></td><td>Those Services that can be converted to the requested type using <code>dynamic_cast&lt;S*&gt;()</code>.  </td></tr>
-</table>
+<p>Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> for a service-type. <br  />
+In contrast to the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> that is returned by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">registerService()</a>, the <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> returned by this function is actually a Proxy.<br  />
+ This Proxy manages all Services of the requested type, regardless of whether they have been registered prior to invoking <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">getRegistration()</a>.<br  />
+ This means that if you subscribe to it using <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">Registration::subscribe()</a>, you will be notified about all published services that match the Service-type. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the required service-type. </td></tr>
-    <tr><td class="paramname">lookup</td><td>determines the strategy for retrieving the ServiceRegistration-Proxy. See the table above for details! </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a> that corresponds to all registration that match the service-type. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> that corresponds to all registration that match the service-type. </dd></dl>
 
 </div>
 </div>
@@ -563,7 +540,8 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> for a service-type and name. </p>
+<p>Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> for a service-type and name. <br  />
+This function will look up Services by the names they were registered with. Additionally, it will look up any alias that might have been given, using <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a4315bd8db4192dd851c35829f66b7232" title="Registers an alias for a Service.  If this function is successful, the Service can be referenced by t...">ServiceRegistration::registerAlias(const QString&amp;)</a>. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the required service-type. </td></tr>
@@ -572,16 +550,16 @@ template&lt;typename S &gt; </div>
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">name</td><td>the desired name of the registration. A valid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> will be returned only if exactly one <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> that matches the name has been registered. </td></tr>
+    <tr><td class="paramname">name</td><td>the desired name of the registration. A valid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> will be returned only if exactly one <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> that matches the name has been registered. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> for the required type and name. If no single <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> with a matching name and service-type could be found, an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> will be returned. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> for the required type and name. If no single <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> with a matching name and service-type could be found, an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> will be returned. </dd></dl>
 
 </div>
 </div>
-<a id="a22256ca9a82346ca90e5e1d56d5e834c" name="a22256ca9a82346ca90e5e1d56d5e834c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a22256ca9a82346ca90e5e1d56d5e834c">&#9670;&#160;</a></span>getRegistration() <span class="overload">[3/4]</span></h2>
+<a id="ac63e2d018d01e779eb6514c518a15fa6" name="ac63e2d018d01e779eb6514c518a15fa6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac63e2d018d01e779eb6514c518a15fa6">&#9670;&#160;</a></span>getRegistration() <span class="overload">[3/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -590,7 +568,56 @@ template&lt;typename S &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">virtual detail::ServiceRegistration * mcnepp::qtdi::QApplicationContext::getRegistration </td>
+          <td class="memname">virtual <a class="el" href="qapplicationcontext_8h.html#adde781831da99ca1afd54b82f9e6d23d">proxy_registration_handle_t</a> mcnepp::qtdi::QApplicationContext::getRegistration </td>
+          <td>(</td>
+          <td class="paramtype">const std::type_info &amp;&#160;</td>
+          <td class="paramname"><em>service_type</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const QMetaObject *&#160;</td>
+          <td class="paramname"><em>metaObject</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for a service_type. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">service_type</td><td>the service-type to match the registrations. </td></tr>
+    <tr><td class="paramname">dynamicCheck</td><td>This optional parameter is used to check whether a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> is actually an instance of the service_type. If <code>nullptr</code> is passed, this function will obtain only those Registrations where the registered service_type matches. </td></tr>
+    <tr><td class="paramname">metaObject</td><td>the static QMetaObject for the type. If not available, <code>nullptr</code> can be passed. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for the supplied service_type. </dd></dl>
+
+<p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#aefe5ecb322d92594da706a38de9d656d">mcnepp::qtdi::StandardApplicationContext</a>.</p>
+
+</div>
+</div>
+<a id="a4d7b6ffee628c5a4e158753a5b5fe5a0" name="a4d7b6ffee628c5a4e158753a5b5fe5a0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4d7b6ffee628c5a4e158753a5b5fe5a0">&#9670;&#160;</a></span>getRegistration() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> mcnepp::qtdi::QApplicationContext::getRegistration </td>
           <td>(</td>
           <td class="paramtype">const std::type_info &amp;&#160;</td>
           <td class="paramname"><em>service_type</em>, </td>
@@ -628,8 +655,8 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="abd25c0895c0475c5e9701885f56c1538" name="abd25c0895c0475c5e9701885f56c1538"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abd25c0895c0475c5e9701885f56c1538">&#9670;&#160;</a></span>getRegistration() <span class="overload">[4/4]</span></h2>
+<a id="a805b17a76dde6d70f32d2a17d17bfd06" name="a805b17a76dde6d70f32d2a17d17bfd06"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a805b17a76dde6d70f32d2a17d17bfd06">&#9670;&#160;</a></span>getRegistrationHandles()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -638,54 +665,26 @@ template&lt;typename S &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">virtual detail::ProxyRegistration * mcnepp::qtdi::QApplicationContext::getRegistration </td>
+          <td class="memname">virtual QList&lt; <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> &gt; mcnepp::qtdi::QApplicationContext::getRegistrationHandles </td>
           <td>(</td>
-          <td class="paramtype">const std::type_info &amp;&#160;</td>
-          <td class="paramname"><em>service_type</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5">LookupKind</a>&#160;</td>
-          <td class="paramname"><em>lookup</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">q_predicate_t&#160;</td>
-          <td class="paramname"><em>dynamicCheck</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const QMetaObject *&#160;</td>
-          <td class="paramname"><em>metaObject</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td> const</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">pure virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for a service_type. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">service_type</td><td>the service-type to match the registrations. </td></tr>
-    <tr><td class="paramname">dynamicCheck</td><td>This optional parameter is used to check whether a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> is actually an instance of the service_type. If <code>nullptr</code> is passed, this function will obtain only those Registrations where the registered service_type matches. </td></tr>
-    <tr><td class="paramname">metaObject</td><td>the static QMetaObject for the type. If not available, <code>nullptr</code> can be passed. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for the supplied service_type. </dd></dl>
+<p>Obtains a List of all Services that have been registered. <br  />
+The element-type of the returned QList is the opaque type service_registration_handle_t. You should not de-reference it, as its API may changed without notice. <br  />
+ What you can do, though, is use one of the free functions <a class="el" href="qapplicationcontext_8h.html#ad99aa9332aee20a47057f62ed4e8f285" title="Determines whether a handle to a Registration matches a type.">matches(registration_handle_t)</a>, <a class="el" href="qapplicationcontext_8h.html#ae09e67c55a69665975a9e2371e3d0a94" title="Obtains the registeredName from a handle to a ServiceRegistration.">registeredName(service_registration_handle_t)</a>, <a class="el" href="qapplicationcontext_8h.html#afefa36bb5b7dd31e385dcd75747fd594" title="Obtains the registeredProperties from a handle to a ServiceRegistration.">registeredProperties(service_registration_handle_t)</a>. <br  />
+Additionally, you may wrap the handles in a type-safe manner, using <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a36e48f258a0e21e9e507d34439cd1913" title="Wraps a handle to a ServiceRegistration into a typesafe high-level ServiceRegistration.">ServiceRegistration::wrap(service_registration_handle_t)</a>. </p>
+<dl class="section return"><dt>Returns</dt><dd>a List of all Services that have been registered. </dd></dl>
 
-<p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a4b0b0efe312feb7fafb63a9b7a64c56e">mcnepp::qtdi::StandardApplicationContext</a>.</p>
+<p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#abd65e56a08366eb1f9a14d999a23c646">mcnepp::qtdi::StandardApplicationContext</a>.</p>
 
 </div>
 </div>
@@ -786,8 +785,8 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="a5560eb625ab07821071c8d70502eae50" name="a5560eb625ab07821071c8d70502eae50"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5560eb625ab07821071c8d70502eae50">&#9670;&#160;</a></span>registerObject() <span class="overload">[1/2]</span></h2>
+<a id="a07d655888051851d1c9282d209cdf731" name="a07d655888051851d1c9282d209cdf731"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a07d655888051851d1c9282d209cdf731">&#9670;&#160;</a></span>registerObject() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -796,7 +795,7 @@ template&lt;typename S &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">virtual detail::ServiceRegistration * mcnepp::qtdi::QApplicationContext::registerObject </td>
+          <td class="memname">virtual <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> mcnepp::qtdi::QApplicationContext::registerObject </td>
           <td>(</td>
           <td class="paramtype">const QString &amp;&#160;</td>
           <td class="paramname"><em>name</em>, </td>
@@ -841,13 +840,13 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="ac500bf06847e80745233dcb6bc3992da" name="ac500bf06847e80745233dcb6bc3992da"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac500bf06847e80745233dcb6bc3992da">&#9670;&#160;</a></span>registerObject() <span class="overload">[2/2]</span></h2>
+<a id="a74b64aeda314a8514933e664b18aa654" name="a74b64aeda314a8514933e664b18aa654"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a74b64aeda314a8514933e664b18aa654">&#9670;&#160;</a></span>registerObject() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S &gt; </div>
+template&lt;typename S , typename... IFaces&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
@@ -887,16 +886,17 @@ template&lt;typename S &gt; </div>
 </dl>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
-    <tr><td class="paramname">S</td><td>the service-type for the object. </td></tr>
+    <tr><td class="paramname">S</td><td>the primary service-type for the object. </td></tr>
+    <tr><td class="paramname">IFaces</td><td>additional service-interfaces to be advertised. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> if it could not be registered. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> if it could not be registered. </dd></dl>
 
 </div>
 </div>
-<a id="aaee5ae38de1fad1d5795aeb90ce48013" name="aaee5ae38de1fad1d5795aeb90ce48013"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaee5ae38de1fad1d5795aeb90ce48013">&#9670;&#160;</a></span>registerService() <span class="overload">[1/3]</span></h2>
+<a id="a0b8dac9fc109eae86adf7c3df96a183b" name="a0b8dac9fc109eae86adf7c3df96a183b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0b8dac9fc109eae86adf7c3df96a183b">&#9670;&#160;</a></span>registerService() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -905,7 +905,7 @@ template&lt;typename S &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">virtual detail::ServiceRegistration * mcnepp::qtdi::QApplicationContext::registerService </td>
+          <td class="memname">virtual <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> mcnepp::qtdi::QApplicationContext::registerService </td>
           <td>(</td>
           <td class="paramtype">const QString &amp;&#160;</td>
           <td class="paramname"><em>name</em>, </td>
@@ -999,7 +999,7 @@ template&lt;typename S &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> if it could not be registered. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> if it could not be registered. </dd></dl>
 
 </div>
 </div>
@@ -1060,7 +1060,7 @@ template&lt;typename S , typename Impl &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> if it could not be registered. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> if it could not be registered. </dd></dl>
 
 </div>
 </div>
