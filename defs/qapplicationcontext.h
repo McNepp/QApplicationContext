@@ -397,6 +397,8 @@ inline QVariantMap registeredProperties(service_registration_handle_t handle) {
     return handle ? handle->registeredProperties() : QVariantMap{};
 }
 
+
+
 /**
  * @brief An opaque handle to a detail::Subscription.
  * Instances of this class will be returned by Registration::subscribe().<br>
@@ -552,7 +554,6 @@ public:
     /// \brief Connects a service with another service from the same QApplicationContext.
     /// Whenever a service of the type `<D>` is published, it will be injected into every service
     /// of type `<S>`, using the supplied member-function.
-    ///
     /// \tparam D the type of service that will be injected into Services of type `<S>`.
     /// \param injectionSlot the member-function to invoke when a service of type `<D>` is published.
     /// \return the Subscription created by this autowiring.
@@ -716,7 +717,7 @@ public:
         }
         auto handle = unwrap();
         if(!matches<U>(handle)) {
-            handle = nullptr;
+            return ServiceRegistration<U>{};
         }
         return ServiceRegistration<U>::wrap(handle);
     }
@@ -1526,19 +1527,6 @@ constructor_t service_creator() {
 
 using q_predicate_t = std::function<bool(QObject*)>;
 
-template<typename S,LookupKind lookup> struct predicate_traits;
-
-template<typename S> struct predicate_traits<S,LookupKind::STATIC> {
-        static constexpr std::nullptr_t predicate() {
-            return nullptr;
-        }
-};
-
-template<typename S> struct predicate_traits<S,LookupKind::DYNAMIC> {
-        static q_predicate_t predicate() {
-            return [](QObject* ptr) { return dynamic_cast<S*>(ptr) != nullptr;};
-        }
-};
 
 
 } // namespace detail
@@ -1761,20 +1749,14 @@ public:
     /// This Proxy manages all Services of the requested type, regardless of whether they have been registered prior
     /// to invoking getRegistration().<br>
     /// This means that if you subscribe to it using Registration::subscribe(), you will be notified
-    /// about all published services that match the Service-type.<br>
-    /// <table><tr><th>LookupKind</th><th>Type of managed Services</th></tr>
-    /// <tr><td><tt>LookupKind::STATIC</tt></td><td>Those Services that `Registration::matches<S>()`</td>
-    /// </tr>
-    /// <tr><td><tt>LookupKind::DYNAMIC</tt></td><td>Those Services that can be converted to the requested type using <tt>dynamic_cast&lt;S*&gt;()</tt>.</td>
-    /// </tr>
-    /// </table>
+    /// about all published services that match the Service-type.
+
     /// \tparam S the required service-type.
-    /// \tparam lookup determines the strategy for retrieving the ServiceRegistration-Proxy. See the table above for details!
     /// \return a ProxyRegistration that corresponds to all registration that match the service-type.
     ///
-    template<typename S,LookupKind lookup = LookupKind::STATIC> [[nodiscard]] ProxyRegistration<S> getRegistration() const {
+    template<typename S> [[nodiscard]] ProxyRegistration<S> getRegistration() const {
         static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
-        return ProxyRegistration<S>::wrap(getRegistration(typeid(S), lookup, detail::predicate_traits<S,lookup>::predicate(), detail::getMetaObject<S>()));
+        return ProxyRegistration<S>::wrap(getRegistration(typeid(S), detail::getMetaObject<S>()));
     }
 
     /**
@@ -1840,7 +1822,6 @@ signals:
 
 protected:
 
-    using q_predicate_t = detail::q_predicate_t;
 
 
     ///
@@ -1888,7 +1869,7 @@ protected:
     /// \param metaObject the static QMetaObject for the type. If not available, `nullptr` can be passed.
     /// \return a Registration for the supplied service_type.
     ///
-    virtual proxy_registration_handle_t getRegistration(const std::type_info& service_type, LookupKind lookup, q_predicate_t dynamicCheck, const QMetaObject* metaObject) const = 0;
+    virtual proxy_registration_handle_t getRegistration(const std::type_info& service_type, const QMetaObject* metaObject) const = 0;
 
 
     ///
@@ -1942,8 +1923,8 @@ protected:
     /// \param service_type
     /// \return the result of getRegistration(const std::type_info&) const.
     ///
-    static proxy_registration_handle_t delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, LookupKind lookup, q_predicate_t dynamicCheck, const QMetaObject* metaObject) {
-        return appContext.getRegistration(service_type, lookup, dynamicCheck, metaObject);
+    static proxy_registration_handle_t delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QMetaObject* metaObject) {
+        return appContext.getRegistration(service_type, metaObject);
     }
 
 

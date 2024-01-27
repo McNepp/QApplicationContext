@@ -561,39 +561,6 @@ You may also access a specific service by name:
     }
     
 
-### Accessing published services by implemented interface
-
-Sometimes, the interface that we use to register a Service might not be the same interface by which we would like to access the Service later.
-
-Applied to our example, it is conceivable that the class `PropFetcher` extends a non-QObject-interface named `QNetworkManagerAware` with a single method:
-
-    class QNetworkManagerAware {
-       virtual ~QNetworkManagerAware() = default;
-       
-       virtual setNetworkManager(QNetworkAccessManager*) = 0;
-    };
-    
-    class PropFetcher : public QObject, public QNetworkManagerAware {
-    
-    explicit PropFetcher(const QString& url, QObject* parent = nulptr);
-    
-    virtual setNetworkManager(QNetworkAccessManager*) override;
-    ...//same as before
-    };
-
-    context -> registerService(Service<PropFetcher,RestPropFetcher>{"hamburgWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
-    context -> registerService(Service<PropFetcher,RestPropFetcher>{"berlinWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10382"}}));
-    
-    auto networkManagerAware = context -> getRegistration<QNetworkManagerAware>(); //WRONG: 
-
-As you can see from the comment in the last line, this will not work, as it will only check against the registered interface, which is `PropFetcher`.
-<br>Fortunately, you only need to change one little bit:
-
-    auto networkManagerAware = context -> getRegistration<QNetworkManagerAware,LookupKind::DYNAMIC>(); //RIGHT: 
-    
-    networkManagerAware.autowire(&QNetworkManagerAware::setNetworkManager); //Will inject the QNetworkManager from the Context into all services that implement the interface.
-
-This will instruct to perform a runtime-check on every published service, in order to check whether it implements the interface `QNetworkManagerAware`.
 
 
 ## Tweaking services (QApplicationContextPostProcessor)

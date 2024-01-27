@@ -422,25 +422,17 @@ detail::ServiceRegistration *StandardApplicationContext::getRegistration(const t
     return nullptr;
 }
 
-detail::ProxyRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, LookupKind lookup, q_predicate_t dynamicCheck, const QMetaObject* metaObject) const
+detail::ProxyRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, const QMetaObject* metaObject) const
 {
-    ProxyRegistration* proxyReg;
-    auto found = proxyRegistrationCache.find({service_type, lookup});
+    auto found = proxyRegistrationCache.find(service_type);
     if(found != proxyRegistrationCache.end()) {
         return found->second;
     }
-    switch(lookup) {
-    case LookupKind::STATIC:
-         proxyReg = new StaticProxyRegistration{service_type, metaObject, const_cast<StandardApplicationContext*>(this)};
-        break;
-    case LookupKind::DYNAMIC:
-        proxyReg = new DynamicProxyRegistration{service_type, dynamicCheck, metaObject, const_cast<StandardApplicationContext*>(this)};
-        break;
-    }
+    ProxyRegistration* proxyReg = new ProxyRegistration{service_type, metaObject, const_cast<StandardApplicationContext*>(this)};
     for(auto reg : registrations) {
         proxyReg->add(reg);
     }
-    proxyRegistrationCache.insert({{service_type, lookup}, proxyReg});
+    proxyRegistrationCache.insert({service_type, proxyReg});
     return proxyReg;
 }
 

@@ -424,8 +424,8 @@ private slots:
         QTimer timer;
         timer.setObjectName("timer");
         auto regTimer = context->registerObject(&timer);
-        auto regBase = context->registerObject(&base, "base");
-        auto regInterface = context->getRegistration<Interface1,LookupKind::DYNAMIC>();
+        auto regBase = context->registerObject<Interface1>(&base, "base");
+        auto regInterface = context->getRegistration<Interface1>();
         QVERIFY(bind(regTimer, "objectName", regInterface, &Interface1::setFoo));
         QCOMPARE(base.foo(), "timer");
         timer.setObjectName("another timer");
@@ -784,16 +784,7 @@ private slots:
     }
 
 
-    void testGetRegistrationDynamic() {
-        context->registerService<BaseService>();
-        context->registerService<BaseService2>();
-        QVERIFY(context->publish());
-        RegistrationSlot<Interface1> staticSlot{context->getRegistration<Interface1>()};
-        RegistrationSlot<Interface1> dynamicSlot{context->getRegistration<Interface1,LookupKind::DYNAMIC>()};
-        QVERIFY(!staticSlot);
-        QVERIFY(dynamicSlot);
-        QCOMPARE(dynamicSlot.invocationCount(), 2);
-    }
+
 
     void testAdvertiseAs() {
         auto reg = context->registerService(Service<BaseService>{}.advertiseAs<Interface1>());
