@@ -1,14 +1,13 @@
 var searchData=
 [
-  ['registeralias_0',['registerAlias',['../classmcnepp_1_1qtdi_1_1_service_registration.html#a4315bd8db4192dd851c35829f66b7232',1,'mcnepp::qtdi::ServiceRegistration']]],
-  ['registeredname_1',['registeredName',['../qapplicationcontext_8h.html#ae09e67c55a69665975a9e2371e3d0a94',1,'mcnepp::qtdi']]],
-  ['registeredproperties_2',['registeredProperties',['../qapplicationcontext_8h.html#afefa36bb5b7dd31e385dcd75747fd594',1,'mcnepp::qtdi']]],
-  ['registeredservices_3',['registeredServices',['../classmcnepp_1_1qtdi_1_1_proxy_registration.html#ac678484fd32771fedd2452a43e8f5706',1,'mcnepp::qtdi::ProxyRegistration::registeredServices()'],['../qapplicationcontext_8h.html#a19ce4ad196137c5749cc881631050853',1,'mcnepp::qtdi::registeredServices()']]],
-  ['registerobject_4',['registerObject',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a74b64aeda314a8514933e664b18aa654',1,'mcnepp::qtdi::QApplicationContext::registerObject(S *obj, const QString &amp;objName=&quot;&quot;)'],['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a07d655888051851d1c9282d209cdf731',1,'mcnepp::qtdi::QApplicationContext::registerObject(const QString &amp;name, QObject *obj, const service_descriptor &amp;descriptor)=0'],['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#a0344d22b931e4c977bf7f450b25d6da3',1,'mcnepp::qtdi::StandardApplicationContext::registerObject()']]],
-  ['registerservice_5',['registerService',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db',1,'mcnepp::qtdi::QApplicationContext::registerService(const Service&lt; S, Impl &gt; &amp;serviceDeclaration, const QString &amp;objectName=&quot;&quot;, const service_config &amp;config=service_config{}) -&gt; ServiceRegistration&lt; S &gt;'],['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a8f7387096bad28fa5241ff5e3a2fd9cb',1,'mcnepp::qtdi::QApplicationContext::registerService(const QString &amp;objectName=&quot;&quot;, const service_config &amp;config=service_config{}) -&gt; ServiceRegistration&lt; S &gt;'],['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a0b8dac9fc109eae86adf7c3df96a183b',1,'mcnepp::qtdi::QApplicationContext::registerService(const QString &amp;name, const service_descriptor &amp;descriptor, const service_config &amp;config)=0'],['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#a6fd168b4295a09d5e853493efc17b4cd',1,'mcnepp::qtdi::StandardApplicationContext::registerService()']]],
-  ['registration_6',['Registration',['../classmcnepp_1_1qtdi_1_1_registration.html',1,'mcnepp::qtdi']]],
-  ['registration_5fhandle_5ft_7',['registration_handle_t',['../qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257',1,'mcnepp::qtdi']]],
-  ['requiredname_8',['requiredName',['../structmcnepp_1_1qtdi_1_1_dependency.html#a3b67b0962cee46596ba92a6402042ddc',1,'mcnepp::qtdi::Dependency']]],
-  ['resolvable_9',['Resolvable',['../structmcnepp_1_1qtdi_1_1_resolvable.html',1,'mcnepp::qtdi']]],
-  ['resolve_10',['resolve',['../qapplicationcontext_8h.html#a59d0392bb960299590af56049c779ba8',1,'mcnepp::qtdi::resolve(const QString &amp;expression)'],['../qapplicationcontext_8h.html#aed1b8e7de230edd274b8e8aebdaf5ccc',1,'mcnepp::qtdi::resolve(const QString &amp;expression, const S &amp;defaultValue)']]]
+  ['service_0',['Service',['../structmcnepp_1_1qtdi_1_1_service.html',1,'mcnepp::qtdi']]],
+  ['service_3c_20impl_2c_20impl_20_3e_1',['Service&lt; Impl, Impl &gt;',['../structmcnepp_1_1qtdi_1_1_service_3_01_impl_00_01_impl_01_4.html',1,'mcnepp::qtdi']]],
+  ['service_5fconfig_2',['service_config',['../structmcnepp_1_1qtdi_1_1service__config.html',1,'mcnepp::qtdi']]],
+  ['service_5fdescriptor_3',['service_descriptor',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26',1,'mcnepp::qtdi::QApplicationContext']]],
+  ['service_5ffactory_4',['service_factory',['../structmcnepp_1_1qtdi_1_1service__factory.html',1,'mcnepp::qtdi']]],
+  ['service_5fregistration_5fhandle_5ft_5',['service_registration_handle_t',['../qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712',1,'mcnepp::qtdi']]],
+  ['serviceregistration_6',['ServiceRegistration',['../classmcnepp_1_1qtdi_1_1_service_registration.html',1,'mcnepp::qtdi']]],
+  ['standardapplicationcontext_7',['StandardApplicationContext',['../classmcnepp_1_1qtdi_1_1_standard_application_context.html',1,'mcnepp::qtdi']]],
+  ['subscribe_8',['subscribe',['../classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f',1,'mcnepp::qtdi::Registration::subscribe(QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)'],['../classmcnepp_1_1qtdi_1_1_registration.html#a19a7323c8bad9818df4583f5268c0ebf',1,'mcnepp::qtdi::Registration::subscribe(T *target, R(T::*setter)(S *), Qt::ConnectionType connectionType=Qt::AutoConnection)']]],
+  ['subscription_9',['Subscription',['../classmcnepp_1_1qtdi_1_1_subscription.html',1,'mcnepp::qtdi']]]
 ];

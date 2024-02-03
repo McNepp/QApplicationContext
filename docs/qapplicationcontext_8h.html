@@ -110,8 +110,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">mcnepp::qtdi::ProxyRegistration&lt; S &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> that manages several ServiceRegistrations of the same type. You can do almost everything with a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> that you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a>, except use it as a source for property-bindings using <a class="el" href="qapplicationcontext_8h.html#a61538a5d0087d717ffe0e3f5aeeed900" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. Instances of this class are produced by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">QApplicationContext::getRegistration()</a>;.  <a href="classmcnepp_1_1qtdi_1_1_proxy_registration.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">mcnepp::qtdi::Dependency&lt; S, c &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies a dependency of a service. Can by used as a type-argument for <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>. In the standard-case of a mandatory relationship, the use of the <code>kind</code> argument is optional. Suppose you have a service-type <code>Reader</code> that needs a mandatory pointer to a <code>DatabaseAccess</code> in its constructor: class Reader : public QObject { public: explicit Update(DatabaseAccess* dao, QObject* parent = nullptr); };.  <a href="structmcnepp_1_1qtdi_1_1_dependency.html#details">More...</a><br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">mcnepp::qtdi::Dependency&lt; S, kind, C &gt;</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies a dependency of a service. <br  />
+Can by used as a type-argument for <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>. In the standard-case of a mandatory relationship, the use of the <code>kind</code> argument is optional. Suppose you have a service-type <code>Reader</code> that needs a mandatory pointer to a <code>DatabaseAccess</code> in its constructor: class Reader : public QObject { public: explicit Update(DatabaseAccess* dao, QObject* parent = nullptr); };.  <a href="structmcnepp_1_1qtdi_1_1_dependency.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_resolvable.html">mcnepp::qtdi::Resolvable&lt; S &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A placeholder for a resolvable constructor-argument. Use the function <a class="el" href="qapplicationcontext_8h.html#a59d0392bb960299590af56049c779ba8" title="Specifies a constructor-argument that shall be resolved by the QApplicationContext....">resolve(const QString&amp;)</a> to pass a resolvable argument to a service with <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>.  <a href="structmcnepp_1_1qtdi_1_1_resolvable.html#details">More...</a><br /></td></tr>
@@ -124,7 +125,7 @@ Classes</h2></td></tr>
 <b>Note:</b> This template has a specialization for the case where the implementation-type is identical to the service-type. That specialization offers an additional method for advertising a service with more than one service-interface!  <a href="structmcnepp_1_1qtdi_1_1_service.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_service_3_01_impl_00_01_impl_01_4.html">mcnepp::qtdi::Service&lt; Impl, Impl &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Describes a service by its implementation and possibly multiple service-interfaces. Compilation will fail if either <code>Impl</code> is not a sub-class of QObject.  <a href="structmcnepp_1_1qtdi_1_1_service_3_01_impl_00_01_impl_01_4.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Describes a service by its implementation and possibly multiple service-interfaces. Compilation will fail if <code>Impl</code> is not a sub-class of QObject.  <a href="structmcnepp_1_1qtdi_1_1_service_3_01_impl_00_01_impl_01_4.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A DI-Container for Qt-based applications.  <a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#details">More...</a><br /></td></tr>
@@ -151,11 +152,6 @@ Enumerations</h2></td></tr>
  }</td></tr>
 <tr class="memdesc:aa26d711edb47348796326730adbbc521"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies the kind of a service-dependency. Will be used as a non-type argument to Dependency, when registering a service. The following table sums up the characteristics of each type of dependency:  <a href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521">More...</a><br /></td></tr>
 <tr class="separator:aa26d711edb47348796326730adbbc521"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af49895a8cf58c1b4277a49aaa76b91a5"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5">mcnepp::qtdi::LookupKind</a> { <a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5afe6f99ef1ec99efbdc19a9786cf1facc">STATIC</a>
-, <a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5a0fcc90da4811c877ba9f9c12f7d60bc9">DYNAMIC</a>
- }</td></tr>
-<tr class="memdesc:af49895a8cf58c1b4277a49aaa76b91a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies the strategy for looking up ServiceRegistrations in ApplicationContexts. See QApplicationContext::getRegistration().  <a href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5">More...</a><br /></td></tr>
-<tr class="separator:af49895a8cf58c1b4277a49aaa76b91a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
@@ -166,6 +162,14 @@ Functions</h2></td></tr>
 <tr class="memitem:ab271ebdb94c20e9ff86195e615d50798"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#ab271ebdb94c20e9ff86195e615d50798">mcnepp::qtdi::applicationContext</a> (<a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a> handle)</td></tr>
 <tr class="memdesc:ab271ebdb94c20e9ff86195e615d50798"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>.  <br /></td></tr>
 <tr class="separator:ab271ebdb94c20e9ff86195e615d50798"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a53cf39c5185ef9e3c0ad9ae9ad418c8d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a53cf39c5185ef9e3c0ad9ae9ad418c8d">mcnepp::qtdi::asService</a> (<a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a> handle)</td></tr>
+<tr class="memdesc:a53cf39c5185ef9e3c0ad9ae9ad418c8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Narrows a handle to a registration to a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a>. <br  />
+If the handle actually points to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a>, this function will cast it to the more specific type. Otherwise, it will return an invalid handle.  <br /></td></tr>
+<tr class="separator:a53cf39c5185ef9e3c0ad9ae9ad418c8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa65fe3eaeb7e84f80bea956b536479b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="qapplicationcontext_8h.html#adde781831da99ca1afd54b82f9e6d23d">proxy_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#afa65fe3eaeb7e84f80bea956b536479b">mcnepp::qtdi::asProxy</a> (<a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a> handle)</td></tr>
+<tr class="memdesc:afa65fe3eaeb7e84f80bea956b536479b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Narrows a handle to a registration to a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>. <br  />
+If the handle actually points to a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>, this function will cast it to the more specific type. Otherwise, it will return an invalid handle.  <br /></td></tr>
+<tr class="separator:afa65fe3eaeb7e84f80bea956b536479b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a19ce4ad196137c5749cc881631050853"><td class="memItemLeft" align="right" valign="top">QList&lt; <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a19ce4ad196137c5749cc881631050853">mcnepp::qtdi::registeredServices</a> (<a class="el" href="qapplicationcontext_8h.html#adde781831da99ca1afd54b82f9e6d23d">proxy_registration_handle_t</a> handle)</td></tr>
 <tr class="memdesc:a19ce4ad196137c5749cc881631050853"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the registered Services from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>.  <br /></td></tr>
 <tr class="separator:a19ce4ad196137c5749cc881631050853"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -197,34 +201,36 @@ All changes made to the source-property will be propagated to all Services repre
 template&lt;typename S &gt; </td></tr>
 <tr class="memitem:a9933d42ed1e34f66da2abc1880c55276"><td class="memTemplItemLeft" align="right" valign="top">QDebug&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mcnepp::qtdi::operator&lt;&lt;</b> (QDebug out, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;reg)</td></tr>
 <tr class="separator:a9933d42ed1e34f66da2abc1880c55276"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa230bb92d281b0431f927577348acba9"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:aa230bb92d281b0431f927577348acba9"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521ac25db15b6f91b287b5b3c8a515bd21ce">Kind::MANDATORY</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#aa230bb92d281b0431f927577348acba9">mcnepp::qtdi::inject</a> (const QString &amp;requiredName=&quot;&quot;)</td></tr>
-<tr class="memdesc:aa230bb92d281b0431f927577348acba9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a mandatory <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service. Can by used as a type-argument for QApplicationContext::register...">Dependency</a>.  <br /></td></tr>
-<tr class="separator:aa230bb92d281b0431f927577348acba9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a77b8f694befa1af5de62398588cf6d5a"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:a77b8f694befa1af5de62398588cf6d5a"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521ac25db15b6f91b287b5b3c8a515bd21ce">Kind::MANDATORY</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a77b8f694befa1af5de62398588cf6d5a">mcnepp::qtdi::inject</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt; &amp;registration)</td></tr>
-<tr class="memdesc:a77b8f694befa1af5de62398588cf6d5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a mandatory <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service. Can by used as a type-argument for QApplicationContext::register...">Dependency</a> on a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a>. This function utilizes the Registration::registeredName() of the supplied registration.  <br /></td></tr>
-<tr class="separator:a77b8f694befa1af5de62398588cf6d5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afe4b3cbeda7748a3b87a0309720cba6b"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:afe4b3cbeda7748a3b87a0309720cba6b"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521a7951811e4b085cf68ed3dc3191f36405">Kind::OPTIONAL</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#afe4b3cbeda7748a3b87a0309720cba6b">mcnepp::qtdi::injectIfPresent</a> (const QString &amp;requiredName=&quot;&quot;)</td></tr>
-<tr class="memdesc:afe4b3cbeda7748a3b87a0309720cba6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects an optional <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service. Can by used as a type-argument for QApplicationContext::register...">Dependency</a> to another <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a>. This function will utilize the Registration::registeredName() to match the dependency.  <br /></td></tr>
-<tr class="separator:afe4b3cbeda7748a3b87a0309720cba6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a556d0f9b363278ab1d8828ee8a048a0e"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:a556d0f9b363278ab1d8828ee8a048a0e"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521a7951811e4b085cf68ed3dc3191f36405">Kind::OPTIONAL</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a556d0f9b363278ab1d8828ee8a048a0e">mcnepp::qtdi::injectIfPresent</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt; &amp;registration)</td></tr>
-<tr class="memdesc:a556d0f9b363278ab1d8828ee8a048a0e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects an optional <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service. Can by used as a type-argument for QApplicationContext::register...">Dependency</a> on a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a>. This function utilizes the Registration::registeredName() of the supplied registration.  <br /></td></tr>
-<tr class="separator:a556d0f9b363278ab1d8828ee8a048a0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3ab0ce02c0834a71a536a0ac41672225"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:a3ab0ce02c0834a71a536a0ac41672225"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521a8d9c307cb7f3c4a32822a51922d1ceaa">Kind::N</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a3ab0ce02c0834a71a536a0ac41672225">mcnepp::qtdi::injectAll</a> (const QString &amp;requiredName=&quot;&quot;)</td></tr>
-<tr class="memdesc:a3ab0ce02c0834a71a536a0ac41672225"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a 1-to-N <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service. Can by used as a type-argument for QApplicationContext::register...">Dependency</a>.  <br /></td></tr>
-<tr class="separator:a3ab0ce02c0834a71a536a0ac41672225"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a41bf7d3748535f292581a58e1970d54f"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:a41bf7d3748535f292581a58e1970d54f"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521a8d9c307cb7f3c4a32822a51922d1ceaa">Kind::N</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a41bf7d3748535f292581a58e1970d54f">mcnepp::qtdi::injectAll</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt; &amp;registration)</td></tr>
-<tr class="memdesc:a41bf7d3748535f292581a58e1970d54f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a 1-to-N <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service. Can by used as a type-argument for QApplicationContext::register...">Dependency</a> on a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a>. This function utilizes the Registration::registeredName() of the supplied registration.  <br /></td></tr>
-<tr class="separator:a41bf7d3748535f292581a58e1970d54f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa3a91bc82cb2225f00c29f0ded7502b8"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:aa3a91bc82cb2225f00c29f0ded7502b8"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521a32d98c41c77a4f7ace30e1a0ee9d3d86">Kind::PRIVATE_COPY</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#aa3a91bc82cb2225f00c29f0ded7502b8">mcnepp::qtdi::injectPrivateCopy</a> (const QString &amp;requiredName=&quot;&quot;)</td></tr>
-<tr class="memdesc:aa3a91bc82cb2225f00c29f0ded7502b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service. Can by used as a type-argument for QApplicationContext::register...">Dependency</a> of type Cardinality::PRIVATE_COPY.  <br /></td></tr>
-<tr class="separator:aa3a91bc82cb2225f00c29f0ded7502b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a52003170c4fd6d306dcc8a53eacd195e"><td class="memTemplParams" colspan="2">template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::MANDATORY&gt;&gt; </td></tr>
+<tr class="memitem:a52003170c4fd6d306dcc8a53eacd195e"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521ac25db15b6f91b287b5b3c8a515bd21ce">Kind::MANDATORY</a>, C &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a52003170c4fd6d306dcc8a53eacd195e">mcnepp::qtdi::inject</a> (const QString &amp;requiredName=&quot;&quot;, C converter=C{})</td></tr>
+<tr class="memdesc:a52003170c4fd6d306dcc8a53eacd195e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a mandatory <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a>.  <br /></td></tr>
+<tr class="separator:a52003170c4fd6d306dcc8a53eacd195e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d7e293b970ddb734d2e2346bb8f0163"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
+<tr class="memitem:a5d7e293b970ddb734d2e2346bb8f0163"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521ac25db15b6f91b287b5b3c8a515bd21ce">Kind::MANDATORY</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a5d7e293b970ddb734d2e2346bb8f0163">mcnepp::qtdi::inject</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;registration)</td></tr>
+<tr class="memdesc:a5d7e293b970ddb734d2e2346bb8f0163"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a mandatory <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a> on a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>. <br  />
+<b>Note:</b> If the registration is actually a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a>, you do not need to use <a class="el" href="qapplicationcontext_8h.html#a5d7e293b970ddb734d2e2346bb8f0163" title="Injects a mandatory Dependency on a Registration.  Note: If the registration is actually a ServiceReg...">inject(const Registration&lt;S&gt;&amp; registration)</a> at all! Rather, you can pass the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> directly to the <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>'s constructor.  <br /></td></tr>
+<tr class="separator:a5d7e293b970ddb734d2e2346bb8f0163"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2ddf8a871e1f8982afcd787799816cc0"><td class="memTemplParams" colspan="2">template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::OPTIONAL&gt;&gt; </td></tr>
+<tr class="memitem:a2ddf8a871e1f8982afcd787799816cc0"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521a7951811e4b085cf68ed3dc3191f36405">Kind::OPTIONAL</a>, C &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a2ddf8a871e1f8982afcd787799816cc0">mcnepp::qtdi::injectIfPresent</a> (const QString &amp;requiredName=&quot;&quot;, C converter=C{})</td></tr>
+<tr class="memdesc:a2ddf8a871e1f8982afcd787799816cc0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects an optional <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a> to another <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a>. This function will utilize the Registration::registeredName() to match the dependency.  <br /></td></tr>
+<tr class="separator:a2ddf8a871e1f8982afcd787799816cc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a35af95e9e5aad40a6e80d9c6fceadb69"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
+<tr class="memitem:a35af95e9e5aad40a6e80d9c6fceadb69"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521a7951811e4b085cf68ed3dc3191f36405">Kind::OPTIONAL</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a35af95e9e5aad40a6e80d9c6fceadb69">mcnepp::qtdi::injectIfPresent</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;registration)</td></tr>
+<tr class="memdesc:a35af95e9e5aad40a6e80d9c6fceadb69"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects an optional <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a> on a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>.  <br /></td></tr>
+<tr class="separator:a35af95e9e5aad40a6e80d9c6fceadb69"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adbc81e2f7354efd7e77aa600539d6eb1"><td class="memTemplParams" colspan="2">template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::N&gt;&gt; </td></tr>
+<tr class="memitem:adbc81e2f7354efd7e77aa600539d6eb1"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521a8d9c307cb7f3c4a32822a51922d1ceaa">Kind::N</a>, C &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#adbc81e2f7354efd7e77aa600539d6eb1">mcnepp::qtdi::injectAll</a> (const QString &amp;requiredName=&quot;&quot;, C converter=C{})</td></tr>
+<tr class="memdesc:adbc81e2f7354efd7e77aa600539d6eb1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a 1-to-N <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a>.  <br /></td></tr>
+<tr class="separator:adbc81e2f7354efd7e77aa600539d6eb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afde88d587fa7201e9eae2fe7550b63fa"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
+<tr class="memitem:afde88d587fa7201e9eae2fe7550b63fa"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521a8d9c307cb7f3c4a32822a51922d1ceaa">Kind::N</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#afde88d587fa7201e9eae2fe7550b63fa">mcnepp::qtdi::injectAll</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;registration)</td></tr>
+<tr class="memdesc:afde88d587fa7201e9eae2fe7550b63fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a 1-to-N <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a> on a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>. <br  />
+<b>Note:</b> If the registration is actually a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>, you do not need to use <a class="el" href="qapplicationcontext_8h.html#a5d7e293b970ddb734d2e2346bb8f0163" title="Injects a mandatory Dependency on a Registration.  Note: If the registration is actually a ServiceReg...">inject(const Registration&lt;S&gt;&amp; registration)</a> at all! Rather, you can pass the <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> directly to the <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>'s constructor.  <br /></td></tr>
+<tr class="separator:afde88d587fa7201e9eae2fe7550b63fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acf9f3ffc1025ccc776ea073730659e87"><td class="memTemplParams" colspan="2">template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::PRIVATE_COPY&gt;&gt; </td></tr>
+<tr class="memitem:acf9f3ffc1025ccc776ea073730659e87"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="qapplicationcontext_8h.html#aa26d711edb47348796326730adbbc521a32d98c41c77a4f7ace30e1a0ee9d3d86">Kind::PRIVATE_COPY</a>, C &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#acf9f3ffc1025ccc776ea073730659e87">mcnepp::qtdi::injectPrivateCopy</a> (const QString &amp;requiredName=&quot;&quot;, C converter=C{})</td></tr>
+<tr class="memdesc:acf9f3ffc1025ccc776ea073730659e87"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a> of type Cardinality::PRIVATE_COPY.  <br /></td></tr>
+<tr class="separator:acf9f3ffc1025ccc776ea073730659e87"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a59d0392bb960299590af56049c779ba8"><td class="memTemplParams" colspan="2">template&lt;typename S  = QString&gt; </td></tr>
 <tr class="memitem:a59d0392bb960299590af56049c779ba8"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_resolvable.html">Resolvable</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a59d0392bb960299590af56049c779ba8">mcnepp::qtdi::resolve</a> (const QString &amp;expression)</td></tr>
 <tr class="memdesc:a59d0392bb960299590af56049c779ba8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies a constructor-argument that shall be resolved by the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. Use this function to supply resolvable arguments to the constructor of a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>. The result of resolving the placeholder must be a String that is convertible via <code>QVariant::value&lt;T&gt;()</code> to the desired type.  <br /></td></tr>
@@ -339,36 +345,6 @@ If no default-constructor exists, publication of the ApplicationContext will fai
 
 </div>
 </div>
-<a id="af49895a8cf58c1b4277a49aaa76b91a5" name="af49895a8cf58c1b4277a49aaa76b91a5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af49895a8cf58c1b4277a49aaa76b91a5">&#9670;&#160;</a></span>LookupKind</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum class <a class="el" href="qapplicationcontext_8h.html#af49895a8cf58c1b4277a49aaa76b91a5">mcnepp::qtdi::LookupKind</a></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Specifies the strategy for looking up ServiceRegistrations in ApplicationContexts. See QApplicationContext::getRegistration(). </p>
-<table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="af49895a8cf58c1b4277a49aaa76b91a5afe6f99ef1ec99efbdc19a9786cf1facc" name="af49895a8cf58c1b4277a49aaa76b91a5afe6f99ef1ec99efbdc19a9786cf1facc"></a>STATIC&#160;</td><td class="fielddoc"><p>All Services whose registered service_type match the requested type, will be looked up. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="af49895a8cf58c1b4277a49aaa76b91a5a0fcc90da4811c877ba9f9c12f7d60bc9" name="af49895a8cf58c1b4277a49aaa76b91a5a0fcc90da4811c877ba9f9c12f7d60bc9"></a>DYNAMIC&#160;</td><td class="fielddoc"><p>All Services that are convertible to the requested type at runtime, will be looked up. </p>
-</td></tr>
-</table>
-
-</div>
-</div>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="ab271ebdb94c20e9ff86195e615d50798" name="ab271ebdb94c20e9ff86195e615d50798"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab271ebdb94c20e9ff86195e615d50798">&#9670;&#160;</a></span>applicationContext()</h2>
@@ -402,6 +378,78 @@ If no default-constructor exists, publication of the ApplicationContext will fai
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>the QApplicationContext if the handle is valid, <code>nullptr</code> otherwise. </dd></dl>
+
+</div>
+</div>
+<a id="afa65fe3eaeb7e84f80bea956b536479b" name="afa65fe3eaeb7e84f80bea956b536479b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afa65fe3eaeb7e84f80bea956b536479b">&#9670;&#160;</a></span>asProxy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">proxy_registration_handle_t mcnepp::qtdi::asProxy </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a>&#160;</td>
+          <td class="paramname"><em>handle</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Narrows a handle to a registration to a handle to a ProxyRegistration. <br  />
+If the handle actually points to a ProxyRegistration, this function will cast it to the more specific type. Otherwise, it will return an invalid handle. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>a valid or invalid handle to a registration. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a handle to the ProxyRegistration that the original handle was pointing to, or an invalid handle if the original handle was not pointing to a ProxyRegistration. </dd></dl>
+
+</div>
+</div>
+<a id="a53cf39c5185ef9e3c0ad9ae9ad418c8d" name="a53cf39c5185ef9e3c0ad9ae9ad418c8d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a53cf39c5185ef9e3c0ad9ae9ad418c8d">&#9670;&#160;</a></span>asService()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">service_registration_handle_t mcnepp::qtdi::asService </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a>&#160;</td>
+          <td class="paramname"><em>handle</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Narrows a handle to a registration to a handle to a ServiceRegistration. <br  />
+If the handle actually points to a ServiceRegistration, this function will cast it to the more specific type. Otherwise, it will return an invalid handle. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>a valid or invalid handle to a registration. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a handle to the ServiceRegistration that the original handle was pointing to, or an invalid handle if the original handle was not pointing to a ServiceRegistration. </dd></dl>
 
 </div>
 </div>
@@ -458,7 +506,16 @@ All changes made to the source-property will be propagated to the target-propert
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">source</td><td>the ServiceRegistration with the source-property to which the target-property shall be bound. </td></tr>
+    <tr><td class="paramname">sourceProperty</td><td>the name of the Q_PROPERTY in the source. </td></tr>
     <tr><td class="paramname">target</td><td>the Registration with the target-property to which the source-property shall be bound. </td></tr>
+    <tr><td class="paramname">targetProperty</td><td>the name of the Q_PROPERTY in the target. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the type of the source. </td></tr>
+    <tr><td class="paramname">T</td><td>the type of the target. </td></tr>
   </table>
   </dd>
 </dl>
@@ -519,7 +576,16 @@ All changes made to the source-property will be propagated to all Services repre
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">source</td><td>the ServiceRegistration with the source-property to which the target-property shall be bound. </td></tr>
+    <tr><td class="paramname">sourceProperty</td><td>the name of the Q_PROPERTY in the source. </td></tr>
     <tr><td class="paramname">target</td><td>the Registration with the target-property to which the source-property shall be bound. </td></tr>
+    <tr><td class="paramname">setter</td><td>the method in the target which shall be bound to the source-property. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the type of the source. </td></tr>
+    <tr><td class="paramname">T</td><td>the type of the target. </td></tr>
   </table>
   </dd>
 </dl>
@@ -527,23 +593,33 @@ All changes made to the source-property will be propagated to all Services repre
 
 </div>
 </div>
-<a id="aa230bb92d281b0431f927577348acba9" name="aa230bb92d281b0431f927577348acba9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa230bb92d281b0431f927577348acba9">&#9670;&#160;</a></span>inject() <span class="overload">[1/2]</span></h2>
+<a id="a52003170c4fd6d306dcc8a53eacd195e" name="a52003170c4fd6d306dcc8a53eacd195e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a52003170c4fd6d306dcc8a53eacd195e">&#9670;&#160;</a></span>inject() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S &gt; </div>
+template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::MANDATORY&gt;&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">constexpr Dependency&lt; S, Kind::MANDATORY &gt; mcnepp::qtdi::inject </td>
+          <td class="memname">constexpr Dependency&lt; S, Kind::MANDATORY, C &gt; mcnepp::qtdi::inject </td>
           <td>(</td>
           <td class="paramtype">const QString &amp;&#160;</td>
-          <td class="paramname"><em>requiredName</em> = <code>&quot;&quot;</code></td><td>)</td>
+          <td class="paramname"><em>requiredName</em> = <code>&quot;&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">C&#160;</td>
+          <td class="paramname"><em>converter</em> = <code>C{}</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
   </td>
@@ -557,6 +633,14 @@ template&lt;typename S &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">requiredName</td><td>the required name of the dependency. If empty, no name is required. </td></tr>
+    <tr><td class="paramname">converter</td><td>an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
+    <tr><td class="paramname">C</td><td>the type of an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
   </table>
   </dd>
 </dl>
@@ -564,8 +648,8 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="a77b8f694befa1af5de62398588cf6d5a" name="a77b8f694befa1af5de62398588cf6d5a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a77b8f694befa1af5de62398588cf6d5a">&#9670;&#160;</a></span>inject() <span class="overload">[2/2]</span></h2>
+<a id="a5d7e293b970ddb734d2e2346bb8f0163" name="a5d7e293b970ddb734d2e2346bb8f0163"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d7e293b970ddb734d2e2346bb8f0163">&#9670;&#160;</a></span>inject() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -578,7 +662,7 @@ template&lt;typename S &gt; </div>
         <tr>
           <td class="memname">constexpr Dependency&lt; S, Kind::MANDATORY &gt; mcnepp::qtdi::inject </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt; &amp;&#160;</td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;&#160;</td>
           <td class="paramname"><em>registration</em></td><td>)</td>
           <td></td>
         </tr>
@@ -590,10 +674,17 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Injects a mandatory Dependency on a ServiceRegistration. This function utilizes the Registration::registeredName() of the supplied registration. </p>
+<p>Injects a mandatory Dependency on a Registration. <br  />
+<b>Note:</b> If the registration is actually a ServiceRegistration, you do not need to use inject(const Registration&lt;S&gt;&amp; registration) at all! Rather, you can pass the ServiceRegistration directly to the Service's constructor. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">registration</td><td>the Registration of the dependency. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
   </table>
   </dd>
 </dl>
@@ -601,23 +692,33 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="a3ab0ce02c0834a71a536a0ac41672225" name="a3ab0ce02c0834a71a536a0ac41672225"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3ab0ce02c0834a71a536a0ac41672225">&#9670;&#160;</a></span>injectAll() <span class="overload">[1/2]</span></h2>
+<a id="adbc81e2f7354efd7e77aa600539d6eb1" name="adbc81e2f7354efd7e77aa600539d6eb1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adbc81e2f7354efd7e77aa600539d6eb1">&#9670;&#160;</a></span>injectAll() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S &gt; </div>
+template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::N&gt;&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">constexpr Dependency&lt; S, Kind::N &gt; mcnepp::qtdi::injectAll </td>
+          <td class="memname">constexpr Dependency&lt; S, Kind::N, C &gt; mcnepp::qtdi::injectAll </td>
           <td>(</td>
           <td class="paramtype">const QString &amp;&#160;</td>
-          <td class="paramname"><em>requiredName</em> = <code>&quot;&quot;</code></td><td>)</td>
+          <td class="paramname"><em>requiredName</em> = <code>&quot;&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">C&#160;</td>
+          <td class="paramname"><em>converter</em> = <code>C{}</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
   </td>
@@ -631,6 +732,14 @@ template&lt;typename S &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">requiredName</td><td>the required name of the dependency. If empty, no name is required. </td></tr>
+    <tr><td class="paramname">converter</td><td>an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
+    <tr><td class="paramname">C</td><td>the type of an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
   </table>
   </dd>
 </dl>
@@ -638,8 +747,8 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="a41bf7d3748535f292581a58e1970d54f" name="a41bf7d3748535f292581a58e1970d54f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a41bf7d3748535f292581a58e1970d54f">&#9670;&#160;</a></span>injectAll() <span class="overload">[2/2]</span></h2>
+<a id="afde88d587fa7201e9eae2fe7550b63fa" name="afde88d587fa7201e9eae2fe7550b63fa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afde88d587fa7201e9eae2fe7550b63fa">&#9670;&#160;</a></span>injectAll() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -652,7 +761,7 @@ template&lt;typename S &gt; </div>
         <tr>
           <td class="memname">constexpr Dependency&lt; S, Kind::N &gt; mcnepp::qtdi::injectAll </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt; &amp;&#160;</td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;&#160;</td>
           <td class="paramname"><em>registration</em></td><td>)</td>
           <td></td>
         </tr>
@@ -664,10 +773,17 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Injects a 1-to-N Dependency on a ServiceRegistration. This function utilizes the Registration::registeredName() of the supplied registration. </p>
+<p>Injects a 1-to-N Dependency on a Registration. <br  />
+<b>Note:</b> If the registration is actually a ProxyRegistration, you do not need to use inject(const Registration&lt;S&gt;&amp; registration) at all! Rather, you can pass the ProxyRegistration directly to the Service's constructor. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">registration</td><td>the Registration of the dependency. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
   </table>
   </dd>
 </dl>
@@ -675,23 +791,33 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="afe4b3cbeda7748a3b87a0309720cba6b" name="afe4b3cbeda7748a3b87a0309720cba6b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afe4b3cbeda7748a3b87a0309720cba6b">&#9670;&#160;</a></span>injectIfPresent() <span class="overload">[1/2]</span></h2>
+<a id="a2ddf8a871e1f8982afcd787799816cc0" name="a2ddf8a871e1f8982afcd787799816cc0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2ddf8a871e1f8982afcd787799816cc0">&#9670;&#160;</a></span>injectIfPresent() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S &gt; </div>
+template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::OPTIONAL&gt;&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">constexpr Dependency&lt; S, Kind::OPTIONAL &gt; mcnepp::qtdi::injectIfPresent </td>
+          <td class="memname">constexpr Dependency&lt; S, Kind::OPTIONAL, C &gt; mcnepp::qtdi::injectIfPresent </td>
           <td>(</td>
           <td class="paramtype">const QString &amp;&#160;</td>
-          <td class="paramname"><em>requiredName</em> = <code>&quot;&quot;</code></td><td>)</td>
+          <td class="paramname"><em>requiredName</em> = <code>&quot;&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">C&#160;</td>
+          <td class="paramname"><em>converter</em> = <code>C{}</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
   </td>
@@ -705,6 +831,14 @@ template&lt;typename S &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">requiredName</td><td>the required name of the dependency. If empty, no name is required. </td></tr>
+    <tr><td class="paramname">converter</td><td>an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
+    <tr><td class="paramname">C</td><td>the type of an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
   </table>
   </dd>
 </dl>
@@ -712,8 +846,8 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="a556d0f9b363278ab1d8828ee8a048a0e" name="a556d0f9b363278ab1d8828ee8a048a0e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a556d0f9b363278ab1d8828ee8a048a0e">&#9670;&#160;</a></span>injectIfPresent() <span class="overload">[2/2]</span></h2>
+<a id="a35af95e9e5aad40a6e80d9c6fceadb69" name="a35af95e9e5aad40a6e80d9c6fceadb69"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a35af95e9e5aad40a6e80d9c6fceadb69">&#9670;&#160;</a></span>injectIfPresent() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -726,7 +860,7 @@ template&lt;typename S &gt; </div>
         <tr>
           <td class="memname">constexpr Dependency&lt; S, Kind::OPTIONAL &gt; mcnepp::qtdi::injectIfPresent </td>
           <td>(</td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt; &amp;&#160;</td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;&#160;</td>
           <td class="paramname"><em>registration</em></td><td>)</td>
           <td></td>
         </tr>
@@ -738,10 +872,16 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Injects an optional Dependency on a ServiceRegistration. This function utilizes the Registration::registeredName() of the supplied registration. </p>
+<p>Injects an optional Dependency on a Registration. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">registration</td><td>the Registration of the dependency. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
   </table>
   </dd>
 </dl>
@@ -749,23 +889,33 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="aa3a91bc82cb2225f00c29f0ded7502b8" name="aa3a91bc82cb2225f00c29f0ded7502b8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa3a91bc82cb2225f00c29f0ded7502b8">&#9670;&#160;</a></span>injectPrivateCopy()</h2>
+<a id="acf9f3ffc1025ccc776ea073730659e87" name="acf9f3ffc1025ccc776ea073730659e87"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acf9f3ffc1025ccc776ea073730659e87">&#9670;&#160;</a></span>injectPrivateCopy()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S &gt; </div>
+template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::PRIVATE_COPY&gt;&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">constexpr Dependency&lt; S, Kind::PRIVATE_COPY &gt; mcnepp::qtdi::injectPrivateCopy </td>
+          <td class="memname">constexpr Dependency&lt; S, Kind::PRIVATE_COPY, C &gt; mcnepp::qtdi::injectPrivateCopy </td>
           <td>(</td>
           <td class="paramtype">const QString &amp;&#160;</td>
-          <td class="paramname"><em>requiredName</em> = <code>&quot;&quot;</code></td><td>)</td>
+          <td class="paramname"><em>requiredName</em> = <code>&quot;&quot;</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">C&#160;</td>
+          <td class="paramname"><em>converter</em> = <code>C{}</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
   </td>
@@ -778,7 +928,15 @@ template&lt;typename S &gt; </div>
 <p>Injects a Dependency of type Cardinality::PRIVATE_COPY. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">the</td><td>required name of the dependency. If empty, no name is required. </td></tr>
+    <tr><td class="paramname">requiredName</td><td>the required name of the dependency. If empty, no name is required. </td></tr>
+    <tr><td class="paramname">converter</td><td>an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
+    <tr><td class="paramname">C</td><td>the type of an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
   </table>
   </dd>
 </dl>
@@ -836,7 +994,7 @@ template&lt;typename S &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">properties</td><td>the keys and value to be applied as Q_PROPERTYs. </td></tr>
-    <tr><td class="paramname">section</td><td>the <code>QSettings::group()</code> to be used. </td></tr>
+    <tr><td class="paramname">group</td><td>the <code>QSettings::group()</code> to be used. </td></tr>
     <tr><td class="paramname">autowire</td><td>if <code>true</code>, the QApplicationContext will attempt to initialize all Q_PROPERTYs of <code>QObject*</code>-type with the corresponding services. </td></tr>
     <tr><td class="paramname">initMethod</td><td>if not empty, will be invoked during publication of the service. </td></tr>
   </table>
