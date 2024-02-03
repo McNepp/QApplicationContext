@@ -163,7 +163,7 @@ QMetaMethod methodByName(const QMetaObject* metaObject, const QString& name) {
     }
 
 
-    template<typename C,typename P> auto erase_if(C& container, P predicate) -> std::enable_if_t<std::is_pointer_v<typename C::value_type>,typename C::value_type> {
+    template<typename C,typename P> auto eraseIf(C& container, P predicate) -> std::enable_if_t<std::is_pointer_v<typename C::value_type>,typename C::value_type> {
         auto iterator = std::find_if(container.begin(), container.end(), predicate);
         if(iterator != container.end()) {
             auto value = *iterator;
@@ -412,17 +412,17 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
 
 
-detail::ServiceRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
+detail::ServiceRegistration *StandardApplicationContext::getRegistrationHandle(const QString& name) const
 {
     DescriptorRegistration* reg = getRegistrationByName(name);
-    if(reg && reg->matches(service_type)) {
+    if(reg) {
         return reg;
     }
-    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name << "' and service-type " << service_type.name();
+    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name;
     return nullptr;
 }
 
-detail::ProxyRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, const QMetaObject* metaObject) const
+detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(const type_info &service_type, const QMetaObject* metaObject) const
 {
     auto found = proxyRegistrationCache.find(service_type);
     if(found != proxyRegistrationCache.end()) {
@@ -550,7 +550,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         auto& dependencyInfos = reg->descriptor.dependencies;
         for(auto& d : dependencyInfos) {
             //If we find an unpublished dependency, we continue with that:
-            auto foundReg = erase_if(unpublished, DescriptorRegistration::matcher(d.type));
+            auto foundReg = eraseIf(unpublished, DescriptorRegistration::matcher(d.type));
             if(foundReg) {
                 unpublished.push_front(reg); //Put the current Registration back where it came from. Will be processed after the dependency.
                 reg = foundReg;
@@ -623,7 +623,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         reg = pop_front(publishedNow);
         next_published:
         for(auto& beanRef : getBeanRefs(reg->config())) {
-            auto foundReg = erase_if(publishedNow, [&beanRef](DescriptorRegistration* r) { return r->registeredName() == beanRef;});
+            auto foundReg = eraseIf(publishedNow, [&beanRef](DescriptorRegistration* r) { return r->registeredName() == beanRef;});
             if(foundReg) {
                 publishedNow.push_front(reg);//Put the current Registration back where it came from. Will be processed after the dependency.
                 reg = foundReg;
@@ -655,7 +655,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
             case Status::fixable:
                 qCWarning(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
                 unresolvable.insert(reg);
-                erase_if(allPublished, [reg](DescriptorRegistration* arg) { return arg == reg; });
+                eraseIf(allPublished, [reg](DescriptorRegistration* arg) { return arg == reg; });
                 continue;
 
             case Status::ok:
@@ -752,7 +752,8 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
 {
     for(auto reg : registrations) {
         //If a service-registration matches another one, it is only allowed if it has the same name or is anonymous:
-        if(reg->matches(descriptor, config)) {
+        //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
+        if(reg->isManaged() && reg->matches(descriptor, config)) {
             //An explicitly different name? Continue!
             if(!name.isEmpty() && name != reg->registeredName()) {
                 continue;
@@ -779,7 +780,8 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
     }
     QString objName = name.isEmpty() ? obj->objectName() : name;
     for(auto reg : registrations) {
-        if(obj == reg->getObject()) {
+        //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
+        if(!reg->isManaged() && obj == reg->getObject()) {
             if(objName.isEmpty() || objName == reg->registeredName()) {
                 if(descriptor == reg->descriptor) {
                     return reg;
