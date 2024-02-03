@@ -805,7 +805,6 @@ private:
 
 
 
-
 /**
  * @brief A Registration that manages several ServiceRegistrations of the same type.
  * You can do almost everything with a ProxyRegistration that you can do with a ServiceRegistration,
@@ -855,6 +854,8 @@ private:
 
     }
 };
+
+
 
 ///
 /// \brief Tests two Registrations for equality.
@@ -1038,6 +1039,12 @@ enum class Kind {
 ///
 ///     context->registerService(Service<Reader>{injectAll<DatabaseAccess>()}, "reader");
 ///
+/// <br>Note:</b> In many cases, you may already have the ServiceRegistration for the dependency at hand.
+/// In that case, you can simply pass that to the Service's constructor, without the need for wrapping it via inject(const ServiceRegistration&):
+///
+///     auto accessReg = context->registerService<DatabaseAccess>();
+///
+///     context->registerService(Service<Reader>{accessReg}, "reader");
 ///
 template<typename S,Kind c=Kind::MANDATORY> struct Dependency {
     static_assert(detail::could_be_qobject<S>::value, "Dependency must be potentially convertible to QObject");
@@ -1061,13 +1068,18 @@ template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const QStrin
 }
 
 ///
-/// \brief Injects a mandatory Dependency on a ServiceRegistration.
-/// This function utilizes the Registration::registeredName() of the supplied registration.
+/// \brief Injects a mandatory Dependency on a Registration.
+/// <br><b>Note:</b> If the registration is actually a ServiceRegistration, you do not need
+/// to use inject(const Registration<S>& registration) at all! Rather, you can pass the ServiceRegistration
+/// directly to the Service's constructor.
 /// \param registration the Registration of the dependency.
 /// \return a mandatory Dependency on the supplied registration.
 ///
-template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const ServiceRegistration<S>& registration) {
-    return Dependency<S,Kind::MANDATORY>{registration.registeredName()};
+template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const Registration<S>& registration) {
+    if(auto srv = asService(registration.unwrap())) {
+        return Dependency<S,Kind::MANDATORY>{registeredName(srv)};
+    }
+    return Dependency<S,Kind::MANDATORY>{};
 }
 
 
@@ -1085,13 +1097,15 @@ template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(cons
 }
 
 ///
-/// \brief Injects an optional Dependency on a ServiceRegistration.
-/// This function utilizes the Registration::registeredName() of the supplied registration.
+/// \brief Injects an optional Dependency on a Registration.
 /// \param registration the Registration of the dependency.
 /// \return an optional Dependency on the supplied registration.
 ///
-template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const ServiceRegistration<S>& registration) {
-    return Dependency<S,Kind::OPTIONAL>{registration.registeredName()};
+template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const Registration<S>& registration) {
+    if(auto srv = asService(registration.unwrap())) {
+        return Dependency<S,Kind::OPTIONAL>{registeredName(srv)};
+    }
+    return Dependency<S,Kind::OPTIONAL>{};
 }
 
 
@@ -1106,13 +1120,18 @@ template<typename S> constexpr Dependency<S,Kind::N> injectAll(const QString& re
 }
 
 ///
-/// \brief Injects a 1-to-N Dependency on a ServiceRegistration.
-/// This function utilizes the Registration::registeredName() of the supplied registration.
+/// \brief Injects a 1-to-N Dependency on a Registration.
+/// <br><b>Note:</b> If the registration is actually a ProxyRegistration, you do not need
+/// to use inject(const Registration<S>& registration) at all! Rather, you can pass the ProxyRegistration
+/// directly to the Service's constructor.
 /// \param registration the Registration of the dependency.
 /// \return a 1-to-N  Dependency on the supplied registration.
 ///
-template<typename S> constexpr Dependency<S,Kind::N> injectAll(const ServiceRegistration<S>& registration) {
-    return Dependency<S,Kind::N>{registration.registeredName()};
+template<typename S> constexpr Dependency<S,Kind::N> injectAll(const Registration<S>& registration) {
+    if(auto srv = asService(registration.unwrap())) {
+        return Dependency<S,Kind::N>{registeredName(srv)};
+    }
+    return Dependency<S,Kind::N>{};
 }
 
 
@@ -1360,6 +1379,36 @@ struct dependency_helper<Dependency<S,kind>> {
 
     static dependency_info info(Dependency<S,kind> dep) {
         return { typeid(S), static_cast<int>(kind), get_default_constructor<S>(), dep.requiredName };
+    }
+
+
+};
+
+template <typename S>
+struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S>> {
+    using type = S;
+
+    static constexpr S* convert(const QVariant& arg) {
+        return dynamic_cast<S*>(arg.value<QObject*>());
+    }
+
+    static dependency_info info(mcnepp::qtdi::ServiceRegistration<S> dep) {
+        return { typeid(S), static_cast<int>(Kind::MANDATORY), get_default_constructor<S>(), dep.registeredName() };
+    }
+
+
+};
+
+template <typename S>
+struct dependency_helper<mcnepp::qtdi::ProxyRegistration<S>> {
+    using type = S;
+
+    static QList<S*> convert(const QVariant& arg) {
+        return convertQList<S>(arg.value<QObjectList>());
+    }
+
+    static dependency_info info(mcnepp::qtdi::ProxyRegistration<S> dep) {
+        return { typeid(S), static_cast<int>(Kind::N)};
     }
 
 

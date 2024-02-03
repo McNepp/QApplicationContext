@@ -80,7 +80,7 @@ The above code has an obvious flaw: The `QNetworkAccessManager` is created outsi
 you would have to create another instance.
 
 We fix this by not providing the pointer to the `QNetworkAccessManager`, but instead using a kind of "placeholder" for it. This placeholder is the class-template `mcnepp::qtdi::Dependency`.
-We create Dependencies by using one of the functions mcnepp::qtdi::inject(), mcnepp::qtdi::injectIfPresent() or mcnepp::qtdi::inject().
+We can create Dependencies by using one of the functions mcnepp::qtdi::inject(), mcnepp::qtdi::injectIfPresent() or mcnepp::qtdi::inject().
 
 You can think of `inject` as a request to the QApplicationContext: *If a service of this type has been registered, please provide it here!*.
 
@@ -103,6 +103,13 @@ By leveraging `inject()`, our code becomes this:
 3. Creates a Declaration for a RestPropFetcher. Again, we pass the first constructor-argument (the URL) directly. However, for the second argument, we use `inject<QNetworkAccessManager>()`.
 4. Registers the descriptor with the context (as before).
 5. The context is published. It will instantiate a QNetworkAccessManager first, then a RestPropFetcher, injecting the QNetworkAccessManager into its constructor.
+
+<b>Note:</b> In the above example, we obtain the mcnepp::qtdi::ServiceRegistration for the `QNetworkAccessManager` in line 2.<br>
+Whenever we want to express a dependency for a Service and we have the corresponding ServiceRegistration at hand, we can leave out the `inject()` and pass the ServiceRegistration directly as a dependency.
+Thus, the lines 2 to 4 from our example could be simplified like this:
+
+    auto networkRegistration = context -> registerService<QNetworkAccessManager>(); // 2
+    context -> registerService(Service<RestPropFetcher> decl{QString{"https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}, networkRegistration}, "hamburgWeather"); // 3
 
 
 ## Externalized Configuration
@@ -248,15 +255,20 @@ As stated before, mandatory dependencies enforce that there is exactly one servi
 Otherwise, publication will fail.
 Mandatory dependencies can be specified by using inject():
 
-    registerService(Service<RestPropFetcher>{inject<QNetworkAccessManager>()});
+    context->registerService(Service<RestPropFetcher>{inject<QNetworkAccessManager>()});
 
+In case you have the ServiceRegistration for the dependency at hand, you may skip the invocation of mcnepp::qtdi::inject() and use the ServiceRegistration directly:
+
+
+....auto networkRegistration = context->registerService<QNetworkAccessManager>();
+    context->registerService(Service<RestPropFetcher>{networkRegistration});
 
 ### OPTIONAL
 A service that has an *optional dependency* to another service may be instantiated even when no matching other service can be found in the ApplicationContext.
 In that case, `nullptr` will be passed to the service's constructor.  
 Optional dependencies are specified the `Dependency` helper-template. Suppose it were possible to create our `RestPropFetcher` without a `QNetworkAccessManage`:
 
-    registerService(Service<RestPropFetcher>{injectIfPresent<QNetworkAccessManager>()});
+    context->registerService(Service<RestPropFetcher>{injectIfPresent<QNetworkAccessManager>()});
 
 ### N (one-to-many)
 
@@ -279,7 +291,12 @@ The following statement will do the trick:
 
 **Note:**, while constructing the `QList` with dependencies, the ordering of registrations of **non-interdependent services** will be honoured as much as possible.
 In the above example, the services "hamburgWeather" and "berlinWeather" will appear in that order in the `QList` that is passed to the `PropFetcherAggreator`.
-    
+
+In case you have the ProxyRegistration for the dependency at hand, you may skip the invocation of mcnepp::qtdi::inject() and use the ProxyRegistration directly:
+
+....auto networkRegistration = context->getRegistration<QNetworkAccessManager>();
+    context->registerService(Service<PropFetcherAggregator>{networkRegistration});
+
 
 ### PRIVATE_COPY
 
