@@ -510,24 +510,32 @@ private slots:
         context->registerService(Service<Interface1,BaseService>{});
         auto regs = context->getRegistration<Interface1>();
 
+        QCOMPARE(regs.registeredServices().size(), 2);
         QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 1);
+        context->publish();
+        QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 2);
         QVERIFY(baseReg);
         base.reset();
         QVERIFY(!baseReg);
-        QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 0);
+        QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 1);
     }
 
     void testDestroyRegisteredServiceExternally() {
         auto reg = context->registerService(Service<Interface1,BaseService>{});
         RegistrationSlot<Interface1> slot{reg};
-
+        auto regs = context->getRegistration<Interface1>();
+        QCOMPARE(regs.registeredServices().size(), 1);
         QVERIFY(reg);
         context->publish();
-        QCOMPARE(RegistrationSlot<Interface1>{reg}.invocationCount(), 1);
+        QVERIFY(slot.last());
         QVERIFY(slot);
         delete slot.last();
         QVERIFY(reg);
-        QCOMPARE(RegistrationSlot<Interface1>{reg}.invocationCount(), 0);
+        QCOMPARE(regs.registeredServices().size(), 1);
+        QVERIFY(!RegistrationSlot<Interface1>{reg}.last());
+        //Publish the service again:
+        context->publish();
+        QVERIFY(RegistrationSlot<Interface1>{reg}.last());
     }
 
     void testDestroyContext() {

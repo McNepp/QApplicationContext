@@ -979,19 +979,6 @@ enum class Kind {
     PRIVATE_COPY
 };
 
-/**
- * @brief Specifies the strategy for looking up ServiceRegistrations in ApplicationContexts.
- * See QApplicationContext::getRegistration().
- */
-enum class LookupKind {
-    ///
-    /// All Services whose registered service_type match the requested type, will be looked up.
-    STATIC,
-
-    ///
-    /// All Services that are convertible to the requested type at runtime, will be looked up.
-    DYNAMIC
-};
 
 
 ///
@@ -1733,13 +1720,14 @@ public:
     /// Additionally, it will look up any alias that might have been given, using ServiceRegistration::registerAlias(const QString&).
     /// \tparam S the required service-type.
     /// \param name the desired name of the registration.
-    /// A valid ServiceRegistration will be returned only if exactly one Service that matches the name has been registered.
+    /// A valid ServiceRegistration will be returned only if exactly one Service that matches the requested type and name has been registered.
     /// \return a ServiceRegistration for the required type and name. If no single Service with a matching name and service-type could be found,
     /// an invalid ServiceRegistration will be returned.
+    /// \sa getRegistrationHandle(const QString&) const.
     ///
     template<typename S> [[nodiscard]] ServiceRegistration<S> getRegistration(const QString& name) const {
         static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
-        return ServiceRegistration<S>::wrap(getRegistration(typeid(S), name));
+        return ServiceRegistration<S>::wrap(getRegistrationHandle(name));
     }
 
     ///
@@ -1756,7 +1744,7 @@ public:
     ///
     template<typename S> [[nodiscard]] ProxyRegistration<S> getRegistration() const {
         static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
-        return ProxyRegistration<S>::wrap(getRegistration(typeid(S), detail::getMetaObject<S>()));
+        return ProxyRegistration<S>::wrap(getRegistrationHandle(typeid(S), detail::getMetaObject<S>()));
     }
 
     /**
@@ -1771,6 +1759,21 @@ public:
      */
     virtual QList<service_registration_handle_t> getRegistrationHandles() const = 0;
 
+    ///
+    /// \brief Obtains a handle to a Registration for a name.
+    /// <br>The type of the returned handle is the opaque type service_registration_handle_t.
+    /// You should not de-reference it, as its API may changed without notice.
+    /// <br>What you can do, though, is use one of the free functions matches(registration_handle_t),
+    /// <br>registeredName(service_registration_handle_t), registeredProperties(service_registration_handle_t).
+    /// <br>Additionally, you may wrap the handles in a type-safe manner, using ServiceRegistration::wrap(service_registration_handle_t).
+    ///
+    /// \param name the desired name of the service.
+    /// A valid handle to a Registration will be returned only if exactly one Service has been registered that matches
+    /// the name.
+    /// \return a handle to a Registration for the supplied name, or `nullptr` if no single Service has been registered with the name.
+    /// \sa getRegistration(const QString&) const.
+    ///
+    virtual service_registration_handle_t getRegistrationHandle(const QString& name) const = 0;
 
 
 
@@ -1852,24 +1855,13 @@ protected:
 
     ///
     /// \brief Obtains a Registration for a service_type.
-    /// \param service_type
-    /// \param name the desired name of the service.
-    /// A valid Registration will be returned only if exactly one Service of the requested type has been registered that matches
-    /// the name.
-    /// \return a Registration for the supplied service_type, or `nullptr` if no single Service with the requested type and matching name
-    /// has been registered.
-    ///
-    virtual service_registration_handle_t getRegistration(const std::type_info& service_type, const QString& name) const = 0;
-
-    ///
-    /// \brief Obtains a Registration for a service_type.
     /// \param service_type the service-type to match the registrations.
     /// \param dynamicCheck This optional parameter is used to check whether a Service is actually an instance of the service_type.
     /// If `nullptr` is passed, this function will obtain only those Registrations where the registered service_type matches.
     /// \param metaObject the static QMetaObject for the type. If not available, `nullptr` can be passed.
     /// \return a Registration for the supplied service_type.
     ///
-    virtual proxy_registration_handle_t getRegistration(const std::type_info& service_type, const QMetaObject* metaObject) const = 0;
+    virtual proxy_registration_handle_t getRegistrationHandle(const std::type_info& service_type, const QMetaObject* metaObject) const = 0;
 
 
     ///
@@ -1901,30 +1893,18 @@ protected:
         return appContext.registerObject(name, obj, descriptor);
     }
 
-    ///
-    /// \brief Allows you to invoke a protected virtual function on another target.
-    /// If you are implementing getRegistration(const std::type_info&) const and want to delegate
-    /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    ///
-    /// \param appContext the target on which to invoke getRegistration(const std::type_info&) const.
-    /// \param service_type
-    /// \return the result of getRegistration(const std::type_info&,const QString&) const.
-    ///
-    static service_registration_handle_t delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QString& name) {
-        return appContext.getRegistration(service_type, name);
-    }
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
-    /// If you are implementing getRegistration(const std::type_info&) const and want to delegate
+    /// If you are implementing getRegistrationHandle(const std::type_info&,const QMetaObject*) const and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
     ///
-    /// \param appContext the target on which to invoke getRegistration(const std::type_info&) const.
+    /// \param appContext the target on which to invoke getRegistration(const std::type_info&,const QMetaObject*) const.
     /// \param service_type
-    /// \return the result of getRegistration(const std::type_info&) const.
+    /// \return the result of getRegistration(const std::type_info&,const QMetaObject*) const.
     ///
-    static proxy_registration_handle_t delegateGetRegistration(const QApplicationContext& appContext, const std::type_info& service_type, const QMetaObject* metaObject) {
-        return appContext.getRegistration(service_type, metaObject);
+    static proxy_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext& appContext, const std::type_info& service_type, const QMetaObject* metaObject) {
+        return appContext.getRegistrationHandle(service_type, metaObject);
     }
 
 

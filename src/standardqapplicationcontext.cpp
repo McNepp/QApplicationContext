@@ -412,17 +412,17 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
 
 
-detail::ServiceRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, const QString& name) const
+detail::ServiceRegistration *StandardApplicationContext::getRegistrationHandle(const QString& name) const
 {
     DescriptorRegistration* reg = getRegistrationByName(name);
-    if(reg && reg->matches(service_type)) {
+    if(reg) {
         return reg;
     }
-    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name << "' and service-type " << service_type.name();
+    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name;
     return nullptr;
 }
 
-detail::ProxyRegistration *StandardApplicationContext::getRegistration(const type_info &service_type, const QMetaObject* metaObject) const
+detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(const type_info &service_type, const QMetaObject* metaObject) const
 {
     auto found = proxyRegistrationCache.find(service_type);
     if(found != proxyRegistrationCache.end()) {
@@ -752,7 +752,8 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
 {
     for(auto reg : registrations) {
         //If a service-registration matches another one, it is only allowed if it has the same name or is anonymous:
-        if(reg->matches(descriptor, config)) {
+        //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
+        if(reg->isManaged() && reg->matches(descriptor, config)) {
             //An explicitly different name? Continue!
             if(!name.isEmpty() && name != reg->registeredName()) {
                 continue;
@@ -779,7 +780,8 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
     }
     QString objName = name.isEmpty() ? obj->objectName() : name;
     for(auto reg : registrations) {
-        if(obj == reg->getObject()) {
+        //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
+        if(!reg->isManaged() && obj == reg->getObject()) {
             if(objName.isEmpty() || objName == reg->registeredName()) {
                 if(descriptor == reg->descriptor) {
                     return reg;

@@ -39,9 +39,9 @@ protected:
 
     virtual detail::ServiceRegistration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
 
-    virtual detail::ServiceRegistration* getRegistration(const std::type_info& service_type, const QString& name) const override;
+    virtual detail::ServiceRegistration* getRegistrationHandle(const QString& name) const override;
 
-    virtual detail::ProxyRegistration* getRegistration(const std::type_info& service_type, const QMetaObject* metaObject) const override;
+    virtual detail::ProxyRegistration* getRegistrationHandle(const std::type_info& service_type, const QMetaObject* metaObject) const override;
 
 
 private:
@@ -391,6 +391,7 @@ private:
                 } else {
                     connect(reg, &Registration::objectPublished, this, &ProxyRegistration::objectPublished);
                 }
+                return true;
             }
             return false;
         }
