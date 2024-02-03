@@ -358,7 +358,17 @@ inline QApplicationContext* applicationContext(registration_handle_t handle) {
 ///
 using service_registration_handle_t = detail::ServiceRegistration*;
 
-
+/**
+ * @brief Narrows a handle to a registration to a handle to a ServiceRegistration.
+ * <br>If the handle actually points to a ServiceRegistration, this function will cast it
+ * to the more specific type. Otherwise, it will return an invalid handle.
+ * @param handle a valid or invalid handle to a registration.
+ * @return a handle to the ServiceRegistration that the original handle was pointing to, or an invalid handle if the original handle
+ * was not pointing to a ServiceRegistration.
+ */
+inline service_registration_handle_t asService(registration_handle_t handle) {
+    return dynamic_cast<service_registration_handle_t>(handle);
+}
 
 ///
 /// An opaque type that represents the ProxyRegistration on a low level.
@@ -369,6 +379,19 @@ using service_registration_handle_t = detail::ServiceRegistration*;
 /// applicationContext(registration_handle_t handle).
 ///
 using proxy_registration_handle_t = detail::ProxyRegistration*;
+
+/**
+ * @brief Narrows a handle to a registration to a handle to a ProxyRegistration.
+ * <br>If the handle actually points to a ProxyRegistration, this function will cast it
+ * to the more specific type. Otherwise, it will return an invalid handle.
+ * @param handle a valid or invalid handle to a registration.
+ * @return a handle to the ProxyRegistration that the original handle was pointing to, or an invalid handle if the original handle
+ * was not pointing to a ProxyRegistration.
+ */
+inline proxy_registration_handle_t asProxy(registration_handle_t handle) {
+    return dynamic_cast<proxy_registration_handle_t>(handle);
+}
+
 
 ///
 /// \brief Obtains the registered Services from a handle to a ProxyRegistration.
@@ -1512,7 +1535,7 @@ constructor_t service_creator() {
                 }; };
 }
 
-using q_predicate_t = std::function<bool(QObject*)>;
+
 
 
 
@@ -1555,14 +1578,14 @@ template<typename Srv,typename Impl=Srv> struct Service {
 
 ///
 /// \brief Describes a service by its implementation and possibly multiple service-interfaces.
-/// Compilation will fail if either `Impl` is not a sub-class of QObject.
+/// Compilation will fail if `Impl` is not a sub-class of QObject.
 /// \tparam Impl the implementation-type of the service. If you do not specify additional service-interfaces,
 /// this will become also the primary service-interface.<br>
 /// You may supply arbitrary arguments to Service' constructor. Those arguments will be passed on to the
 /// constructor of the actual service when the QApplicationContext is published.
 /// Example with one argument:
 ///
-///    context->registerService(Service<QFile>{QString{"readme.txt"}.advertiseAs<QIODevice>(), "file");
+///    context->registerService(Service<QFile>{QString{"readme.txt"}.advertiseAs<QIODevice,QFileDevice>(), "file");
 ///
 ///
 template<typename Impl> struct Service<Impl,Impl> {
@@ -1585,22 +1608,22 @@ template<typename Impl> struct Service<Impl,Impl> {
 
     /**
      * @brief Specifies service-interfaces.
-     *  <br>You must specify at least one interface. These interfaces will be available for lookup via QApplicationContext::getRegistration().
+     *  <br>You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via QApplicationContext::getRegistration().
      *  They will also be used to satisfy dependencies that other services may have to this one.
      *  <br>This function may be invoked only on temporary instances.
-     *  \tparam First the primary service-interface.
-     *  \tparam Tail the additional service-interfaces.
+     *  \tparam IFaces the service-interfaces. <b>At least one must be supplied.</b>
      * @return this Service.
      */
-    template<typename First, typename...Tail> Service<Impl,Impl> advertiseAs()&& {
+    template<typename...IFaces> Service<Impl,Impl> advertiseAs()&& {
+        static_assert(sizeof...(IFaces) > 0, "At least one service-interface must be advertised.");
 
-        static_assert(std::is_base_of_v<First,Impl> && (std::is_base_of_v<Tail,Impl> && ... ), "implementation-type does not implement all advertised interfaces");
+        static_assert((std::is_base_of_v<IFaces,Impl> && ... ), "Implementation-type does not implement all advertised interfaces");
         auto descr{descriptor};
         auto first = descr.service_types.begin();
         if(first != descr.service_types.end() && *first == descr.impl_type) {
            descr.service_types.erase(first);
         }
-        (descr.service_types.push_back(typeid(First)), ..., descr.service_types.push_back(typeid(Tail)));
+        (descr.service_types.push_back(typeid(IFaces)), ...);
         return Service<Impl,Impl>{std::move(descr)};
     }
 
@@ -1657,12 +1680,14 @@ public:
 
     ///
     /// \brief Registers a service with this ApplicationContext.
-    /// \param serviceDeclaration denotes the Service.
+    /// \param serviceDeclaration comprises the services's primary advertised interface, its implementation-type and its dependencies to be injected
+    /// via its constructor.
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param config the Configuration for the service.
-    /// \tparam S the service-type. If you want to distinguish the service-type from the implementation-type, you should supply a Service here.
+    /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
+    /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
     template<typename S,typename Impl> auto registerService(const Service<S,Impl>& serviceDeclaration, const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S> {

@@ -14,6 +14,7 @@ FILE(GLOB sources src/*.cpp src/*.h defs/*.h)
 
 
 add_library(${PROJECT_NAME} STATIC ${sources})
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/defs)
 

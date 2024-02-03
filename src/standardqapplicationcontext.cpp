@@ -163,7 +163,7 @@ QMetaMethod methodByName(const QMetaObject* metaObject, const QString& name) {
     }
 
 
-    template<typename C,typename P> auto erase_if(C& container, P predicate) -> std::enable_if_t<std::is_pointer_v<typename C::value_type>,typename C::value_type> {
+    template<typename C,typename P> auto eraseIf(C& container, P predicate) -> std::enable_if_t<std::is_pointer_v<typename C::value_type>,typename C::value_type> {
         auto iterator = std::find_if(container.begin(), container.end(), predicate);
         if(iterator != container.end()) {
             auto value = *iterator;
@@ -550,7 +550,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         auto& dependencyInfos = reg->descriptor.dependencies;
         for(auto& d : dependencyInfos) {
             //If we find an unpublished dependency, we continue with that:
-            auto foundReg = erase_if(unpublished, DescriptorRegistration::matcher(d.type));
+            auto foundReg = eraseIf(unpublished, DescriptorRegistration::matcher(d.type));
             if(foundReg) {
                 unpublished.push_front(reg); //Put the current Registration back where it came from. Will be processed after the dependency.
                 reg = foundReg;
@@ -623,7 +623,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         reg = pop_front(publishedNow);
         next_published:
         for(auto& beanRef : getBeanRefs(reg->config())) {
-            auto foundReg = erase_if(publishedNow, [&beanRef](DescriptorRegistration* r) { return r->registeredName() == beanRef;});
+            auto foundReg = eraseIf(publishedNow, [&beanRef](DescriptorRegistration* r) { return r->registeredName() == beanRef;});
             if(foundReg) {
                 publishedNow.push_front(reg);//Put the current Registration back where it came from. Will be processed after the dependency.
                 reg = foundReg;
@@ -655,7 +655,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
             case Status::fixable:
                 qCWarning(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
                 unresolvable.insert(reg);
-                erase_if(allPublished, [reg](DescriptorRegistration* arg) { return arg == reg; });
+                eraseIf(allPublished, [reg](DescriptorRegistration* arg) { return arg == reg; });
                 continue;
 
             case Status::ok:
