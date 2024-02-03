@@ -23,6 +23,19 @@ template<> struct service_factory<BaseService> {
 
 namespace mcnepp::qtditest {
 
+template<typename S>  struct vector_converter {
+    std::vector<S*> operator()(const QVariant& arg) const {
+        auto list = detail::convertQList<S>(arg.value<QObjectList>());
+        return {list.begin(), list.end()};
+    }
+};
+
+template<typename S> struct ref_converter {
+    S& operator()(const QVariant& arg) const {
+        return dynamic_cast<S&>(*arg.value<QObject*>());
+    }
+};
+
 template<typename S> class RegistrationSlot : public QObject {
 public:
 
@@ -1363,11 +1376,14 @@ private slots:
         dependentReg.subscribe(this, published);
         auto threeReg = context->registerService(Service<ServiceWithThreeArgs>{baseReg, dependentReg, base2Reg}, "three");
         threeReg.subscribe(this, published);
-        auto fourReg = context->registerService(Service<ServiceWithFourArgs>{baseReg, dependentReg, base2Reg, threeReg}, "four");
+        auto fourReg = context->registerService(Service<ServiceWithFourArgs>{inject<BaseService,ref_converter<BaseService>>(),
+                                                                             inject<DependentService,ref_converter<DependentService>>(),
+                                                                             inject<BaseService2,ref_converter<BaseService2>>(),
+                                                                             inject<ServiceWithThreeArgs,ref_converter<ServiceWithThreeArgs>>()}, "four");
         fourReg.subscribe(this, published);
         auto fiveReg = context->registerService(Service<ServiceWithFiveArgs>{baseReg, dependentReg, base2Reg, threeReg, fourReg}, "five");
         fiveReg.subscribe(this, published);
-        auto sixReg = context->registerService(Service<ServiceWithSixArgs>{QString{"Hello"}, base2Reg, injectAll(fiveReg), threeReg, fourReg, resolve("${pi}", 3.14159)}, "six");
+        auto sixReg = context->registerService(Service<ServiceWithSixArgs>{QString{"Hello"}, base2Reg, injectAll<ServiceWithFiveArgs,vector_converter<ServiceWithFiveArgs>>(), threeReg, fourReg, resolve("${pi}", 3.14159)}, "six");
         sixReg.subscribe(this, published);
 
 

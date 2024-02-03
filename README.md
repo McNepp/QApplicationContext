@@ -326,6 +326,42 @@ If no default-constructor exists, publication of the ApplicationContext will fai
 <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
 </table>
 
+## Converting Dependencies
+
+As we have seen in the previous section, a mandatory Dependency of type T will be injected into the dependent Service's constructor as a `T*`.
+<br>Likewise, a one-to-many Dependency of type T will be injected into the dependent Service's constructor as a `QList<T*>`.
+<br>However, sometimes a Service may have a constructor that accepts its dependencies in a different format.
+Suppose that the class `PropFetcherAggregator` were declared like this:
+
+    class PropFetcherAggregator : public QObject {
+      Q_OBJECT
+      
+      public:
+      
+      static constexpr MAX_FETCHERS = 10;
+      
+      explicit PropFetcherAggregator(const std::array<RestPropFetcher*,MAX_FETCHERS>& fetchers, QObject* parent = nullptr);
+    };
+
+There is no implicit conversion from a QList to `a std::array`.
+Thus, we'd have to write a converter that accepts a `QObjectList` and produces a `std::array`. Actually, the converter's argument-type must be `QVariant`, as that 
+will be passed by the ApplicationContext.
+
+
+    struct propfetcher_set_converter {
+      using array_t = std::array<RestPropFetcher*,PropFetcherAggregator::MAX_FETCHERS>;
+
+      array_t operator()(const QVariant& arg) const {
+        array_t target;
+        auto qlist = arg.value<QObjectList>();
+        std::copy_n(qlist.begin(), std::min(target.size(), qlist.size()), target.begin());
+        return target;        
+      }
+    };
+
+Now when we register the `PropFetcherAggregator` with an ApplicationContext, we simply specify this converter as a type-argument:
+
+    context -> registerService(Service<PropFetcherAggregator>{injectAll<RestPropFetcher,propfetcher_set_converter>()});
 
 ## Service-interfaces
 

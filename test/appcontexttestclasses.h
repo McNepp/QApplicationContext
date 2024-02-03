@@ -218,7 +218,7 @@ public:
 
 class ServiceWithFourArgs : public QObject {
 public:
-    ServiceWithFourArgs(BaseService*, DependentService*, BaseService2*, ServiceWithThreeArgs* ) {
+    ServiceWithFourArgs(BaseService&, DependentService&, BaseService2&, ServiceWithThreeArgs& ) {
 
     }
 };
@@ -233,7 +233,7 @@ public:
 
 class ServiceWithSixArgs : public QObject {
 public:
-    ServiceWithSixArgs(const QString&, BaseService2*, const QList<ServiceWithFiveArgs*>&, ServiceWithThreeArgs*, ServiceWithFourArgs*, double) {
+    ServiceWithSixArgs(const QString&, BaseService2*, const std::vector<ServiceWithFiveArgs*>&, ServiceWithThreeArgs*, ServiceWithFourArgs*, double) {
 
     }
 };

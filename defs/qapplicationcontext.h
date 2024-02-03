@@ -17,6 +17,45 @@ namespace mcnepp::qtdi {
 class QApplicationContext;
 
 
+/**
+* \brief Specifies the kind of a service-dependency.
+* Will be used as a non-type argument to Dependency, when registering a service.
+* The following table sums up the characteristics of each type of dependency:
+* <table><tr><th>&nbsp;</th><th>Normal behaviour</th><th>What if no dependency can be found?</th><th>What if more than one dependency can be found?</th></tr>
+* <tr><td>MANDATORY</td><td>Injects one dependency into the dependent service.</td><td>If the dependency-type has an accessible default-constructor, this will be used to register and create an instance of that type.
+* <br>If no default-constructor exists, publication of the ApplicationContext will fail.</td>
+* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+* <tr><td>OPTIONAL</td><td>Injects one dependency into the dependent service</td><td>Injects `nullptr` into the dependent service.</td>
+* td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+* <tr><td>N</td><td>Injects all dependencies of the dependency-type that have been registered into the dependent service, using a `QList`</td>
+* <td>Injects an empty `QList` into the dependent service.</td>
+* <td>See 'Normal behaviour'</td></tr>
+* <tr><td>PRIVATE_COPY</td><td>Injects a newly created instance of the dependency-type and sets its `QObject::parent()` to the dependent service.</td>
+* <td>If the dependency-type has an accessible default-constructor, this will be used to create an instance of that type.<br>
+* If no default-constructor exists, publication of the ApplicationContext will fail.</td>
+* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+* </table>
+*/
+enum class Kind {
+    ///
+    /// This dependency must be present in the ApplicationContext.
+    MANDATORY,
+    /// This dependency need not be present in the ApplicationContext.
+    /// If not, `nullptr` will be provided.
+    OPTIONAL,
+    ///
+    /// All Objects with the required service-type will be pushed into QList
+    /// and provided to the constructor of the service that depends on them.
+    N,
+    ///
+    /// This dependency must be present in the ApplicationContext.
+    /// A copy will be made and provided to the constructor of the service that depends on them.
+    /// This copy will not be published in the ApplicationContext.
+    /// After construction, the QObject::parent() of the dependency will
+    /// be set to the service that owns it.
+    ///
+    PRIVATE_COPY
+};
 
 
 
@@ -52,6 +91,21 @@ template <>
 inline QObjectList convertQList<QObject>(const QObjectList &list) {
     return list;
 }
+
+template<typename S,Kind kind> struct default_argument_converter {
+    S* operator()(const QVariant& arg) const {
+        return dynamic_cast<S*>(arg.value<QObject*>());
+    }
+};
+
+
+template<typename S> struct default_argument_converter<S,Kind::N> {
+    QList<S*> operator()(const QVariant& arg) const {
+        return convertQList<S>(arg.value<QObjectList>());
+    }
+};
+
+
 
 class Registration;
 
@@ -963,51 +1017,12 @@ template<typename S> struct service_factory;
 
 
 
-/**
-* \brief Specifies the kind of a service-dependency.
-* Will be used as a non-type argument to Dependency, when registering a service.
-* The following table sums up the characteristics of each type of dependency:
-* <table><tr><th>&nbsp;</th><th>Normal behaviour</th><th>What if no dependency can be found?</th><th>What if more than one dependency can be found?</th></tr>
-* <tr><td>MANDATORY</td><td>Injects one dependency into the dependent service.</td><td>If the dependency-type has an accessible default-constructor, this will be used to register and create an instance of that type.
-* <br>If no default-constructor exists, publication of the ApplicationContext will fail.</td>
-* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
-* <tr><td>OPTIONAL</td><td>Injects one dependency into the dependent service</td><td>Injects `nullptr` into the dependent service.</td>
-* td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
-* <tr><td>N</td><td>Injects all dependencies of the dependency-type that have been registered into the dependent service, using a `QList`</td>
-* <td>Injects an empty `QList` into the dependent service.</td>
-* <td>See 'Normal behaviour'</td></tr>
-* <tr><td>PRIVATE_COPY</td><td>Injects a newly created instance of the dependency-type and sets its `QObject::parent()` to the dependent service.</td>
-* <td>If the dependency-type has an accessible default-constructor, this will be used to create an instance of that type.<br>
-* If no default-constructor exists, publication of the ApplicationContext will fail.</td>
-* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
-* </table>
-*/
-enum class Kind {
-    ///
-    /// This dependency must be present in the ApplicationContext.
-    MANDATORY,
-    /// This dependency need not be present in the ApplicationContext.
-    /// If not, `nullptr` will be provided.
-    OPTIONAL,
-    ///
-    /// All Objects with the required service-type will be pushed into QList
-    /// and provided to the constructor of the service that depends on them.
-    N,
-    ///
-    /// This dependency must be present in the ApplicationContext.
-    /// A copy will be made and provided to the constructor of the service that depends on them.
-    /// This copy will not be published in the ApplicationContext.
-    /// After construction, the QObject::parent() of the dependency will
-    /// be set to the service that owns it.
-    ///
-    PRIVATE_COPY
-};
 
 
 
 ///
 /// \brief Specifies a dependency of a service.
-/// Can by used as a type-argument for QApplicationContext::registerService().
+/// <br>Can by used as a type-argument for QApplicationContext::registerService().
 /// In the standard-case of a mandatory relationship, the use of the `kind` argument is optional.
 /// Suppose you have a service-type `Reader` that needs a mandatory pointer to a `DatabaseAccess` in its constructor:
 ///     class Reader : public QObject {
@@ -1046,7 +1061,11 @@ enum class Kind {
 ///
 ///     context->registerService(Service<Reader>{accessReg}, "reader");
 ///
-template<typename S,Kind c=Kind::MANDATORY> struct Dependency {
+/// \tparam S the service-interface of the Dependency
+/// \tparam kind the kind of Dependency
+/// \tparam C the type of the converter. This must be a *default-constructible Callable* class capable of converting
+/// a QVariant to the target-type, i.e. it must have an `operator()(const QVariant&)`.
+template<typename S,Kind kind=Kind::MANDATORY,typename C=detail::default_argument_converter<S,kind>> struct Dependency {
     static_assert(detail::could_be_qobject<S>::value, "Dependency must be potentially convertible to QObject");
     ///
     /// \brief the required name for this dependency.
@@ -1054,17 +1073,20 @@ template<typename S,Kind c=Kind::MANDATORY> struct Dependency {
     ///
     QString requiredName;
 
-
+    C converter;
 };
 
 
 ///
 /// \brief Injects a mandatory Dependency.
 /// \param requiredName the required name of the dependency. If empty, no name is required.
+/// \param converter an optional *Callable* object that can convert a QVariant to the target-type.
+/// \tparam S the service-type of the dependency.
+/// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return a mandatory Dependency on the supplied type.
 ///
-template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const QString& requiredName = "") {
-    return Dependency<S,Kind::MANDATORY>{requiredName};
+template<typename S,typename C=detail::default_argument_converter<S,Kind::MANDATORY>> constexpr Dependency<S,Kind::MANDATORY,C> inject(const QString& requiredName = "", C converter = C{}) {
+    return Dependency<S,Kind::MANDATORY,C>{requiredName, converter};
 }
 
 ///
@@ -1073,6 +1095,7 @@ template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const QStrin
 /// to use inject(const Registration<S>& registration) at all! Rather, you can pass the ServiceRegistration
 /// directly to the Service's constructor.
 /// \param registration the Registration of the dependency.
+/// \tparam S the service-type of the dependency.
 /// \return a mandatory Dependency on the supplied registration.
 ///
 template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const Registration<S>& registration) {
@@ -1090,15 +1113,19 @@ template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const Regist
 /// \brief Injects an optional Dependency to another ServiceRegistration.
 /// This function will utilize the Registration::registeredName() to match the dependency.
 /// \param requiredName the required name of the dependency. If empty, no name is required.
+/// \param converter an optional *Callable* object that can convert a QVariant to the target-type.
+/// \tparam S the service-type of the dependency.
+/// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return an optional Dependency on the supplied type.
 ///
-template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const QString& requiredName = "") {
-    return Dependency<S,Kind::OPTIONAL>{requiredName};
+template<typename S,typename C=detail::default_argument_converter<S,Kind::OPTIONAL>> constexpr Dependency<S,Kind::OPTIONAL,C> injectIfPresent(const QString& requiredName = "", C converter = C{}) {
+    return Dependency<S,Kind::OPTIONAL,C>{requiredName, converter};
 }
 
 ///
 /// \brief Injects an optional Dependency on a Registration.
 /// \param registration the Registration of the dependency.
+/// \tparam S the service-type of the dependency.
 /// \return an optional Dependency on the supplied registration.
 ///
 template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const Registration<S>& registration) {
@@ -1113,10 +1140,13 @@ template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(cons
 ///
 /// \brief Injects a 1-to-N Dependency.
 /// \param requiredName the required name of the dependency. If empty, no name is required.
+/// \param converter an optional *Callable* object that can convert a QVariant to the target-type.
+/// \tparam S the service-type of the dependency.
+/// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return a 1-to-N Dependency on the supplied type.
 ///
-template<typename S> constexpr Dependency<S,Kind::N> injectAll(const QString& requiredName = "") {
-    return Dependency<S,Kind::N>{requiredName};
+template<typename S,typename C=detail::default_argument_converter<S,Kind::N>> constexpr Dependency<S,Kind::N,C> injectAll(const QString& requiredName = "", C converter = C{}) {
+    return Dependency<S,Kind::N,C>{requiredName, converter};
 }
 
 ///
@@ -1125,6 +1155,7 @@ template<typename S> constexpr Dependency<S,Kind::N> injectAll(const QString& re
 /// to use inject(const Registration<S>& registration) at all! Rather, you can pass the ProxyRegistration
 /// directly to the Service's constructor.
 /// \param registration the Registration of the dependency.
+/// \tparam S the service-type of the dependency.
 /// \return a 1-to-N  Dependency on the supplied registration.
 ///
 template<typename S> constexpr Dependency<S,Kind::N> injectAll(const Registration<S>& registration) {
@@ -1137,11 +1168,14 @@ template<typename S> constexpr Dependency<S,Kind::N> injectAll(const Registratio
 
 ///
 /// \brief Injects a Dependency of type Cardinality::PRIVATE_COPY
-/// \param the required name of the dependency. If empty, no name is required.
+/// \param requiredName the required name of the dependency. If empty, no name is required.
+/// \param converter an optional *Callable* object that can convert a QVariant to the target-type.
+/// \tparam S the service-type of the dependency.
+/// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return a Dependency of the supplied type that will create its own private copy.
 ///
-template<typename S> constexpr Dependency<S,Kind::PRIVATE_COPY> injectPrivateCopy(const QString& requiredName = "") {
-    return Dependency<S,Kind::PRIVATE_COPY>{requiredName};
+template<typename S,typename C=detail::default_argument_converter<S,Kind::PRIVATE_COPY>> constexpr Dependency<S,Kind::PRIVATE_COPY,C> injectPrivateCopy(const QString& requiredName = "", C converter = C{}) {
+    return Dependency<S,Kind::PRIVATE_COPY,C>{requiredName, converter};
 }
 
 ///
@@ -1227,6 +1261,25 @@ using constructor_t = std::function<QObject*(const QVariantList&)>;
 
 constexpr int VALUE_KIND = 0x10;
 constexpr int RESOLVABLE_KIND = 0x20;
+
+
+template<typename S> struct argument_converter {
+
+
+    S operator()(const QVariant& arg) const {
+        return arg.value<S>();
+    }
+};
+
+template<typename S,Kind kind,typename C> struct argument_converter<Dependency<S,kind,C>> {
+
+    auto operator()(const QVariant& arg) const {
+        return converter(arg);
+    }
+
+    C converter;
+};
+
 
 
 struct dependency_info {
@@ -1358,7 +1411,8 @@ template <typename S>
 struct dependency_helper {
     using type = S;
 
-    static constexpr S convert(const QVariant& arg) {
+
+    static S convert(const QVariant& arg) {
         return arg.value<S>();
     }
 
@@ -1367,35 +1421,39 @@ struct dependency_helper {
         return { typeid(S), VALUE_KIND, constructor_t{}, "", QVariant::fromValue(dep) };
     }
 
-};
-
-template <typename S,Kind kind>
-struct dependency_helper<Dependency<S,kind>> {
-    using type = S;
-
-    static constexpr S* convert(const QVariant& arg) {
-        return dynamic_cast<S*>(arg.value<QObject*>());
+    static auto converter(S dep) {
+        return &convert;
     }
 
-    static dependency_info info(Dependency<S,kind> dep) {
+};
+
+template <typename S,Kind kind,typename C>
+struct dependency_helper<Dependency<S,kind,C>> {
+    using type = S;
+
+
+    static dependency_info info(const Dependency<S,kind,C>& dep) {
         return { typeid(S), static_cast<int>(kind), get_default_constructor<S>(), dep.requiredName };
     }
 
-
+    static C converter(const Dependency<S,kind,C>& dep) {
+        return dep.converter;
+    }
 };
 
 template <typename S>
 struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S>> {
     using type = S;
 
-    static constexpr S* convert(const QVariant& arg) {
-        return dynamic_cast<S*>(arg.value<QObject*>());
-    }
 
-    static dependency_info info(mcnepp::qtdi::ServiceRegistration<S> dep) {
+
+    static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S>& dep) {
         return { typeid(S), static_cast<int>(Kind::MANDATORY), get_default_constructor<S>(), dep.registeredName() };
     }
 
+    static auto converter(const mcnepp::qtdi::ServiceRegistration<S>& dep) {
+        return default_argument_converter<S,Kind::MANDATORY>{};
+    }
 
 };
 
@@ -1403,33 +1461,18 @@ template <typename S>
 struct dependency_helper<mcnepp::qtdi::ProxyRegistration<S>> {
     using type = S;
 
-    static QList<S*> convert(const QVariant& arg) {
-        return convertQList<S>(arg.value<QObjectList>());
-    }
 
-    static dependency_info info(mcnepp::qtdi::ProxyRegistration<S> dep) {
+
+    static dependency_info info(const mcnepp::qtdi::ProxyRegistration<S>&) {
         return { typeid(S), static_cast<int>(Kind::N)};
     }
 
+    static auto converter(const mcnepp::qtdi::ProxyRegistration<S>&) {
+        return default_argument_converter<S,Kind::N>{};
+    }
 
 };
 
-
-
-
-template <typename S>
-struct dependency_helper<Dependency<S, Kind::N>> {
-
-    using type = S;
-
-
-    static dependency_info info(Dependency<S,Kind::N> dep) {
-        return { typeid(S), static_cast<int>(Kind::N), get_default_constructor<S>(), dep.requiredName };
-    }
-    static QList<S*> convert(const QVariant& arg) {
-        return convertQList<S>(arg.value<QObjectList>());
-    }
-};
 
 template <typename S>
 struct dependency_helper<Resolvable<S>> {
@@ -1437,20 +1480,17 @@ struct dependency_helper<Resolvable<S>> {
     using type = S;
 
 
-    static dependency_info info(Resolvable<S> dep) {
+
+    static dependency_info info(const Resolvable<S>& dep) {
         return { typeid(S), RESOLVABLE_KIND, constructor_t{}, dep.expression, dep.defaultValue };
     }
 
-    static constexpr S convert(const QVariant& arg) {
-        return arg.value<S>();
+    static auto converter(const Resolvable<S>& resolv) {
+        return &dependency_helper<S>::convert;
     }
 };
 
 
-
-template<typename S> auto constexpr convert_arg(const QVariant& arg) {
-    return dependency_helper<S>::convert(arg);
-}
 
 
 
@@ -1485,102 +1525,102 @@ template <typename T> constructor_t service_creator() {
     };
 }
 
-template <typename T, typename D1> constructor_t service_creator() {
-        return [](const QVariantList &dependencies) {
+template <typename T, typename D1> constructor_t service_creator(D1 conv1) {
+        return [conv1](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}(convert_arg<D1>(dependencies[0]));
+                return service_factory<T>{}(conv1(dependencies[0]));
             } else {
-                return new T{ convert_arg<D1>(dependencies[0]) };
+                return new T{ conv1(dependencies[0]) };
             }
         };
     }
 
 template <typename T, typename D1, typename D2>
-    constructor_t service_creator() {
-        return [](const QVariantList &dependencies) {
+    constructor_t service_creator(D1 conv1, D2 conv2) {
+        return [conv1,conv2](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}(convert_arg<D1>(dependencies[0]), convert_arg<D2>(dependencies[1]));
+                return service_factory<T>{}(conv1(dependencies[0]), conv2(dependencies[1]));
             } else {
-                return new T{ convert_arg<D1>(dependencies[0]), convert_arg<D2>(dependencies[1]) };
+                return new T{ conv1(dependencies[0]), conv2(dependencies[1]) };
             }
         };
     }
 
 template <typename T, typename D1, typename D2, typename D3>
-    constructor_t service_creator() {
-        return [](const QVariantList &dependencies) {
+    constructor_t service_creator(D1 conv1, D2 conv2, D3 conv3) {
+        return [conv1,conv2,conv3](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(
-                        convert_arg<D1>(dependencies[0]),
-                        convert_arg<D2>(dependencies[1]),
-                        convert_arg<D3>(dependencies[2]));
+                        conv1(dependencies[0]),
+                        conv2(dependencies[1]),
+                        conv3(dependencies[2]));
             } else {
             return new T{
-                         convert_arg<D1>(dependencies[0]),
-                         convert_arg<D2>(dependencies[1]),
-                         convert_arg<D3>(dependencies[2])
+                         conv1(dependencies[0]),
+                         conv2(dependencies[1]),
+                         conv3(dependencies[2])
                         };
             }
         };
     }
 
 template <typename T, typename D1, typename D2, typename D3, typename D4>
-    constructor_t service_creator() {
-        return [](const QVariantList &dependencies) {
+    constructor_t service_creator(D1 conv1, D2 conv2, D3 conv3, D4 conv4) {
+        return [conv1,conv2,conv3,conv4](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
                 return service_factory<T>{}(
-                        convert_arg<D1>(dependencies[0]),
-                        convert_arg<D2>(dependencies[1]),
-                        convert_arg<D3>(dependencies[2]),
-                        convert_arg<D4>(dependencies[3]));
+                        conv1(dependencies[0]),
+                        conv2(dependencies[1]),
+                        conv3(dependencies[2]),
+                        conv4(dependencies[3]));
             } else {
             return new T{
-                         convert_arg<D1>(dependencies[0]),
-                         convert_arg<D2>(dependencies[1]),
-                         convert_arg<D3>(dependencies[2]),
-                         convert_arg<D4>(dependencies[3])
+                         conv1(dependencies[0]),
+                         conv2(dependencies[1]),
+                         conv3(dependencies[2]),
+                         conv4(dependencies[3])
                      };
             }
         };
     }
 
 template <typename T, typename D1, typename D2, typename D3, typename D4, typename D5>
-    constructor_t service_creator() {
-        return [](const QVariantList &dependencies) {
+    constructor_t service_creator(D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5) {
+        return [conv1,conv2,conv3,conv4,conv5](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}(convert_arg<D1>(dependencies[0]),
-                        convert_arg<D2>(dependencies[1]),
-                        convert_arg<D3>(dependencies[2]),
-                        convert_arg<D4>(dependencies[3]),
-                        convert_arg<D5>(dependencies[4]));
+                return service_factory<T>{}(conv1(dependencies[0]),
+                        conv2(dependencies[1]),
+                        conv3(dependencies[2]),
+                        conv4(dependencies[3]),
+                        conv5(dependencies[4]));
             } else
             return new T{
-                             convert_arg<D1>(dependencies[0]),
-                             convert_arg<D2>(dependencies[1]),
-                             convert_arg<D3>(dependencies[2]),
-                             convert_arg<D4>(dependencies[3]),
-                             convert_arg<D5>(dependencies[4])
+                             conv1(dependencies[0]),
+                             conv2(dependencies[1]),
+                             conv3(dependencies[2]),
+                             conv4(dependencies[3]),
+                             conv5(dependencies[4])
                          }; };
     }
 
 template <typename T, typename D1, typename D2, typename D3, typename D4, typename D5, typename D6>
-constructor_t service_creator() {
-        return [](const QVariantList &dependencies) {
+constructor_t service_creator(D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5, D6 conv6) {
+        return [conv1,conv2,conv3,conv4,conv5,conv6](const QVariantList &dependencies) {
             if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}(convert_arg<D1>(dependencies[0]),
-                                            convert_arg<D2>(dependencies[1]),
-                                            convert_arg<D3>(dependencies[2]),
-                                            convert_arg<D4>(dependencies[3]),
-                                            convert_arg<D5>(dependencies[4]),
-                                            convert_arg<D6>(dependencies[5]));
+                return service_factory<T>{}(conv1(dependencies[0]),
+                                            conv2(dependencies[1]),
+                                            conv3(dependencies[2]),
+                                            conv4(dependencies[3]),
+                                            conv5(dependencies[4]),
+                                            conv6(dependencies[5]));
             } else
                 return new T{
-                    convert_arg<D1>(dependencies[0]),
-                    convert_arg<D2>(dependencies[1]),
-                    convert_arg<D3>(dependencies[2]),
-                    convert_arg<D4>(dependencies[3]),
-                    convert_arg<D5>(dependencies[4]),
-                    convert_arg<D6>(dependencies[5])
+                    conv1(dependencies[0]),
+                    conv2(dependencies[1]),
+                    conv3(dependencies[2]),
+                    conv4(dependencies[3]),
+                    conv5(dependencies[4]),
+                    conv6(dependencies[5])
                 }; };
 }
 
@@ -1619,7 +1659,7 @@ template<typename Srv,typename Impl=Srv> struct Service {
 
     template<typename...Dep> Service(Dep...deps) : descriptor{{typeid(Srv)}, typeid(Impl), &Impl::staticMetaObject} {
         (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
-        descriptor.constructor = detail::service_creator<Impl,Dep...>();
+        descriptor.constructor = detail::service_creator<Impl>(detail::dependency_helper<Dep>::converter(deps)...);
     }
 
     detail::service_descriptor descriptor;
@@ -1648,7 +1688,7 @@ template<typename Impl> struct Service<Impl,Impl> {
 
     template<typename...Dep> Service(Dep...deps) : descriptor{{typeid(Impl)}, typeid(Impl), &Impl::staticMetaObject} {
         (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
-        descriptor.constructor = detail::service_creator<Impl,Dep...>();
+        descriptor.constructor = detail::service_creator<Impl>(detail::dependency_helper<Dep>::converter(deps)...);
     }
 
     Service(detail::service_descriptor&& descr) :
