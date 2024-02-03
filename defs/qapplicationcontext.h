@@ -808,7 +808,6 @@ public:
     /// name it was originally registered with. There can be multiple aliases for a Service.<br>
     /// Aliases must be unique within the ApplicationContext.
     /// \param alias the alias to use.
-    /// \param descriptor
     /// \return `true` if the alias could be registered. `false` if this alias has already been registered before with a different registration.
     ///
     bool registerAlias(const QString& alias) {
@@ -931,7 +930,11 @@ template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, 
 /// <br>All changes made to the source-property will be propagated to the target-property.
 /// For each target-property, there can be only successful call to bind().
 /// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
+/// \param sourceProperty the name of the Q_PROPERTY in the source.
 /// \param target the Registration with the target-property to which the source-property shall be bound.
+/// \param targetProperty the name of the Q_PROPERTY in the target.
+/// \tparam S the type of the source.
+/// \tparam T the type of the target.
 /// \return the Subscription established by this binding.
 ///
 template<typename S,typename T> inline Subscription bind(const ServiceRegistration<S>& source, const char* sourceProperty, Registration<T>& target, const char* targetProperty) {
@@ -944,7 +947,11 @@ template<typename S,typename T> inline Subscription bind(const ServiceRegistrati
 /// <br>All changes made to the source-property will be propagated to all Services represented by the target.
 /// For each target-property, there can be only successful call to bind().
 /// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
+/// \param sourceProperty the name of the Q_PROPERTY in the source.
 /// \param target the Registration with the target-property to which the source-property shall be bound.
+/// \param setter the method in the target which shall be bound to the source-property.
+/// \tparam S the type of the source.
+/// \tparam T the type of the target.
 /// \return the Subscription established by this binding.
 ///
 template<typename S,typename T,typename A,typename R> inline Subscription bind(const ServiceRegistration<S>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A)) {
@@ -1054,7 +1061,7 @@ template<typename S> struct service_factory;
 ///
 ///     context->registerService(Service<Reader>{injectAll<DatabaseAccess>()}, "reader");
 ///
-/// <br>Note:</b> In many cases, you may already have the ServiceRegistration for the dependency at hand.
+/// <b>Note:</b> In many cases, you may already have the ServiceRegistration for the dependency at hand.
 /// In that case, you can simply pass that to the Service's constructor, without the need for wrapping it via inject(const ServiceRegistration&):
 ///
 ///     auto accessReg = context->registerService<DatabaseAccess>();
@@ -1073,6 +1080,10 @@ template<typename S,Kind kind=Kind::MANDATORY,typename C=detail::default_argumen
     ///
     QString requiredName;
 
+    ///
+    /// \brief The (optional) converter. This must be a *default-constructible Callable* class capable of converting
+    /// a QVariant to the target-type, i.e. it must have an `operator()(const QVariant&)`.
+    ///
     C converter;
 };
 
@@ -1243,7 +1254,7 @@ struct service_config final {
 ///
 /// \brief Makes a service_config.
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
-/// \param section the `QSettings::group()` to be used.
+/// \param group the `QSettings::group()` to be used.
 /// \param autowire if `true`, the QApplicationContext will attempt to initialize all Q_PROPERTYs of `QObject*`-type with the corresponding services.
 /// \param initMethod if not empty, will be invoked during publication of the service.
 /// \return the service_config.
@@ -1950,8 +1961,9 @@ protected:
 
     ///
     /// \brief Registers a service with this QApplicationContext.
-    /// \param name
-    /// \param descriptor
+    /// \param name the name of the service.
+    /// \param descriptor the descriptor of the service.
+    /// \param config the configuration of the service.
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
     virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) = 0;
@@ -1970,8 +1982,6 @@ protected:
     ///
     /// \brief Obtains a Registration for a service_type.
     /// \param service_type the service-type to match the registrations.
-    /// \param dynamicCheck This optional parameter is used to check whether a Service is actually an instance of the service_type.
-    /// If `nullptr` is passed, this function will obtain only those Registrations where the registered service_type matches.
     /// \param metaObject the static QMetaObject for the type. If not available, `nullptr` can be passed.
     /// \return a Registration for the supplied service_type.
     ///
@@ -1986,6 +1996,7 @@ protected:
     /// \param appContext the target on which to invoke registerService(const QString&, service_descriptor*).
     /// \param name
     /// \param descriptor
+    /// \param config
     /// \return the result of registerService(const QString&, service_descriptor*).
     ///
     static service_registration_handle_t delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config) {
@@ -2013,9 +2024,10 @@ protected:
     /// If you are implementing getRegistrationHandle(const std::type_info&,const QMetaObject*) const and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
     ///
-    /// \param appContext the target on which to invoke getRegistration(const std::type_info&,const QMetaObject*) const.
+    /// \param appContext the target on which to invoke getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
     /// \param service_type
-    /// \return the result of getRegistration(const std::type_info&,const QMetaObject*) const.
+    /// \param metaObject the QMetaObject of the service_type. May be omitted.
+    /// \return the result of getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
     ///
     static proxy_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext& appContext, const std::type_info& service_type, const QMetaObject* metaObject) {
         return appContext.getRegistrationHandle(service_type, metaObject);
