@@ -1564,14 +1564,14 @@ template<typename Head,typename...Tail> constexpr bool check_unique_types() {
 
 
 
-template<typename T,typename First, typename...Tail> constexpr std::pair<bool,const char*> check_dynamic_types(T* obj) {
+template<typename T,typename First, typename...Tail> constexpr std::pair<bool,const std::type_info&> check_dynamic_types(T* obj) {
     if(!dynamic_cast<First*>(obj)) {
-        return {false, typeid(First).name()};
+        return {false, typeid(First)};
     }
     if constexpr(sizeof...(Tail) > 0) {
         return check_dynamic_types<T,Tail...>(obj);
     }
-    return {true, nullptr};
+    return {true, typeid(void)};
 }
 
 
@@ -1876,18 +1876,23 @@ public:
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
     template<typename S,typename... IFaces> ServiceRegistration<S> registerObject(S* obj, const QString& objName = "") {
-        static_assert(detail::could_be_qobject<S>::value, "Object is not convertible to QObject");
+        static_assert(detail::could_be_qobject<S>::value, "Object is not potentially convertible to QObject");
+        QObject* qObject = dynamic_cast<QObject*>(obj);
+        if(!qObject) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Object is no QObject";
+            return ServiceRegistration<S>{};
+        }
         if constexpr(sizeof...(IFaces) > 0) {
             static_assert(detail::check_unique_types<S,IFaces...>(), "All advertised interfaces must be distinct");
             auto check = detail::check_dynamic_types<S,IFaces...>(obj);
             if(!check.first)            {
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as name '" << objName << "'. Object does not implement " << check.second;
+                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << qObject << " as '" << objName << "'. Object does not implement " << check.second.name();
                 return ServiceRegistration<S>{};
             }
         }
         std::unordered_set<std::type_index> ifaces;
         (ifaces.insert(typeid(S)), ..., ifaces.insert(typeid(IFaces)));
-        service_descriptor descr{ifaces, typeid(*obj)};        return ServiceRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), service_descriptor{ifaces, typeid(*obj)}));
+        return ServiceRegistration<S>::wrap(registerObject(objName, qObject, service_descriptor{ifaces, typeid(*obj)}));
     }
 
     ///

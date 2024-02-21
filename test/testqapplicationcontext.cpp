@@ -1,6 +1,7 @@
 #include <QTest>
 #include <QSettings>
 #include <QTemporaryFile>
+#include <iostream>
 #include "standardqapplicationcontext.h"
 #include "appcontexttestclasses.h"
 #include "qtestcase.h"
@@ -149,6 +150,13 @@ private slots:
 
 
 
+
+    void testRegisterNonQObject() {
+        //std::cerr is no QObject. However, this cannot be detected at compile-time, as it has virtual functions and is thus _potentially convertible_ to QObject.
+        //Therefore, it should fail at runtime:
+        auto reg = context->registerObject(&std::cerr);
+        QVERIFY(!reg);
+    }
 
     void testNoDependency() {
         auto reg = context->registerService<BaseService>();
