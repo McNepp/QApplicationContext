@@ -136,17 +136,12 @@ private slots:
 
 
     void init() {
-        settingsFile = new QTemporaryFile;
+        settingsFile.reset(new QTemporaryFile);
         settingsFile->open();
-        config = new QSettings{settingsFile->fileName(), QSettings::Format::IniFormat};
-        context = new StandardApplicationContext;
+        config.reset(new QSettings{settingsFile->fileName(), QSettings::Format::IniFormat});
+        context.reset(new StandardApplicationContext);
     }
 
-    void cleanup() {
-        delete context;
-        delete config;
-        delete settingsFile;
-    }
 
 
 
@@ -181,7 +176,7 @@ private slots:
 
     void testWithPlaceholderProperty() {
         config->setValue("timerInterval", 4711);
-        context->registerObject(config);
+        context->registerObject(config.get());
 
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${timerInterval}"}}));
         QCOMPARE(reg.registeredProperties()["interval"], "${timerInterval}");
@@ -209,7 +204,7 @@ private slots:
 
     void testPlaceholderPropertyIgnoresDefaultValue() {
         config->setValue("timerInterval", 42);
-        context->registerObject(config);
+        context->registerObject(config.get());
 
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${timerInterval:4711}"}}));
         QVERIFY(context->publish());
@@ -220,7 +215,7 @@ private slots:
 
     void testWithUnbalancedPlaceholderProperty() {
         config->setValue("timerInterval", 4711);
-        context->registerObject(config);
+        context->registerObject(config.get());
 
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${timerInterval"}}));
         QVERIFY(!context->publish());
@@ -228,7 +223,7 @@ private slots:
 
     void testWithDollarInPlaceholderProperty() {
         config->setValue("timerInterval", 4711);
-        context->registerObject(config);
+        context->registerObject(config.get());
 
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${$timerInterval}"}}));
         QVERIFY(!context->publish());
@@ -237,7 +232,7 @@ private slots:
 
     void testWithEmbeddedPlaceholderProperty() {
         config->setValue("baseName", "theBase");
-        context->registerObject(config);
+        context->registerObject(config.get());
 
         auto reg = context->registerService<BaseService>("base", make_config({{"objectName", "I am ${baseName}!"}}));
         QVERIFY(context->publish());
@@ -248,7 +243,7 @@ private slots:
 
     void testWithEmbeddedPlaceholderPropertyAndDollarSign() {
         config->setValue("dollars", "one thousand");
-        context->registerObject(config);
+        context->registerObject(config.get());
 
         auto reg = context->registerService<BaseService>("base", make_config({{"objectName", "I have $${dollars}$"}}));
         QVERIFY(context->publish());
@@ -260,7 +255,7 @@ private slots:
     void testWithTwoPlaceholders() {
         config->setValue("section", "BaseServices");
         config->setValue("baseName", "theBase");
-        context->registerObject(config);
+        context->registerObject(config.get());
 
         auto reg = context->registerService<BaseService>("base", make_config({{"objectName", "${section}:${baseName}:yeah"}}));
         QVERIFY(context->publish());
@@ -274,7 +269,7 @@ private slots:
     void testWithConfiguredPropertyInSubConfig() {
         config->setValue("timers/interval", 4711);
         config->setValue("timers/single", "true");
-        context->registerObject(config);
+        context->registerObject(config.get());
 
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${interval}"},
                                                                           {"singleShot", "${single}"}}, "timers"));
@@ -289,7 +284,7 @@ private slots:
         context->registerService<QTimer>("timer", make_config({{"interval", "${interval}"}}));
         QVERIFY(!context->publish());
         config->setValue("interval", 4711);
-        context->registerObject(config);
+        context->registerObject(config.get());
         QVERIFY(context->publish());
     }
 
@@ -574,8 +569,7 @@ private slots:
         auto reg = context->registerService(service<Interface1,BaseService>());
 
         QVERIFY(reg);
-        delete context;
-        context = nullptr;
+        context.reset();
         QVERIFY(!reg);
     }
 
@@ -639,7 +633,7 @@ private slots:
         QVERIFY(context->publish());
 
         RegistrationSlot<BaseService> baseSlot{baseReg};
-        QCOMPARE(baseSlot->context(), context);
+        QCOMPARE(baseSlot->context(), context.get());
     }
 
     void testNonExistingInitMethod() {
@@ -703,7 +697,7 @@ private slots:
         config->setValue("section/url", "https://google.de/search");
         config->setValue("section/term", "something");
         config->setValue("section/id", "4711");
-        context->registerObject(config);
+        context->registerObject(config.get());
         BaseService base;
         auto reg = context->registerService(service<DependentService>(resolve<int>("${id}"), resolve("${url}?q=${term}"), &base), "dep", make_config({}, "section"));
         QVERIFY(reg);
@@ -1355,8 +1349,8 @@ private slots:
 
         unsigned contextPublished = context->published();
         unsigned contextPending = context->pendingPublication();
-        connect(context, &QApplicationContext::publishedChanged, this, [this,&contextPublished] {contextPublished = context->published();});
-        connect(context, &QApplicationContext::pendingPublicationChanged, this, [this,&contextPending] {contextPending = context->pendingPublication();});
+        connect(context.get(), &QApplicationContext::publishedChanged, this, [this,&contextPublished] {contextPublished = context->published();});
+        connect(context.get(), &QApplicationContext::pendingPublicationChanged, this, [this,&contextPending] {contextPending = context->pendingPublication();});
         auto baseReg = context->getRegistration<Interface1>();
         context->registerService(service<Interface1,BaseService>(), "base");
         QCOMPARE(contextPending, 1);
@@ -1455,8 +1449,7 @@ private slots:
         QVERIFY(publishedInOrder.indexOf(three.last()) < publishedInOrder.indexOf(four.last()));
         QVERIFY(publishedInOrder.indexOf(four.last()) < publishedInOrder.indexOf(five.last()));
         QVERIFY(publishedInOrder.indexOf(five.last()) < publishedInOrder.indexOf(six.last()));
-        delete context;
-        context = nullptr;
+        context.reset();
 
         QCOMPARE(destroyedInOrder.size(), 8);
 
@@ -1479,9 +1472,9 @@ private slots:
     }
 
 private:
-    QApplicationContext* context;
-    QTemporaryFile* settingsFile;
-    QSettings* config;
+    std::unique_ptr<QApplicationContext> context;
+    std::unique_ptr<QTemporaryFile> settingsFile;
+    std::unique_ptr<QSettings> config;
 };
 
 } //mcnepp::qtdi
