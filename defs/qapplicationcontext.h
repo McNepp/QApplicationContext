@@ -1013,31 +1013,48 @@ template<typename S> QDebug operator<<(QDebug out, const Registration<S>& reg) {
 
 ///
 /// \brief A template that can be specialized to override the standard way of instantiating services.
-/// This template can be used to force the QApplicationContext to use a static factory-function instead of a constructor.
+/// <br>This template can be used to force the QApplicationContext to use a static factory-function instead of a constructor.
 /// You may specialize this template for your own component-types.
 ///
 /// If you do so, you must define a call-operator with a pointer to your component as its return-type
 /// and as many arguments as are needed to construct an instance.
+/// <br>Additionally, the factory should contain a type-declaration `service_type`.
+///
+/// The specialization must reside in namespace mcnepp::qtdi.
 ///
 /// For example, if you have a service-type `MyService` with an inaccessible constructor for which only a static factory-function `MyService::create()` exists,
 /// you may define the corresponding service_factory like this:
 ///
+///     namespace mcnepp::qtdi {
 ///     template<> struct service_factory<MyService> {
+///       using service_type = MyService;
+///
 ///       MyService* operator()() const {
 ///         return MyService::create();
 ///       }
 ///     };
+///     }
 ///
 /// Should the service-type `MyService` have a dependency of type `QNetworkAccessManager` that must be supplied to the factory-function,
 /// the corresponding service_factory would be defined like this this:
 ///
+///     namespace mcnepp::qtdi {
 ///     template<> struct service_factory<MyService> {
+///       using service_type = MyService;
+///
 ///       MyService* operator()(QNetworkAccessManager* networkManager) const {
 ///         return MyService::create(networkManager);
 ///       }
 ///     };
-///
-template<typename S> struct service_factory;
+///     }
+/// \tparam S the service-type.
+template<typename S> struct service_factory {
+    using service_type = S;
+
+    template<typename...Args> S* operator()(Args&&...args) const {
+        return new S{std::forward<Args>(args)...};
+    }
+};
 
 
 
@@ -1059,13 +1076,13 @@ template<typename S> struct service_factory;
 ///
 /// Thus, the following two lines would be completely equivalent:
 ///
-///     context->registerService(Service<Reader>{Dependency<DatabaseAccess>{}}, "reader");
+///     context->registerService(service<Reader>(Dependency<DatabaseAccess>{}), "reader");
 ///
-///     context->registerService(Service<Reader>{inject<DatabaseAccess>()}, "reader");
+///     context->registerService(service<Reader>(inject<DatabaseAccess>()), "reader");
 ///
 /// However, if your service can do without a `DatabaseAccess`, you should register it like this:
 ///
-///     context->registerService(Service<Reader>{injectIfPresent<DatabaseAccess>()}, "reader");
+///     context->registerService(service<Reader>(injectIfPresent<DatabaseAccess>()), "reader");
 ///
 /// Consider the case where your `Reader` takes a List of `DatabaseAccess` instances:
 ///
@@ -1076,14 +1093,14 @@ template<typename S> struct service_factory;
 ///
 /// In that case, it would be registered in an ApplicationContext using the following line:
 ///
-///     context->registerService(Service<Reader>{injectAll<DatabaseAccess>()}, "reader");
+///     context->registerService(service<Reader>(injectAll<DatabaseAccess>()), "reader");
 ///
 /// <b>Note:</b> In many cases, you may already have the ServiceRegistration for the dependency at hand.
 /// In that case, you can simply pass that to the Service's constructor, without the need for wrapping it via inject(const ServiceRegistration&):
 ///
 ///     auto accessReg = context->registerService<DatabaseAccess>();
 ///
-///     context->registerService(Service<Reader>{accessReg}, "reader");
+///     context->registerService(service<Reader>(accessReg), "reader");
 ///
 /// \tparam S the service-interface of the Dependency
 /// \tparam kind the kind of Dependency
@@ -1222,7 +1239,7 @@ template<typename S> struct Resolvable {
 /// The result of resolving the placeholder must be a String that is convertible via `QVariant::value<T>()` to the desired type.
 /// ### Example
 ///
-///     Service<QIODevice,QFile> service{ resolve("${filename:readme.txt}") };
+///     auto serviceDecl = service<QIODevice,QFile>(resolve("${filename:readme.txt}"));
 ///
 /// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`.
 /// \return a Resolvable instance for the supplied type.
@@ -1240,7 +1257,7 @@ template<typename S = QString> Resolvable<S> resolve(const QString& expression) 
 /// since the embedded default-value would always take precedence!
 /// ### Example
 ///
-///     Service<QIODevice,QFile> service{ resolve("${filename}", QString{"readme.txt"}) };
+///     auto serviceDecl = service<QIODevice,QFile>(resolve("${filename}", QString{"readme.txt"}));
 /// \param expression may contain placeholders in the format `${identifier}`.
 /// \param defaultValue the value to use if the placeholder cannot be resolved.
 /// \return a Resolvable instance for the supplied type.
@@ -1401,6 +1418,8 @@ struct service_descriptor {
     std::vector<dependency_info> dependencies;
 };
 
+
+
 ///
 /// \brief Determines whether two service_descriptors are deemed equal.
 /// two service_descriptors are deemed equal if their service_types, impl_type,
@@ -1424,16 +1443,6 @@ inline bool operator!=(const service_descriptor &left, const service_descriptor 
 
 
 
- template<typename S,int=sizeof(service_factory<S>)> constexpr bool hasServiceFactory(S*) {
-    return true;
- }
-
- constexpr bool hasServiceFactory(void*) {
-    return false;
- }
-
-
- template<typename S> constexpr bool has_service_factory = hasServiceFactory(static_cast<S*>(nullptr));
 
 
 
@@ -1568,115 +1577,76 @@ template<typename T,typename First, typename...Tail> constexpr std::pair<bool,co
 
 
 
-template <typename T> constructor_t service_creator() {
-    return [](const QVariantList &dependencies) {
-        if constexpr(detail::has_service_factory<T>) {
-            return service_factory<T>{}();
-        } else {
-            return new T;
-        }
+template <typename T,typename F> constructor_t service_creator(F factory) {
+    return [factory](const QVariantList &dependencies) {
+        return factory();
     };
 }
 
-template <typename T, typename D1> constructor_t service_creator(D1 conv1) {
-        return [conv1](const QVariantList &dependencies) {
-            if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}(conv1(dependencies[0]));
-            } else {
-                return new T{ conv1(dependencies[0]) };
-            }
+template <typename T, typename F, typename D1> constructor_t service_creator(F factory, D1 conv1) {
+        return [factory,conv1](const QVariantList &dependencies) {
+        return factory(conv1(dependencies[0]));
         };
     }
 
-template <typename T, typename D1, typename D2>
-    constructor_t service_creator(D1 conv1, D2 conv2) {
-        return [conv1,conv2](const QVariantList &dependencies) {
-            if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}(conv1(dependencies[0]), conv2(dependencies[1]));
-            } else {
-                return new T{ conv1(dependencies[0]), conv2(dependencies[1]) };
-            }
+template <typename T,typename F, typename D1, typename D2>
+    constructor_t service_creator(F factory, D1 conv1, D2 conv2) {
+        return [factory,conv1,conv2](const QVariantList &dependencies) {
+            return factory(conv1(dependencies[0]), conv2(dependencies[1]));
         };
     }
 
-template <typename T, typename D1, typename D2, typename D3>
-    constructor_t service_creator(D1 conv1, D2 conv2, D3 conv3) {
-        return [conv1,conv2,conv3](const QVariantList &dependencies) {
-            if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}(
+template <typename T,typename F, typename D1, typename D2, typename D3>
+    constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3) {
+        return [factory,conv1,conv2,conv3](const QVariantList &dependencies) {
+                return factory(
                         conv1(dependencies[0]),
                         conv2(dependencies[1]),
                         conv3(dependencies[2]));
-            } else {
-            return new T{
-                         conv1(dependencies[0]),
-                         conv2(dependencies[1]),
-                         conv3(dependencies[2])
-                        };
-            }
         };
     }
 
-template <typename T, typename D1, typename D2, typename D3, typename D4>
-    constructor_t service_creator(D1 conv1, D2 conv2, D3 conv3, D4 conv4) {
-        return [conv1,conv2,conv3,conv4](const QVariantList &dependencies) {
-            if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}(
+template <typename T,typename F, typename D1, typename D2, typename D3, typename D4>
+    constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4) {
+        return [factory,conv1,conv2,conv3,conv4](const QVariantList &dependencies) {
+                return factory(
                         conv1(dependencies[0]),
                         conv2(dependencies[1]),
                         conv3(dependencies[2]),
                         conv4(dependencies[3]));
-            } else {
-            return new T{
-                         conv1(dependencies[0]),
-                         conv2(dependencies[1]),
-                         conv3(dependencies[2]),
-                         conv4(dependencies[3])
-                     };
-            }
         };
     }
 
-template <typename T, typename D1, typename D2, typename D3, typename D4, typename D5>
-    constructor_t service_creator(D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5) {
-        return [conv1,conv2,conv3,conv4,conv5](const QVariantList &dependencies) {
-            if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}(conv1(dependencies[0]),
+template <typename T,typename F, typename D1, typename D2, typename D3, typename D4, typename D5>
+    constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5) {
+        return [factory,conv1,conv2,conv3,conv4,conv5](const QVariantList &dependencies) {
+                return factory(conv1(dependencies[0]),
                         conv2(dependencies[1]),
                         conv3(dependencies[2]),
                         conv4(dependencies[3]),
                         conv5(dependencies[4]));
-            } else
-            return new T{
-                             conv1(dependencies[0]),
-                             conv2(dependencies[1]),
-                             conv3(dependencies[2]),
-                             conv4(dependencies[3]),
-                             conv5(dependencies[4])
-                         }; };
+    };
     }
 
-template <typename T, typename D1, typename D2, typename D3, typename D4, typename D5, typename D6>
-constructor_t service_creator(D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5, D6 conv6) {
-        return [conv1,conv2,conv3,conv4,conv5,conv6](const QVariantList &dependencies) {
-            if constexpr(detail::has_service_factory<T>) {
-                return service_factory<T>{}(conv1(dependencies[0]),
+template <typename T,typename F, typename D1, typename D2, typename D3, typename D4, typename D5, typename D6>
+constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5, D6 conv6) {
+        return [factory,conv1,conv2,conv3,conv4,conv5,conv6](const QVariantList &dependencies) {
+                return factory(conv1(dependencies[0]),
                                             conv2(dependencies[1]),
                                             conv3(dependencies[2]),
                                             conv4(dependencies[3]),
                                             conv5(dependencies[4]),
                                             conv6(dependencies[5]));
-            } else
-                return new T{
-                    conv1(dependencies[0]),
-                    conv2(dependencies[1]),
-                    conv3(dependencies[2]),
-                    conv4(dependencies[3]),
-                    conv5(dependencies[4]),
-                    conv6(dependencies[5])
-                }; };
+                };
 }
 
+
+template<typename Srv,typename Impl,typename F,typename...Dep> service_descriptor make_descriptor(F factory, Dep...deps) {
+    detail::service_descriptor descriptor{{typeid(Srv)}, typeid(Impl), &Impl::staticMetaObject};
+    (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
+    descriptor.constructor = service_creator<Impl>(factory, detail::dependency_helper<Dep>::converter(deps)...);
+    return descriptor;
+}
 
 
 
@@ -1688,18 +1658,18 @@ constructor_t service_creator(D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5, 
 /// Compilation will fail if either `Srv` is not a sub-class of QObject, or if `Impl` is not a sub-class of `Srv`.
 /// <br><b>Note:</b> This template has a specialization for the case where the implementation-type is identical
 /// to the service-type. That specialization offers an additional method for advertising a service with
-/// more than one service-interface!
-
+/// more than one service-interface!<br>
+/// constructor of the actual service when the QApplicationContext is published.
+/// <br>The preferred way of creating Services is the function mcnepp::qtdi::service().
+///
+/// Example with one argument:
+///
+///     context->registerService(service<QIODevice,QFile>(QString{"readme.txt"), "file");
+///
 /// \tparam Srv the primary service-interface. The service will be advertised as this type. If you only supply this type-argument,
 /// the primary service-interface will be identical to the service's implementation-type.
 /// \tparam Impl the implementation-type of the service.
 /// You may supply arbitrary arguments to Service' constructor. Those arguments will be passed on to the
-/// constructor of the actual service when the QApplicationContext is published.
-///
-/// Example with one argument:
-///
-///    context->registerService(Service<QIODevice,QFile>{QString{"readme.txt"}, "file");
-///
 ///
 template<typename Srv,typename Impl=Srv> struct Service {
     static_assert(std::is_base_of_v<QObject,Impl>, "Implementation-type must be a subclass of QObject");
@@ -1710,9 +1680,11 @@ template<typename Srv,typename Impl=Srv> struct Service {
 
     using impl_type = Impl;
 
-    template<typename...Dep> Service(Dep...deps) : descriptor{{typeid(Srv)}, typeid(Impl), &Impl::staticMetaObject} {
-        (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
-        descriptor.constructor = detail::service_creator<Impl>(detail::dependency_helper<Dep>::converter(deps)...);
+    template<typename...Dep> [[deprecated("Use function service() instead")]] Service(Dep...deps) : descriptor{detail::make_descriptor<Srv,Impl>(service_factory<Impl>{}, deps...)} {
+    }
+
+    explicit Service(detail::service_descriptor&& descr) :
+        descriptor{std::move(descr)} {
     }
 
     detail::service_descriptor descriptor;
@@ -1721,13 +1693,15 @@ template<typename Srv,typename Impl=Srv> struct Service {
 ///
 /// \brief Describes a service by its implementation and possibly multiple service-interfaces.
 /// Compilation will fail if `Impl` is not a sub-class of QObject.
-/// \tparam Impl the implementation-type of the service. If you do not specify additional service-interfaces,
-/// this will become also the primary service-interface.<br>
-/// You may supply arbitrary arguments to Service' constructor. Those arguments will be passed on to the
+/// <br>The preferred way of creating Services is the function mcnepp::qtdi::service().
+/// <br>You may supply arbitrary arguments to this function. Those arguments will be passed on to the
 /// constructor of the actual service when the QApplicationContext is published.
 /// Example with one argument:
 ///
-///    context->registerService(Service<QFile>{QString{"readme.txt"}.advertiseAs<QIODevice,QFileDevice>(), "file");
+///     context->registerService(service<QFile>(QString{"readme.txt").advertiseAs<QIODevice,QFileDevice>(), "file");
+///
+/// \tparam Impl the implementation-type of the service. If you do not specify additional service-interfaces,
+/// this will become also the primary service-interface.<br>
 ///
 ///
 template<typename Impl> struct Service<Impl,Impl> {
@@ -1739,12 +1713,11 @@ template<typename Impl> struct Service<Impl,Impl> {
     using impl_type = Impl;
 
 
-    template<typename...Dep> Service(Dep...deps) : descriptor{{typeid(Impl)}, typeid(Impl), &Impl::staticMetaObject} {
-        (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
-        descriptor.constructor = detail::service_creator<Impl>(detail::dependency_helper<Dep>::converter(deps)...);
+    template<typename...Dep> [[deprecated("Use function service() instead")]] Service(Dep...deps) : descriptor{detail::make_descriptor<Impl,Impl>(service_factory<Impl>{}, deps...)} {
     }
 
-    Service(detail::service_descriptor&& descr) :
+
+    explicit Service(detail::service_descriptor&& descr) :
         descriptor{std::move(descr)} {
     }
 
@@ -1759,7 +1732,6 @@ template<typename Impl> struct Service<Impl,Impl> {
      */
     template<typename...IFaces> Service<Impl,Impl>&& advertiseAs() && {
         static_assert(sizeof...(IFaces) > 0, "At least one service-interface must be advertised.");
-
         static_assert((std::is_base_of_v<IFaces,Impl> && ... ), "Implementation-type does not implement all advertised interfaces");
         static_assert(detail::check_unique_types<Impl,IFaces...>(), "All advertised interfaces must be distinct");
         if(auto found = descriptor.service_types.find(descriptor.impl_type); found != descriptor.service_types.end()) {
@@ -1785,8 +1757,32 @@ template<typename Impl> struct Service<Impl,Impl> {
     detail::service_descriptor descriptor;
 };
 
+///
+/// \brief Creates a Service with an explicit factory.
+/// \param factory the factory to use. Must be a *Callable* object, i.e. provide an `Impl* operator()` that accepts
+/// the arguments derived from the dependencies and yields a pointer to the created Object.
+/// <br>The factory-type should contain a type-declaration `service_type` which denotes
+/// the type of the service's implementation.
+/// \param dependencies the arguments to be injected into the factory.
+/// \tparam F the type of the factory.
+/// \tparam Impl the implementation-type of the service. If the factory-type F contains
+/// a type-declaration `service_type`, Impl will be deduced as that type.
+/// \return a Service that will use the provided factory.
+template<typename F,typename Impl=typename F::service_type,typename...Dep> Service<Impl,Impl> serviceWithFactory(F factory, Dep...dependencies) {
+    return Service<Impl,Impl>{detail::make_descriptor<Impl,Impl>(factory, dependencies...)};
+}
 
 
+
+///
+/// \brief Creates a Service with the default service-factory.
+/// \param dependencies the arguments to be injected into the service's constructor.
+/// \tparam the primary service-interface.
+/// \tparam Impl the implementation-type of the service.
+/// \return a Service that will use the provided factory.
+template<typename S,typename Impl=S,typename...Dep> Service<S,Impl> service(Dep...dependencies) {
+    return Service<S,Impl>{detail::make_descriptor<S,Impl>(service_factory<Impl>{}, dependencies...)};
+}
 
 
 
@@ -1860,7 +1856,7 @@ public:
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
     template<typename S> auto registerService(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S> {
-        return registerService(Service<S>{}, objectName, config);
+        return registerService(service<S>(), objectName, config);
     }
 
 
