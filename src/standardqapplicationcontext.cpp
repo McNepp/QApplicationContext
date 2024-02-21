@@ -125,32 +125,6 @@ namespace {
 const QRegularExpression beanRefPattern{"^&([^.]+)(\\.([^.]+))?"};
 
 
-struct QOwningList {
-    QObjectList list;
-
-    QOwningList() = default;
-
-    QOwningList(const QOwningList&) = delete;
-
-    ~QOwningList() {
-        for(auto iter = list.begin(); iter != list.end(); iter = list.erase(iter)) {
-            delete *iter;
-        }
-    }
-
-    void push_back(QObject* ptr) {
-        if(ptr) {
-            list.push_back(ptr);
-        }
-    }
-
-    void moveTo(QObject* newParent) {
-        for(auto iter = list.begin(); iter != list.end(); iter = list.erase(iter)) {
-            (*iter)->setParent(newParent);
-        }
-
-    }
-};
 
 QMetaMethod methodByName(const QMetaObject* metaObject, const QString& name) {
     for(int i = 0; i < metaObject->methodCount(); ++i) {
@@ -279,12 +253,11 @@ StandardApplicationContext::DescriptorRegistration *StandardApplicationContext::
 }
 
 
-std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveDependency(const descriptor_list &published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial)
+std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveDependency(const descriptor_list &published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial, bool publish, QObject* temporaryPrivateParent)
 {
     const std::type_info& type = d.type;
 
     QList<DescriptorRegistration*> depRegs;
-    QObjectList dep;
 
     for(auto pub : published) {
         if(pub->matches(type)) {
@@ -295,7 +268,6 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 }
             }
             depRegs.push_back(pub);
-            dep.push_back(pub->getObject());
         }
     }
 
@@ -318,7 +290,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
         }
 
     case static_cast<int>(Kind::MANDATORY):
-        if(dep.empty()) {
+        if(depRegs.empty()) {
             if(allowPartial) {
                 qWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
                 return {QVariant{}, Status::fixable};
@@ -329,25 +301,29 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
         }
     case static_cast<int>(Kind::OPTIONAL):
-        switch(dep.size()) {
+        switch(depRegs.size()) {
         case 0:
             qCInfo(loggingCategory()).noquote().nospace() << "Skipped " << d;
             return {QVariant{}, Status::ok};
         case 1:
-            qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << dep[0];
-            return {QVariant::fromValue(dep[0]), Status::ok};
+            qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << depRegs[0];
+            return {QVariant::fromValue(depRegs[0]->getObject()), Status::ok};
         default:
             //Ambiguity is always a non-fixable error:
             qCritical(loggingCategory()).noquote().nospace() << d << " is ambiguous";
             return {QVariant{}, Status::fatal};
         }
     case static_cast<int>(Kind::N):
-        qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << dep.size() << " objects.";
-        return {QVariant::fromValue(dep), Status::ok};
+        qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << depRegs.size() << " objects.";
+        {
+            QObjectList dep;
+            std::transform(depRegs.begin(), depRegs.end(), std::back_insert_iterator(dep), std::mem_fn(&DescriptorRegistration::getObject));
+            return {QVariant::fromValue(dep), Status::ok};
+        }
 
     case static_cast<int>(Kind::PRIVATE_COPY):
         DescriptorRegistration* depReg = nullptr;
-        switch(dep.size()) {
+        switch(depRegs.size()) {
         case 0:
             break;
         case 1:
@@ -382,26 +358,30 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             depReg = new ServiceRegistration{"", service_descriptor{{type}, type, nullptr, d.defaultConstructor}, service_config{}, this};
         }
         QVariantList subDep;
-        QOwningList privateSubDep;
+        QObject subTemporaryPrivateParent;
         for(auto& dd : depReg->descriptor.dependencies) {
-            auto result = resolveDependency(published, depReg, dd, allowPartial);
+            auto result = resolveDependency(published, depReg, dd, allowPartial, publish, &subTemporaryPrivateParent);
             if(result.second != Status::ok) {
                 return result;
             }
             subDep.push_back(result.first);
-            if(dd.kind == static_cast<int>(Kind::PRIVATE_COPY)) {
-                privateSubDep.push_back(result.first.value<QObject*>());
+        }
+        QObject* service = nullptr;
+        if(publish) {
+            service = depReg->createPrivateObject(subDep);
+            if(!service) {
+                //If creation fails, this is always a non-fixable error:
+                qCCritical(loggingCategory()).noquote().nospace() << "Could not create private copy of " << d;
+                return {QVariant{}, Status::fatal};
             }
+            qCInfo(loggingCategory()).noquote().nospace() << "Created private copy of " << *depReg;
+            service->setParent(temporaryPrivateParent);
+            QObjectList subChildren = subTemporaryPrivateParent.children(); //We must make a copy of the chilren, as we'll modify it indirectly in the loop.
+            for(auto child : subChildren) {
+                child->setParent(service);
+            }
+            qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " with " << service;
         }
-        QObject* service = depReg->createPrivateObject(subDep);
-        if(!service) {
-            //If creation fails, this is always a non-fixable error:
-            qCCritical(loggingCategory()).noquote().nospace() << "Could not create private copy of " << d;
-            return {QVariant{}, Status::fatal};
-        }
-        qCInfo(loggingCategory()).noquote().nospace() << "Created private copy of " << *depReg;
-        privateSubDep.moveTo(service);
-        qCInfo(loggingCategory()).noquote().nospace() << "Resolved dependency " << d << " with " << service;
         return {QVariant::fromValue(service), Status::ok};
     }
 
@@ -435,6 +415,7 @@ detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(con
     proxyRegistrationCache.insert({service_type, proxyReg});
     return proxyReg;
 }
+
 
 bool StandardApplicationContext::registerAlias(detail::ServiceRegistration *reg, const QString &alias)
 {
@@ -506,30 +487,28 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
     }
 }
 
-
-
-bool StandardApplicationContext::publish(bool allowPartial)
+///
+/// \brief Validates this ApplicationContext before publishing.
+/// \param allowPartial if true, will succeed even if not all service-dependencies can be resolved.
+/// \param published The services that have already been published (used for dependency-resolution).
+/// \param unpublished Upon entry: the yet unpublished services, in no particular order.
+/// Upon exit: the yet unpublished services, in the correct order for publication.
+/// \return Status::Ok if all services can be published. Status::Fixable if some services can be published.
+/// Status::Fatal if there are non-fixable errors.<br>
+/// If allowPartial == true, the result can only be Status::Ok or Status::Fatal!
+///
+StandardApplicationContext::Status StandardApplicationContext::validate(bool allowPartial, const descriptor_list& published, descriptor_list& unpublished)
 {
-    descriptor_list allPublished;
-    descriptor_list publishedNow;//Keep order of publication
+    descriptor_list allPublished{published.begin(), published.end()};
+    descriptor_list validated; //validated contains the yet-to-be-published services in the correct order. Will be copied back to unpublished upon exit.
 
-    descriptor_list unpublished;
-    descriptor_set unresolvable;
-    for(auto reg : registrations) {
-        if(reg->isPublished()) {
-            allPublished.push_back(reg);
-        } else {
-            unpublished.push_back(reg);
-        }
-    }
-
-    qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext with " << unpublished.size() << " unpublished Objects";
-    std::vector<std::size_t> posStack;
+    qCDebug(loggingCategory()).noquote().nospace() << "Validating ApplicationContext with " << unpublished.size() << " unpublished Objects";
     DescriptorRegistration* reg = nullptr;
-    //Do several rounds and publish those services whose dependencies have already been published.
-    //For a service with an empty set of dependencies, this means that it will be published first.
+    Status status = Status::ok;
+    //Do several rounds and validate those services whose dependencies have already been published.
+    //For a service with an empty set of dependencies, this means that it will be validated first.
     while(!unpublished.empty()) {
-        next_unpublished:
+    next_unpublished:
         if(!reg) {
             if(unpublished.empty()) {
                 break;
@@ -540,17 +519,15 @@ bool StandardApplicationContext::publish(bool allowPartial)
             if(!getRegistrationByName(beanRef)) {
                 if(!allowPartial) {
                     qCCritical(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
-                    return false;
+                    return Status::fatal;
                 }
                 qCWarning(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
-                unresolvable.insert(reg);
                 reg = nullptr;
-                goto next_unpublished;
+                status = Status::fixable;
+                goto next_unpublished;               qCCritical(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
             }
         }
 
-        QVariantList dependencies;
-        QOwningList privateDependencies;
         auto& dependencyInfos = reg->descriptor.dependencies;
         for(auto& d : dependencyInfos) {
             //If we find an unpublished dependency, we continue with that:
@@ -572,24 +549,65 @@ bool StandardApplicationContext::publish(bool allowPartial)
             }
         }
         if(!dependencyInfos.empty()) {
+            QObject temporaryParent;
             qCInfo(loggingCategory()).noquote().nospace() << "Resolving " << dependencyInfos.size() << " dependencies of " << *reg << ":";
             for(auto& d : dependencyInfos) {
-                auto result = resolveDependency(allPublished, reg, d, allowPartial);
+                auto result = resolveDependency(allPublished, reg, d, allowPartial, false, &temporaryParent);
                 switch(result.second) {
-                case Status::fatal:
-                    return false;
                 case Status::fixable:
-                    if(!allowPartial) {
-                        return false;
+                    if(allowPartial) {
+                        status = Status::fixable;
+                        reg = nullptr;
+                        goto next_unpublished;
                     }
-                    unresolvable.insert(reg);
-                    reg = nullptr;
-                    goto next_unpublished;
+                case Status::fatal:
+                    return Status::fatal;
                 }
+            }
+        }
+        allPublished.push_back(reg);
+        validated.push_back(reg);
+        reg = nullptr;
+    }
+    // Copy validated yet-to-be-published services back to unpublished, now in the correct order for publication:
+    unpublished.insert(unpublished.begin(), validated.begin(), validated.end());
+    return status;
+}
+
+
+bool StandardApplicationContext::publish(bool allowPartial)
+{
+    descriptor_list allPublished;
+    descriptor_list unpublished;
+    for(auto reg : registrations) {
+        if(reg->isPublished()) {
+            allPublished.push_back(reg);
+        } else {
+            unpublished.push_back(reg);
+        }
+    }
+    if(unpublished.empty()) {
+        return true;
+    }
+    auto validationResult = validate(allowPartial, allPublished, unpublished);
+    if(validationResult == Status::fatal) {
+        return false;
+    }
+
+    descriptor_list publishedNow;//Keep order of publication
+
+    qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext with " << unpublished.size() << " unpublished Objects";
+    //Do several rounds and publish those services whose dependencies have already been published.
+    //For a service with an empty set of dependencies, this means that it will be published first.
+    for(auto reg : unpublished) {
+        QVariantList dependencies;
+        QObject temporaryParent;
+        auto& dependencyInfos = reg->descriptor.dependencies;
+        if(!dependencyInfos.empty()) {
+            qCInfo(loggingCategory()).noquote().nospace() << "Resolving " << dependencyInfos.size() << " dependencies of " << *reg << ":";
+            for(auto& d : dependencyInfos) {
+                auto result = resolveDependency(allPublished, reg, d, allowPartial, true, &temporaryParent);
                 dependencies.push_back(result.first);
-                if(d.kind == static_cast<int>(Kind::PRIVATE_COPY)) {
-                    privateDependencies.push_back(result.first.value<QObject*>());
-                }
             }
         }
         auto service = reg->publish(dependencies);
@@ -597,7 +615,10 @@ bool StandardApplicationContext::publish(bool allowPartial)
             qCCritical(loggingCategory()).nospace().noquote() << "Could not publish " << *reg;
             return false;
         }
-        privateDependencies.moveTo(service);
+        QObjectList tempChildren = temporaryParent.children(); //We must make a copy of the chilren, as we'll modify it indirectly in the loop.
+        for(auto child : tempChildren) {
+            child->setParent(service);
+        }
         if(service->objectName().isEmpty()) {
             service->setObjectName(reg->registeredName());
         }
@@ -606,7 +627,6 @@ bool StandardApplicationContext::publish(bool allowPartial)
         //By building the list of published services from scratch, we guarantee that they'll end up in Kind::N-dependencies in the right order:
         allPublished.clear();
         std::copy_if(registrations.begin(), registrations.end(), std::inserter(allPublished, allPublished.begin()), std::mem_fn(&DescriptorRegistration::isPublished));
-        reg = nullptr;
     }
     qsizetype publishedCount = 0;
     QList<QApplicationContextPostProcessor*> postProcessors;
@@ -625,7 +645,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
     //The services that have been instantiated during this methd-invocation will be configured in the order they have have been
     //instantiated. However, if their configuration has bean-refs, this order may need to be modified.
     while(!publishedNow.empty()) {
-        reg = pop_front(publishedNow);
+        DescriptorRegistration* reg = pop_front(publishedNow);
         next_published:
         for(auto& beanRef : getBeanRefs(reg->config())) {
             auto foundReg = eraseIf(publishedNow, [&beanRef](DescriptorRegistration* r) { return r->registeredName() == beanRef;});
@@ -659,7 +679,6 @@ bool StandardApplicationContext::publish(bool allowPartial)
                 return false;
             case Status::fixable:
                 qCWarning(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
-                unresolvable.insert(reg);
                 eraseIf(allPublished, [reg](DescriptorRegistration* arg) { return arg == reg; });
                 continue;
 
@@ -681,7 +700,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         emit publishedChanged();
         emit pendingPublicationChanged();
     }
-    return unresolvable.empty();
+    return validationResult == Status::ok;
 }
 
 unsigned StandardApplicationContext::published() const

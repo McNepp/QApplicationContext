@@ -1962,10 +1962,8 @@ public:
     /// \brief Publishes this ApplicationContext.
     /// This method may be invoked multiple times.
     /// Each time it is invoked, it will attempt to instantiate all yet-unpublished services that have been registered with this ApplicationContext.
-    /// \param allowPartial has the default-value `false`, this function will return immediately when a service cannot be published (due to missing dependencies,
-    /// unresolveable properties, etc...).
-    /// Additionally, the cause of such a failure will be logged with the level QtMsgType::QtCriticalMessage.
-    /// if `allowPartial == true`, the function will attempt to publish as many pending services as possible.
+    /// \param allowPartial has the default-value `false`, this function will either return all services or no service at all.
+    /// If `allowPartial == true`, the function will attempt to publish as many pending services as possible.
     /// Failures that may be fixed by further registrations will be logged with the level QtMsgType::QtWarningMessage.
     /// \return `true` if there are no fatal errors and all services were published.
     ///

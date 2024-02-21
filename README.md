@@ -808,16 +808,18 @@ The function QApplicationContext::publish(bool) has a boolean argument `allowPar
 The following table shows how this argument affects the outcome of the function:
 
 ### allowPartial = false:
-- If publication of one service fails for whatever reason, the function will immediately return without attempts to publish other services.
+- Transactional behaviour: Only if it can be validated that all service-dependencies can be resolved will publication begin.
+- Will either publish all services or no service at all.
 - All errors that occur while publishing a service will be logged with the level QtMsgType::QtCriticalMessage.
 
 ### allowPartial = true:
-- If publication of one service fails for reasons that may be fixed, the function will continue to publish other services. 
+- Iterative behaviour: Will publish those services whose dependencies can be resolved.
+- If publication of one service is not possible reasons that may be fixed, the function will continue to publish other services. 
   Such reasons include:
   - unresolved dependencies (as those may be registered later).
   - unresolved config-values (as those may be configured later).
 - Such "fixable errors" that occur while publishing a service will be logged with the level QtMsgType::QtWarningMessage.
-- If publication of one service fails for reasons that will prevail, the function will will immediately return without attempts to publish other services.
+- If publication of one service fails for a reason that is not fixable, the function will will immediately return without attempts to publish other services.
   Such reasons include:
   - ambiguous dependencies (as those cannot not be removed from the ApplicationContext).
   - non-existing names of Q_PROPERTYs.

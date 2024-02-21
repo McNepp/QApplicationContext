@@ -46,6 +46,7 @@ protected:
 
 private:
 
+
     bool registerAlias(detail::ServiceRegistration* reg, const QString& alias);
 
 
@@ -460,6 +461,7 @@ private:
         QObject* source;
     };
 
+    Status validate(bool allowPartial, const descriptor_list& published, descriptor_list& unpublished);
 
     template<typename C> static DescriptorRegistration* find_by_type(const C& regs, const std::type_info& type);
 
@@ -478,7 +480,7 @@ private:
     DescriptorRegistration* getRegistrationByName(const QString& name) const;
 
 
-    std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial);
+    std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial, bool publish, QObject* temporaryPrivateParent);
 
     DescriptorRegistration* registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj);
 
