@@ -1236,6 +1236,15 @@ detail::Subscription* StandardApplicationContext::DescriptorRegistration::create
     return subscription;
 }
 
+detail::Subscription *StandardApplicationContext::DescriptorRegistration::createAutowiring(const type_info &type, detail::q_inject_t injector, Registration *source)
+{
+    if(!autowirings.insert(type).second) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register autowiring for type " << type.name() << " in " << *this;
+        return nullptr;
+    }
+    return new AutowireSubscription{this, injector, source};
+}
+
 
 
 
@@ -1278,7 +1287,9 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
 
 
     void StandardApplicationContext::DescriptorRegistration::PropertyBindingSubscription::notify(QObject* obj) {
-       subscriptions.push_back(subscribe( new PropertyInjector{m_target, obj, m_sourceProperty, m_setter}));
+       auto subscr = new PropertyInjector{m_target, obj, m_sourceProperty, m_setter};
+       subscr->subscribe();
+       subscriptions.push_back(subscr);
     }
 
     void StandardApplicationContext::DescriptorRegistration::PropertyBindingSubscription::cancel() {
@@ -1310,6 +1321,36 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const
        }
        //QPropertyNotifier will remove the binding in its destructor:
        bindings.clear();
+    }
+
+    void StandardApplicationContext::AutowireSubscription::notify(QObject *obj) {
+        if(auto sourceReg = dynamic_cast<registration_handle_t>(m_bound)) {
+            auto subscr = new AutowireSubscription{sourceReg, m_injector, obj};
+            subscr->subscribe();
+            subscriptions.push_back(subscr);
+        } else {
+            m_injector(m_bound, obj);
+        }
+    }
+
+    void StandardApplicationContext::AutowireSubscription::cancel() {
+        detail::Subscription::cancel();
+        for(auto iter = subscriptions.begin(); iter != subscriptions.end(); iter = subscriptions.erase(iter)) {
+            auto subscr = *iter;
+            if(subscr) {
+                subscr->cancel();
+            }
+        }
+    }
+
+    detail::Subscription *StandardApplicationContext::ProxyRegistration::createAutowiring(const type_info &type, detail::q_inject_t injector, Registration *source)
+    {
+        if(!autowirings.insert(type).second) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register autowiring for type " << type.name() << " in " << *this;
+            return nullptr;
+        }
+
+        return new AutowireSubscription{this, injector, source};
     }
 
     }//mcnepp::qtdi

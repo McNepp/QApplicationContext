@@ -141,6 +141,13 @@ protected:
 
     virtual void notify(QObject*) = 0;
 
+    /**
+     * @brief Subscribes to this Subscription.
+     * <br>This function will retrieve the Subscription::registration() and invoke onSubscription(Subscription*)
+     * on it.
+     * @param subscription
+     */
+    void subscribe();
 
 signals:
 
@@ -166,7 +173,10 @@ template<typename S> constexpr const QMetaObject* getMetaObject() {
     return getMetaObject(static_cast<S*>(nullptr));
 }
 
-    using q_setter_t = std::function<void(QObject*,QVariant)>;
+using q_setter_t = std::function<void(QObject*,QVariant)>;
+
+using q_inject_t = std::function<void(QObject*,QObject*)>;
+
 
 struct property_descriptor {
     QByteArray name;
@@ -262,6 +272,8 @@ protected:
      */
     virtual void onSubscription(Subscription* subscription) = 0;
 
+    virtual Subscription* createAutowiring(const std::type_info& type, q_inject_t injector, Registration* source) = 0;
+
     /**
      * @brief Subscribes to a Subscription.
      * <br>This function will retrieve the Subscription::registration() and invoke onSubscription(Subscription*)
@@ -269,16 +281,20 @@ protected:
      * @param subscription
      * @return the subscription (for convenience)
      */
-    static Subscription* subscribe(Subscription* subscription) {
-        if(subscription) {
-            subscription->registration()->onSubscription(subscription);
-        }
-        return subscription;
-    }
-
+    static Subscription* subscribe(Subscription* subscription);
 };
 
 
+inline void Subscription::subscribe() {
+    registration()->onSubscription(this);
+}
+
+inline Subscription* Registration::subscribe(Subscription* subscription) {
+    if(subscription) {
+        subscription->subscribe();
+    }
+    return subscription;
+}
 
 
 inline Subscription::Subscription(Registration* registration, QObject* targetContext, Qt::ConnectionType connectionType) :
@@ -649,9 +665,11 @@ public:
     /// \brief Connects a service with another service from the same QApplicationContext.
     /// Whenever a service of the type `<D>` is published, it will be injected into every service
     /// of type `<S>`, using the supplied member-function.
+    /// <br>For each source-type `D`, you can register at most one autowiring.
     /// \tparam D the type of service that will be injected into Services of type `<S>`.
     /// \param injectionSlot the member-function to invoke when a service of type `<D>` is published.
-    /// \return the Subscription created by this autowiring.
+    /// \return the Subscription created by this autowiring. If an autowiring has already been registered
+    /// for the type `D´, an invalid Subscription will be returned.
     ///
     template<typename D,typename R> Subscription autowire(R (S::*injectionSlot)(D*));
 
@@ -727,38 +745,6 @@ private:
         T* const m_target;
         R (T::*m_setter)(S*);
     };
-
-    template<typename D,typename R> class AutowireSubscription : public detail::Subscription {
-        friend class Registration;
-
-        AutowireSubscription(registration_handle_t registration, R (S::*setter)(D*), registration_handle_t target) : Subscription(registration, target, Qt::AutoConnection),
-            m_setter(setter),
-            m_target(target)
-        {
-        }
-
-        void notify(QObject* obj) override {
-            if(S* srv = dynamic_cast<S*>(obj)) {
-               Registration<D> target{m_target};
-               auto subscr = target.subscribe(srv, m_setter);
-               if(subscr) {
-                   subscriptions.push_back(subscr);
-               }
-            }
-        }
-
-        void cancel() override {
-            detail::Subscription::cancel();
-            for(auto iter = subscriptions.begin(); iter != subscriptions.end(); iter = subscriptions.erase(iter)) {
-                iter->cancel();
-            }
-        }
-
-        R (S::*m_setter)(D*);
-        QPointer<detail::Registration> m_target;
-        std::vector<mcnepp::qtdi::Subscription> subscriptions;
-    };
-
 
 
     QPointer<detail::Registration> registrationHolder;
@@ -2088,7 +2074,14 @@ template<typename S> template<typename D,typename R> Subscription Registration<S
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot autowire " << *this;
         return Subscription{};
     }
-    auto subscription = new AutowireSubscription<D,R>{unwrap(), injectionSlot, applicationContext()->template getRegistration<D>().unwrap()};
+    detail::q_inject_t injector = [injectionSlot](QObject* target,QObject* source) {
+        if(S* targetSrv = dynamic_cast<S*>(target)) {
+            if(D* sourceSrv = dynamic_cast<D*>(source)) {
+                (targetSrv->*injectionSlot)(sourceSrv);
+            }
+        }
+    };
+    auto subscription = unwrap()->createAutowiring(typeid(D), injector, applicationContext()->template getRegistration<D>().unwrap());
     return Subscription{detail::Registration::subscribe(subscription)};
 }
 

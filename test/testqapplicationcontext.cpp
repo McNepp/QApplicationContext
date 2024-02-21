@@ -592,6 +592,8 @@ private slots:
     void testOptionalDependencyWithAutowire() {
         auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()));
         QVERIFY(reg.autowire(&DependentService::setBase));
+        //Second autowiring for same type shall fail:
+        QVERIFY(!reg.autowire(&DependentService::setBase));
         RegistrationSlot<DependentService> srv{reg};
         QVERIFY(context->publish());
         QVERIFY(!srv->m_dependency);
