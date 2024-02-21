@@ -74,27 +74,65 @@ $(function() {
 </div>
 </div><!-- top -->
 <div class="header">
+  <div class="summary">
+<a href="#pub-types">Public Types</a> &#124;
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="structmcnepp_1_1qtdi_1_1service__factory-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">mcnepp::qtdi::service_factory&lt; S &gt; Struct Template Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>A template that can be specialized to override the standard way of instantiating services. This template can be used to force the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> to use a static factory-function instead of a constructor. You may specialize this template for your own component-types.  
+<p>A template that can be specialized to override the standard way of instantiating services. <br  />
+This template can be used to force the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> to use a static factory-function instead of a constructor. You may specialize this template for your own component-types.  
  <a href="structmcnepp_1_1qtdi_1_1service__factory.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a>&gt;</code></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:a61bb7a540adb6b86e89b7786a6f84499"><td class="memItemLeft" align="right" valign="top"><a id="a61bb7a540adb6b86e89b7786a6f84499" name="a61bb7a540adb6b86e89b7786a6f84499"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>service_type</b> = S</td></tr>
+<tr class="separator:a61bb7a540adb6b86e89b7786a6f84499"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:add1f72d3c3d41f4f728eec92e9898744"><td class="memTemplParams" colspan="2"><a id="add1f72d3c3d41f4f728eec92e9898744" name="add1f72d3c3d41f4f728eec92e9898744"></a>
+template&lt;typename... Args&gt; </td></tr>
+<tr class="memitem:add1f72d3c3d41f4f728eec92e9898744"><td class="memTemplItemLeft" align="right" valign="top">S *&#160;</td><td class="memTemplItemRight" valign="bottom"><b>operator()</b> (Args &amp;&amp;...args) const</td></tr>
+<tr class="separator:add1f72d3c3d41f4f728eec92e9898744"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename S&gt;<br />
-struct mcnepp::qtdi::service_factory&lt; S &gt;</div><p>A template that can be specialized to override the standard way of instantiating services. This template can be used to force the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> to use a static factory-function instead of a constructor. You may specialize this template for your own component-types. </p>
-<p>If you do so, you must define a call-operator with a pointer to your component as its return-type and as many arguments as are needed to construct an instance.</p>
-<p>For example, if you have a service-type <code>MyService</code> with an inaccessible constructor for which only a static factory-function <code>MyService::create()</code> exists, you may define the corresponding <a class="el" href="structmcnepp_1_1qtdi_1_1service__factory.html" title="A template that can be specialized to override the standard way of instantiating services....">service_factory</a> like this: </p><pre class="fragment">template&lt;&gt; struct service_factory&lt;MyService&gt; {
+struct mcnepp::qtdi::service_factory&lt; S &gt;</div><p>A template that can be specialized to override the standard way of instantiating services. <br  />
+This template can be used to force the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> to use a static factory-function instead of a constructor. You may specialize this template for your own component-types. </p>
+<p>If you do so, you must define a call-operator with a pointer to your component as its return-type and as many arguments as are needed to construct an instance. <br  />
+Additionally, the factory should contain a type-declaration <code>service_type</code>.</p>
+<p>The specialization must reside in namespace mcnepp::qtdi.</p>
+<p>For example, if you have a service-type <code>MyService</code> with an inaccessible constructor for which only a static factory-function <code>MyService::create()</code> exists, you may define the corresponding <a class="el" href="structmcnepp_1_1qtdi_1_1service__factory.html" title="A template that can be specialized to override the standard way of instantiating services....">service_factory</a> like this: </p><pre class="fragment">namespace mcnepp::qtdi {
+template&lt;&gt; struct service_factory&lt;MyService&gt; {
+  using service_type = MyService;
+
   MyService* operator()() const {
     return MyService::create();
   }
 };
-</pre><p> Should the service-type <code>MyService</code> have a dependency of type <code>QNetworkAccessManager</code> that must be supplied to the factory-function, the corresponding <a class="el" href="structmcnepp_1_1qtdi_1_1service__factory.html" title="A template that can be specialized to override the standard way of instantiating services....">service_factory</a> would be defined like this this: </p><pre class="fragment">template&lt;&gt; struct service_factory&lt;MyService&gt; {
+}
+</pre><p> Should the service-type <code>MyService</code> have a dependency of type <code>QNetworkAccessManager</code> that must be supplied to the factory-function, the corresponding <a class="el" href="structmcnepp_1_1qtdi_1_1service__factory.html" title="A template that can be specialized to override the standard way of instantiating services....">service_factory</a> would be defined like this this: </p><pre class="fragment">namespace mcnepp::qtdi {
+template&lt;&gt; struct service_factory&lt;MyService&gt; {
+  using service_type = MyService;
+
   MyService* operator()(QNetworkAccessManager* networkManager) const {
     return MyService::create(networkManager);
   }
 };
-</pre> </div><hr/>The documentation for this struct was generated from the following file:<ul>
+}
+</pre> <dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type. </td></tr>
+  </table>
+  </dd>
+</dl>
+</div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>defs/<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a></li>
 </ul>
 </div><!-- contents -->

@@ -83,7 +83,9 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 
-<p>Describes a service by its implementation and possibly multiple service-interfaces. Compilation will fail if <code>Impl</code> is not a sub-class of QObject.  
+<p>Describes a service by its implementation and possibly multiple service-interfaces. Compilation will fail if <code>Impl</code> is not a sub-class of QObject. <br  />
+The preferred way of creating Services is the function <a class="el" href="qapplicationcontext_8h.html#a59a5f8a64a3501f3958d706bac650287" title="Creates a Service with the default service-factory.">mcnepp::qtdi::service()</a>. <br  />
+You may supply arbitrary arguments to this function. Those arguments will be passed on to the constructor of the actual service when the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> is published. Example with one argument:  
  <a href="structmcnepp_1_1qtdi_1_1_service_3_01_impl_00_01_impl_01_4.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a>&gt;</code></p>
@@ -106,12 +108,17 @@ template&lt;typename... Dep&gt; </td></tr>
 <tr class="memitem:a087e1b0ba9a867c5fde7e87aae499b97"><td class="memItemLeft" align="right" valign="top"><a id="a087e1b0ba9a867c5fde7e87aae499b97" name="a087e1b0ba9a867c5fde7e87aae499b97"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Service</b> (detail::service_descriptor &amp;&amp;descr)</td></tr>
 <tr class="separator:a087e1b0ba9a867c5fde7e87aae499b97"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ade498a9705fb5b962250c9c44e1f8603"><td class="memTemplParams" colspan="2">template&lt;typename... IFaces&gt; </td></tr>
-<tr class="memitem:ade498a9705fb5b962250c9c44e1f8603"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_service_3_01_impl_00_01_impl_01_4.html#ade498a9705fb5b962250c9c44e1f8603">advertiseAs</a> () &amp;&amp;</td></tr>
-<tr class="memdesc:ade498a9705fb5b962250c9c44e1f8603"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies service-interfaces. <br  />
+<tr class="memitem:a50887951326d825e9ed9f0db8a0b3800"><td class="memTemplParams" colspan="2">template&lt;typename... IFaces&gt; </td></tr>
+<tr class="memitem:a50887951326d825e9ed9f0db8a0b3800"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl &gt; &amp;&amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_service_3_01_impl_00_01_impl_01_4.html#a50887951326d825e9ed9f0db8a0b3800">advertiseAs</a> () &amp;&amp;</td></tr>
+<tr class="memdesc:a50887951326d825e9ed9f0db8a0b3800"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies service-interfaces. <br  />
 You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">QApplicationContext::getRegistration()</a>. They will also be used to satisfy dependencies that other services may have to this one. <br  />
 This function may be invoked only on temporary instances.  <br /></td></tr>
-<tr class="separator:ade498a9705fb5b962250c9c44e1f8603"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a50887951326d825e9ed9f0db8a0b3800"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a321041a94c9518d07ea3e7fc8fa31900"><td class="memTemplParams" colspan="2">template&lt;typename... IFaces&gt; </td></tr>
+<tr class="memitem:a321041a94c9518d07ea3e7fc8fa31900"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_service_3_01_impl_00_01_impl_01_4.html#a321041a94c9518d07ea3e7fc8fa31900">advertiseAs</a> () const &amp;</td></tr>
+<tr class="memdesc:a321041a94c9518d07ea3e7fc8fa31900"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies service-interfaces. <br  />
+You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">QApplicationContext::getRegistration()</a>. They will also be used to satisfy dependencies that other services may have to this one.  <br /></td></tr>
+<tr class="separator:a321041a94c9518d07ea3e7fc8fa31900"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -121,18 +128,20 @@ detail::service_descriptor&#160;</td><td class="memItemRight" valign="bottom"><b
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename Impl&gt;<br />
-struct mcnepp::qtdi::Service&lt; Impl, Impl &gt;</div><p>Describes a service by its implementation and possibly multiple service-interfaces. Compilation will fail if <code>Impl</code> is not a sub-class of QObject. </p>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
+struct mcnepp::qtdi::Service&lt; Impl, Impl &gt;</div><p>Describes a service by its implementation and possibly multiple service-interfaces. Compilation will fail if <code>Impl</code> is not a sub-class of QObject. <br  />
+The preferred way of creating Services is the function <a class="el" href="qapplicationcontext_8h.html#a59a5f8a64a3501f3958d706bac650287" title="Creates a Service with the default service-factory.">mcnepp::qtdi::service()</a>. <br  />
+You may supply arbitrary arguments to this function. Those arguments will be passed on to the constructor of the actual service when the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> is published. Example with one argument: </p>
+<pre class="fragment">context-&gt;registerService(service&lt;QFile&gt;(QString{"readme.txt").advertiseAs&lt;QIODevice,QFileDevice&gt;(), "file");
+</pre> <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">Impl</td><td>the implementation-type of the service. If you do not specify additional service-interfaces, this will become also the primary service-interface.<br  />
- You may supply arbitrary arguments to <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>' constructor. Those arguments will be passed on to the constructor of the actual service when the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> is published. Example with one argument:</td></tr>
+ </td></tr>
   </table>
   </dd>
 </dl>
-<p>context-&gt;registerService(Service&lt;QFile&gt;{QString{"readme.txt"}.<a class="el" href="structmcnepp_1_1qtdi_1_1_service_3_01_impl_00_01_impl_01_4.html#ade498a9705fb5b962250c9c44e1f8603" title="Specifies service-interfaces.  You must specify at least one interface (or otherwise compilation will...">advertiseAs&lt;QIODevice,QFileDevice&gt;()</a>, "file"); </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="ade498a9705fb5b962250c9c44e1f8603" name="ade498a9705fb5b962250c9c44e1f8603"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ade498a9705fb5b962250c9c44e1f8603">&#9670;&#160;</a></span>advertiseAs()</h2>
+<a id="a50887951326d825e9ed9f0db8a0b3800" name="a50887951326d825e9ed9f0db8a0b3800"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a50887951326d825e9ed9f0db8a0b3800">&#9670;&#160;</a></span>advertiseAs() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -145,7 +154,7 @@ template&lt;typename... IFaces&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl &gt; <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service</a>&lt; Impl, Impl &gt;::advertiseAs </td>
+          <td class="memname"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl &gt; &amp;&amp; <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service</a>&lt; Impl, Impl &gt;::advertiseAs </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> &amp;&amp;</td>
@@ -163,11 +172,51 @@ You must specify at least one interface (or otherwise compilation will fail). Th
 This function may be invoked only on temporary instances. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
-    <tr><td class="paramname">IFaces</td><td>the service-interfaces. <b>At least one must be supplied.</b> </td></tr>
+    <tr><td class="paramname">IFaces</td><td>additional service-interfaces to be advertised. <b>At least one must be supplied.</b> <br  />
+If a type appears more than once in the set of types comprising <code>Impl</code> and <code>IFaces</code>, compilation will fail with a diagnostic. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>this <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>. </dd></dl>
+
+</div>
+</div>
+<a id="a321041a94c9518d07ea3e7fc8fa31900" name="a321041a94c9518d07ea3e7fc8fa31900"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a321041a94c9518d07ea3e7fc8fa31900">&#9670;&#160;</a></span>advertiseAs() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename Impl &gt; </div>
+<div class="memtemplate">
+template&lt;typename... IFaces&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl &gt; <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service</a>&lt; Impl, Impl &gt;::advertiseAs </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const &amp;</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Specifies service-interfaces. <br  />
+You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">QApplicationContext::getRegistration()</a>. They will also be used to satisfy dependencies that other services may have to this one. </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">IFaces</td><td>the service-interfaces. <b>At least one must be supplied.</b> </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> with the advertised interfaces. </dd></dl>
 
 </div>
 </div>

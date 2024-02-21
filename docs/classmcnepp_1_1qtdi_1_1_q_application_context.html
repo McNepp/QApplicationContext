@@ -156,7 +156,7 @@ The element-type of the returned QList is the opaque type service_registration_h
 Additionally, you may wrap the handles in a type-safe manner, using <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a36e48f258a0e21e9e507d34439cd1913" title="Wraps a handle to a ServiceRegistration into a typesafe high-level ServiceRegistration.">ServiceRegistration::wrap(service_registration_handle_t)</a>.  <br /></td></tr>
 <tr class="separator:a805b17a76dde6d70f32d2a17d17bfd06"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3da238d296fe034a8056aa7a951cbc21"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a3da238d296fe034a8056aa7a951cbc21">getRegistrationHandle</a> (const QString &amp;name) const =0</td></tr>
-<tr class="memdesc:a3da238d296fe034a8056aa7a951cbc21"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for a name. <br  />
+<tr class="memdesc:a3da238d296fe034a8056aa7a951cbc21"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> for a name. <br  />
 The type of the returned handle is the opaque type service_registration_handle_t. You should not de-reference it, as its API may changed without notice. <br  />
 What you can do, though, is use one of the free functions <a class="el" href="qapplicationcontext_8h.html#ad99aa9332aee20a47057f62ed4e8f285" title="Determines whether a handle to a Registration matches a type.">matches(registration_handle_t)</a>, <br  />
 <a class="el" href="qapplicationcontext_8h.html#ae09e67c55a69665975a9e2371e3d0a94" title="Obtains the registeredName from a handle to a ServiceRegistration.">registeredName(service_registration_handle_t)</a>, <a class="el" href="qapplicationcontext_8h.html#afefa36bb5b7dd31e385dcd75747fd594" title="Obtains the registeredProperties from a handle to a ServiceRegistration.">registeredProperties(service_registration_handle_t)</a>. <br  />
@@ -184,7 +184,7 @@ Protected Member Functions</h2></td></tr>
 <tr class="memdesc:a07d655888051851d1c9282d209cdf731"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers an Object with this <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.  <br /></td></tr>
 <tr class="separator:a07d655888051851d1c9282d209cdf731"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8dfd2e0474d2a52f71b38003ee818426"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="qapplicationcontext_8h.html#adde781831da99ca1afd54b82f9e6d23d">proxy_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8dfd2e0474d2a52f71b38003ee818426">getRegistrationHandle</a> (const std::type_info &amp;service_type, const QMetaObject *metaObject) const =0</td></tr>
-<tr class="memdesc:a8dfd2e0474d2a52f71b38003ee818426"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for a service_type.  <br /></td></tr>
+<tr class="memdesc:a8dfd2e0474d2a52f71b38003ee818426"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> for a service_type.  <br /></td></tr>
 <tr class="separator:a8dfd2e0474d2a52f71b38003ee818426"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-static-methods" name="pro-static-methods"></a>
@@ -534,18 +534,18 @@ This function will look up Services by the names they were registered with. Addi
 </table>
 </div><div class="memdoc">
 
-<p>Obtains a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for a name. <br  />
+<p>Obtains a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> for a name. <br  />
 The type of the returned handle is the opaque type service_registration_handle_t. You should not de-reference it, as its API may changed without notice. <br  />
 What you can do, though, is use one of the free functions <a class="el" href="qapplicationcontext_8h.html#ad99aa9332aee20a47057f62ed4e8f285" title="Determines whether a handle to a Registration matches a type.">matches(registration_handle_t)</a>, <br  />
 <a class="el" href="qapplicationcontext_8h.html#ae09e67c55a69665975a9e2371e3d0a94" title="Obtains the registeredName from a handle to a ServiceRegistration.">registeredName(service_registration_handle_t)</a>, <a class="el" href="qapplicationcontext_8h.html#afefa36bb5b7dd31e385dcd75747fd594" title="Obtains the registeredProperties from a handle to a ServiceRegistration.">registeredProperties(service_registration_handle_t)</a>. <br  />
 Additionally, you may wrap the handles in a type-safe manner, using <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a36e48f258a0e21e9e507d34439cd1913" title="Wraps a handle to a ServiceRegistration into a typesafe high-level ServiceRegistration.">ServiceRegistration::wrap(service_registration_handle_t)</a>. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">name</td><td>the desired name of the service. A valid handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> will be returned only if exactly one <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> has been registered that matches the name. </td></tr>
+    <tr><td class="paramname">name</td><td>the desired name of the service. A valid handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> will be returned only if exactly one <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> has been registered that matches the name. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for the supplied name, or <code>nullptr</code> if no single <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> has been registered with the name. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> for the supplied name, or <code>nullptr</code> if no single <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> has been registered with the name. </dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">getRegistration(const QString&amp;) const</a>. </dd></dl>
 
 <p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#af804e0866cd267f49b2ac725e432733d">mcnepp::qtdi::StandardApplicationContext</a>.</p>
@@ -586,7 +586,7 @@ Additionally, you may wrap the handles in a type-safe manner, using <a class="el
 </table>
 </div><div class="memdoc">
 
-<p>Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for a service_type. </p>
+<p>Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> for a service_type. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">service_type</td><td>the service-type to match the registrations. </td></tr>
@@ -594,7 +594,7 @@ Additionally, you may wrap the handles in a type-safe manner, using <a class="el
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for the supplied service_type. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> for the supplied service_type. </dd></dl>
 
 <p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a8a8bffbb11a74ca6c412a2d23a28d3b6">mcnepp::qtdi::StandardApplicationContext</a>.</p>
 
@@ -690,11 +690,11 @@ Additionally, you may wrap the handles in a type-safe manner, using <a class="el
 <p>Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked, it will attempt to instantiate all yet-unpublished services that have been registered with this ApplicationContext. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">allowPartial</td><td>has the default-value <code>false</code>, this function will return immediately when a service cannot be published (due to missing dependencies, unresolveable properties, etc...). Additionally, the cause of such a failure will be logged with the level QtMsgType::QtCriticalMessage. if <code>allowPartial == true</code>, the function will attempt to publish as many pending services as possible. Failures that may be fixed by further registrations will be logged with the level QtMsgType::QtWarningMessage. </td></tr>
+    <tr><td class="paramname">allowPartial</td><td>has the default-value <code>false</code>, this function will either return all services or no service at all. If <code>allowPartial == true</code>, the function will attempt to publish as many pending services as possible. Failures that may be fixed by further registrations will be logged with the level QtMsgType::QtWarningMessage. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd><code>true</code> if there are no fatal errors and all services were published (in case <code>allowPartial == false</code>), or at least one service was published (in case <code>allowPartial == true</code>). </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> if there are no fatal errors and all services were published. </dd></dl>
 
 <p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ad58c83a97736500900b331ec30b92690">mcnepp::qtdi::StandardApplicationContext</a>.</p>
 
@@ -779,7 +779,7 @@ Additionally, you may wrap the handles in a type-safe manner, using <a class="el
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for the object, or <code>nullptr</code> if it could not be registered. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> for the object, or <code>nullptr</code> if it could not be registered. </dd></dl>
 
 <p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a0344d22b931e4c977bf7f450b25d6da3">mcnepp::qtdi::StandardApplicationContext</a>.</p>
 
@@ -832,7 +832,7 @@ template&lt;typename S , typename... IFaces&gt; </div>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the primary service-type for the object. </td></tr>
-    <tr><td class="paramname">IFaces</td><td>additional service-interfaces to be advertised. </td></tr>
+    <tr><td class="paramname">IFaces</td><td>additional service-interfaces to be advertised. If a type appears more than once in the set of types comprising <code>S</code> and <code>IFaces</code>, compilation will fail with a diagnostic. </td></tr>
   </table>
   </dd>
 </dl>
@@ -889,7 +889,7 @@ template&lt;typename S , typename... IFaces&gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> for the service, or <code>nullptr</code> if it could not be registered. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> for the service, or <code>nullptr</code> if it could not be registered. </dd></dl>
 
 <p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a6fd168b4295a09d5e853493efc17b4cd">mcnepp::qtdi::StandardApplicationContext</a>.</p>
 

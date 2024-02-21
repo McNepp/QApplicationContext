@@ -78,12 +78,16 @@ $(function() {
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pro-methods">Protected Member Functions</a> &#124;
+<a href="#friends">Friends</a> &#124;
 <a href="classmcnepp_1_1qtdi_1_1_registration-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">mcnepp::qtdi::Registration&lt; S &gt; Class Template Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a74b64aeda314a8514933e664b18aa654" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">QApplicationContext::getRegistration()</a>.  
+<p>A type-safe wrapper for a detail::Registration. <br  />
+This is a non-instantiable base-class. As such, it defines the operations common to both <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>. <br  />
+Its most important operation is the type-safe function <code><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">subscribe()</a></code> which should be preferred over directly connecting to the signal <code>detail::Registration::objectPublished(QObject*)</code>. <br  />
+ A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> contains a <em>non-owning pointer</em> to a detail::Registration whose lifetime is bound to the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. The <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> will become invalid after the corresponding <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> has been destructed.  
  <a href="classmcnepp_1_1qtdi_1_1_registration.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a>&gt;</code></p>
@@ -101,12 +105,12 @@ Inheritance diagram for mcnepp::qtdi::Registration&lt; S &gt;:</div>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a4c4c71ac5e0fb82a2af9819abae7c121"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a4c4c71ac5e0fb82a2af9819abae7c121">applicationContext</a> () const</td></tr>
-<tr class="memdesc:a4c4c71ac5e0fb82a2af9819abae7c121"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>.  <br /></td></tr>
+<tr class="memdesc:a4c4c71ac5e0fb82a2af9819abae7c121"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>.  <br /></td></tr>
 <tr class="separator:a4c4c71ac5e0fb82a2af9819abae7c121"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4562640be6a8d1f377411c0ab912c34f"><td class="memTemplParams" colspan="2">template&lt;typename U &gt; </td></tr>
 <tr class="memitem:a4562640be6a8d1f377411c0ab912c34f"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a4562640be6a8d1f377411c0ab912c34f">matches</a> () const</td></tr>
-<tr class="memdesc:a4562640be6a8d1f377411c0ab912c34f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests whether this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> matches a type. <br  />
-This function will yield <code>true</code> if this is valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> and its underlying registration-handle matches the requested type. This will be the case (at least) if U is either an advertised service-interface or the implementation-type of the service.  <br /></td></tr>
+<tr class="memdesc:a4562640be6a8d1f377411c0ab912c34f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests whether this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> matches a type. <br  />
+This function will yield <code>true</code> if this is valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> and its underlying registration-handle matches the requested type. This will be the case (at least) if U is either an advertised service-interface or the implementation-type of the service.  <br /></td></tr>
 <tr class="separator:a4562640be6a8d1f377411c0ab912c34f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa70f34088d747d139cf12f9e7e02df8f"><td class="memTemplParams" colspan="2">template&lt;typename F &gt; </td></tr>
 <tr class="memitem:aa70f34088d747d139cf12f9e7e02df8f"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f">subscribe</a> (QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
@@ -117,33 +121,39 @@ This function will yield <code>true</code> if this is valid <a class="el" href="
 <tr class="memdesc:a19a7323c8bad9818df4583f5268c0ebf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>objectPublished</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the setter immediately with the current publishedObjects().  <br /></td></tr>
 <tr class="separator:a19a7323c8bad9818df4583f5268c0ebf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaac5888c2f09725ca0d8f6fff97852ce"><td class="memItemLeft" align="right" valign="top"><a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aaac5888c2f09725ca0d8f6fff97852ce">unwrap</a> () const</td></tr>
-<tr class="memdesc:aaac5888c2f09725ca0d8f6fff97852ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the wrapped handle to the <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>.  <br /></td></tr>
+<tr class="memdesc:aaac5888c2f09725ca0d8f6fff97852ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the wrapped handle to the <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>.  <br /></td></tr>
 <tr class="separator:aaac5888c2f09725ca0d8f6fff97852ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afacf8c2137a7b568249532a14f53a33f"><td class="memTemplParams" colspan="2">template&lt;typename D , typename R &gt; </td></tr>
 <tr class="memitem:afacf8c2137a7b568249532a14f53a33f"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#afacf8c2137a7b568249532a14f53a33f">autowire</a> (R(S::*injectionSlot)(D *))</td></tr>
-<tr class="memdesc:afacf8c2137a7b568249532a14f53a33f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects a service with another service from the same <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. Whenever a service of the type <code>&lt;D&gt;</code> is published, it will be injected into every service of type <code>&lt;S&gt;</code>, using the supplied member-function.  <br /></td></tr>
+<tr class="memdesc:afacf8c2137a7b568249532a14f53a33f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects a service with another service from the same <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. Whenever a service of the type <code>&lt;D&gt;</code> is published, it will be injected into every service of type <code>&lt;S&gt;</code>, using the supplied member-function. <br  />
+For each source-type <code>D</code>, you can register at most one autowiring.  <br /></td></tr>
 <tr class="separator:afacf8c2137a7b568249532a14f53a33f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a98e7db034be679d63391761aac500b8d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a98e7db034be679d63391761aac500b8d">isValid</a> () const</td></tr>
-<tr class="memdesc:a98e7db034be679d63391761aac500b8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> represent a valid Registration?  <br /></td></tr>
+<tr class="memdesc:a98e7db034be679d63391761aac500b8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> represent a valid Registration?  <br /></td></tr>
 <tr class="separator:a98e7db034be679d63391761aac500b8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a00d602faaeba576319d7967fa2d057af"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a00d602faaeba576319d7967fa2d057af">operator bool</a> () const</td></tr>
-<tr class="memdesc:a00d602faaeba576319d7967fa2d057af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> represent a valid Registration? Equivalent to <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a98e7db034be679d63391761aac500b8d" title="Does this Registration represent a valid Registration?">isValid()</a>.  <br /></td></tr>
+<tr class="memdesc:a00d602faaeba576319d7967fa2d057af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> represent a valid Registration? Equivalent to <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a98e7db034be679d63391761aac500b8d" title="Does this Registration represent a valid Registration?">isValid()</a>.  <br /></td></tr>
 <tr class="separator:a00d602faaeba576319d7967fa2d057af"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a889de9ca6ad0f1e1735bcf3be1fc0287"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a889de9ca6ad0f1e1735bcf3be1fc0287">operator!</a> () const</td></tr>
-<tr class="memdesc:a889de9ca6ad0f1e1735bcf3be1fc0287"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> represent an invalid Registration? Equivalent to <code>!isValid()</code>.  <br /></td></tr>
-<tr class="separator:a889de9ca6ad0f1e1735bcf3be1fc0287"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
 <tr class="memitem:ae74b67d6b49af8f447ad533f28990068"><td class="memItemLeft" align="right" valign="top"><a id="ae74b67d6b49af8f447ad533f28990068" name="ae74b67d6b49af8f447ad533f28990068"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Registration</b> (<a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a> reg=nullptr)</td></tr>
 <tr class="separator:ae74b67d6b49af8f447ad533f28990068"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
+Friends</h2></td></tr>
+<tr class="memitem:a4e29b9a1322713881cab07a65f9a94b9"><td class="memTemplParams" colspan="2"><a id="a4e29b9a1322713881cab07a65f9a94b9" name="a4e29b9a1322713881cab07a65f9a94b9"></a>
+template&lt;typename U &gt; </td></tr>
+<tr class="memitem:a4e29b9a1322713881cab07a65f9a94b9"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>swap</b> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; U &gt; &amp;reg1, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; U &gt; &amp;reg2)</td></tr>
+<tr class="separator:a4e29b9a1322713881cab07a65f9a94b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename S&gt;<br />
-class mcnepp::qtdi::Registration&lt; S &gt;</div><p>A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a74b64aeda314a8514933e664b18aa654" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">QApplicationContext::getRegistration()</a>. </p>
-<p>This class offers the type-safe function <code><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">subscribe()</a></code> which should be preferred over directly connecting to the signal <code>detail::Registration::objectPublished(QObject*)</code>.</p>
-<p>A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> contains a <em>non-owning pointer</em> to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> whose lifetime of is bound to the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. The <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> will become invalid after the corresponding <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> has been destructed. </p>
+class mcnepp::qtdi::Registration&lt; S &gt;</div><p>A type-safe wrapper for a detail::Registration. <br  />
+This is a non-instantiable base-class. As such, it defines the operations common to both <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>. <br  />
+Its most important operation is the type-safe function <code><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">subscribe()</a></code> which should be preferred over directly connecting to the signal <code>detail::Registration::objectPublished(QObject*)</code>. <br  />
+ A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> contains a <em>non-owning pointer</em> to a detail::Registration whose lifetime is bound to the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. The <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> will become invalid after the corresponding <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> has been destructed. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a4c4c71ac5e0fb82a2af9819abae7c121" name="a4c4c71ac5e0fb82a2af9819abae7c121"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a4c4c71ac5e0fb82a2af9819abae7c121">&#9670;&#160;</a></span>applicationContext()</h2>
@@ -170,8 +180,8 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Yields the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>. </p>
-<dl class="section return"><dt>Returns</dt><dd>the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>, or <code>nullptr</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> is invalid. </dd></dl>
+<p>Yields the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. </p>
+<dl class="section return"><dt>Returns</dt><dd>the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> that manages this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>, or <code>nullptr</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> is invalid. </dd></dl>
 
 </div>
 </div>
@@ -195,7 +205,8 @@ template&lt;typename D , typename R &gt; </div>
       </table>
 </div><div class="memdoc">
 
-<p>Connects a service with another service from the same <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. Whenever a service of the type <code>&lt;D&gt;</code> is published, it will be injected into every service of type <code>&lt;S&gt;</code>, using the supplied member-function. </p>
+<p>Connects a service with another service from the same <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. Whenever a service of the type <code>&lt;D&gt;</code> is published, it will be injected into every service of type <code>&lt;S&gt;</code>, using the supplied member-function. <br  />
+For each source-type <code>D</code>, you can register at most one autowiring. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">D</td><td>the type of service that will be injected into Services of type <code>&lt;S&gt;</code>. </td></tr>
@@ -208,7 +219,7 @@ template&lt;typename D , typename R &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>the <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> created by this autowiring. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>the <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> created by this autowiring. If an autowiring has already been registered for the type `D´, an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> will be returned. </dd></dl>
 
 </div>
 </div>
@@ -237,8 +248,8 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> represent a valid Registration? </p>
-<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> is present. </dd></dl>
+<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> represent a valid Registration? </p>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> is present. </dd></dl>
 
 </div>
 </div>
@@ -269,9 +280,9 @@ template&lt;typename U &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Tests whether this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> matches a type. <br  />
-This function will yield <code>true</code> if this is valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> and its underlying registration-handle matches the requested type. This will be the case (at least) if U is either an advertised service-interface or the implementation-type of the service. </p>
-<dl class="section return"><dt>Returns</dt><dd><code>true</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> matches a type. </dd></dl>
+<p>Tests whether this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> matches a type. <br  />
+This function will yield <code>true</code> if this is valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> and its underlying registration-handle matches the requested type. This will be the case (at least) if U is either an advertised service-interface or the implementation-type of the service. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> matches a type. </dd></dl>
 
 </div>
 </div>
@@ -300,38 +311,8 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> represent a valid Registration? Equivalent to <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a98e7db034be679d63391761aac500b8d" title="Does this Registration represent a valid Registration?">isValid()</a>. </p>
-<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> is present. </dd></dl>
-
-</div>
-</div>
-<a id="a889de9ca6ad0f1e1735bcf3be1fc0287" name="a889de9ca6ad0f1e1735bcf3be1fc0287"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a889de9ca6ad0f1e1735bcf3be1fc0287">&#9670;&#160;</a></span>operator!()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename S &gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">mcnepp::qtdi::Registration</a>&lt; S &gt;::operator! </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> represent an invalid Registration? Equivalent to <code>!isValid()</code>. </p>
-<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> is not present. </dd></dl>
+<p>Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> represent a valid Registration? Equivalent to <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a98e7db034be679d63391761aac500b8d" title="Does this Registration represent a valid Registration?">isValid()</a>. </p>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the underlying <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> is present. </dd></dl>
 
 </div>
 </div>
@@ -486,8 +467,8 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Yields the wrapped handle to the <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>. </p>
-<dl class="section return"><dt>Returns</dt><dd>the wrapped handle to the <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>, or <code>nullptr</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a> wraps no valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration. Instances of this class are being returned by the pub...">Registration</a>. </dd></dl>
+<p>Yields the wrapped handle to the <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. </p>
+<dl class="section return"><dt>Returns</dt><dd>the wrapped handle to the <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>, or <code>nullptr</code> if this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> wraps no valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. </dd></dl>
 
 </div>
 </div>

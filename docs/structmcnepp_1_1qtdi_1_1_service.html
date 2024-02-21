@@ -84,7 +84,9 @@ $(function() {
 <div class="contents">
 
 <p>Describes a service by its interface and implementation. Compilation will fail if either <code>Srv</code> is not a sub-class of QObject, or if <code>Impl</code> is not a sub-class of <code>Srv</code>. <br  />
-<b>Note:</b> This template has a specialization for the case where the implementation-type is identical to the service-type. That specialization offers an additional method for advertising a service with more than one service-interface!  
+<b>Note:</b> This template has a specialization for the case where the implementation-type is identical to the service-type. That specialization offers an additional method for advertising a service with more than one service-interface!<br  />
+ constructor of the actual service when the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> is published. <br  />
+The preferred way of creating Services is the function <a class="el" href="qapplicationcontext_8h.html#a59a5f8a64a3501f3958d706bac650287" title="Creates a Service with the default service-factory.">mcnepp::qtdi::service()</a>.  
  <a href="structmcnepp_1_1qtdi_1_1_service.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a>&gt;</code></p>
@@ -104,6 +106,9 @@ Public Member Functions</h2></td></tr>
 template&lt;typename... Dep&gt; </td></tr>
 <tr class="memitem:a8e8efe5561595b54335f9bdd3aecbbda"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><b>Service</b> (Dep...deps)</td></tr>
 <tr class="separator:a8e8efe5561595b54335f9bdd3aecbbda"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a63a3c11ecc80df9eb07ac1d8677bb39c"><td class="memItemLeft" align="right" valign="top"><a id="a63a3c11ecc80df9eb07ac1d8677bb39c" name="a63a3c11ecc80df9eb07ac1d8677bb39c"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>Service</b> (detail::service_descriptor &amp;&amp;descr)</td></tr>
+<tr class="separator:a63a3c11ecc80df9eb07ac1d8677bb39c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -114,16 +119,17 @@ detail::service_descriptor&#160;</td><td class="memItemRight" valign="bottom"><b
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename Srv, typename Impl = Srv&gt;<br />
 struct mcnepp::qtdi::Service&lt; Srv, Impl &gt;</div><p>Describes a service by its interface and implementation. Compilation will fail if either <code>Srv</code> is not a sub-class of QObject, or if <code>Impl</code> is not a sub-class of <code>Srv</code>. <br  />
-<b>Note:</b> This template has a specialization for the case where the implementation-type is identical to the service-type. That specialization offers an additional method for advertising a service with more than one service-interface! </p>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
+<b>Note:</b> This template has a specialization for the case where the implementation-type is identical to the service-type. That specialization offers an additional method for advertising a service with more than one service-interface!<br  />
+ constructor of the actual service when the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> is published. <br  />
+The preferred way of creating Services is the function <a class="el" href="qapplicationcontext_8h.html#a59a5f8a64a3501f3958d706bac650287" title="Creates a Service with the default service-factory.">mcnepp::qtdi::service()</a>. </p>
+<p>Example with one argument: </p><pre class="fragment">context-&gt;registerService(service&lt;QIODevice,QFile&gt;(QString{"readme.txt"), "file");
+</pre> <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">Srv</td><td>the primary service-interface. The service will be advertised as this type. If you only supply this type-argument, the primary service-interface will be identical to the service's implementation-type. </td></tr>
-    <tr><td class="paramname">Impl</td><td>the implementation-type of the service. You may supply arbitrary arguments to <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>' constructor. Those arguments will be passed on to the constructor of the actual service when the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> is published.</td></tr>
+    <tr><td class="paramname">Impl</td><td>the implementation-type of the service. You may supply arbitrary arguments to <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>' constructor. Those arguments will be passed on to the </td></tr>
   </table>
   </dd>
 </dl>
-<p>Example with one argument:</p>
-<p>context-&gt;registerService(Service&lt;QIODevice,QFile&gt;{QString{"readme.txt"}, "file"); </p>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>defs/<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a></li>
 </ul>
