@@ -46,6 +46,7 @@ protected:
 
 private:
 
+
     bool registerAlias(detail::ServiceRegistration* reg, const QString& alias);
 
 
@@ -60,6 +61,24 @@ private:
 
 
     };
+
+    class AutowireSubscription : public detail::Subscription {
+    public:
+        AutowireSubscription(registration_handle_t registration, detail::q_inject_t injector, QObject* bound) : Subscription(registration, bound, Qt::AutoConnection),
+            m_injector(injector),
+            m_bound(bound)
+        {
+        }
+
+        void notify(QObject* obj) override;
+
+        void cancel() override;
+    private:
+        detail::q_inject_t m_injector;
+        QObject* m_bound;
+        std::vector<QPointer<detail::Subscription>> subscriptions;
+    };
+
 
     class DescriptorRegistration : public detail::ServiceRegistration, public StandardRegistrationImpl {
     private:
@@ -112,7 +131,7 @@ private:
         virtual detail::Subscription* createBindingTo(const char* sourcePropertyName, Registration* target, const detail::property_descriptor& targetProperty) override;
 
 
-
+        virtual detail::Subscription* createAutowiring(const std::type_info& type, detail::q_inject_t injector, Registration* source) override;
 
 
         QString registeredName() const override {
@@ -185,6 +204,7 @@ private:
         QVariantMap resolvedProperties;
         std::vector<QPropertyNotifier> bindings;
         std::unordered_set<QString> boundProperties;
+        std::unordered_set<std::type_index> autowirings;
     };
 
     using descriptor_set = std::unordered_set<DescriptorRegistration*>;
@@ -369,6 +389,8 @@ private:
             m_meta(metaObject) {
         }
 
+        virtual detail::Subscription* createAutowiring(const std::type_info& type, detail::q_inject_t injector, Registration* source) override;
+
         bool matches(const std::type_info& type) const override {
             return m_type == type;
         }
@@ -438,7 +460,7 @@ private:
         descriptor_list registrations;
         const QMetaObject* m_meta;
         std::unordered_set<QString> boundProperties;
-
+        std::unordered_set<std::type_index> autowirings;
     };
 
 
@@ -460,6 +482,7 @@ private:
         QObject* source;
     };
 
+    Status validate(bool allowPartial, const descriptor_list& published, descriptor_list& unpublished);
 
     template<typename C> static DescriptorRegistration* find_by_type(const C& regs, const std::type_info& type);
 
@@ -478,7 +501,7 @@ private:
     DescriptorRegistration* getRegistrationByName(const QString& name) const;
 
 
-    std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial);
+    std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial, bool publish, QObject* temporaryPrivateParent);
 
     DescriptorRegistration* registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj);
 
