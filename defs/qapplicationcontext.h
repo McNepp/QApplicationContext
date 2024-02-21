@@ -525,20 +525,39 @@ public:
         }
     }
 
+    friend void swap(Subscription& reg1, Subscription& reg2);
+
+
 private:
     QPointer<detail::Subscription> m_subscription;
 };
 
+///
+/// \brief Tests two Subscriptions for equality.
+///
+/// Two Subscriptions are deemed equal if the pointers returned by Subscriptions::unwrap() point to the same Subscriptions
+/// **and** if they both report `true` via Subscriptions::isValid().
+/// \param sub1
+/// \param sub2
+/// \return `true` if the two Subscriptions are logically equal.
+///
+inline bool operator==(const Subscription& sub1, const Subscription& sub2) {
+    return sub1.unwrap() == sub2.unwrap() && sub1;
+}
+
+
+inline void swap(Subscription& reg1, Subscription& reg2) {
+    reg1.m_subscription.swap(reg2.m_subscription);
+}
 
 
 ///
 /// \brief A type-safe wrapper for a detail::Registration.
-/// Instances of this class are being returned by the public function-templates QApplicationContext::registerService(),
-/// QApplicationContext::registerObject() and QApplicationContext::getRegistration().
-///
-/// This class offers the type-safe function `subscribe()` which should be preferred over directly connecting to the signal `detail::Registration::objectPublished(QObject*)`.
-///
-/// A Registration contains a *non-owning pointer* to a Registration whose lifetime of is bound
+/// <br>This is a non-instantiable base-class.
+/// As such, it defines the operations common to both ServiceRegistration and ProxyRegistration.
+/// <br>Its most important operation is the type-safe function `subscribe()` which should be preferred over directly connecting to the signal `detail::Registration::objectPublished(QObject*)`.
+/// <br>
+/// A Registration contains a *non-owning pointer* to a detail::Registration whose lifetime is bound
 /// to the QApplicationContext. The Registration will become invalid after the corresponding QApplicationContext has been destructed.
 ///
 template<typename S> class Registration {
@@ -661,15 +680,7 @@ public:
         return isValid();
     }
 
-    ///
-    /// \brief Does this Registration represent an invalid %Registration?
-    /// Equivalent to `!isValid()`.
-    /// \return `true` if the underlying Registration is not present.
-    ///
-    bool operator!() const {
-        return !unwrap();
-    }
-
+    template<typename U> friend void swap(Registration<U>& reg1, Registration<U>& reg2);
 
 
 protected:
@@ -754,6 +765,11 @@ private:
 
     QPointer<detail::Registration> registrationHolder;
 };
+
+
+template<typename U> void swap(Registration<U>& reg1, Registration<U>& reg2) {
+    reg1.registrationHolder.swap(reg2.registrationHolder);
+}
 
 
 ///
@@ -2110,5 +2126,33 @@ public:
 
 
 
+
+}
+
+namespace std {
+    template<> struct hash<mcnepp::qtdi::Subscription> {
+        size_t operator()(const mcnepp::qtdi::Subscription& sub, size_t seed = 0) const {
+            return hasher(sub.unwrap());
+        }
+
+        std::hash<mcnepp::qtdi::detail::Subscription*> hasher;
+    };
+
+    template<typename S> struct hash<mcnepp::qtdi::ServiceRegistration<S>> {
+        size_t operator()(const mcnepp::qtdi::ServiceRegistration<S>& sub, size_t seed = 0) const {
+            return hasher(sub.unwrap());
+        }
+
+        std::hash<mcnepp::qtdi::detail::ServiceRegistration*> hasher;
+    };
+
+
+    template<typename S> struct hash<mcnepp::qtdi::ProxyRegistration<S>> {
+        size_t operator()(const mcnepp::qtdi::ProxyRegistration<S>& sub, size_t seed = 0) const {
+            return hasher(sub.unwrap());
+        }
+
+        std::hash<mcnepp::qtdi::detail::ProxyRegistration*> hasher;
+    };
 
 }
