@@ -824,6 +824,9 @@ private slots:
         QVERIFY(simpleReg.as<BaseService>());
         QVERIFY(!simpleReg.as<BaseService2>());
         QCOMPARE(reg, simpleReg);
+        auto timerReg = context->registerService(Service<BaseService>{}.advertiseAs<TimerAware>());
+        QVERIFY(timerReg);
+        QCOMPARE_NE(timerReg, simpleReg);
         auto failedReg = context->registerService(Service<BaseService>{}.advertiseAs<Interface1,TimerAware>());
         //You cannot register a Service with the same implementation-type and primary interface-type, but different addtional service-types:
         QVERIFY(!failedReg);

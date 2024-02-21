@@ -6,6 +6,7 @@
 
 #include <utility>
 #include <typeindex>
+#include <unordered_set>
 #include <QObject>
 #include <QVariant>
 #include <QPointer>
@@ -1331,6 +1332,7 @@ inline bool operator==(const dependency_info& info1, const dependency_info& info
 
 
 struct service_descriptor {
+    using type_set = std::unordered_set<std::type_index>;
 
 
     QObject* create(const QVariantList& dependencies) const {
@@ -1338,14 +1340,16 @@ struct service_descriptor {
     }
 
     bool matches(const std::type_index& type) const {
-        return type == impl_type || std::find(service_types.begin(), service_types.end(), type) != service_types.end();
+        return type == impl_type || service_types.find(type) != service_types.end();
     }
 
     /**
      * @brief Is this service_descriptor compatible with another one?
-     * <br>For this to be true, the impl_types must be identical,
-     * as well as the primary (aka first) service-type.
-     * Also, the dependencies must match.
+     * <br>For this to be true, all of the following criteria must be true:
+     * <br>The impl_types must be identical.
+     * <br>The set of service_types must either be equal, or
+     * one set of service_types must be a true sub-set of the other.
+     * <br>The dependencies must match.
      * @param other
      * @return true if the other descriptor matches this one.
      */
@@ -1353,17 +1357,28 @@ struct service_descriptor {
         if(impl_type != other.impl_type || dependencies != other.dependencies) {
             return false;
         }
-        if(service_types.empty()) {
-            return !other.service_types.empty();
+        //The straight-forward case: both sets are equal.
+        if(service_types == other.service_types) {
+            return true;
         }
-        if(other.service_types.empty()) {
-            return !service_types.empty();
+        //Otherwise, if the sets have the same size, one cannot be a sub-set of the other:
+        if(service_types.size() == other.service_types.size()) {
+            return false;
         }
-        return service_types[0] == other.service_types[0];
+        const type_set& larger = service_types.size() > other.service_types.size() ? service_types : other.service_types;
+        const type_set& smaller = service_types.size() < other.service_types.size() ? service_types : other.service_types;
+        for(auto& type : smaller) {
+            //If at least one item of the smaller set cannot be found in the larger set
+            if(larger.find(type) == larger.end()) {
+                return false;
+            }
+        }
+        return true;
     }
 
 
-    std::vector<std::type_index> service_types;
+
+    type_set service_types;
     const std::type_info& impl_type;
     const QMetaObject* meta_object = nullptr;
     constructor_t constructor = nullptr;
@@ -1508,7 +1523,18 @@ struct dependency_helper<Resolvable<S>> {
 
 
 
-
+template<typename Head,typename...Tail> constexpr bool check_unique_types() {
+    //Check Head against all of Tail:
+    if constexpr((std::is_same_v<Head,Tail> || ...)) {
+        return false;
+    }
+    if constexpr(sizeof...(Tail) > 1) {
+        //Check Head of remainder against remainder:
+        return check_unique_types<Tail...>();
+    } else {
+        return true;
+    }
+}
 
 
 
@@ -1711,21 +1737,33 @@ template<typename Impl> struct Service<Impl,Impl> {
      *  <br>You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via QApplicationContext::getRegistration().
      *  They will also be used to satisfy dependencies that other services may have to this one.
      *  <br>This function may be invoked only on temporary instances.
-     *  \tparam IFaces the service-interfaces. <b>At least one must be supplied.</b>
+     * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
+     * <br>If a type appears more than once in the set of types comprising `Impl` and `IFaces`, compilation will fail with a diagnostic.
      * @return this Service.
      */
-    template<typename...IFaces> Service<Impl,Impl> advertiseAs()&& {
+    template<typename...IFaces> Service<Impl,Impl>&& advertiseAs() && {
         static_assert(sizeof...(IFaces) > 0, "At least one service-interface must be advertised.");
 
         static_assert((std::is_base_of_v<IFaces,Impl> && ... ), "Implementation-type does not implement all advertised interfaces");
-        auto descr{descriptor};
-        auto first = descr.service_types.begin();
-        if(first != descr.service_types.end() && *first == descr.impl_type) {
-           descr.service_types.erase(first);
+        static_assert(detail::check_unique_types<Impl,IFaces...>(), "All advertised interfaces must be distinct");
+        if(auto found = descriptor.service_types.find(descriptor.impl_type); found != descriptor.service_types.end()) {
+           descriptor.service_types.erase(found);
         }
-        (descr.service_types.push_back(typeid(IFaces)), ...);
-        return Service<Impl,Impl>{std::move(descr)};
+        (descriptor.service_types.insert(typeid(IFaces)), ...);
+        return std::move(*this);
     }
+
+    /**
+     * @brief Specifies service-interfaces.
+     *  <br>You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via QApplicationContext::getRegistration().
+     *  They will also be used to satisfy dependencies that other services may have to this one.
+     *  \tparam IFaces the service-interfaces. <b>At least one must be supplied.</b>
+     * @return a Service with the advertised interfaces.
+     */
+    template<typename...IFaces> [[nodiscard]] Service<Impl,Impl> advertiseAs() const& {
+        return Service<Impl,Impl>{*this}.advertiseAs<IFaces...>();
+    }
+
 
 
     detail::service_descriptor descriptor;
@@ -1822,20 +1860,21 @@ public:
     /// \param objName the name for this Object in the ApplicationContext.
     /// *Note*: this name will not be set as the QObject::objectName(). It will be the internal name within the ApplicationContext only.
     /// \tparam S the primary service-type for the object.
-    /// \tparam IFaces additional service-interfaces to be advertised.
+    /// \tparam IFaces additional service-interfaces to be advertised. If a type appears more than once in the set of types comprising `S` and `IFaces`, compilation will fail with a diagnostic.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
     template<typename S,typename... IFaces> ServiceRegistration<S> registerObject(S* obj, const QString& objName = "") {
         static_assert(detail::could_be_qobject<S>::value, "Object is not convertible to QObject");
         if constexpr(sizeof...(IFaces) > 0) {
+            static_assert(detail::check_unique_types<S,IFaces...>(), "All advertised interfaces must be distinct");
             auto check = detail::check_dynamic_types<S,IFaces...>(obj);
             if(!check.first)            {
                 qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as name '" << objName << "'. Object does not implement " << check.second;
                 return ServiceRegistration<S>{};
             }
         }
-        std::vector<std::type_index> ifaces;
-        (ifaces.push_back(typeid(S)), ..., ifaces.push_back(typeid(IFaces)));
+        std::unordered_set<std::type_index> ifaces;
+        (ifaces.insert(typeid(S)), ..., ifaces.insert(typeid(IFaces)));
         service_descriptor descr{ifaces, typeid(*obj)};        return ServiceRegistration<S>::wrap(registerObject(objName, dynamic_cast<QObject*>(obj), service_descriptor{ifaces, typeid(*obj)}));
     }
 
