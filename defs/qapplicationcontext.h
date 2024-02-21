@@ -132,7 +132,7 @@ public:
         QObject::disconnect(in_connection);
     }
 
-    Registration* registration() const {
+    [[nodiscard]] Registration* registration() const {
         return m_registration;
     }
 
@@ -388,7 +388,7 @@ using registration_handle_t = detail::Registration*;
 /// \tparam T the type to query.
 /// \return `true` if the handle is valid and matches the type.
 ///
-template<typename T> inline bool matches(registration_handle_t handle) {
+template<typename T> [[nodiscard]] inline bool matches(registration_handle_t handle) {
     return handle && handle->matches(typeid(T));
 }
 
@@ -397,7 +397,7 @@ template<typename T> inline bool matches(registration_handle_t handle) {
 /// \param handle the handle to the Registration.
 /// \return the QApplicationContext if the handle is valid, `nullptr` otherwise.
 ///
-inline QApplicationContext* applicationContext(registration_handle_t handle) {
+[[nodiscard]] inline QApplicationContext* applicationContext(registration_handle_t handle) {
     return handle ? handle->applicationContext() : nullptr;
 }
 
@@ -421,7 +421,7 @@ using service_registration_handle_t = detail::ServiceRegistration*;
  * @return a handle to the ServiceRegistration that the original handle was pointing to, or an invalid handle if the original handle
  * was not pointing to a ServiceRegistration.
  */
-inline service_registration_handle_t asService(registration_handle_t handle) {
+[[nodiscard]] inline service_registration_handle_t asService(registration_handle_t handle) {
     return dynamic_cast<service_registration_handle_t>(handle);
 }
 
@@ -443,7 +443,7 @@ using proxy_registration_handle_t = detail::ProxyRegistration*;
  * @return a handle to the ProxyRegistration that the original handle was pointing to, or an invalid handle if the original handle
  * was not pointing to a ProxyRegistration.
  */
-inline proxy_registration_handle_t asProxy(registration_handle_t handle) {
+[[nodiscard]] inline proxy_registration_handle_t asProxy(registration_handle_t handle) {
     return dynamic_cast<proxy_registration_handle_t>(handle);
 }
 
@@ -453,7 +453,7 @@ inline proxy_registration_handle_t asProxy(registration_handle_t handle) {
 /// \param handle the handle to the ProxyRegistration.
 /// \return the Services that the ProxyRegistration knows of, or an empty List if the handle is not valid.
 ///
-inline QList<service_registration_handle_t> registeredServices(proxy_registration_handle_t handle) {
+[[nodiscard]] inline QList<service_registration_handle_t> registeredServices(proxy_registration_handle_t handle) {
     return handle ? handle->registeredServices() : QList<service_registration_handle_t>{};
 }
 
@@ -462,7 +462,7 @@ inline QList<service_registration_handle_t> registeredServices(proxy_registratio
 /// \param handle the handle to the ServiceRegistration.
 /// \return the name that this ServiceRegistration was registered with, or an empty String if the handle is not valid.
 ///
-inline QString registeredName(service_registration_handle_t handle) {
+[[nodiscard]] inline QString registeredName(service_registration_handle_t handle) {
     return handle ? handle->registeredName() : QString{};
 }
 
@@ -471,7 +471,7 @@ inline QString registeredName(service_registration_handle_t handle) {
 /// \param handle the handle to the  ServiceRegistration.
 /// \return the properties that this ServiceRegistration was registered with, or an empty Map if the handle is not valid.
 ///
-inline QVariantMap registeredProperties(service_registration_handle_t handle) {
+[[nodiscard]] inline QVariantMap registeredProperties(service_registration_handle_t handle) {
     return handle ? handle->registeredProperties() : QVariantMap{};
 }
 
@@ -503,7 +503,7 @@ public:
      * @brief Was this Subscription successful?
      * @return true if this Subscription was successfully created.
      */
-    bool isValid() const {
+    [[nodiscard]] bool isValid() const {
         return m_subscription;
     }
 
@@ -511,7 +511,7 @@ public:
      * @brief Yields the underlying detail::Subscription.
      * @return the underlying detail::Subscription.
      */
-    detail::Subscription* unwrap() const {
+    [[nodiscard]] detail::Subscription* unwrap() const {
         return m_subscription;
     }
 
@@ -643,7 +643,7 @@ public:
     /// \brief Yields the wrapped handle to the Registration.
     /// \return the wrapped handle to the Registration, or `nullptr` if this Registration wraps no valid Registration.
     ///
-    registration_handle_t unwrap() const {
+    [[nodiscard]] registration_handle_t unwrap() const {
         return registrationHolder.get();
     }
 
@@ -667,7 +667,7 @@ public:
     /// \brief Does this Registration represent a valid %Registration?
     /// \return `true` if the underlying Registration is present.
     ///
-    bool isValid() const {
+    [[nodiscard]] bool isValid() const {
         return unwrap() != nullptr;
     }
 
@@ -791,7 +791,7 @@ public:
         return mcnepp::qtdi::registeredProperties(unwrap());
     }
 
-    service_registration_handle_t unwrap() const {
+    [[nodiscard]] service_registration_handle_t unwrap() const {
         //We can use static_cast here, as the constructor enforces the correct type:
         return static_cast<service_registration_handle_t>(Registration<S>::unwrap());
     }
@@ -843,7 +843,7 @@ public:
     /// \return a valid Registration if handle is not `nullptr` and if `Registration::matches<S>()`.
     /// \see unwrap().
     ///
-    static ServiceRegistration<S> wrap(service_registration_handle_t handle) {
+    [[nodiscard]] static ServiceRegistration<S> wrap(service_registration_handle_t handle) {
         if(mcnepp::qtdi::matches<S>(handle)) {
             return ServiceRegistration<S>{handle};
         }
@@ -900,7 +900,7 @@ public:
         return result;
     }
 
-    proxy_registration_handle_t unwrap() const {
+    [[nodiscard]] proxy_registration_handle_t unwrap() const {
         //We can use static_cast here, as the constructor enforces the correct type:
         return static_cast<proxy_registration_handle_t>(Registration<S>::unwrap());
     }
@@ -911,7 +911,7 @@ public:
     /// \return a valid Registration if handle is not `nullptr` and if `Registration::matches<S>()`.
     /// \see unwrap().
     ///
-    static ProxyRegistration<S> wrap(proxy_registration_handle_t handle) {
+    [[nodiscard]] static ProxyRegistration<S> wrap(proxy_registration_handle_t handle) {
         if(matches<S>(handle)) {
             return ProxyRegistration<S>{handle};
         }
@@ -1130,7 +1130,7 @@ template<typename S,Kind kind=Kind::MANDATORY,typename C=detail::default_argumen
 /// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return a mandatory Dependency on the supplied type.
 ///
-template<typename S,typename C=detail::default_argument_converter<S,Kind::MANDATORY>> constexpr Dependency<S,Kind::MANDATORY,C> inject(const QString& requiredName = "", C converter = C{}) {
+template<typename S,typename C=detail::default_argument_converter<S,Kind::MANDATORY>> [[nodiscard]] constexpr Dependency<S,Kind::MANDATORY,C> inject(const QString& requiredName = "", C converter = C{}) {
     return Dependency<S,Kind::MANDATORY,C>{requiredName, converter};
 }
 
@@ -1143,7 +1143,7 @@ template<typename S,typename C=detail::default_argument_converter<S,Kind::MANDAT
 /// \tparam S the service-type of the dependency.
 /// \return a mandatory Dependency on the supplied registration.
 ///
-template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const Registration<S>& registration) {
+template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::MANDATORY> inject(const Registration<S>& registration) {
     if(auto srv = asService(registration.unwrap())) {
         return Dependency<S,Kind::MANDATORY>{registeredName(srv)};
     }
@@ -1163,7 +1163,7 @@ template<typename S> constexpr Dependency<S,Kind::MANDATORY> inject(const Regist
 /// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return an optional Dependency on the supplied type.
 ///
-template<typename S,typename C=detail::default_argument_converter<S,Kind::OPTIONAL>> constexpr Dependency<S,Kind::OPTIONAL,C> injectIfPresent(const QString& requiredName = "", C converter = C{}) {
+template<typename S,typename C=detail::default_argument_converter<S,Kind::OPTIONAL>> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL,C> injectIfPresent(const QString& requiredName = "", C converter = C{}) {
     return Dependency<S,Kind::OPTIONAL,C>{requiredName, converter};
 }
 
@@ -1173,7 +1173,7 @@ template<typename S,typename C=detail::default_argument_converter<S,Kind::OPTION
 /// \tparam S the service-type of the dependency.
 /// \return an optional Dependency on the supplied registration.
 ///
-template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const Registration<S>& registration) {
+template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const Registration<S>& registration) {
     if(auto srv = asService(registration.unwrap())) {
         return Dependency<S,Kind::OPTIONAL>{registeredName(srv)};
     }
@@ -1190,7 +1190,7 @@ template<typename S> constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(cons
 /// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return a 1-to-N Dependency on the supplied type.
 ///
-template<typename S,typename C=detail::default_argument_converter<S,Kind::N>> constexpr Dependency<S,Kind::N,C> injectAll(const QString& requiredName = "", C converter = C{}) {
+template<typename S,typename C=detail::default_argument_converter<S,Kind::N>> [[nodiscard]] constexpr Dependency<S,Kind::N,C> injectAll(const QString& requiredName = "", C converter = C{}) {
     return Dependency<S,Kind::N,C>{requiredName, converter};
 }
 
@@ -1203,7 +1203,7 @@ template<typename S,typename C=detail::default_argument_converter<S,Kind::N>> co
 /// \tparam S the service-type of the dependency.
 /// \return a 1-to-N  Dependency on the supplied registration.
 ///
-template<typename S> constexpr Dependency<S,Kind::N> injectAll(const Registration<S>& registration) {
+template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::N> injectAll(const Registration<S>& registration) {
     if(auto srv = asService(registration.unwrap())) {
         return Dependency<S,Kind::N>{registeredName(srv)};
     }
@@ -1219,7 +1219,7 @@ template<typename S> constexpr Dependency<S,Kind::N> injectAll(const Registratio
 /// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return a Dependency of the supplied type that will create its own private copy.
 ///
-template<typename S,typename C=detail::default_argument_converter<S,Kind::PRIVATE_COPY>> constexpr Dependency<S,Kind::PRIVATE_COPY,C> injectPrivateCopy(const QString& requiredName = "", C converter = C{}) {
+template<typename S,typename C=detail::default_argument_converter<S,Kind::PRIVATE_COPY>> [[nodiscard]] constexpr Dependency<S,Kind::PRIVATE_COPY,C> injectPrivateCopy(const QString& requiredName = "", C converter = C{}) {
     return Dependency<S,Kind::PRIVATE_COPY,C>{requiredName, converter};
 }
 
@@ -1244,7 +1244,7 @@ template<typename S> struct Resolvable {
 /// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S = QString> Resolvable<S> resolve(const QString& expression) {
+template<typename S = QString> [[nodiscard]] Resolvable<S> resolve(const QString& expression) {
     return Resolvable<S>{expression};
 }
 
@@ -1262,7 +1262,7 @@ template<typename S = QString> Resolvable<S> resolve(const QString& expression) 
 /// \param defaultValue the value to use if the placeholder cannot be resolved.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S> Resolvable<S> resolve(const QString& expression, const S& defaultValue) {
+template<typename S> [[nodiscard]] Resolvable<S> resolve(const QString& expression, const S& defaultValue) {
     return Resolvable<S>{expression, QVariant::fromValue(defaultValue)};
 }
 
@@ -1293,7 +1293,7 @@ struct service_config final {
 /// \param initMethod if not empty, will be invoked during publication of the service.
 /// \return the service_config.
 ///
-inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties = {}, const QString& group = "", bool autowire = false, const QString& initMethod = "") {
+[[nodiscard]] inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties = {}, const QString& group = "", bool autowire = false, const QString& initMethod = "") {
     return service_config{properties, group, autowire, initMethod};
 }
 
@@ -1768,7 +1768,7 @@ template<typename Impl> struct Service<Impl,Impl> {
 /// \tparam Impl the implementation-type of the service. If the factory-type F contains
 /// a type-declaration `service_type`, Impl will be deduced as that type.
 /// \return a Service that will use the provided factory.
-template<typename F,typename Impl=typename F::service_type,typename...Dep> Service<Impl,Impl> serviceWithFactory(F factory, Dep...dependencies) {
+template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nodiscard]]Service<Impl,Impl> serviceWithFactory(F factory, Dep...dependencies) {
     return Service<Impl,Impl>{detail::make_descriptor<Impl,Impl>(factory, dependencies...)};
 }
 
@@ -1780,7 +1780,7 @@ template<typename F,typename Impl=typename F::service_type,typename...Dep> Servi
 /// \tparam the primary service-interface.
 /// \tparam Impl the implementation-type of the service.
 /// \return a Service that will use the provided factory.
-template<typename S,typename Impl=S,typename...Dep> Service<S,Impl> service(Dep...dependencies) {
+template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]]Service<S,Impl> service(Dep...dependencies) {
     return Service<S,Impl>{detail::make_descriptor<S,Impl>(service_factory<Impl>{}, dependencies...)};
 }
 
@@ -1933,7 +1933,7 @@ public:
      * <br>Additionally, you may wrap the handles in a type-safe manner, using ServiceRegistration::wrap(service_registration_handle_t).
      * @return a List of all Services that have been registered.
      */
-    virtual QList<service_registration_handle_t> getRegistrationHandles() const = 0;
+    [[nodiscard]] virtual QList<service_registration_handle_t> getRegistrationHandles() const = 0;
 
     ///
     /// \brief Obtains a handle to a Registration for a name.
@@ -1949,7 +1949,7 @@ public:
     /// \return a handle to a Registration for the supplied name, or `nullptr` if no single Service has been registered with the name.
     /// \sa getRegistration(const QString&) const.
     ///
-    virtual service_registration_handle_t getRegistrationHandle(const QString& name) const = 0;
+    [[nodiscard]] virtual service_registration_handle_t getRegistrationHandle(const QString& name) const = 0;
 
 
 
@@ -1973,7 +1973,7 @@ public:
     /// \brief The number of published services.
     /// \return The number of published services.
     ///
-    virtual unsigned published() const = 0;
+    [[nodiscard]] virtual unsigned published() const = 0;
 
     /// \brief The number of yet unpublished services.
     /// \return the number of services that have been registered but not (yet) published.
