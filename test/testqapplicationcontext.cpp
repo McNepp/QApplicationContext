@@ -768,6 +768,8 @@ private slots:
 
 
     void testPrivateCopyDependency() {
+        context->registerService<BaseService>();
+        context->registerService<BaseService2>();
         auto depReg = context->registerService(service<DependentService>(injectPrivateCopy<BaseService>()), "dependent");
         auto threeReg = context->registerService(service<ServiceWithThreeArgs>(inject<BaseService>(), injectPrivateCopy<DependentService>(), inject<BaseService2>()), "three");
         QVERIFY(context->publish());
@@ -797,34 +799,14 @@ private slots:
         QVERIFY(dynamic_cast<BaseService2*>(dependentSlot->m_dependency));
     }
 
-    void testInvalidPrivateCopyDependency() {
+    void testPrivateCopyDependencyOnUnmangedService() {
         BaseService base;
-        context->registerObject<Interface1>(&base, "base");
-        context->registerService(service<DependentService>(injectPrivateCopy<Interface1>()), "dependent");
+        context->registerObject<Interface1>(&base);
+        context->registerService(service<DependentService>(injectPrivateCopy<BaseService>()));
         QVERIFY(!context->publish());
     }
 
-    void testAutoDependency() {
-        auto reg = context->registerService(service<DependentService>(inject<BaseService>()));
-        QVERIFY(reg);
-        QVERIFY(context->publish());
-        RegistrationSlot<DependentService> service{reg};
-        RegistrationSlot<BaseService> baseSlot{context->getRegistration<BaseService>()};
-        QVERIFY(baseSlot);
-        QCOMPARE(service->m_dependency, baseSlot.last());
-    }
 
-    void testPrefersExplicitOverAutoDependency() {
-        BaseService base;
-        auto reg = context->registerService(service<DependentService>(inject<BaseService>()));
-        QVERIFY(reg);
-        context->registerObject(&base);
-        QVERIFY(context->publish());
-        RegistrationSlot<DependentService> service{reg};
-        RegistrationSlot<BaseService> baseSlot{context->getRegistration<BaseService>()};
-        QCOMPARE(baseSlot.last(), &base);
-        QCOMPARE(service->m_dependency, &base);
-    }
 
 
 

@@ -312,8 +312,7 @@ QApplicationContext defines the dependency-type PRIVATE_COPY for this. Applied t
 The following table sums up the characteristics of the different types of dependencies:
 
 <table><tr><th>&nbsp;</th><th>Normal behaviour</th><th>What if no dependency can be found?</th><th>What if more than one dependency can be found?</th></tr>
-<tr><td>MANDATORY</td><td>Injects one dependency into the dependent service.</td><td>If the dependency-type has an accessible default-constructor, this will be used to register and create an instance of that type.
-<br>If no default-constructor exists, publication of the ApplicationContext will fail.</td>
+<tr><td>MANDATORY</td><td>Injects one dependency into the dependent service.</td><td>Publication of the ApplicationContext will fail.</td>
 <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
 <tr><td>OPTIONAL</td><td>Injects one dependency into the dependent service</td><td>Injects `nullptr` into the dependent service.</td>
 <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
@@ -321,8 +320,7 @@ The following table sums up the characteristics of the different types of depend
 <td>Injects an empty `QList` into the dependent service.</td>
 <td>See 'Normal behaviour'</td></tr>
 <tr><td>PRIVATE_COPY</td><td>Injects a newly created instance of the dependency-type and sets its `QObject::parent()` to the dependent service.</td>
-<td>If the dependency-type has an accessible default-constructor, this will be used to create an instance of that type.<br>
-If no default-constructor exists, publication of the ApplicationContext will fail.</td>
+<td>Publication of the ApplicationContext will fail.</td>
 <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
 </table>
 
@@ -439,18 +437,15 @@ Putting it all together, we use the helper-template `Service` for specifying bot
     
     QApplicationContext* context = new StandardQApplicationContext; 
     
+    context -> registerService<QNetworkAccessManager>();
+    
     context -> registerService(service<PropFetcherAggregator>(injectAllOf<PropFetcher>()), "propFetcherAggration");
     
     /*2*/ context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher>(), "hamburgWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
     
     context -> publish(); 
 
-Two noteworthy things:
-
-1. You may have noticed that the registration of the `QNetworkAccessManager` is no longer there.  
-The reason for this is that the class has an accessible default-constructor. `QApplicationContext` makes sure that whenever a dependency
-for a specific type is resolved and a matching service has not been explicitly registered, a default-instance will be created if possible.
-2. The order of registrations has been switched: now, the dependent service `PropFetcherAggregator` is registered before the services it depends on.
+**Note:** The order of registrations has been switched: now, the dependent service `PropFetcherAggregator` is registered before the services it depends on.
 This was done to demonstrate that, **regardless of the ordering of registrations**, the dependencies will be resolved correctly! 
 Also, there are two type-arguments for the Service now: the first specifies the type of service-interface, the second the implementation-type.
 

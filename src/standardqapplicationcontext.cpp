@@ -345,17 +345,14 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             }
         }
         if(!(depReg && depReg->isManaged())) {
-            if(!d.defaultConstructor) {
-                if(allowPartial) {
-                    qWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
-                    //Unresolvable dependencies may be fixable by registering more services:
-                    return {QVariant{}, Status::fixable};
-                } else {
-                    qCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
-                    return {QVariant{}, Status::fatal};
-                }
+            if(allowPartial) {
+                qWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
+                //Unresolvable dependencies may be fixable by registering more services:
+                return {QVariant{}, Status::fixable};
+            } else {
+                qCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
+                return {QVariant{}, Status::fatal};
             }
-            depReg = new ServiceRegistration{"", service_descriptor{{type}, type, nullptr, d.defaultConstructor}, service_config{}, this};
         }
         QVariantList subDep;
         QObject subTemporaryPrivateParent;
@@ -507,14 +504,13 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
     Status status = Status::ok;
     //Do several rounds and validate those services whose dependencies have already been published.
     //For a service with an empty set of dependencies, this means that it will be validated first.
-    while(!unpublished.empty()) {
-    next_unpublished:
-        if(!reg) {
-            if(unpublished.empty()) {
-                break;
-            }
-            reg = pop_front(unpublished);
+    for(;;) {
+    fetch_next:
+        if(unpublished.empty()) {
+            break;
         }
+        reg = pop_front(unpublished);
+    next_unpublished:
         for(auto& beanRef : getBeanRefs(reg->config())) {
             if(!getRegistrationByName(beanRef)) {
                 if(!allowPartial) {
@@ -522,9 +518,8 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
                     return Status::fatal;
                 }
                 qCWarning(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
-                reg = nullptr;
                 status = Status::fixable;
-                goto next_unpublished;               qCCritical(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
+                goto fetch_next;               qCCritical(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
             }
         }
 
@@ -537,16 +532,6 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
                 reg = foundReg;
                 goto next_unpublished;
             }
-            //If we find a mandatory dependency for which there is a default-constructor, we continue with that:
-            if(!find_by_type(allPublished, d.type) && d.kind == static_cast<int>(Kind::MANDATORY) && d.defaultConstructor) {
-                auto def = registerDescriptor("", service_descriptor{{d.type}, d.type, nullptr, d.defaultConstructor}, service_config{}, nullptr);
-                if(def) {
-                    unpublished.push_front(reg);
-                    reg = def;
-                    qCInfo(loggingCategory()).noquote().nospace() << "Creating default-instance of " << d << " for " << *reg;
-                    goto next_unpublished;
-                }
-            }
         }
         if(!dependencyInfos.empty()) {
             QObject temporaryParent;
@@ -557,8 +542,7 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
                 case Status::fixable:
                     if(allowPartial) {
                         status = Status::fixable;
-                        reg = nullptr;
-                        goto next_unpublished;
+                        goto fetch_next;
                     }
                 case Status::fatal:
                     return Status::fatal;
@@ -567,7 +551,6 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
         }
         allPublished.push_back(reg);
         validated.push_back(reg);
-        reg = nullptr;
     }
     // Copy validated yet-to-be-published services back to unpublished, now in the correct order for publication:
     unpublished.insert(unpublished.begin(), validated.begin(), validated.end());
