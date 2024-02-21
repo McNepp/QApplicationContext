@@ -1098,6 +1098,18 @@ private slots:
 
     }
 
+    void testDependencyWithRequiredNamePublishPartial() {
+        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1");
+        auto reg = context->registerService(service<DependentService>(inject<Interface1>("base2")));
+        QVERIFY(!context->publish(true));
+        auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
+        QVERIFY(context->publish());
+        auto regs = context->getRegistration<Interface1>();
+        RegistrationSlot<Interface1> base2{reg2};
+        RegistrationSlot<DependentService> service{reg};
+        QCOMPARE(service->m_dependency, base2.last());
+
+    }
     void testDependencyWithRequiredRegisteredName() {
         auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1");
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");

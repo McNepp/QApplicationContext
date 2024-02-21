@@ -1967,8 +1967,7 @@ public:
     /// Additionally, the cause of such a failure will be logged with the level QtMsgType::QtCriticalMessage.
     /// if `allowPartial == true`, the function will attempt to publish as many pending services as possible.
     /// Failures that may be fixed by further registrations will be logged with the level QtMsgType::QtWarningMessage.
-    /// \return `true` if there are no fatal errors and all services were published (in case `allowPartial == false`),
-    /// or at least one service was published (in case `allowPartial == true`).
+    /// \return `true` if there are no fatal errors and all services were published.
     ///
     virtual bool publish(bool allowPartial = false) = 0;
 

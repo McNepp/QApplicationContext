@@ -290,7 +290,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
         if(pub->matches(type)) {
             if(d.has_required_name()) {
                 auto byName = getRegistrationByName(d.expression);
-                if(!byName || byName->getObject() != pub->getObject()) {
+                if(!byName || byName != pub) {
                     continue;
                 }
             }
@@ -368,7 +368,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 return {QVariant{}, Status::fatal};
             }
         }
-        if(!depReg) {
+        if(!(depReg && depReg->isManaged())) {
             if(!d.defaultConstructor) {
                 if(allowPartial) {
                     qWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
@@ -529,9 +529,13 @@ bool StandardApplicationContext::publish(bool allowPartial)
     //Do several rounds and publish those services whose dependencies have already been published.
     //For a service with an empty set of dependencies, this means that it will be published first.
     while(!unpublished.empty()) {
-        reg = pop_front(unpublished);
-
         next_unpublished:
+        if(!reg) {
+            if(unpublished.empty()) {
+                break;
+            }
+            reg = pop_front(unpublished);
+        }
         for(auto& beanRef : getBeanRefs(reg->config())) {
             if(!getRegistrationByName(beanRef)) {
                 if(!allowPartial) {
@@ -540,7 +544,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
                 }
                 qCWarning(loggingCategory()).noquote().nospace() << *reg << " is unresolvable. References Object '" << beanRef << "', but no such Object has been registered.";
                 unresolvable.insert(reg);
-                reg = pop_front(unpublished);
+                reg = nullptr;
                 goto next_unpublished;
             }
         }
@@ -579,7 +583,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
                         return false;
                     }
                     unresolvable.insert(reg);
-                    reg = pop_front(unpublished);
+                    reg = nullptr;
                     goto next_unpublished;
                 }
                 dependencies.push_back(result.first);
@@ -602,6 +606,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         //By building the list of published services from scratch, we guarantee that they'll end up in Kind::N-dependencies in the right order:
         allPublished.clear();
         std::copy_if(registrations.begin(), registrations.end(), std::inserter(allPublished, allPublished.begin()), std::mem_fn(&DescriptorRegistration::isPublished));
+        reg = nullptr;
     }
     qsizetype publishedCount = 0;
     QList<QApplicationContextPostProcessor*> postProcessors;
@@ -675,9 +680,6 @@ bool StandardApplicationContext::publish(bool allowPartial)
     if(publishedCount) {
         emit publishedChanged();
         emit pendingPublicationChanged();
-    }
-    if(allowPartial) {
-        return publishedCount != 0;
     }
     return unresolvable.empty();
 }
