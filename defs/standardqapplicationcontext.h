@@ -152,9 +152,6 @@ private:
 
         virtual bool isManaged() const = 0;
 
-        bool matches(const service_descriptor& descriptor, const service_config& config) const {
-            return descriptor.matches(this->descriptor) && this->config() == config;
-        }
 
         virtual const service_config& config() const = 0;
 

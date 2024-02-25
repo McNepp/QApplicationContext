@@ -1348,8 +1348,6 @@ inline bool operator==(const dependency_info& info1, const dependency_info& info
 
 
 struct service_descriptor {
-    using type_set = std::unordered_set<std::type_index>;
-
 
     QObject* create(const QVariantList& dependencies) const {
         return constructor ? constructor(dependencies) : nullptr;
@@ -1359,47 +1357,17 @@ struct service_descriptor {
         return type == impl_type || service_types.find(type) != service_types.end();
     }
 
-    /**
-     * @brief Is this service_descriptor compatible with another one?
-     * <br>For this to be true, all of the following criteria must be true:
-     * <br>The impl_types must be identical.
-     * <br>The set of service_types must either be equal, or
-     * one set of service_types must be a true sub-set of the other.
-     * <br>The dependencies must match.
-     * @param other
-     * @return true if the other descriptor matches this one.
-     */
-    bool matches(const service_descriptor& other) const {
-        if(impl_type != other.impl_type || dependencies != other.dependencies) {
-            return false;
-        }
-        //The straight-forward case: both sets are equal.
-        if(service_types == other.service_types) {
-            return true;
-        }
-        //Otherwise, if the sets have the same size, one cannot be a sub-set of the other:
-        if(service_types.size() == other.service_types.size()) {
-            return false;
-        }
-        const type_set& larger = service_types.size() > other.service_types.size() ? service_types : other.service_types;
-        const type_set& smaller = service_types.size() < other.service_types.size() ? service_types : other.service_types;
-        for(auto& type : smaller) {
-            //If at least one item of the smaller set cannot be found in the larger set
-            if(larger.find(type) == larger.end()) {
-                return false;
-            }
-        }
-        return true;
-    }
 
 
-
-    type_set service_types;
+    std::unordered_set<std::type_index> service_types;
     const std::type_info& impl_type;
     const QMetaObject* meta_object = nullptr;
-    constructor_t constructor = nullptr;
+    constructor_t constructor;
     std::vector<dependency_info> dependencies;
 };
+
+
+
 
 
 

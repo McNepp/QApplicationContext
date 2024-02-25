@@ -12,6 +12,46 @@ namespace mcnepp::qtdi {
 
 namespace detail {
 
+enum class DescriptorMatchKind {
+    NO_MATCH,
+    INTERSECTS,
+    IDENTICAL
+};
+
+/**
+     * @brief Is a service_descriptor compatible with another one?
+     *  -# If the left descriptor has a different impl_type than the right, will return DescriptorMatchKind::NO_MATCH.
+     *  -# If the left descriptor has different dependencies than the right, will return DescriptorMatchKind::NO_MATCH.
+     *  -# If the service_types are equal, will return DescriptorMatchKind::IDENTICAL.
+     *  -# If the left descriptor's service_types are a full sub-set of the other's, or vice versa, will return DescriptorMatchKind::INTERSECTS.
+     *  -# Otherwise, will return DescriptorMatchKind::NO_MATCH.
+     * @param other
+     * @return The kind of match between the two descriptors.
+     */
+DescriptorMatchKind match(const service_descriptor& left, const service_descriptor& right) {
+    if(left.impl_type != right.impl_type || left.dependencies != right.dependencies) {
+        return DescriptorMatchKind::NO_MATCH;
+    }
+    //The straight-forward case: both sets are equal.
+    if(left.service_types == right.service_types) {
+        return DescriptorMatchKind::IDENTICAL;
+    }
+    //Otherwise, if the sets have the same size, one cannot be a sub-set of the other:
+    if(left.service_types.size() == right.service_types.size()) {
+        return DescriptorMatchKind::NO_MATCH;
+    }
+    const auto& larger = left.service_types.size() > right.service_types.size() ? left.service_types : right.service_types;
+    const auto& smaller = left.service_types.size() < right.service_types.size() ? left.service_types : right.service_types;
+    for(auto& type : smaller) {
+        //If at least one item of the smaller set cannot be found in the larger set
+        if(larger.find(type) == larger.end()) {
+            return DescriptorMatchKind::NO_MATCH;
+        }
+    }
+    return DescriptorMatchKind::INTERSECTS;
+}
+
+
 BindingProxy::BindingProxy(QMetaProperty sourceProp, QObject* source, const detail::property_descriptor& setter, QObject* target) : QObject(source),
     m_source(source),
     m_sourceProp(sourceProp),
@@ -754,24 +794,35 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
 
 detail::ServiceRegistration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config)
 {
-    for(auto reg : registrations) {
-        //If a service-registration matches another one, it is only allowed if it has the same name or is anonymous:
-        //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
-        if(reg->isManaged() && reg->matches(descriptor, config)) {
-            //An explicitly different name? Continue!
-            if(!name.isEmpty() && name != reg->registeredName()) {
-                continue;
-            }
-            //Are the descriptors identical? Return the previous registration!
-            if(descriptor == reg->descriptor) {
+    if(!name.isEmpty()) {
+        auto reg = getRegistrationByName(name);
+        //If we have a registration under the same name, we'll return it only if it has the same descriptor and config:
+        if(reg) {
+            //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
+            if(reg->isManaged() && descriptor == reg->descriptor && reg->config() == config) {
                 return reg;
             }
-        } else if(name != reg->registeredName()) {
-            //Different name or anonymous? Continue!
-            continue;
+            //Otherwise, we have a conflicting registration
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << " as '" << name << "'. Has already been registered as " << *reg;
+            return nullptr;
         }
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << " as '" << name << "'. Has already been registered as " << *reg;
-        return nullptr;
+    } else {
+        //For an anonymous registration, we have to loop over all registrations:
+        for(auto reg : registrations) {
+            //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
+            if(reg->isManaged() && reg->config() == config) {
+                switch(detail::match(descriptor, reg->descriptor)) {
+                case detail::DescriptorMatchKind::IDENTICAL:
+                    return reg;
+                case detail::DescriptorMatchKind::INTERSECTS:
+                    //Otherwise, we have a conflicting registration
+                    qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << ". Has already been registered as " << *reg;
+                    return nullptr;
+                default:
+                    continue;
+                }
+            }
+        }
     }
     return registerDescriptor(name, descriptor, config, nullptr);
 }
@@ -783,20 +834,31 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
         return nullptr;
     }
     QString objName = name.isEmpty() ? obj->objectName() : name;
+    if(!objName.isEmpty()) {
+        auto reg = getRegistrationByName(objName);
+        //If we have a registration under the same name, we'll return it only if it's for the same object and it has the same descriptor:
+        if(reg) {
+            if(!reg->isManaged() && reg->getObject() == obj && descriptor == reg->descriptor) {
+                return reg;
+            }
+            //Otherwise, we have a conflicting registration
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Has already been registered as " << *reg;
+            return nullptr;
+        }
+    }
+    //For object-registrations, even if we supply an explicit name, we still have to loop over all registrations,
+    //as we need to check whether the same object has been registered before.
     for(auto reg : registrations) {
         //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
         if(!reg->isManaged() && obj == reg->getObject()) {
-            if(objName.isEmpty() || objName == reg->registeredName()) {
-                if(descriptor == reg->descriptor) {
-                    return reg;
-                }
+            //An identical anonymous registration is allowed:
+            if(descriptor == reg->descriptor && objName.isEmpty()) {
+                return reg;
             }
-        } else
-        if(objName != reg->registeredName()) {
-            continue;
+            //Otherwise, we have a conflicting registration
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Has already been registered as " << *reg;
+            return nullptr;
         }
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object "<< obj <<" as '" << objName << "'. Has already been registered as " << *reg;
-        return nullptr;
     }
 
     return registerDescriptor(objName, descriptor, ObjectRegistration::defaultConfig, obj);
