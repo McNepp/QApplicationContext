@@ -75,7 +75,6 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="#friends">Friends</a> &#124;
@@ -114,11 +113,13 @@ This function will yield <code>true</code> if this is valid <a class="el" href="
 <tr class="separator:a4562640be6a8d1f377411c0ab912c34f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa70f34088d747d139cf12f9e7e02df8f"><td class="memTemplParams" colspan="2">template&lt;typename F &gt; </td></tr>
 <tr class="memitem:aa70f34088d747d139cf12f9e7e02df8f"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f">subscribe</a> (QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
-<tr class="memdesc:aa70f34088d747d139cf12f9e7e02df8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the callable immediately with the current publishedObjects().  <br /></td></tr>
+<tr class="memdesc:aa70f34088d747d139cf12f9e7e02df8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the callable immediately with the current publishedObjects(). <br  />
+<b>Thread-safety:</b> This function may be safely called from any thread.  <br /></td></tr>
 <tr class="separator:aa70f34088d747d139cf12f9e7e02df8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a19a7323c8bad9818df4583f5268c0ebf"><td class="memTemplParams" colspan="2">template&lt;typename T , typename R &gt; </td></tr>
 <tr class="memitem:a19a7323c8bad9818df4583f5268c0ebf"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a19a7323c8bad9818df4583f5268c0ebf">subscribe</a> (T *target, R(T::*setter)(S *), Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
-<tr class="memdesc:a19a7323c8bad9818df4583f5268c0ebf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>objectPublished</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the setter immediately with the current publishedObjects().  <br /></td></tr>
+<tr class="memdesc:a19a7323c8bad9818df4583f5268c0ebf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>objectPublished</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the setter immediately with the current publishedObjects(). <br  />
+<b>Thread-safety:</b> This function may be safely called from any thread.  <br /></td></tr>
 <tr class="separator:a19a7323c8bad9818df4583f5268c0ebf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaac5888c2f09725ca0d8f6fff97852ce"><td class="memItemLeft" align="right" valign="top"><a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aaac5888c2f09725ca0d8f6fff97852ce">unwrap</a> () const</td></tr>
 <tr class="memdesc:aaac5888c2f09725ca0d8f6fff97852ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the wrapped handle to the <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>.  <br /></td></tr>
@@ -126,7 +127,8 @@ This function will yield <code>true</code> if this is valid <a class="el" href="
 <tr class="memitem:afacf8c2137a7b568249532a14f53a33f"><td class="memTemplParams" colspan="2">template&lt;typename D , typename R &gt; </td></tr>
 <tr class="memitem:afacf8c2137a7b568249532a14f53a33f"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#afacf8c2137a7b568249532a14f53a33f">autowire</a> (R(S::*injectionSlot)(D *))</td></tr>
 <tr class="memdesc:afacf8c2137a7b568249532a14f53a33f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects a service with another service from the same <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. Whenever a service of the type <code>&lt;D&gt;</code> is published, it will be injected into every service of type <code>&lt;S&gt;</code>, using the supplied member-function. <br  />
-For each source-type <code>D</code>, you can register at most one autowiring.  <br /></td></tr>
+For each source-type <code>D</code>, you can register at most one autowiring. <br  />
+<b>Thread-safety:</b> This function may only be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
 <tr class="separator:afacf8c2137a7b568249532a14f53a33f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a98e7db034be679d63391761aac500b8d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a98e7db034be679d63391761aac500b8d">isValid</a> () const</td></tr>
 <tr class="memdesc:a98e7db034be679d63391761aac500b8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> represent a valid Registration?  <br /></td></tr>
@@ -206,7 +208,8 @@ template&lt;typename D , typename R &gt; </div>
 </div><div class="memdoc">
 
 <p>Connects a service with another service from the same <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. Whenever a service of the type <code>&lt;D&gt;</code> is published, it will be injected into every service of type <code>&lt;S&gt;</code>, using the supplied member-function. <br  />
-For each source-type <code>D</code>, you can register at most one autowiring. </p>
+For each source-type <code>D</code>, you can register at most one autowiring. <br  />
+<b>Thread-safety:</b> This function may only be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">D</td><td>the type of service that will be injected into Services of type <code>&lt;S&gt;</code>. </td></tr>
@@ -360,7 +363,8 @@ template&lt;typename F &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the callable immediately with the current publishedObjects(). </p>
+<p>Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the callable immediately with the current publishedObjects(). <br  />
+<b>Thread-safety:</b> This function may be safely called from any thread. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">F</td><td>is assumed to be a Callable that accepts an argument of type <code>S*</code>. </td></tr>
@@ -423,7 +427,8 @@ template&lt;typename T , typename R &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Receive all published QObjects in a type-safe way. Connects to the <code>objectPublished</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the setter immediately with the current publishedObjects(). </p>
+<p>Receive all published QObjects in a type-safe way. Connects to the <code>objectPublished</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the setter immediately with the current publishedObjects(). <br  />
+<b>Thread-safety:</b> This function may be safely called from any thread. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">T</td><td>the target of the subscription. Must be derived from QObject. </td></tr>

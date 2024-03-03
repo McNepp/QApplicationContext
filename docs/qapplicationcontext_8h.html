@@ -100,7 +100,7 @@ $(function() {
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">mcnepp::qtdi::Subscription</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">An opaque handle to a detail::Subscription. Instances of this class will be returned by <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">Registration::subscribe()</a>.<br  />
- The only thing you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> is test for validity and <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#a9f1f91cf61304e348c798b219fba7507" title="Cancels this Subscription.">Subscription::cancel()</a>.  <a href="classmcnepp_1_1qtdi_1_1_subscription.html#details">More...</a><br /></td></tr>
+ The only thing you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> is test for validity and <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#a9f1f91cf61304e348c798b219fba7507" title="Cancels this Subscription.  Thread-safety: This function may only be called from the Thread that crea...">Subscription::cancel()</a>.  <a href="classmcnepp_1_1qtdi_1_1_subscription.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">mcnepp::qtdi::Registration&lt; S &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A type-safe wrapper for a detail::Registration. <br  />
@@ -109,7 +109,7 @@ Its most important operation is the type-safe function <code><a class="el" href=
  A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> contains a <em>non-owning pointer</em> to a detail::Registration whose lifetime is bound to the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. The <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> will become invalid after the corresponding <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> has been destructed.  <a href="classmcnepp_1_1qtdi_1_1_registration.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration&lt; S &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a74b64aeda314a8514933e664b18aa654" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a>.  <a href="classmcnepp_1_1qtdi_1_1_service_registration.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a74b64aeda314a8514933e664b18aa654" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a>.  <a href="classmcnepp_1_1qtdi_1_1_service_registration.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">mcnepp::qtdi::ProxyRegistration&lt; S &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> that manages several ServiceRegistrations of the same type. You can do almost everything with a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> that you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a>, except use it as a source for property-bindings using <a class="el" href="qapplicationcontext_8h.html#a61538a5d0087d717ffe0e3f5aeeed900" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. Instances of this class are produced by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a961953e2d50213098e05446b5450427b" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">QApplicationContext::getRegistration()</a>;.  <a href="classmcnepp_1_1qtdi_1_1_proxy_registration.html#details">More...</a><br /></td></tr>
@@ -120,10 +120,10 @@ This template can be used to force the <a class="el" href="classmcnepp_1_1qtdi_1
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">mcnepp::qtdi::Dependency&lt; S, kind, C &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies a dependency of a service. <br  />
-Can by used as a type-argument for <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>. In the standard-case of a mandatory relationship, the use of the <code>kind</code> argument is optional. Suppose you have a service-type <code>Reader</code> that needs a mandatory pointer to a <code>DatabaseAccess</code> in its constructor: class Reader : public QObject { public: explicit Update(DatabaseAccess* dao, QObject* parent = nullptr); };.  <a href="structmcnepp_1_1qtdi_1_1_dependency.html#details">More...</a><br /></td></tr>
+Can by used as a type-argument for <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>. In the standard-case of a mandatory relationship, the use of the <code>kind</code> argument is optional. Suppose you have a service-type <code>Reader</code> that needs a mandatory pointer to a <code>DatabaseAccess</code> in its constructor: class Reader : public QObject { public: explicit Update(DatabaseAccess* dao, QObject* parent = nullptr); };.  <a href="structmcnepp_1_1qtdi_1_1_dependency.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_resolvable.html">mcnepp::qtdi::Resolvable&lt; S &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A placeholder for a resolvable constructor-argument. Use the function <a class="el" href="qapplicationcontext_8h.html#a59d0392bb960299590af56049c779ba8" title="Specifies a constructor-argument that shall be resolved by the QApplicationContext....">resolve(const QString&amp;)</a> to pass a resolvable argument to a service with <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.">QApplicationContext::registerService()</a>.  <a href="structmcnepp_1_1qtdi_1_1_resolvable.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A placeholder for a resolvable constructor-argument. Use the function <a class="el" href="qapplicationcontext_8h.html#a59d0392bb960299590af56049c779ba8" title="Specifies a constructor-argument that shall be resolved by the QApplicationContext....">resolve(const QString&amp;)</a> to pass a resolvable argument to a service with <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a020ed18a23366ea6122bc7346442e6db" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>.  <a href="structmcnepp_1_1qtdi_1_1_resolvable.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">mcnepp::qtdi::service_config</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Configures a service for an ApplicationContext.  <a href="structmcnepp_1_1qtdi_1_1service__config.html#details">More...</a><br /></td></tr>
@@ -160,6 +160,8 @@ Typedefs</h2></td></tr>
 <tr class="separator:a4db8ccaad83e16ecef8cf25908b5d712"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adde781831da99ca1afd54b82f9e6d23d"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#adde781831da99ca1afd54b82f9e6d23d">mcnepp::qtdi::proxy_registration_handle_t</a> = detail::ProxyRegistration *</td></tr>
 <tr class="separator:adde781831da99ca1afd54b82f9e6d23d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3b06c799b9c4a19b40ee9213b2715d41"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a3b06c799b9c4a19b40ee9213b2715d41">mcnepp::qtdi::subscription_handle_t</a> = detail::Subscription *</td></tr>
+<tr class="separator:a3b06c799b9c4a19b40ee9213b2715d41"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
@@ -177,6 +179,11 @@ Functions</h2></td></tr>
 <tr class="memitem:ad99aa9332aee20a47057f62ed4e8f285"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#ad99aa9332aee20a47057f62ed4e8f285">mcnepp::qtdi::matches</a> (<a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a> handle)</td></tr>
 <tr class="memdesc:ad99aa9332aee20a47057f62ed4e8f285"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines whether a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> matches a type.  <br /></td></tr>
 <tr class="separator:ad99aa9332aee20a47057f62ed4e8f285"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af2e530b1413a562c467126d14058b73a"><td class="memItemLeft" align="right" valign="top">template&lt;&gt; </td></tr>
+<tr class="memitem:af2e530b1413a562c467126d14058b73a"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#af2e530b1413a562c467126d14058b73a">mcnepp::qtdi::matches&lt; QObject &gt;</a> (<a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a> handle)</td></tr>
+<tr class="memdesc:af2e530b1413a562c467126d14058b73a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines whether a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> matches QObject. <br  />
+This specizaliation always yields <code>true</code> if the handle is valid, as every service can be dynamically cast to QObject.  <br /></td></tr>
+<tr class="separator:af2e530b1413a562c467126d14058b73a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab271ebdb94c20e9ff86195e615d50798"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#ab271ebdb94c20e9ff86195e615d50798">mcnepp::qtdi::applicationContext</a> (<a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a> handle)</td></tr>
 <tr class="memdesc:ab271ebdb94c20e9ff86195e615d50798"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>.  <br /></td></tr>
 <tr class="separator:ab271ebdb94c20e9ff86195e615d50798"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -214,12 +221,14 @@ template&lt;typename U &gt; </td></tr>
 <tr class="memitem:a61538a5d0087d717ffe0e3f5aeeed900"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T &gt; </td></tr>
 <tr class="memitem:a61538a5d0087d717ffe0e3f5aeeed900"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a61538a5d0087d717ffe0e3f5aeeed900">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt; &amp;source, const char *sourceProperty, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, const char *targetProperty)</td></tr>
 <tr class="memdesc:a61538a5d0087d717ffe0e3f5aeeed900"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> to a property from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
-All changes made to the source-property will be propagated to the target-property. For each target-property, there can be only successful call to <a class="el" href="qapplicationcontext_8h.html#a61538a5d0087d717ffe0e3f5aeeed900" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>.  <br /></td></tr>
+All changes made to the source-property will be propagated to the target-property. For each target-property, there can be only successful call to <a class="el" href="qapplicationcontext_8h.html#a61538a5d0087d717ffe0e3f5aeeed900" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
+<b>Thread-safety:</b> This function may only be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
 <tr class="separator:a61538a5d0087d717ffe0e3f5aeeed900"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab98c46421275c921141ad4a393a406af"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename A , typename R &gt; </td></tr>
 <tr class="memitem:ab98c46421275c921141ad4a393a406af"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#ab98c46421275c921141ad4a393a406af">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S &gt; &amp;source, const char *sourceProperty, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, R(T::*setter)(A))</td></tr>
 <tr class="memdesc:ab98c46421275c921141ad4a393a406af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration. Instances of this class are being produces by ...">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
-All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="qapplicationcontext_8h.html#a61538a5d0087d717ffe0e3f5aeeed900" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>.  <br /></td></tr>
+All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="qapplicationcontext_8h.html#a61538a5d0087d717ffe0e3f5aeeed900" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
+<b>Thread-safety:</b> This function only may be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
 <tr class="separator:ab98c46421275c921141ad4a393a406af"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af3af5d12702a86a3fb75354a6e7e37a8"><td class="memTemplParams" colspan="2">template&lt;typename S1 , typename S2 &gt; </td></tr>
 <tr class="memitem:af3af5d12702a86a3fb75354a6e7e37a8"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#af3af5d12702a86a3fb75354a6e7e37a8">mcnepp::qtdi::operator!=</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;reg1, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S2 &gt; &amp;reg2)</td></tr>
@@ -329,6 +338,22 @@ Clients should have no need to know any details about this type. The only thing 
 </div><div class="memdoc">
 <p>An opaque type that represents the ServiceRegistration on a low level. <br  />
 Clients should have no need to know any details about this type. The only thing you may do directly with a service_registration_handle_t is check for validity using an if-expression. In particular, you should not de-reference a handle, as its API might change without notice! What you can do, however, is use one of the free functions registeredName(service_registration_handle_t handle), registeredProperties(service_registration_handle_t). applicationContext(registration_handle_t handle). </p>
+
+</div>
+</div>
+<a id="a3b06c799b9c4a19b40ee9213b2715d41" name="a3b06c799b9c4a19b40ee9213b2715d41"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3b06c799b9c4a19b40ee9213b2715d41">&#9670;&#160;</a></span>subscription_handle_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="qapplicationcontext_8h.html#a3b06c799b9c4a19b40ee9213b2715d41">mcnepp::qtdi::subscription_handle_t</a> = typedef detail::Subscription*</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>An opaque type that represents the Subscription on a low level. <br  />
+Clients should have no need to know any details about this type. The only thing you may do directly with a registration_handle_t is check for validity using an if-expression. In particular, you should not de-reference a handle, as its API might change without notice! </p>
 
 </div>
 </div>
@@ -536,7 +561,8 @@ template&lt;typename S , typename T &gt; </div>
 </div><div class="memdoc">
 
 <p>Binds a property of one ServiceRegistration to a property from another Registration. <br  />
-All changes made to the source-property will be propagated to the target-property. For each target-property, there can be only successful call to bind(). </p>
+All changes made to the source-property will be propagated to the target-property. For each target-property, there can be only successful call to bind(). <br  />
+<b>Thread-safety:</b> This function may only be called from the QApplicationContext's thread. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">source</td><td>the ServiceRegistration with the source-property to which the target-property shall be bound. </td></tr>
@@ -606,7 +632,8 @@ template&lt;typename S , typename T , typename A , typename R &gt; </div>
 </div><div class="memdoc">
 
 <p>Binds a property of one ServiceRegistration to a Setter from another Registration. <br  />
-All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to bind(). </p>
+All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to bind(). <br  />
+<b>Thread-safety:</b> This function only may be called from the QApplicationContext's thread. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">source</td><td>the ServiceRegistration with the source-property to which the target-property shall be bound. </td></tr>
@@ -1078,6 +1105,44 @@ template&lt;typename T &gt; </div>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><code>true</code> if the handle is valid and matches the type. </dd></dl>
+
+</div>
+</div>
+<a id="af2e530b1413a562c467126d14058b73a" name="af2e530b1413a562c467126d14058b73a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af2e530b1413a562c467126d14058b73a">&#9670;&#160;</a></span>matches&lt; QObject &gt;()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr bool <a class="el" href="qapplicationcontext_8h.html#ad99aa9332aee20a47057f62ed4e8f285">mcnepp::qtdi::matches</a>&lt; QObject &gt; </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a>&#160;</td>
+          <td class="paramname"><em>handle</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Determines whether a handle to a Registration matches QObject. <br  />
+This specizaliation always yields <code>true</code> if the handle is valid, as every service can be dynamically cast to QObject. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>the handle to the Registration. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> if the handle is valid. </dd></dl>
 
 </div>
 </div>

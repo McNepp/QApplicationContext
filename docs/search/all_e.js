@@ -11,5 +11,6 @@ var searchData=
   ['servicewithfactory_8',['serviceWithFactory',['../qapplicationcontext_8h.html#ac2f360ce934d11753005739f0dc52ffc',1,'mcnepp::qtdi']]],
   ['standardapplicationcontext_9',['StandardApplicationContext',['../classmcnepp_1_1qtdi_1_1_standard_application_context.html',1,'mcnepp::qtdi']]],
   ['subscribe_10',['subscribe',['../classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f',1,'mcnepp::qtdi::Registration::subscribe(QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)'],['../classmcnepp_1_1qtdi_1_1_registration.html#a19a7323c8bad9818df4583f5268c0ebf',1,'mcnepp::qtdi::Registration::subscribe(T *target, R(T::*setter)(S *), Qt::ConnectionType connectionType=Qt::AutoConnection)']]],
-  ['subscription_11',['Subscription',['../classmcnepp_1_1qtdi_1_1_subscription.html',1,'mcnepp::qtdi']]]
+  ['subscription_11',['Subscription',['../classmcnepp_1_1qtdi_1_1_subscription.html',1,'mcnepp::qtdi']]],
+  ['subscription_5fhandle_5ft_12',['subscription_handle_t',['../qapplicationcontext_8h.html#a3b06c799b9c4a19b40ee9213b2715d41',1,'mcnepp::qtdi']]]
 ];

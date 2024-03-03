@@ -83,28 +83,29 @@ $(function() {
 <div class="contents">
 
 <p>An opaque handle to a detail::Subscription. Instances of this class will be returned by <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">Registration::subscribe()</a>.<br  />
- The only thing you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> is test for validity and <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#a9f1f91cf61304e348c798b219fba7507" title="Cancels this Subscription.">Subscription::cancel()</a>.  
+ The only thing you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> is test for validity and <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#a9f1f91cf61304e348c798b219fba7507" title="Cancels this Subscription.  Thread-safety: This function may only be called from the Thread that crea...">Subscription::cancel()</a>.  
  <a href="classmcnepp_1_1qtdi_1_1_subscription.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a85ec80d4bb603b3d096de4478fa1b8cd"><td class="memItemLeft" align="right" valign="top"><a id="a85ec80d4bb603b3d096de4478fa1b8cd" name="a85ec80d4bb603b3d096de4478fa1b8cd"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>Subscription</b> (detail::Subscription *subscription=nullptr)</td></tr>
-<tr class="separator:a85ec80d4bb603b3d096de4478fa1b8cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af1e8e3d4a4d383200ab81b7cc1be468b"><td class="memItemLeft" align="right" valign="top"><a id="af1e8e3d4a4d383200ab81b7cc1be468b" name="af1e8e3d4a4d383200ab81b7cc1be468b"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>Subscription</b> (<a class="el" href="qapplicationcontext_8h.html#a3b06c799b9c4a19b40ee9213b2715d41">subscription_handle_t</a> subscription=nullptr)</td></tr>
+<tr class="separator:af1e8e3d4a4d383200ab81b7cc1be468b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afb10e854b3c682aff3c8192d5d703ebd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#afb10e854b3c682aff3c8192d5d703ebd">operator bool</a> () const</td></tr>
 <tr class="memdesc:afb10e854b3c682aff3c8192d5d703ebd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Was this <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> successful? Identical to <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#acceba2ac73751d2bfe14a4113a28050d" title="Was this Subscription successful?">isValid()</a>.  <br /></td></tr>
 <tr class="separator:afb10e854b3c682aff3c8192d5d703ebd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acceba2ac73751d2bfe14a4113a28050d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#acceba2ac73751d2bfe14a4113a28050d">isValid</a> () const</td></tr>
 <tr class="memdesc:acceba2ac73751d2bfe14a4113a28050d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Was this <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> successful?  <br /></td></tr>
 <tr class="separator:acceba2ac73751d2bfe14a4113a28050d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aca7b390ff72a72ea65b011c9162121b4"><td class="memItemLeft" align="right" valign="top">detail::Subscription *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#aca7b390ff72a72ea65b011c9162121b4">unwrap</a> () const</td></tr>
-<tr class="memdesc:aca7b390ff72a72ea65b011c9162121b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the underlying detail::Subscription.  <br /></td></tr>
-<tr class="separator:aca7b390ff72a72ea65b011c9162121b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1e0211a625db4163bc719b3de64a199e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="qapplicationcontext_8h.html#a3b06c799b9c4a19b40ee9213b2715d41">subscription_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#a1e0211a625db4163bc719b3de64a199e">unwrap</a> () const</td></tr>
+<tr class="memdesc:a1e0211a625db4163bc719b3de64a199e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the underlying detail::Subscription.  <br /></td></tr>
+<tr class="separator:a1e0211a625db4163bc719b3de64a199e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9f1f91cf61304e348c798b219fba7507"><td class="memItemLeft" align="right" valign="top"><a id="a9f1f91cf61304e348c798b219fba7507" name="a9f1f91cf61304e348c798b219fba7507"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>cancel</b> ()</td></tr>
-<tr class="memdesc:a9f1f91cf61304e348c798b219fba7507"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cancels this <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a>. <br /></td></tr>
+<tr class="memdesc:a9f1f91cf61304e348c798b219fba7507"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cancels this <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a>. <br  />
+<b>Thread-safety:</b> This function may only be called from the Thread that created this <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a>. (This is not necessarily the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.) <br /></td></tr>
 <tr class="separator:a9f1f91cf61304e348c798b219fba7507"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
@@ -115,7 +116,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>swap</b> (<a class="e
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>An opaque handle to a detail::Subscription. Instances of this class will be returned by <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">Registration::subscribe()</a>.<br  />
- The only thing you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> is test for validity and <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#a9f1f91cf61304e348c798b219fba7507" title="Cancels this Subscription.">Subscription::cancel()</a>. </p>
+ The only thing you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> is test for validity and <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#a9f1f91cf61304e348c798b219fba7507" title="Cancels this Subscription.  Thread-safety: This function may only be called from the Thread that crea...">Subscription::cancel()</a>. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="acceba2ac73751d2bfe14a4113a28050d" name="acceba2ac73751d2bfe14a4113a28050d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acceba2ac73751d2bfe14a4113a28050d">&#9670;&#160;</a></span>isValid()</h2>
@@ -173,8 +174,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>swap</b> (<a class="e
 
 </div>
 </div>
-<a id="aca7b390ff72a72ea65b011c9162121b4" name="aca7b390ff72a72ea65b011c9162121b4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aca7b390ff72a72ea65b011c9162121b4">&#9670;&#160;</a></span>unwrap()</h2>
+<a id="a1e0211a625db4163bc719b3de64a199e" name="a1e0211a625db4163bc719b3de64a199e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1e0211a625db4163bc719b3de64a199e">&#9670;&#160;</a></span>unwrap()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -183,7 +184,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>swap</b> (<a class="e
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">detail::Subscription * mcnepp::qtdi::Subscription::unwrap </td>
+          <td class="memname"><a class="el" href="qapplicationcontext_8h.html#a3b06c799b9c4a19b40ee9213b2715d41">subscription_handle_t</a> mcnepp::qtdi::Subscription::unwrap </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
