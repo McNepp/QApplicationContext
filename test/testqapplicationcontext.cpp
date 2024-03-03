@@ -37,6 +37,7 @@ template<> struct service_factory<BaseService> {
 
 namespace mcnepp::qtditest {
 
+
 template<typename S>  struct vector_converter {
     std::vector<S*> operator()(const QVariant& arg) const {
         auto list = detail::convertQList<S>(arg.value<QObjectList>());
@@ -155,6 +156,7 @@ private slots:
 
     void testNoDependency() {
         auto reg = context->registerService<BaseService>();
+        reg.subscribe(this, [](BaseService* srv) {});
         QVERIFY(reg);
         QVERIFY(!context->getRegistration<BaseService>("anotherName"));
         QCOMPARE(context->getRegistration<BaseService>(reg.registeredName()), reg);
@@ -471,9 +473,25 @@ private slots:
         auto regBase = context->registerObject<Interface1>(&base, "base");
         auto regInterface = context->getRegistration<Interface1>();
         QVERIFY(bind(regTimer, "objectName", regInterface, &Interface1::setFoo));
+        QVERIFY(context->publish());
         QCOMPARE(base.foo(), "timer");
         timer.setObjectName("another timer");
         QCOMPARE(base.foo(), "another timer");
+    }
+
+    void testBindServiceRegistrationToObjectSetter() {
+
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer).as<QObject>();
+        auto regBase = context->registerService<BaseService>("base", make_config({{"foo", "baseFoo"}}));
+        void (QObject::*setter)(const QString&) = &QObject::setObjectName;//We need this temporary variable, as setObjectName has two overloads!
+        bind(regBase, "foo", regTimer, setter);
+        QVERIFY(context->publish());
+        QCOMPARE(timer.objectName(), "baseFoo");
+        RegistrationSlot<BaseService> baseSlot{regBase};
+        baseSlot->setFoo("newFoo");
+        QCOMPARE(timer.objectName(), "newFoo");
     }
 
 
@@ -1099,18 +1117,53 @@ private slots:
 
     }
 
-    void testDependencyWithRequiredNamePublishPartial() {
+    void testPutlishPartialDependencyWithRequiredName() {
         auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1");
+        RegistrationSlot<Interface1> slot1{reg1};
         auto reg = context->registerService(service<DependentService>(inject<Interface1>("base2")));
+        RegistrationSlot<DependentService> srvSlot{reg};
         QVERIFY(!context->publish(true));
+        QVERIFY(slot1);
+        QVERIFY(!srvSlot);
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
         QVERIFY(context->publish());
-        auto regs = context->getRegistration<Interface1>();
-        RegistrationSlot<Interface1> base2{reg2};
-        RegistrationSlot<DependentService> service{reg};
-        QCOMPARE(service->m_dependency, base2.last());
+        RegistrationSlot<Interface1> slot2{reg2};
+        QVERIFY(slot2);
+        QCOMPARE(srvSlot->m_dependency, slot2.last());
 
     }
+
+    void testPublishPartialWithBeanRef() {
+        auto timerReg1 = context->registerService(service<QTimer>(), "timer1");
+        RegistrationSlot<QTimer> timerSlot1{timerReg1};
+
+        auto reg = context->registerService(service<BaseService>(), "srv", make_config({{"timer", "&timer2"}}));
+        RegistrationSlot<BaseService> slot1{reg};
+        QVERIFY(!context->publish(true));
+        QVERIFY(timerSlot1);
+        QVERIFY(!slot1);
+        auto timerReg2 = context->registerService(service<QTimer>(), "timer2");
+        RegistrationSlot<QTimer> timerSlot2{timerReg2};
+        QVERIFY(context->publish());
+        QVERIFY(timerSlot2);
+        QVERIFY(slot1);
+        QCOMPARE(slot1->timer(), timerSlot2.last());
+
+    }
+
+    void testPublishPartialWithConfig() {
+        context->registerObject(config.get());
+        auto reg = context->registerService(service<BaseService>(), "srv", make_config({{"foo", "${foo}"}}));
+        QVERIFY(!context->publish(true));
+        RegistrationSlot<BaseService> slot1{reg};
+        QVERIFY(!slot1);
+        config->setValue("foo", "Hello, world");
+        QVERIFY(context->publish());
+        QVERIFY(slot1);
+        QCOMPARE(slot1->foo(), "Hello, world");
+
+    }
+
     void testDependencyWithRequiredRegisteredName() {
         auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1");
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");

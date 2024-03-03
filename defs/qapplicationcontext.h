@@ -111,10 +111,12 @@ class Registration;
 ///
 /// \brief The Subscription created by Registrations.
 /// This is an internal Q_OBJECT whose sole purpose it is to provide a signal
-/// for publishing the current set of published Services.<br>
-/// Internally, a Subscription comprises two QMetaObject::Connections:
-/// one outgoing to the Client that wants to be informed about a Service's publication,
-/// and one incoming from the associated Registration.
+/// for publishing the current set of published Services.
+/// <br>Subscriptions are passed to Registration::onSubscription(Subscription*),
+/// where one of two things happens:
+/// <br>Either, the signal Subscription::objectPublished(QObject*) is emitted,
+/// or the Registration connects its own incoming signal Registration::objectPublished(QObject*) to
+/// the Subscription's outgoing signal.
 ///
 class Subscription : public QObject {
     Q_OBJECT
@@ -125,41 +127,40 @@ class Subscription : public QObject {
 
 
 public:
-    virtual void cancel() {
-        QObject::disconnect(out_connection);
-        QObject::disconnect(in_connection);
-    }
+    ///
+    /// \brief Severs all Connections that this Subscription has made.
+    ///
+    virtual void cancel() = 0;
 
-    [[nodiscard]] Registration* registration() const {
-        return m_registration;
-    }
+    ///
+    /// \brief Connects to a Registration.
+    /// <br>An implementation should invoke connect(Registration*, Subscription*, Qt::ConnectionType) and
+    /// store the QMetaObject::Connection in a field. It should be disconnected in cancel().
+    /// \param source the Registration whose signals shall be propagated.
+    /// \param target the Subscription that shall re-emit the signal Subscription::objectPublished.
+    ///
+    virtual void connectTo(Registration* source) = 0;
 
+    ///
+    /// \brief Convenience-function that connects the incoming signal of a Registration with the outgoing signal of a Subscription.
+    /// \param source
+    /// \param target
+    /// \param connectionType
+    /// \return the Connection.
+    ///
+    static QMetaObject::Connection connect(Registration* source, Subscription* target, Qt::ConnectionType connectionType = Qt::AutoConnection);
 
 protected:
-    Subscription(Registration* registration, QObject* targetContext, Qt::ConnectionType connectionType);
+    explicit Subscription(QObject* parent = nullptr) : QObject(parent) {
 
-
-    virtual void notify(QObject*) = 0;
-
-    /**
-     * @brief Subscribes to this Subscription.
-     * <br>This function will retrieve the Subscription::registration() and invoke onSubscription(Subscription*)
-     * on it.
-     * @param subscription
-     */
-    void subscribe();
+    }
 
 signals:
 
     void objectPublished(QObject*);
-
-private:
-
-
-    QMetaObject::Connection out_connection;
-    QMetaObject::Connection in_connection;
-    Registration* const m_registration;
 };
+
+
 
 template<typename S> constexpr auto getMetaObject(S*) -> decltype(&S::staticMetaObject) {
     return &S::staticMetaObject;
@@ -190,8 +191,39 @@ inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
     return out;
 }
 
+template<typename S> struct callable_adapter {
 
+    template<typename F> static auto adapt(F callable) {
+        return [callable](QObject* obj) {
+            if(S* ptr = dynamic_cast<S*>(obj)) {
+                callable(ptr);
+            }
+        };
+    }
 
+    template<typename A,typename R> static q_setter_t adaptSetter(R (S::*setter)(A)) {
+        using arg_type = std::remove_cv_t<std::remove_reference_t<A>>;
+        return [setter](QObject* obj,QVariant arg) {
+            if(S* ptr = dynamic_cast<S*>(obj)) {
+                (ptr->*setter)(arg.value<arg_type>());
+            }
+        };
+    }
+};
+
+template<> struct callable_adapter<QObject> {
+
+    template<typename F> static constexpr auto adapt(F callable) {
+        return callable;
+    }
+
+    template<typename A,typename R> static q_setter_t adaptSetter(R (QObject::*setter)(A)) {
+        using arg_type = std::remove_cv_t<std::remove_reference_t<A>>;
+        return [setter](QObject* obj,QVariant arg) {
+            (obj->*setter)(arg.value<arg_type>());
+        };
+    }
+};
 
 
 
@@ -235,7 +267,18 @@ public:
         return out;
     }
 
-
+    /// Subscribes to a Subscription.
+    /// <br>Invokes onSubscription(Subscription* subscription).
+    /// \brief subscribe
+    /// \param subscription
+    /// \return the subscription.
+    ///
+    Subscription* subscribe(Subscription* subscription) {
+        if(subscription) {
+            onSubscription(subscription);
+        }
+        return subscription;
+    }
 
 signals:
 
@@ -243,9 +286,6 @@ signals:
     /// \brief Signals when a service has been published.
     ///
     void objectPublished(QObject*);
-
-
-
 
 protected:
 
@@ -266,44 +306,59 @@ protected:
 
 
     /**
-     * @brief A Subscription has been connected to this Registration.
-
+     * @brief A Subscription shall be connected to this Registration.
+     * <br>The Registration might immediately emit the signal Subscription::objectPublished(QObject*).
+     * <br>Alternatively or in addition to that, it might connect itself to the Subscription using Subscription::connectTo(Registration*).
      * @param subscription the Subscribtion that was connected.
      */
     virtual void onSubscription(Subscription* subscription) = 0;
 
+     /**
+     * @brief Creates a Subscription for auto-wiring another Service into this.
+     * <br>Will create a Subscription and also subscribe to it.
+     * @param type the type of service to be injected into this.
+     * @param injector the function to invoke for injecting the other service into this.
+     * @param source the Registration for the source-service.
+     * @return the Subscription, or `nullptr` if it could not be created.
+     */
     virtual Subscription* createAutowiring(const std::type_info& type, q_inject_t injector, Registration* source) = 0;
 
-    /**
-     * @brief Subscribes to a Subscription.
-     * <br>This function will retrieve the Subscription::registration() and invoke onSubscription(Subscription*)
-     * on it.
-     * @param subscription
-     * @return the subscription (for convenience)
-     */
-    static Subscription* subscribe(Subscription* subscription);
 };
 
-
-inline void Subscription::subscribe() {
-    registration()->onSubscription(this);
-}
-
-inline Subscription* Registration::subscribe(Subscription* subscription) {
-    if(subscription) {
-        subscription->subscribe();
+inline QMetaObject::Connection Subscription::connect(Registration* source, Subscription* target, Qt::ConnectionType connectionType) {
+    if(source && target) {
+        return QObject::connect(source, &Registration::objectPublished, target, &Subscription::objectPublished, connectionType);
     }
-    return subscription;
+    return QMetaObject::Connection{};
 }
 
 
-inline Subscription::Subscription(Registration* registration, QObject* targetContext, Qt::ConnectionType connectionType) :
-    QObject(targetContext),
-    m_registration(registration)
-{
-    in_connection = QObject::connect(registration, &Registration::objectPublished, this, &Subscription::objectPublished);
-    out_connection = QObject::connect(this, &Subscription::objectPublished, targetContext, [this](QObject* obj) { notify(obj); }, connectionType);
-}
+
+///
+/// \brief A basic implementation of the detail::Subscription.
+///
+class CallableSubscription : public detail::Subscription {
+public:
+
+    template<typename F> CallableSubscription(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) : Subscription(context)
+    {
+        out_connection = QObject::connect(this, &Subscription::objectPublished, context, callable);
+    }
+
+    void cancel() override {
+        QObject::disconnect(out_connection);
+        QObject::disconnect(in_connection);
+    }
+
+    void connectTo(Registration* source) override {
+        in_connection = connect(source, this);
+    }
+
+private:
+    QMetaObject::Connection out_connection;
+    QMetaObject::Connection in_connection;
+};
+
 
 
 class ServiceRegistration : public Registration {
@@ -353,7 +408,15 @@ protected:
     ///
     virtual bool registerAlias(const QString& alias) = 0;
 
-   virtual detail::Subscription* createBindingTo(const char* sourcePropertyName, Registration* target, const detail::property_descriptor& targetProperty) = 0;
+    ///
+    /// \brief Creates a binding from a property of this service to a property of a target-service.
+    /// <br>The returned Subscription will have been subscribed to already!
+    /// \param sourcePropertyName
+    /// \param target
+    /// \param targetProperty
+    /// \return the Subscription for binding this service to a target-service, or `nullptr` if something went wrong.
+    ///
+    virtual detail::Subscription* createBindingTo(const char* sourcePropertyName, Registration* target, const detail::property_descriptor& targetProperty) = 0;
 
 };
 
@@ -637,9 +700,8 @@ public:
             return Subscription{};
         }
 
-
-        auto subscription = new CallableSubscription<F>{unwrap(), callable, context, connectionType};
-        return Subscription{detail::Registration::subscribe(subscription)};
+        auto subscription = new detail::CallableSubscription{context, detail::callable_adapter<S>::adapt(callable), connectionType};
+        return Subscription{unwrap()->subscribe(subscription)};
       }
 
     /// \brief Receive all published QObjects in a type-safe way.
@@ -658,8 +720,9 @@ public:
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
             return Subscription{};
         }
-        auto subscription = new SetterSubscription<T,R>{unwrap(), target, setter, connectionType};
-        return Subscription{detail::Registration::subscribe(subscription)};
+        auto callable = std::bind(std::mem_fn(setter), target, std::placeholders::_1);
+        auto subscription = new detail::CallableSubscription{target, detail::callable_adapter<S>::adapt(callable), connectionType};
+        return Subscription{unwrap()->subscribe(subscription)};
      }
 
 
@@ -719,45 +782,6 @@ protected:
 
     }
 private:
-
-    template<typename F> class CallableSubscription : public detail::Subscription {
-        friend class Registration;
-
-        explicit CallableSubscription(registration_handle_t registration, F callable, QObject* context, Qt::ConnectionType connectionType) : Subscription(registration, context, connectionType),
-            m_callable(callable) {
-
-        }
-
-        virtual void notify(QObject* obj) {
-            if(S* srv = dynamic_cast<S*>(obj)) {
-                m_callable(srv);
-            }
-        }
-        F m_callable;
-    };
-
-
-
-
-    template<typename T,typename R> class SetterSubscription : public detail::Subscription {
-        friend class Registration;
-
-        SetterSubscription(registration_handle_t registration, T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType) : Subscription(registration, target, connectionType),
-            m_setter(setter),
-            m_target(target){
-        }
-
-        virtual void notify(QObject* obj) override {
-            if(S* ptr = dynamic_cast<S*>(obj)) {
-               (m_target->*m_setter)(ptr);
-            }
-        }
-
-        T* const m_target;
-        R (T::*m_setter)(S*);
-    };
-
-
     QPointer<detail::Registration> registrationHolder;
 };
 
@@ -859,7 +883,7 @@ private:
             return Subscription{};
         }
         auto subscription = unwrap() -> createBindingTo(sourceProperty, target, descriptor);
-        return Subscription{detail::Registration::subscribe(subscription)};
+        return Subscription{subscription};
      }
 
 };
@@ -967,12 +991,7 @@ template<typename S,typename T,typename A,typename R> inline Subscription bind(c
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
-    detail::q_setter_t theSetter = [setter](QObject* target,QVariant arg) {
-        if(T* srv = dynamic_cast<T*>(target)) {
-            (srv->*setter)(arg.value<std::remove_cv_t<std::remove_reference_t<A>>>());
-        }
-    };
-    return source.bind(sourceProperty, target.unwrap(), {"", theSetter });
+    return source.bind(sourceProperty, target.unwrap(), {"", detail::callable_adapter<T>::adaptSetter(setter)});
 }
 
 
@@ -2104,7 +2123,7 @@ template<typename S> template<typename D,typename R> Subscription Registration<S
         }
     };
     auto subscription = unwrap()->createAutowiring(typeid(D), injector, applicationContext()->template getRegistration<D>().unwrap());
-    return Subscription{detail::Registration::subscribe(subscription)};
+    return Subscription{subscription};
 }
 
 
