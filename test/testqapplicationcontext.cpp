@@ -161,10 +161,27 @@ private slots:
         QVERIFY(reg.matches<BaseService>());
         QVERIFY(reg.as<BaseService>());
         QVERIFY(!reg.as<BaseService2>());
+        auto registrations = context->getRegistrations();
+        QCOMPARE(registrations.size(), 1);
+        QVERIFY(registrations[0]);
+        QVERIFY(registrations[0].as<BaseService>());
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> slot{reg};
         QVERIFY(slot);
     }
+
+    void testQObjectRegistration() {
+        auto reg = context->registerService<BaseService>();
+        QVERIFY(reg);
+        auto qReg = context->getRegistration(reg.registeredName());
+        QCOMPARE(qReg, reg);
+        QVERIFY(qReg.matches<BaseService>());
+        QVERIFY(qReg.matches<QObject>());
+        QVERIFY(context->publish());
+        RegistrationSlot<QObject> slot{qReg};
+        QVERIFY(slot);
+    }
+
 
     void testWithProperty() {
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", 4711}}));
@@ -1430,7 +1447,7 @@ private slots:
 
         QCOMPARE(publishedInOrder.size(), 8);
 
-        auto serviceHandles = context->getRegistrationHandles();
+        auto serviceHandles = context->getRegistrations();
         QCOMPARE(serviceHandles.size(), 8);
 
         //1. BaseService must be initialized before BaseService2 (because the order of registration shall be kept, barring other restrictions).
