@@ -733,7 +733,7 @@ Additionally, it should provide a type-declaration `service_type`:
       };
     }
 
-Now, when registering our service, we must supply an instance of the `propfetcher_factory`. We do this by using the function mcnepp::qtdi::serviceWithFactory() instead of `Service`'s constructor:
+Now, when registering our service, we must supply an instance of the `propfetcher_factory`. We do this by using the function mcnepp::qtdi::serviceWithFactory() instead of mcnepp::qtdi::service():
 
     context -> registerService(serviceWithFactory(propfetcher_factory{}, injectAll<PropFetcher>()));
 
@@ -820,6 +820,34 @@ The following table shows how this argument affects the outcome of the function:
   - non-existing names of Q_PROPERTYs.
   - syntactically erronous config-keys (such as `"$interval}"`).
 - Such "fatal errors" that occur while publishing a service will be logged with the level QtMsgType::QtCriticalMessage.
+
+## Multi-threading
+
+Since the class mcnepp::qtdi::QApplicationContext is derived from QObject, each ApplicationContext has a *thread-affinity* to the thread that created it.
+
+As a consequence, there are some restrictions regarding the threads from which some of the ApplicationContext's functions may be invoked.
+
+The main thing to keep in mind is this: **An ApplicationContext may only be modified and published in the ApplicationContext's thread.**
+
+However, any thread may safely obtain a mcnepp::qtdi::ServiceRegistration or a mcnepp::qtdi::ProxyRegistration and subscribe to its publication-signal. The signal will be delivered
+using the target-thread's event-queue.
+
+The following table sums this up:
+
+|Function|Allowed threads|Remarks|
+|---|---|---|
+|mcnepp::qtdi::QApplicationContext::getRegistration(const QString&) const|any| |
+|mcnepp::qtdi::QApplicationContext::getRegistration() const|any| |
+|mcnepp::qtdi::QApplicationContext::getRegistrations() const|any| |
+|mcnepp::qtdi::QApplicationContext::published() const|any| |
+|mcnepp::qtdi::QApplicationContext::pendingPublication() const|any| |
+|mcnepp::qtdi::Registration::subscribe()|any|the signal will be delivered to the target-thread using its event-queue.|
+|mcnepp::qtdi::QApplicationContext::registerService()|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return an invalid ServiceRegistration.|
+|mcnepp::qtdi::QApplicationContext::registerObject()|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return an invalid ServiceRegistration.|
+|mcnepp::qtdi::ServiceRegistration::registerAlias(const QString&)|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return `false`.|
+|mcnepp::qtdi::Registration::autowire()|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return an invalid Subscription.|
+|mcnepp::qtdi::bind()|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return an invalid Subscription.|
+|mcnepp::qtdi::QApplicationContext::publish(bool)|only the ApplicationContext's|All published services will live in the ApplicationContext's thread.|
 
 
 

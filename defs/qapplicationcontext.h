@@ -17,6 +17,53 @@ namespace mcnepp::qtdi {
 
 class QApplicationContext;
 
+namespace detail {
+    class Registration;
+    class ServiceRegistration;
+    class ProxyRegistration;
+    class Subscription;
+}
+
+///
+/// An opaque type that represents the Registration on a low level.
+/// <br>Clients should have no need to know any details about this type.
+/// The only thing you may do directly with a registration_handle_t is check for validity using an if-expression.
+/// In particular, you should not de-reference a handle, as its API might change without notice!
+/// What you can do, however, is use one of the free functions matches(registration_handle_t handle),
+/// applicationContext(registration_handle_t handle).
+///
+using registration_handle_t = detail::Registration*;
+
+
+///
+/// An opaque type that represents the ServiceRegistration on a low level.
+/// <br>Clients should have no need to know any details about this type.
+/// The only thing you may do directly with a service_registration_handle_t is check for validity using an if-expression.
+/// In particular, you should not de-reference a handle, as its API might change without notice!
+/// What you can do, however, is use one of the free functions registeredName(service_registration_handle_t handle),
+/// registeredProperties(service_registration_handle_t).
+/// applicationContext(registration_handle_t handle).
+///
+using service_registration_handle_t = detail::ServiceRegistration*;
+
+///
+/// An opaque type that represents the ProxyRegistration on a low level.
+/// <br>Clients should have no need to know any details about this type.
+/// The only thing you may do directly with a proxy_registration_handle_t is check for validity using an if-expression.
+/// In particular, you should not de-reference a handle, as its API might change without notice!
+/// What you can do, however, is use the free function registeredServices(proxy_registration_handle_t handle).
+/// applicationContext(registration_handle_t handle).
+///
+using proxy_registration_handle_t = detail::ProxyRegistration*;
+
+///
+/// An opaque type that represents the Subscription on a low level.
+/// <br>Clients should have no need to know any details about this type.
+/// The only thing you may do directly with a registration_handle_t is check for validity using an if-expression.
+/// In particular, you should not de-reference a handle, as its API might change without notice!
+///
+using subscription_handle_t = detail::Subscription*;
+
 
 /**
 * \brief Specifies the kind of a service-dependency.
@@ -63,7 +110,6 @@ template<typename S> class Registration;
 
 template<typename S> class ServiceRegistration;
 
-class Subscription;
 
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 
@@ -106,15 +152,16 @@ template<typename S> struct default_argument_converter<S,Kind::N> {
 
 
 
-class Registration;
 
 ///
 /// \brief The Subscription created by Registrations.
 /// This is an internal Q_OBJECT whose sole purpose it is to provide a signal
-/// for publishing the current set of published Services.<br>
-/// Internally, a Subscription comprises two QMetaObject::Connections:
-/// one outgoing to the Client that wants to be informed about a Service's publication,
-/// and one incoming from the associated Registration.
+/// for publishing the current set of published Services.
+/// <br>Subscriptions are passed to Registration::onSubscription(subscription_handle_t),
+/// where one of two things happens:
+/// <br>Either, the signal Subscription::objectPublished(QObject*) is emitted,
+/// or the Registration connects its own incoming signal Registration::objectPublished(QObject*) to
+/// the Subscription's outgoing signal.
 ///
 class Subscription : public QObject {
     Q_OBJECT
@@ -125,41 +172,40 @@ class Subscription : public QObject {
 
 
 public:
-    virtual void cancel() {
-        QObject::disconnect(out_connection);
-        QObject::disconnect(in_connection);
-    }
+    ///
+    /// \brief Severs all Connections that this Subscription has made.
+    ///
+    virtual void cancel() = 0;
 
-    [[nodiscard]] Registration* registration() const {
-        return m_registration;
-    }
+    ///
+    /// \brief Connects to a Registration.
+    /// <br>An implementation should invoke connect(registration_handle_t, subscription_handle_t, Qt::ConnectionType) and
+    /// store the QMetaObject::Connection in a field. It should be disconnected in cancel().
+    /// \param source the Registration whose signals shall be propagated.
+    /// \param target the Subscription that shall re-emit the signal Subscription::objectPublished.
+    ///
+    virtual void connectTo(registration_handle_t source) = 0;
 
+    ///
+    /// \brief Convenience-function that connects the incoming signal of a Registration with the outgoing signal of a Subscription.
+    /// \param source
+    /// \param target
+    /// \param connectionType
+    /// \return the Connection.
+    ///
+    static QMetaObject::Connection connect(registration_handle_t source, subscription_handle_t target, Qt::ConnectionType connectionType = Qt::AutoConnection);
 
 protected:
-    Subscription(Registration* registration, QObject* targetContext, Qt::ConnectionType connectionType);
+    explicit Subscription(QObject* parent = nullptr) : QObject(parent) {
 
-
-    virtual void notify(QObject*) = 0;
-
-    /**
-     * @brief Subscribes to this Subscription.
-     * <br>This function will retrieve the Subscription::registration() and invoke onSubscription(Subscription*)
-     * on it.
-     * @param subscription
-     */
-    void subscribe();
+    }
 
 signals:
 
     void objectPublished(QObject*);
-
-private:
-
-
-    QMetaObject::Connection out_connection;
-    QMetaObject::Connection in_connection;
-    Registration* const m_registration;
 };
+
+
 
 template<typename S> constexpr auto getMetaObject(S*) -> decltype(&S::staticMetaObject) {
     return &S::staticMetaObject;
@@ -190,8 +236,39 @@ inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
     return out;
 }
 
+template<typename S> struct callable_adapter {
 
+    template<typename F> static auto adapt(F callable) {
+        return [callable](QObject* obj) {
+            if(S* ptr = dynamic_cast<S*>(obj)) {
+                callable(ptr);
+            }
+        };
+    }
 
+    template<typename A,typename R> static q_setter_t adaptSetter(R (S::*setter)(A)) {
+        using arg_type = std::remove_cv_t<std::remove_reference_t<A>>;
+        return [setter](QObject* obj,QVariant arg) {
+            if(S* ptr = dynamic_cast<S*>(obj)) {
+                (ptr->*setter)(arg.value<arg_type>());
+            }
+        };
+    }
+};
+
+template<> struct callable_adapter<QObject> {
+
+    template<typename F> static constexpr auto adapt(F callable) {
+        return callable;
+    }
+
+    template<typename A,typename R> static q_setter_t adaptSetter(R (QObject::*setter)(A)) {
+        using arg_type = std::remove_cv_t<std::remove_reference_t<A>>;
+        return [setter](QObject* obj,QVariant arg) {
+            (obj->*setter)(arg.value<arg_type>());
+        };
+    }
+};
 
 
 
@@ -235,7 +312,18 @@ public:
         return out;
     }
 
-
+    /// Subscribes to a Subscription.
+    /// <br>Invokes onSubscription(subscription_handle_t subscription).
+    /// \brief subscribe
+    /// \param subscription
+    /// \return the subscription.
+    ///
+    subscription_handle_t subscribe(subscription_handle_t subscription) {
+        if(subscription) {
+            onSubscription(subscription);
+        }
+        return subscription;
+    }
 
 signals:
 
@@ -243,9 +331,6 @@ signals:
     /// \brief Signals when a service has been published.
     ///
     void objectPublished(QObject*);
-
-
-
 
 protected:
 
@@ -266,49 +351,63 @@ protected:
 
 
     /**
-     * @brief A Subscription has been connected to this Registration.
-
+     * @brief A Subscription shall be connected to this Registration.
+     * <br>The Registration might immediately emit the signal Subscription::objectPublished(QObject*).
+     * <br>Alternatively or in addition to that, it might connect itself to the Subscription using Subscription::connectTo(registration_handle_t).
      * @param subscription the Subscribtion that was connected.
      */
-    virtual void onSubscription(Subscription* subscription) = 0;
+    virtual void onSubscription(subscription_handle_t subscription) = 0;
 
-    virtual Subscription* createAutowiring(const std::type_info& type, q_inject_t injector, Registration* source) = 0;
-
-    /**
-     * @brief Subscribes to a Subscription.
-     * <br>This function will retrieve the Subscription::registration() and invoke onSubscription(Subscription*)
-     * on it.
-     * @param subscription
-     * @return the subscription (for convenience)
+     /**
+     * @brief Creates a Subscription for auto-wiring another Service into this.
+     * <br>Will create a Subscription and also subscribe to it.
+     * @param type the type of service to be injected into this.
+     * @param injector the function to invoke for injecting the other service into this.
+     * @param source the Registration for the source-service.
+     * @return the Subscription, or `nullptr` if it could not be created.
      */
-    static Subscription* subscribe(Subscription* subscription);
+    virtual subscription_handle_t createAutowiring(const std::type_info& type, q_inject_t injector, registration_handle_t source) = 0;
+
 };
 
-
-inline void Subscription::subscribe() {
-    registration()->onSubscription(this);
-}
-
-inline Subscription* Registration::subscribe(Subscription* subscription) {
-    if(subscription) {
-        subscription->subscribe();
+inline QMetaObject::Connection Subscription::connect(registration_handle_t source, subscription_handle_t target, Qt::ConnectionType connectionType) {
+    if(source && target) {
+        return QObject::connect(source, &Registration::objectPublished, target, &Subscription::objectPublished, connectionType);
     }
-    return subscription;
+    return QMetaObject::Connection{};
 }
 
 
-inline Subscription::Subscription(Registration* registration, QObject* targetContext, Qt::ConnectionType connectionType) :
-    QObject(targetContext),
-    m_registration(registration)
-{
-    in_connection = QObject::connect(registration, &Registration::objectPublished, this, &Subscription::objectPublished);
-    out_connection = QObject::connect(this, &Subscription::objectPublished, targetContext, [this](QObject* obj) { notify(obj); }, connectionType);
-}
+
+///
+/// \brief A basic implementation of the detail::Subscription.
+///
+class CallableSubscription : public detail::Subscription {
+public:
+
+    template<typename F> CallableSubscription(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) : Subscription(context)
+    {
+        out_connection = QObject::connect(this, &Subscription::objectPublished, context, callable);
+    }
+
+    void cancel() override {
+        QObject::disconnect(out_connection);
+        QObject::disconnect(in_connection);
+    }
+
+    void connectTo(registration_handle_t source) override {
+        in_connection = connect(source, this);
+    }
+
+private:
+    QMetaObject::Connection out_connection;
+    QMetaObject::Connection in_connection;
+};
+
 
 
 class ServiceRegistration : public Registration {
     Q_OBJECT
-
 
     template<typename S> friend class mcnepp::qtdi::ServiceRegistration;
 
@@ -354,7 +453,15 @@ protected:
     ///
     virtual bool registerAlias(const QString& alias) = 0;
 
-   virtual detail::Subscription* createBindingTo(const char* sourcePropertyName, Registration* target, const detail::property_descriptor& targetProperty) = 0;
+    ///
+    /// \brief Creates a binding from a property of this service to a property of a target-service.
+    /// <br>The returned Subscription will have been subscribed to already!
+    /// \param sourcePropertyName
+    /// \param target
+    /// \param targetProperty
+    /// \return the Subscription for binding this service to a target-service, or `nullptr` if something went wrong.
+    ///
+    virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) = 0;
 
 };
 
@@ -370,7 +477,7 @@ public:
      * Should you register more Services that match this service-type, you may need to invoke this method again.
      * @return the ServiceRegistrations that this proxy currently knows of.
      */
-    [[nodiscard]] virtual QList<ServiceRegistration*> registeredServices() const = 0;
+    [[nodiscard]] virtual QList<service_registration_handle_t> registeredServices() const = 0;
 
 
 protected:
@@ -386,15 +493,7 @@ protected:
 
 }
 
-///
-/// An opaque type that represents the Registration on a low level.
-/// <br>Clients should have no need to know any details about this type.
-/// The only thing you may do directly with a registration_handle_t is check for validity using an if-expression.
-/// In particular, you should not de-reference a handle, as its API might change without notice!
-/// What you can do, however, is use one of the free functions matches(registration_handle_t handle),
-/// applicationContext(registration_handle_t handle).
-///
-using registration_handle_t = detail::Registration*;
+
 
 ///
 /// \brief Determines whether a handle to a Registration matches a type.
@@ -407,6 +506,18 @@ template<typename T> [[nodiscard]] inline bool matches(registration_handle_t han
 }
 
 ///
+/// \brief Determines whether a handle to a Registration matches QObject.
+/// <br>This specizaliation always yields `true` if the handle is valid, as every
+/// service can be dynamically cast to QObject.
+/// \param handle the handle to the Registration.
+/// \return `true` if the handle is valid.
+///
+template<> [[nodiscard]] constexpr bool matches<QObject>(registration_handle_t handle) {
+    return handle;
+}
+
+
+///
 /// \brief Obtains the QApplicationContext from a handle to a Registration.
 /// \param handle the handle to the Registration.
 /// \return the QApplicationContext if the handle is valid, `nullptr` otherwise.
@@ -416,16 +527,6 @@ template<typename T> [[nodiscard]] inline bool matches(registration_handle_t han
 }
 
 
-///
-/// An opaque type that represents the ServiceRegistration on a low level.
-/// <br>Clients should have no need to know any details about this type.
-/// The only thing you may do directly with a service_registration_handle_t is check for validity using an if-expression.
-/// In particular, you should not de-reference a handle, as its API might change without notice!
-/// What you can do, however, is use one of the free functions registeredName(service_registration_handle_t handle),
-/// registeredProperties(service_registration_handle_t).
-/// applicationContext(registration_handle_t handle).
-///
-using service_registration_handle_t = detail::ServiceRegistration*;
 
 /**
  * @brief Narrows a handle to a registration to a handle to a ServiceRegistration.
@@ -439,15 +540,6 @@ using service_registration_handle_t = detail::ServiceRegistration*;
     return dynamic_cast<service_registration_handle_t>(handle);
 }
 
-///
-/// An opaque type that represents the ProxyRegistration on a low level.
-/// <br>Clients should have no need to know any details about this type.
-/// The only thing you may do directly with a proxy_registration_handle_t is check for validity using an if-expression.
-/// In particular, you should not de-reference a handle, as its API might change without notice!
-/// What you can do, however, is use the free function registeredServices(proxy_registration_handle_t handle).
-/// applicationContext(registration_handle_t handle).
-///
-using proxy_registration_handle_t = detail::ProxyRegistration*;
 
 /**
  * @brief Narrows a handle to a registration to a handle to a ProxyRegistration.
@@ -499,7 +591,7 @@ using proxy_registration_handle_t = detail::ProxyRegistration*;
 class Subscription final {
 public:
 
-     explicit Subscription(detail::Subscription* subscription = nullptr) :
+     explicit Subscription(subscription_handle_t subscription = nullptr) :
         m_subscription(subscription) {
 
     }
@@ -525,12 +617,14 @@ public:
      * @brief Yields the underlying detail::Subscription.
      * @return the underlying detail::Subscription.
      */
-    [[nodiscard]] detail::Subscription* unwrap() const {
+    [[nodiscard]] subscription_handle_t unwrap() const {
         return m_subscription;
     }
 
     /**
      * @brief Cancels this Subscription.
+     * <br>**Thread-safety:** This function may only be called from the Thread that created this Subscription.
+     * (This is not necessarily the QApplicationContext's thread.)
      */
     void cancel() {
         if(m_subscription) {
@@ -614,6 +708,7 @@ public:
     /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
     /// If the ApplicationContext has already been published, this method
     /// will invoke the callable immediately with the current publishedObjects().
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \tparam F is assumed to be a Callable that accepts an argument of type `S*`.
     /// \param context the target-context.
     /// \param callable the piece of code to execute.
@@ -626,15 +721,15 @@ public:
             return Subscription{};
         }
 
-
-        auto subscription = new CallableSubscription<F>{unwrap(), callable, context, connectionType};
-        return Subscription{detail::Registration::subscribe(subscription)};
+        auto subscription = new detail::CallableSubscription{context, detail::callable_adapter<S>::adapt(callable), connectionType};
+        return Subscription{unwrap()->subscribe(subscription)};
       }
 
     /// \brief Receive all published QObjects in a type-safe way.
     /// Connects to the `objectPublished` signal and propagates new QObjects to the callable.
     /// If the ApplicationContext has already been published, this method
     /// will invoke the setter immediately with the current publishedObjects().
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \tparam T the target of the subscription. Must be derived from QObject.
     /// \param target the object on which the setter will be invoked.
     /// \param setter the method that will be invoked.
@@ -647,8 +742,9 @@ public:
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
             return Subscription{};
         }
-        auto subscription = new SetterSubscription<T,R>{unwrap(), target, setter, connectionType};
-        return Subscription{detail::Registration::subscribe(subscription)};
+        auto callable = std::bind(std::mem_fn(setter), target, std::placeholders::_1);
+        auto subscription = new detail::CallableSubscription{target, detail::callable_adapter<S>::adapt(callable), connectionType};
+        return Subscription{unwrap()->subscribe(subscription)};
      }
 
 
@@ -666,13 +762,13 @@ public:
     /// Whenever a service of the type `<D>` is published, it will be injected into every service
     /// of type `<S>`, using the supplied member-function.
     /// <br>For each source-type `D`, you can register at most one autowiring.
+    /// <br>**Thread-safety:** This function may only be called from the QApplicationContext's thread.
     /// \tparam D the type of service that will be injected into Services of type `<S>`.
     /// \param injectionSlot the member-function to invoke when a service of type `<D>` is published.
     /// \return the Subscription created by this autowiring. If an autowiring has already been registered
     /// for the type `D´, an invalid Subscription will be returned.
     ///
     template<typename D,typename R> Subscription autowire(R (S::*injectionSlot)(D*));
-
 
 
 
@@ -708,45 +804,6 @@ protected:
 
     }
 private:
-
-    template<typename F> class CallableSubscription : public detail::Subscription {
-        friend class Registration;
-
-        explicit CallableSubscription(registration_handle_t registration, F callable, QObject* context, Qt::ConnectionType connectionType) : Subscription(registration, context, connectionType),
-            m_callable(callable) {
-
-        }
-
-        virtual void notify(QObject* obj) {
-            if(S* srv = dynamic_cast<S*>(obj)) {
-                m_callable(srv);
-            }
-        }
-        F m_callable;
-    };
-
-
-
-
-    template<typename T,typename R> class SetterSubscription : public detail::Subscription {
-        friend class Registration;
-
-        SetterSubscription(registration_handle_t registration, T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType) : Subscription(registration, target, connectionType),
-            m_setter(setter),
-            m_target(target){
-        }
-
-        virtual void notify(QObject* obj) override {
-            if(S* ptr = dynamic_cast<S*>(obj)) {
-               (m_target->*m_setter)(ptr);
-            }
-        }
-
-        T* const m_target;
-        R (T::*m_setter)(S*);
-    };
-
-
     QPointer<detail::Registration> registrationHolder;
 };
 
@@ -793,11 +850,7 @@ public:
         if constexpr(std::is_same_v<U,S>) {
             return *this;
         }
-        auto handle = unwrap();
-        if(!matches<U>(handle)) {
-            return ServiceRegistration<U>{};
-        }
-        return ServiceRegistration<U>::wrap(handle);
+        return ServiceRegistration<U>::wrap(unwrap());
     }
 
 
@@ -808,6 +861,7 @@ public:
     /// <br>If this function is successful, the Service can be referenced by the new name in addition to the
     /// name it was originally registered with. There can be multiple aliases for a Service.<br>
     /// Aliases must be unique within the ApplicationContext.
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \param alias the alias to use.
     /// \return `true` if the alias could be registered. `false` if this alias has already been registered before with a different registration.
     ///
@@ -852,7 +906,7 @@ private:
             return Subscription{};
         }
         auto subscription = unwrap() -> createBindingTo(sourceProperty, target, descriptor);
-        return Subscription{detail::Registration::subscribe(subscription)};
+        return Subscription{subscription};
      }
 
 };
@@ -930,6 +984,7 @@ template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, 
 /// \brief Binds a property of one ServiceRegistration to a property from  another Registration.
 /// <br>All changes made to the source-property will be propagated to the target-property.
 /// For each target-property, there can be only successful call to bind().
+/// <br>**Thread-safety:** This function may only be called from the QApplicationContext's thread.
 /// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
 /// \param sourceProperty the name of the Q_PROPERTY in the source.
 /// \param target the Registration with the target-property to which the source-property shall be bound.
@@ -947,6 +1002,7 @@ template<typename S,typename T> inline Subscription bind(const ServiceRegistrati
 /// \brief Binds a property of one ServiceRegistration to a Setter from  another Registration.
 /// <br>All changes made to the source-property will be propagated to all Services represented by the target.
 /// For each target-property, there can be only successful call to bind().
+/// <br>**Thread-safety:** This function only may be called from the QApplicationContext's thread.
 /// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
 /// \param sourceProperty the name of the Q_PROPERTY in the source.
 /// \param target the Registration with the target-property to which the source-property shall be bound.
@@ -960,12 +1016,7 @@ template<typename S,typename T,typename A,typename R> inline Subscription bind(c
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
-    detail::q_setter_t theSetter = [setter](QObject* target,QVariant arg) {
-        if(T* srv = dynamic_cast<T*>(target)) {
-            (srv->*setter)(arg.value<std::remove_cv_t<std::remove_reference_t<A>>>());
-        }
-    };
-    return source.bind(sourceProperty, target.unwrap(), {"", theSetter });
+    return source.bind(sourceProperty, target.unwrap(), {"", detail::callable_adapter<T>::adaptSetter(setter)});
 }
 
 
@@ -1348,8 +1399,6 @@ inline bool operator==(const dependency_info& info1, const dependency_info& info
 
 
 struct service_descriptor {
-    using type_set = std::unordered_set<std::type_index>;
-
 
     QObject* create(const QVariantList& dependencies) const {
         return constructor ? constructor(dependencies) : nullptr;
@@ -1359,47 +1408,17 @@ struct service_descriptor {
         return type == impl_type || service_types.find(type) != service_types.end();
     }
 
-    /**
-     * @brief Is this service_descriptor compatible with another one?
-     * <br>For this to be true, all of the following criteria must be true:
-     * <br>The impl_types must be identical.
-     * <br>The set of service_types must either be equal, or
-     * one set of service_types must be a true sub-set of the other.
-     * <br>The dependencies must match.
-     * @param other
-     * @return true if the other descriptor matches this one.
-     */
-    bool matches(const service_descriptor& other) const {
-        if(impl_type != other.impl_type || dependencies != other.dependencies) {
-            return false;
-        }
-        //The straight-forward case: both sets are equal.
-        if(service_types == other.service_types) {
-            return true;
-        }
-        //Otherwise, if the sets have the same size, one cannot be a sub-set of the other:
-        if(service_types.size() == other.service_types.size()) {
-            return false;
-        }
-        const type_set& larger = service_types.size() > other.service_types.size() ? service_types : other.service_types;
-        const type_set& smaller = service_types.size() < other.service_types.size() ? service_types : other.service_types;
-        for(auto& type : smaller) {
-            //If at least one item of the smaller set cannot be found in the larger set
-            if(larger.find(type) == larger.end()) {
-                return false;
-            }
-        }
-        return true;
-    }
 
 
-
-    type_set service_types;
+    std::unordered_set<std::type_index> service_types;
     const std::type_info& impl_type;
     const QMetaObject* meta_object = nullptr;
-    constructor_t constructor = nullptr;
+    constructor_t constructor;
     std::vector<dependency_info> dependencies;
 };
+
+
+
 
 
 
@@ -1807,6 +1826,7 @@ public:
 
     ///
     /// \brief Registers a service with this ApplicationContext.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
     /// \param serviceDeclaration comprises the services's primary advertised interface, its implementation-type and its dependencies to be injected
     /// via its constructor.
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
@@ -1825,6 +1845,7 @@ public:
     ///
     /// \brief Registers a service with no dependencies with this ApplicationContext.
     /// This is a convenience-function equivalent to `registerService(Service<S>{}, objectName, config)`.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
@@ -1845,6 +1866,7 @@ public:
     /// The object will immediately be published.
     /// You can either let the compiler's template-argument deduction figure out the servicetype `<S>` for you,
     /// or you can supply it explicitly, if it differs from the static type of the object.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
     /// \param obj must be non-null. Also, must be convertible to QObject.
     /// \param objName the name for this Object in the ApplicationContext.
     /// *Note*: this name will not be set as the QObject::objectName(). It will be the internal name within the ApplicationContext only.
@@ -1876,17 +1898,22 @@ public:
     /// \brief Obtains a ServiceRegistration for a service-type and name.
     /// <br>This function will look up Services by the names they were registered with.
     /// Additionally, it will look up any alias that might have been given, using ServiceRegistration::registerAlias(const QString&).
+    /// <br>**Note:** If you do not provide an explicit type-argument, QObject will be assumed. This will, of course, match
+    /// any service with the supplied name.<br>
+    /// The returned ServiceRegistration may be narrowed to a more specific service-type using ServiceRegistration::as().
+    /// <br>**Thread-safety:** This function may be called safely  from any thread.
     /// \tparam S the required service-type.
     /// \param name the desired name of the registration.
     /// A valid ServiceRegistration will be returned only if exactly one Service that matches the requested type and name has been registered.
     /// \return a ServiceRegistration for the required type and name. If no single Service with a matching name and service-type could be found,
     /// an invalid ServiceRegistration will be returned.
-    /// \sa getRegistrationHandle(const QString&) const.
     ///
-    template<typename S> [[nodiscard]] ServiceRegistration<S> getRegistration(const QString& name) const {
+    template<typename S=QObject> [[nodiscard]] ServiceRegistration<S> getRegistration(const QString& name) const {
         static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
         return ServiceRegistration<S>::wrap(getRegistrationHandle(name));
     }
+
+
 
     ///
     /// \brief Obtains a ProxyRegistration for a service-type.
@@ -1896,7 +1923,7 @@ public:
     /// to invoking getRegistration().<br>
     /// This means that if you subscribe to it using Registration::subscribe(), you will be notified
     /// about all published services that match the Service-type.
-
+    /// <br>**Thread-safety:** This function may be called safely  from any thread.
     /// \tparam S the required service-type.
     /// \return a ProxyRegistration that corresponds to all registration that match the service-type.
     ///
@@ -1907,31 +1934,19 @@ public:
 
     /**
      * @brief Obtains a List of all Services that have been registered.
-     * <br>The element-type of the returned QList is the opaque type service_registration_handle_t.
-     * You should not de-reference it, as its API may changed without notice.
-     * <br>
-     * What you can do, though, is use one of the free functions matches(registration_handle_t),
-     * registeredName(service_registration_handle_t), registeredProperties(service_registration_handle_t).
-     * <br>Additionally, you may wrap the handles in a type-safe manner, using ServiceRegistration::wrap(service_registration_handle_t).
+     * <br>The ServiceRegistrations have a type-argument `QObject`. You may
+     * want to narrow them to the expected service-type using ServiceRegistration::as().
+     * <br>**Thread-safety:** This function may be called safely  from any thread.
      * @return a List of all Services that have been registered.
      */
-    [[nodiscard]] virtual QList<service_registration_handle_t> getRegistrationHandles() const = 0;
+    [[nodiscard]] QList<ServiceRegistration<QObject>> getRegistrations() const {
+        QList<ServiceRegistration<QObject>> result;
+        for(auto handle : getRegistrationHandles()) {
+            result.push_back(ServiceRegistration<QObject>::wrap(handle));
+        }
+        return result;
+    }
 
-    ///
-    /// \brief Obtains a handle to a Registration for a name.
-    /// <br>The type of the returned handle is the opaque type service_registration_handle_t.
-    /// You should not de-reference it, as its API may changed without notice.
-    /// <br>What you can do, though, is use one of the free functions matches(registration_handle_t),
-    /// <br>registeredName(service_registration_handle_t), registeredProperties(service_registration_handle_t).
-    /// <br>Additionally, you may wrap the handles in a type-safe manner, using ServiceRegistration::wrap(service_registration_handle_t).
-    ///
-    /// \param name the desired name of the service.
-    /// A valid handle to a Registration will be returned only if exactly one Service has been registered that matches
-    /// the name.
-    /// \return a handle to a Registration for the supplied name, or `nullptr` if no single Service has been registered with the name.
-    /// \sa getRegistration(const QString&) const.
-    ///
-    [[nodiscard]] virtual service_registration_handle_t getRegistrationHandle(const QString& name) const = 0;
 
 
 
@@ -1939,6 +1954,7 @@ public:
     /// \brief Publishes this ApplicationContext.
     /// This method may be invoked multiple times.
     /// Each time it is invoked, it will attempt to instantiate all yet-unpublished services that have been registered with this ApplicationContext.
+    /// <br>**Thread-safety:** This function may only be called from the QApplicationContext's thread.
     /// \param allowPartial has the default-value `false`, this function will either return all services or no service at all.
     /// If `allowPartial == true`, the function will attempt to publish as many pending services as possible.
     /// Failures that may be fixed by further registrations will be logged with the level QtMsgType::QtWarningMessage.
@@ -1950,11 +1966,13 @@ public:
 
     ///
     /// \brief The number of published services.
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \return The number of published services.
     ///
     [[nodiscard]] virtual unsigned published() const = 0;
 
     /// \brief The number of yet unpublished services.
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \return the number of services that have been registered but not (yet) published.
     ///
     [[nodiscard]] virtual unsigned pendingPublication() const = 0;
@@ -2017,6 +2035,35 @@ protected:
     ///
     virtual proxy_registration_handle_t getRegistrationHandle(const std::type_info& service_type, const QMetaObject* metaObject) const = 0;
 
+    ///
+    /// \brief Obtains a handle to a Registration for a name.
+    /// <br>The type of the returned handle is the opaque type service_registration_handle_t.
+    /// You should not de-reference it, as its API may changed without notice.
+    /// <br>What you can do, though, is use one of the free functions matches(registration_handle_t),
+    /// <br>registeredName(service_registration_handle_t), registeredProperties(service_registration_handle_t).
+    /// <br>Additionally, you may wrap the handles in a type-safe manner, using ServiceRegistration::wrap(service_registration_handle_t).
+    ///
+    /// \param name the desired name of the service.
+    /// A valid handle to a Registration will be returned only if exactly one Service has been registered that matches
+    /// the name.
+    /// \return a handle to a Registration for the supplied name, or `nullptr` if no single Service has been registered with the name.
+    /// \sa getRegistration(const QString&) const.
+    ///
+    [[nodiscard]] virtual service_registration_handle_t getRegistrationHandle(const QString& name) const = 0;
+
+
+    /**
+     * @brief Obtains a List of all Services that have been registered.
+     * <br>The element-type of the returned QList is the opaque type service_registration_handle_t.
+     * You should not de-reference it, as its API may changed without notice.
+     * <br>
+     * What you can do, though, is use one of the free functions matches(registration_handle_t),
+     * registeredName(service_registration_handle_t), registeredProperties(service_registration_handle_t).
+     * <br>Additionally, you may wrap the handles in a type-safe manner, using ServiceRegistration::wrap(service_registration_handle_t).
+     * @return a List of all Services that have been registered.
+     */
+    [[nodiscard]] virtual QList<service_registration_handle_t> getRegistrationHandles() const = 0;
+
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
@@ -2063,6 +2110,33 @@ protected:
         return appContext.getRegistrationHandle(service_type, metaObject);
     }
 
+    ///
+    /// \brief Allows you to invoke a protected virtual function on another target.
+    /// If you are implementing getRegistrationHandle(const QString&) const and want to delegate
+    /// to another implementation, access-rules will not allow you to invoke the function on another target.
+    ///
+    /// \param appContext the target on which to invoke getRegistrationHandle(const QString&) const.
+    /// \param name the name under which the service is looked up.
+    /// \return the result of getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
+    ///
+    static service_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext& appContext, const QString& name) {
+        return appContext.getRegistrationHandle(name);
+    }
+
+
+
+    ///
+    /// \brief Allows you to invoke a protected virtual function on another target.
+    /// If you are implementing getRegistrationHandles() const and want to delegate
+    /// to another implementation, access-rules will not allow you to invoke the function on another target.
+    ///
+    /// \param appContext the target on which to invoke getRegistrationHandles() const.
+    /// \return the result of getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
+    ///
+    static QList<service_registration_handle_t> delegateGetRegistrationHandles(const QApplicationContext& appContext) {
+        return appContext.getRegistrationHandles();
+    }
+
 
 
     template<typename S> friend class ServiceRegistration;
@@ -2082,7 +2156,7 @@ template<typename S> template<typename D,typename R> Subscription Registration<S
         }
     };
     auto subscription = unwrap()->createAutowiring(typeid(D), injector, applicationContext()->template getRegistration<D>().unwrap());
-    return Subscription{detail::Registration::subscribe(subscription)};
+    return Subscription{subscription};
 }
 
 
@@ -2117,7 +2191,7 @@ namespace std {
             return hasher(sub.unwrap());
         }
 
-        std::hash<mcnepp::qtdi::detail::Subscription*> hasher;
+        std::hash<mcnepp::qtdi::subscription_handle_t> hasher;
     };
 
     template<typename S> struct hash<mcnepp::qtdi::ServiceRegistration<S>> {
@@ -2125,7 +2199,7 @@ namespace std {
             return hasher(sub.unwrap());
         }
 
-        std::hash<mcnepp::qtdi::detail::ServiceRegistration*> hasher;
+        std::hash<mcnepp::qtdi::service_registration_handle_t> hasher;
     };
 
 
@@ -2134,7 +2208,7 @@ namespace std {
             return hasher(sub.unwrap());
         }
 
-        std::hash<mcnepp::qtdi::detail::ProxyRegistration*> hasher;
+        std::hash<mcnepp::qtdi::proxy_registration_handle_t> hasher;
     };
 
 }

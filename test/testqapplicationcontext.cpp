@@ -1,6 +1,9 @@
 #include <QTest>
 #include <QSettings>
 #include <QTemporaryFile>
+#include <QPromise>
+#include <QSemaphore>
+#include <QFuture>
 #include <iostream>
 #include "standardqapplicationcontext.h"
 #include "appcontexttestclasses.h"
@@ -9,6 +12,7 @@
 namespace mcnepp::qtdi {
 
 using namespace qtditest;
+
 
 template<> struct service_factory<BaseService> {
     using service_type = BaseService;
@@ -36,6 +40,7 @@ template<> struct service_factory<BaseService> {
 }
 
 namespace mcnepp::qtditest {
+
 
 template<typename S>  struct vector_converter {
     std::vector<S*> operator()(const QVariant& arg) const {
@@ -121,6 +126,30 @@ public:
     QObjectList processedObjects;
 };
 
+template<typename S> class SubscriptionThread : public QThread {
+protected:
+    void run() override {
+        QObject context;
+        auto registration = m_context->getRegistration<S>();
+        registration.subscribe(&context,[this](BaseService* srv) {
+            service.storeRelease(srv);
+            exit();//Leave event-loop
+        });
+
+        subscribed = 1;
+        QThread::run();
+    }
+public:
+    explicit SubscriptionThread(QApplicationContext* context) :
+        m_context(context) {
+    }
+
+    QAtomicPointer<BaseService> service;
+    QApplicationContext* const m_context;
+    QAtomicInt subscribed;
+};
+
+
 class ApplicationContextTest
  : public QObject {
     Q_OBJECT
@@ -155,16 +184,34 @@ private slots:
 
     void testNoDependency() {
         auto reg = context->registerService<BaseService>();
+        reg.subscribe(this, [](BaseService* srv) {});
         QVERIFY(reg);
         QVERIFY(!context->getRegistration<BaseService>("anotherName"));
         QCOMPARE(context->getRegistration<BaseService>(reg.registeredName()), reg);
         QVERIFY(reg.matches<BaseService>());
         QVERIFY(reg.as<BaseService>());
         QVERIFY(!reg.as<BaseService2>());
+        auto registrations = context->getRegistrations();
+        QCOMPARE(registrations.size(), 1);
+        QVERIFY(registrations[0]);
+        QVERIFY(registrations[0].as<BaseService>());
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> slot{reg};
         QVERIFY(slot);
     }
+
+    void testQObjectRegistration() {
+        auto reg = context->registerService<BaseService>();
+        QVERIFY(reg);
+        auto qReg = context->getRegistration(reg.registeredName());
+        QCOMPARE(qReg, reg);
+        QVERIFY(qReg.matches<BaseService>());
+        QVERIFY(qReg.matches<QObject>());
+        QVERIFY(context->publish());
+        RegistrationSlot<QObject> slot{qReg};
+        QVERIFY(slot);
+    }
+
 
     void testWithProperty() {
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", 4711}}));
@@ -454,9 +501,25 @@ private slots:
         auto regBase = context->registerObject<Interface1>(&base, "base");
         auto regInterface = context->getRegistration<Interface1>();
         QVERIFY(bind(regTimer, "objectName", regInterface, &Interface1::setFoo));
+        QVERIFY(context->publish());
         QCOMPARE(base.foo(), "timer");
         timer.setObjectName("another timer");
         QCOMPARE(base.foo(), "another timer");
+    }
+
+    void testBindServiceRegistrationToObjectSetter() {
+
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer).as<QObject>();
+        auto regBase = context->registerService<BaseService>("base", make_config({{"foo", "baseFoo"}}));
+        void (QObject::*setter)(const QString&) = &QObject::setObjectName;//We need this temporary variable, as setObjectName has two overloads!
+        bind(regBase, "foo", regTimer, setter);
+        QVERIFY(context->publish());
+        QCOMPARE(timer.objectName(), "baseFoo");
+        RegistrationSlot<BaseService> baseSlot{regBase};
+        baseSlot->setFoo("newFoo");
+        QCOMPARE(timer.objectName(), "newFoo");
     }
 
 
@@ -1082,18 +1145,53 @@ private slots:
 
     }
 
-    void testDependencyWithRequiredNamePublishPartial() {
+    void testPutlishPartialDependencyWithRequiredName() {
         auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1");
+        RegistrationSlot<Interface1> slot1{reg1};
         auto reg = context->registerService(service<DependentService>(inject<Interface1>("base2")));
+        RegistrationSlot<DependentService> srvSlot{reg};
         QVERIFY(!context->publish(true));
+        QVERIFY(slot1);
+        QVERIFY(!srvSlot);
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
         QVERIFY(context->publish());
-        auto regs = context->getRegistration<Interface1>();
-        RegistrationSlot<Interface1> base2{reg2};
-        RegistrationSlot<DependentService> service{reg};
-        QCOMPARE(service->m_dependency, base2.last());
+        RegistrationSlot<Interface1> slot2{reg2};
+        QVERIFY(slot2);
+        QCOMPARE(srvSlot->m_dependency, slot2.last());
 
     }
+
+    void testPublishPartialWithBeanRef() {
+        auto timerReg1 = context->registerService(service<QTimer>(), "timer1");
+        RegistrationSlot<QTimer> timerSlot1{timerReg1};
+
+        auto reg = context->registerService(service<BaseService>(), "srv", make_config({{"timer", "&timer2"}}));
+        RegistrationSlot<BaseService> slot1{reg};
+        QVERIFY(!context->publish(true));
+        QVERIFY(timerSlot1);
+        QVERIFY(!slot1);
+        auto timerReg2 = context->registerService(service<QTimer>(), "timer2");
+        RegistrationSlot<QTimer> timerSlot2{timerReg2};
+        QVERIFY(context->publish());
+        QVERIFY(timerSlot2);
+        QVERIFY(slot1);
+        QCOMPARE(slot1->timer(), timerSlot2.last());
+
+    }
+
+    void testPublishPartialWithConfig() {
+        context->registerObject(config.get());
+        auto reg = context->registerService(service<BaseService>(), "srv", make_config({{"foo", "${foo}"}}));
+        QVERIFY(!context->publish(true));
+        RegistrationSlot<BaseService> slot1{reg};
+        QVERIFY(!slot1);
+        config->setValue("foo", "Hello, world");
+        QVERIFY(context->publish());
+        QVERIFY(slot1);
+        QCOMPARE(slot1->foo(), "Hello, world");
+
+    }
+
     void testDependencyWithRequiredRegisteredName() {
         auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1");
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
@@ -1384,6 +1482,65 @@ private slots:
 
     }
 
+    void testPublishThenSubscribeInThread() {
+        auto registration = context->registerService<BaseService>();
+        RegistrationSlot<BaseService> slot{registration};
+        context->publish();
+        SubscriptionThread<BaseService> thread{context.get()};
+        thread.start();
+        bool hasSubscribed = QTest::qWaitFor([&thread] { return thread.subscribed;}, 1000);
+        QVERIFY(hasSubscribed);
+        QVERIFY(thread.service);
+        QCOMPARE(thread.service, slot.last());
+    }
+
+
+
+    void testSubscribeInThreadThenPublish() {
+        auto registration = context->registerService<BaseService>();
+        RegistrationSlot<BaseService> slot{registration};
+        SubscriptionThread<BaseService> thread{context.get()};
+        thread.start();
+        bool hasSubscribed = QTest::qWaitFor([&thread] { return thread.subscribed;}, 1000);
+        QVERIFY(hasSubscribed);
+        context->publish();
+        QVERIFY(thread.wait(1000));
+        QVERIFY(thread.service);
+        QCOMPARE(thread.service, slot.last());
+    }
+
+
+    void testPublishInThreadFails() {
+        auto registration = context->registerService<BaseService>();
+        RegistrationSlot<BaseService> slot{registration};
+
+        QAtomicInt success{-1};
+        QThread* thread = QThread::create([this,&success] {
+            success = context->publish();
+        });
+        thread->start();
+        bool hasSubscribed = QTest::qWaitFor([&success] { return success != -1;}, 1000);
+        QVERIFY(!success);
+        QVERIFY(!slot);
+        QVERIFY(thread->wait(1000));
+        delete thread;
+    }
+
+
+    void testGetRegistrationInThread() {
+        QMutex mutex;
+        ProxyRegistration<BaseService> reg;
+        QThread* thread = QThread::create([this,&reg,&mutex] {
+            QMutexLocker locker{&mutex};
+            reg = context->getRegistration<BaseService>();
+        });
+        thread->start();
+        bool hasSetParent = QTest::qWaitFor([&reg,&mutex] {QMutexLocker locker{&mutex}; return reg.isValid();}, 1000);
+        QVERIFY(hasSetParent);
+        QCOMPARE(reg.unwrap()->thread(), QThread::currentThread());
+        QVERIFY(thread->wait(1000));
+        delete thread;
+    }
 
 
     void testPublishAll() {
@@ -1430,7 +1587,7 @@ private slots:
 
         QCOMPARE(publishedInOrder.size(), 8);
 
-        auto serviceHandles = context->getRegistrationHandles();
+        auto serviceHandles = context->getRegistrations();
         QCOMPARE(serviceHandles.size(), 8);
 
         //1. BaseService must be initialized before BaseService2 (because the order of registration shall be kept, barring other restrictions).
