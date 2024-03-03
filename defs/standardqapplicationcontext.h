@@ -21,6 +21,7 @@ class StandardApplicationContext final : public QApplicationContext
 {
     Q_OBJECT
 
+//Forward-declarations of nested class:
     class CreateRegistrationHandleEvent;
 
 public:
@@ -39,25 +40,24 @@ public:
 
 protected:
 
-    virtual detail::ServiceRegistration* registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
+    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) override;
 
-    virtual detail::ServiceRegistration* registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
+    virtual service_registration_handle_t registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
 
-    virtual detail::ServiceRegistration* getRegistrationHandle(const QString& name) const override;
+    virtual service_registration_handle_t getRegistrationHandle(const QString& name) const override;
 
-    virtual detail::ProxyRegistration* getRegistrationHandle(const std::type_info& service_type, const QMetaObject* metaObject) const override;
+    virtual proxy_registration_handle_t getRegistrationHandle(const std::type_info& service_type, const QMetaObject* metaObject) const override;
 
 
 private:
 
 
-    bool registerAlias(detail::ServiceRegistration* reg, const QString& alias);
+    bool registerAlias(service_registration_handle_t reg, const QString& alias);
 
 
     class StandardRegistrationImpl {
 
-
-    public:
+       friend class StandardApplicationContext;
 
         virtual QMetaProperty getProperty(const char* name) const = 0;
 
@@ -66,29 +66,7 @@ private:
 
     };
 
-    class AutowireSubscription : public detail::Subscription {
-    public:
-        AutowireSubscription(detail::q_inject_t injector, QObject* bound) : Subscription(bound),
-            m_injector(injector),
-            m_bound(bound)
-        {
-            out_Connection = QObject::connect(this, &Subscription::objectPublished, this, &AutowireSubscription::notify);
-        }
 
-        void notify(QObject* obj);
-
-        void cancel() override;
-
-        void connectTo(detail::Registration* source) override;
-
-
-    private:
-        detail::q_inject_t m_injector;
-        QObject* m_bound;
-        std::vector<QPointer<detail::Subscription>> subscriptions;
-        QMetaObject::Connection out_Connection;
-        QMetaObject::Connection in_Connection;
-    };
 
 
     static constexpr int STATE_INIT = 0;
@@ -96,66 +74,12 @@ private:
     static constexpr int STATE_PUBLISHED = 3;
 
     class DescriptorRegistration : public detail::ServiceRegistration, public StandardRegistrationImpl {
-    private:
+        friend class StandardApplicationContext;
+
+        virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
 
 
-
-        class PropertyBindingSubscription : public detail::Subscription {
-            friend class DescriptorRegistration;
-        public:
-
-            void notify(QObject* obj);
-
-            void cancel() override;
-
-            void connectTo(Registration* source) override;
-
-        private:
-            PropertyBindingSubscription(detail::Registration* target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(target),
-                m_sourceProperty(sourceProperty),
-                m_setter(setter),
-                m_target(target) {
-                out_Connection = QObject::connect(this, &Subscription::objectPublished, this, &PropertyBindingSubscription::notify);
-            }
-            detail::Registration* m_target;
-            QMetaProperty m_sourceProperty;
-            detail::property_descriptor m_setter;
-            std::vector<QPointer<Subscription>> subscriptions;
-            QMetaObject::Connection out_Connection;
-            QMetaObject::Connection in_Connection;
-        };
-
-        class PropertyInjector : public detail::Subscription {
-            friend class PropertyBindingSubscription;
-        public:
-
-            void notify(QObject* obj);
-
-            void cancel() override;
-
-            void connectTo(Registration* source) override;
-        private:
-
-            PropertyInjector(QObject* boundSource, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(boundSource),
-                m_sourceProperty(sourceProperty),
-                m_setter(setter),
-                m_boundSource(boundSource) {
-                out_Connection = QObject::connect(this, &Subscription::objectPublished, this, &PropertyInjector::notify);
-            }
-            QMetaProperty m_sourceProperty;
-            detail::property_descriptor m_setter;
-            QObject* m_boundSource;
-            std::vector<QPropertyNotifier> bindings;
-            std::vector<QMetaObject::Connection> connections;
-            QMetaObject::Connection out_Connection;
-            QMetaObject::Connection in_Connection;
-        };
-
-    public:
-        virtual detail::Subscription* createBindingTo(const char* sourcePropertyName, Registration* target, const detail::property_descriptor& targetProperty) override;
-
-
-        virtual detail::Subscription* createAutowiring(const std::type_info& type, detail::q_inject_t injector, Registration* source) override;
+        virtual subscription_handle_t createAutowiring(const std::type_info& type, detail::q_inject_t injector, registration_handle_t source) override;
 
 
         QString registeredName() const override {
@@ -245,9 +169,9 @@ private:
     using descriptor_list = std::deque<DescriptorRegistration*>;
 
 
-    struct ServiceRegistration : public DescriptorRegistration {
+    class ServiceRegistration : public DescriptorRegistration {
 
-
+        friend class StandardApplicationContext;
 
         ServiceRegistration(const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
             DescriptorRegistration{name, desc, parent},
@@ -318,7 +242,7 @@ private:
             return theService;
         }
 
-        virtual void onSubscription(detail::Subscription* subscription) override {
+        virtual void onSubscription(subscription_handle_t subscription) override {
             //If the Service is already present, there is no need to connect to the signal:
             if(isPublished()) {
                 emit subscription->objectPublished(theService);
@@ -361,9 +285,9 @@ private:
         mutable std::optional<QStringList> beanRefsCache;
     };
 
-    struct ObjectRegistration : public DescriptorRegistration {
+    class ObjectRegistration : public DescriptorRegistration {
 
-
+        friend class StandardApplicationContext;
 
         ObjectRegistration(const QString& name, const service_descriptor& desc, QObject* obj, StandardApplicationContext* parent) :
             DescriptorRegistration{name, desc, parent},
@@ -424,7 +348,7 @@ private:
             return defaultConfig;
         }
 
-        virtual void onSubscription(detail::Subscription* subscription) override {
+        virtual void onSubscription(subscription_handle_t subscription) override {
             emit subscription->objectPublished(theObj);
         }
 
@@ -442,62 +366,15 @@ private:
     };
 
 
-    struct ProxyRegistration : public detail::ProxyRegistration, public StandardRegistrationImpl {
-
-        class ProxySubscription : public detail::Subscription {
-        public:
-            explicit ProxySubscription(ProxyRegistration* target) :
-                detail::Subscription{target} {
-                out_connection = QObject::connect(this, &Subscription::objectPublished, target, &Registration::objectPublished);
-            }
-
-            void connectTo(Registration* source) override {
-                in_connections.push_back(connect(source, this));
-            }
-
-            void cancel() override {
-                QObject::disconnect(out_connection);
-                for(auto& connection : in_connections) {
-                    QObject::disconnect(connection);
-                }
-            }
+    class ProxyRegistrationImpl : public detail::ProxyRegistration, public StandardRegistrationImpl {
 
 
-            QMetaObject::Connection out_connection;
-            QList<QMetaObject::Connection> in_connections;
-        };
+        friend class StandardApplicationContext;
 
-        ///
-        /// \brief Passes the signal through, but does not accept connections from a source-Registration.
-        ///
-        class TemporarySubscriptionProxy : public detail::Subscription {
-        public:
-            explicit TemporarySubscriptionProxy(Subscription* target) :
-                detail::Subscription{target} {
-                QObject::connect(this, &Subscription::objectPublished, target, &Subscription::objectPublished);
-            }
-
-            void connectTo(Registration* source) override {
-                //Does nothing intentionally
-            }
-
-            void cancel() override {
-            }
-        };
+        ProxyRegistrationImpl(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent, const descriptor_list& registrations);
 
 
-        ProxyRegistration(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent, const descriptor_list& registrations) :
-            detail::ProxyRegistration{parent},
-                m_type(type),
-            m_meta(metaObject)
-        {
-            proxySubscription = new ProxySubscription{this};
-            for(auto reg : registrations) {
-                add(reg);
-            }
-        }
-
-        virtual detail::Subscription* createAutowiring(const std::type_info& type, detail::q_inject_t injector, Registration* source) override;
+        virtual subscription_handle_t createAutowiring(const std::type_info& type, detail::q_inject_t injector, registration_handle_t source) override;
 
         bool matches(const std::type_info& type) const override {
             return m_type == type;
@@ -507,9 +384,9 @@ private:
             return static_cast<StandardApplicationContext*>(parent());
         }
 
-        virtual QList<detail::ServiceRegistration*> registeredServices() const override {
+        virtual QList<service_registration_handle_t> registeredServices() const override {
             QMutexLocker locker{&mutex};
-            return QList<detail::ServiceRegistration*>{registrations.begin(), registrations.end()};
+            return QList<service_registration_handle_t>{registrations.begin(), registrations.end()};
         }
 
 
@@ -529,14 +406,7 @@ private:
 
 
 
-        virtual void onSubscription(detail::Subscription* subscription) override {
-            detail::Subscription::connect(this, subscription);
-            TemporarySubscriptionProxy tempProxy{subscription};
-            //By subscribing to a TemporarySubscriptionProxy, we force exisiting objects to be signalled immediately, while not creating any new Connections:
-            for(auto reg : registeredServices()) {
-                reg->subscribe(&tempProxy);
-            }
-        }
+        virtual void onSubscription(subscription_handle_t subscription) override;
 
         virtual QMetaProperty getProperty(const char* name) const override {
             if(m_meta) {
@@ -573,7 +443,7 @@ private:
         const QMetaObject* m_meta;
         std::unordered_set<QString> boundProperties;
         std::unordered_set<std::type_index> autowirings;
-        ProxySubscription* proxySubscription;
+        subscription_handle_t proxySubscription;
         mutable QMutex mutex;
     };
 
@@ -637,7 +507,7 @@ private:
 
 
 
-    mutable std::unordered_map<std::type_index,ProxyRegistration*> proxyRegistrationCache;
+    mutable std::unordered_map<std::type_index,ProxyRegistrationImpl*> proxyRegistrationCache;
     mutable QMutex mutex;
     mutable QWaitCondition condition;
 };

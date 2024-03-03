@@ -217,9 +217,194 @@ QString makeName(const std::type_index& type) {
 
 
 
-}
 
-struct StandardApplicationContext::CreateRegistrationHandleEvent : public QEvent {
+
+
+class AutowireSubscription : public detail::Subscription {
+public:
+    AutowireSubscription(detail::q_inject_t injector, QObject* bound) : Subscription(bound),
+        m_injector(injector),
+        m_bound(bound)
+    {
+        out_Connection = QObject::connect(this, &Subscription::objectPublished, this, &AutowireSubscription::notify);
+    }
+
+     void notify(QObject *obj) {
+        if(auto sourceReg = dynamic_cast<registration_handle_t>(m_bound)) {
+            auto subscr = new AutowireSubscription{m_injector, obj};
+            sourceReg->subscribe(subscr);
+            subscriptions.push_back(subscr);
+        } else {
+            m_injector(m_bound, obj);
+        }
+    }
+
+    void cancel() override{
+        for(auto iter = subscriptions.begin(); iter != subscriptions.end(); iter = subscriptions.erase(iter)) {
+            auto subscr = *iter;
+            if(subscr) {
+                subscr->cancel();
+            }
+        }
+        QObject::disconnect(out_Connection);
+        QObject::disconnect(in_Connection);
+    }
+
+    void connectTo(detail::Registration *source) override
+    {
+        in_Connection = connect(source, this);
+    }
+
+
+
+
+private:
+    detail::q_inject_t m_injector;
+    QObject* m_bound;
+    std::vector<QPointer<detail::Subscription>> subscriptions;
+    QMetaObject::Connection out_Connection;
+    QMetaObject::Connection in_Connection;
+};
+
+
+class PropertyInjector : public detail::Subscription {
+    friend class PropertyBindingSubscription;
+public:
+
+    void connectTo(registration_handle_t source) override
+    {
+        in_Connection = connect(source, this);
+    }
+
+    void notify(QObject* target) {
+        m_setter.setter(target, m_sourceProperty.read(m_boundSource));
+        auto notifier = detail::bindProperty(m_boundSource, m_sourceProperty, target, m_setter);
+        if(std::holds_alternative<QPropertyNotifier>(notifier)) {
+            bindings.push_back(std::get<QPropertyNotifier>(std::move(notifier)));
+        }
+        if(std::holds_alternative<QMetaObject::Connection>(notifier)) {
+            connections.push_back(std::get<QMetaObject::Connection>(notifier));
+        }
+
+    }
+
+    void cancel() override {
+        for(auto iter = connections.begin(); iter != connections.end(); iter = connections.erase(iter)) {
+            QObject::disconnect(*iter);
+        }
+        //QPropertyNotifier will remove the binding in its destructor:
+        bindings.clear();
+        QObject::disconnect(out_Connection);
+        QObject::disconnect(in_Connection);
+    }
+
+private:
+
+    PropertyInjector(QObject* boundSource, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(boundSource),
+        m_sourceProperty(sourceProperty),
+        m_setter(setter),
+        m_boundSource(boundSource) {
+        out_Connection = QObject::connect(this, &Subscription::objectPublished, this, &PropertyInjector::notify);
+    }
+    QMetaProperty m_sourceProperty;
+    detail::property_descriptor m_setter;
+    QObject* m_boundSource;
+    std::vector<QPropertyNotifier> bindings;
+    std::vector<QMetaObject::Connection> connections;
+    QMetaObject::Connection out_Connection;
+    QMetaObject::Connection in_Connection;
+};
+
+class PropertyBindingSubscription : public detail::Subscription {
+public:
+
+
+    void notify(QObject* obj) {
+        auto subscr = new PropertyInjector{obj, m_sourceProperty, m_setter};
+        m_target->subscribe(subscr);
+        subscriptions.push_back(subscr);
+    }
+
+    void cancel() override {
+        for(auto iter = subscriptions.begin(); iter != subscriptions.end(); iter = subscriptions.erase(iter)) {
+            auto subscription = *iter;
+            if(subscription) {
+                subscription->cancel();
+            }
+        }
+        QObject::disconnect(out_Connection);
+        QObject::disconnect(in_Connection);
+    }
+
+    void connectTo(registration_handle_t source) override
+    {
+        in_Connection = connect(source, this);
+    }
+
+    PropertyBindingSubscription(registration_handle_t target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(target),
+        m_sourceProperty(sourceProperty),
+        m_setter(setter),
+        m_target(target) {
+        out_Connection = QObject::connect(this, &Subscription::objectPublished, this, &PropertyBindingSubscription::notify);
+    }
+private:
+    registration_handle_t m_target;
+    QMetaProperty m_sourceProperty;
+    detail::property_descriptor m_setter;
+    std::vector<QPointer<Subscription>> subscriptions;
+    QMetaObject::Connection out_Connection;
+    QMetaObject::Connection in_Connection;
+};
+
+
+class ProxySubscription : public detail::Subscription {
+public:
+    explicit ProxySubscription(registration_handle_t target) :
+        detail::Subscription{target} {
+        out_connection = QObject::connect(this, &Subscription::objectPublished, target, &detail::Registration::objectPublished);
+    }
+
+    void connectTo(registration_handle_t source) override {
+        in_connections.push_back(connect(source, this));
+    }
+
+    void cancel() override {
+        QObject::disconnect(out_connection);
+        for(auto& connection : in_connections) {
+            QObject::disconnect(connection);
+        }
+    }
+
+private:
+    QMetaObject::Connection out_connection;
+    QList<QMetaObject::Connection> in_connections;
+};
+
+///
+/// \brief Passes the signal through, but does not accept connections from a source-Registration.
+///
+class TemporarySubscriptionProxy : public detail::Subscription {
+public:
+    explicit TemporarySubscriptionProxy(Subscription* target) :
+        detail::Subscription{target} {
+        QObject::connect(this, &Subscription::objectPublished, target, &Subscription::objectPublished);
+    }
+
+    void connectTo(registration_handle_t source) override {
+        //Does nothing intentionally
+    }
+
+    void cancel() override {
+    }
+};
+
+
+} // End of anonymous namespace
+
+
+
+class StandardApplicationContext::CreateRegistrationHandleEvent : public QEvent {
+public:
     static QEvent::Type eventId() {
         static int eventId = QEvent::registerEventType();
         return static_cast<QEvent::Type>(eventId);
@@ -230,23 +415,184 @@ struct StandardApplicationContext::CreateRegistrationHandleEvent : public QEvent
         QEvent(eventId()),
         m_service_type(service_type),
         m_metaObject(metaObject),
-        m_result(QSharedPointer<std::optional<registration_handle_t>>::create())
+        m_result(QSharedPointer<std::optional<ProxyRegistrationImpl*>>::create())
     {
     }
 
     void createHandle(StandardApplicationContext* context) {
-        *m_result = new StandardApplicationContext::ProxyRegistration{m_service_type, m_metaObject, context, context->registrations};
+        *m_result = new ProxyRegistrationImpl{m_service_type, m_metaObject, context, context->registrations};
     }
 
+    QSharedPointer<std::optional<ProxyRegistrationImpl*>> result() const {
+        return m_result;
+    }
+
+private:
     const type_info &m_service_type;
     const QMetaObject* m_metaObject;
-    QSharedPointer<std::optional<registration_handle_t>> m_result;
+    QSharedPointer<std::optional<ProxyRegistrationImpl*>> m_result;
 };
 
 
+StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent, const descriptor_list& registrations) :
+    detail::ProxyRegistration{parent},
+    m_type(type),
+    m_meta(metaObject)
+{
+    proxySubscription = new ProxySubscription{this};
+    for(auto reg : registrations) {
+        add(reg);
+    }
+}
+
+
+void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscription_handle_t subscription) {
+    detail::Subscription::connect(this, subscription);
+    TemporarySubscriptionProxy tempProxy{subscription};
+    //By subscribing to a TemporarySubscriptionProxy, we force exisiting objects to be signalled immediately, while not creating any new Connections:
+    for(auto reg : registeredServices()) {
+        reg->subscribe(&tempProxy);
+    }
+}
+
+detail::Subscription *StandardApplicationContext::ProxyRegistrationImpl::createAutowiring(const type_info &type, detail::q_inject_t injector, Registration *source)
+{
+    if(!autowirings.insert(type).second) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register autowiring for type " << type.name() << " in " << *this;
+        return nullptr;
+    }
+
+    return subscribe(new AutowireSubscription{injector, source});
+}
 
 
 
+const service_config StandardApplicationContext::ObjectRegistration::defaultConfig;
+
+
+subscription_handle_t StandardApplicationContext::DescriptorRegistration::createBindingTo(const char* sourcePropertyName, detail::Registration *target, const detail::property_descriptor& targetProperty)
+{
+    if(QThread::currentThread() != this->thread()) {
+        qCritical(loggingCategory()).noquote().nospace() << "Cannot create binding in different thread";
+        return nullptr;
+    }
+
+    detail::property_descriptor setter = targetProperty;
+    auto targetReg = dynamic_cast<StandardRegistrationImpl*>(target);
+    if(!targetReg) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << *target;
+        return nullptr;
+    }
+    if(this == target && QString{sourcePropertyName} == setter.name) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to self";
+        return nullptr;
+    }
+
+    if(target->applicationContext() != applicationContext()) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << *target << " from different ApplicationContext";
+        return nullptr;
+    }
+
+    auto sourceProperty = getProperty(sourcePropertyName);
+    if(!detail::isBindable(sourceProperty)) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Property '" << sourcePropertyName << "' in " << *this << " is not bindable";
+        return nullptr;
+    }
+    if(!setter.setter) {
+        auto targetProperty = targetReg->getProperty(setter.name);
+        if(!targetProperty.isValid() || !targetProperty.isWritable()) {
+            qCCritical(loggingCategory()).noquote().nospace() << setter << " is not a writable property for " << *target;
+            return nullptr;
+        }
+        if(!QMetaType::canConvert(sourceProperty.metaType(), targetProperty.metaType())) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << setter << " of " << *target << " with incompatible types";
+            return nullptr;
+        }
+        setter = detail::propertySetter(targetProperty);
+    }
+    if(!targetReg->registerBoundProperty(setter.name)) {
+        qCCritical(loggingCategory()).noquote().nospace() << setter << " has already been bound to " << *target;
+        return nullptr;
+
+    }
+
+
+    auto subscription = new PropertyBindingSubscription{target, sourceProperty, setter};
+    qCInfo(loggingCategory()).noquote().nospace() << "Created Subscription for binding property '" << sourceProperty.name() << "' of " << *this << " to " << setter << " of " << *target;
+    return subscribe(subscription);
+}
+
+detail::Subscription *StandardApplicationContext::DescriptorRegistration::createAutowiring(const type_info &type, detail::q_inject_t injector, Registration *source)
+{
+    if(QThread::currentThread() != this->thread()) {
+        qCritical(loggingCategory()).noquote().nospace() << "Cannot create autowiring in different thread";
+        return nullptr;
+    }
+
+    if(!autowirings.insert(type).second) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register autowiring for type " << type.name() << " in " << *this;
+        return nullptr;
+    }
+    return subscribe(new AutowireSubscription{injector, source});
+}
+
+
+
+
+
+StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
+    detail::ServiceRegistration(parent),
+    descriptor{desc},
+    m_name(name)
+{
+}
+
+
+
+
+
+
+void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
+    out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor;
+}
+
+void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *srv) {
+    if(srv == theService) {
+        //Somebody has destroyed a Service that is managed by this ApplicationContext.
+        //All we can do is log an error and set theService to nullptr.
+        //Yet, it might still be in use somewhere as a dependency.
+        qCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
+        theService = nullptr;
+        m_state = STATE_INIT;
+    }
+}
+
+void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
+    out.nospace().noquote() << "Object '" << registeredName() << "' with " << this->descriptor;
+}
+
+
+
+
+QStringList StandardApplicationContext::ServiceRegistration::getBeanRefs() const
+{
+    if(beanRefsCache.has_value()) {
+        return beanRefsCache.value();
+    }
+    QStringList result;
+    for(auto entry : config().properties.asKeyValueRange()) {
+        auto key = entry.second.toString();
+        if(key.startsWith('&')) {
+            int dot = key.indexOf('.');
+            if(dot < 0) {
+                dot = key.size();
+            }
+            result.push_back(key.mid(1, dot-1));
+        }
+    }
+    beanRefsCache = result;
+    return result;
+}
 
 
 
@@ -487,13 +833,13 @@ detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(con
     if(found != proxyRegistrationCache.end()) {
         return found->second;
     }
-    ProxyRegistration* proxyReg;
+    ProxyRegistrationImpl* proxyReg;
     if(QThread::currentThread() == thread()) {
-        proxyReg = new ProxyRegistration{service_type, metaObject, const_cast<StandardApplicationContext*>(this), registrations};
+        proxyReg = new ProxyRegistrationImpl{service_type, metaObject, const_cast<StandardApplicationContext*>(this), registrations};
     } else {
         //We are in a different Thread than the QApplicationContext's. Let's post an Event that will create the ProxyRegistration asynchronously:
         auto event = new CreateRegistrationHandleEvent{service_type, metaObject};
-        auto result = event->m_result; //Pin member on Stack to prevent asynchronous deletion.
+        auto result = event->result(); //Pin member on Stack to prevent asynchronous deletion.
         QCoreApplication::postEvent(const_cast<StandardApplicationContext*>(this), event);
         QDeadlineTimer timer{1000};
         while(!result->has_value()) {
@@ -504,14 +850,14 @@ detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(con
             return nullptr;
         }
 
-        proxyReg = dynamic_cast<ProxyRegistration*>(result->value());
+        proxyReg = result->value();
     }
     proxyRegistrationCache.insert({service_type, proxyReg});
     return proxyReg;
 }
 
 
-bool StandardApplicationContext::registerAlias(detail::ServiceRegistration *reg, const QString &alias)
+bool StandardApplicationContext::registerAlias(service_registration_handle_t reg, const QString &alias)
 {
     QMutexLocker<QMutex> locker{&mutex};
     if(!reg) {
@@ -1337,224 +1683,6 @@ bool StandardApplicationContext::event(QEvent *event)
 
 }
 
-
-const service_config StandardApplicationContext::ObjectRegistration::defaultConfig;
-
-
-detail::Subscription* StandardApplicationContext::DescriptorRegistration::createBindingTo(const char* sourcePropertyName, detail::Registration *target, const detail::property_descriptor& targetProperty)
-{
-    if(QThread::currentThread() != this->thread()) {
-        qCritical(loggingCategory()).noquote().nospace() << "Cannot create binding in different thread";
-        return nullptr;
-    }
-
-    detail::property_descriptor setter = targetProperty;
-    auto targetReg = dynamic_cast<StandardRegistrationImpl*>(target);
-    if(!targetReg) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << *target;
-        return nullptr;
-    }
-    if(this == target && QString{sourcePropertyName} == setter.name) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to self";
-        return nullptr;
-    }
-
-    if(target->applicationContext() != applicationContext()) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << *target << " from different ApplicationContext";
-        return nullptr;
-    }
-
-    auto sourceProperty = getProperty(sourcePropertyName);
-    if(!detail::isBindable(sourceProperty)) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Property '" << sourcePropertyName << "' in " << *this << " is not bindable";
-        return nullptr;
-    }
-    if(!setter.setter) {
-        auto targetProperty = targetReg->getProperty(setter.name);
-        if(!targetProperty.isValid() || !targetProperty.isWritable()) {
-            qCCritical(loggingCategory()).noquote().nospace() << setter << " is not a writable property for " << *target;
-            return nullptr;
-        }
-        if(!QMetaType::canConvert(sourceProperty.metaType(), targetProperty.metaType())) {
-            qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << setter << " of " << *target << " with incompatible types";
-            return nullptr;
-        }
-        setter = detail::propertySetter(targetProperty);
-    }
-    if(!targetReg->registerBoundProperty(setter.name)) {
-        qCCritical(loggingCategory()).noquote().nospace() << setter << " has already been bound to " << *target;
-        return nullptr;
-
-    }
-
-
-    auto subscription = new PropertyBindingSubscription{target, sourceProperty, setter};
-    qCInfo(loggingCategory()).noquote().nospace() << "Created Subscription for binding property '" << sourceProperty.name() << "' of " << *this << " to " << setter << " of " << *target;
-    return subscribe(subscription);
-}
-
-detail::Subscription *StandardApplicationContext::DescriptorRegistration::createAutowiring(const type_info &type, detail::q_inject_t injector, Registration *source)
-{
-    if(QThread::currentThread() != this->thread()) {
-        qCritical(loggingCategory()).noquote().nospace() << "Cannot create autowiring in different thread";
-        return nullptr;
-    }
-
-    if(!autowirings.insert(type).second) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register autowiring for type " << type.name() << " in " << *this;
-        return nullptr;
-    }
-    return subscribe(new AutowireSubscription{injector, source});
-}
-
-
-
-
-
-StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
-    detail::ServiceRegistration(parent),
-    descriptor{desc},
-    m_name(name)
-{
-}
-
-
-
-
-
-
-
-    void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
-       out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor;
-    }
-
-    void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *srv) {
-       if(srv == theService) {
-           //Somebody has destroyed a Service that is managed by this ApplicationContext.
-           //All we can do is log an error and set theService to nullptr.
-           //Yet, it might still be in use somewhere as a dependency.
-           qCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
-           theService = nullptr;
-           m_state = STATE_INIT;
-       }
-    }
-
-    void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
-       out.nospace().noquote() << "Object '" << registeredName() << "' with " << this->descriptor;
-    }
-
-
-
-
-
-
-
-    void StandardApplicationContext::DescriptorRegistration::PropertyBindingSubscription::notify(QObject* obj) {
-       auto subscr = new PropertyInjector{obj, m_sourceProperty, m_setter};
-       m_target->subscribe(subscr);
-       subscriptions.push_back(subscr);
-    }
-
-    void StandardApplicationContext::DescriptorRegistration::PropertyBindingSubscription::cancel() {
-       for(auto iter = subscriptions.begin(); iter != subscriptions.end(); iter = subscriptions.erase(iter)) {
-           auto subscription = *iter;
-           if(subscription) {
-              subscription->cancel();
-           }
-       }
-       QObject::disconnect(out_Connection);
-       QObject::disconnect(in_Connection);
-    }
-
-    void StandardApplicationContext::DescriptorRegistration::PropertyBindingSubscription::connectTo(Registration *source)
-    {
-        in_Connection = connect(source, this);
-    }
-
-
-    void StandardApplicationContext::DescriptorRegistration::PropertyInjector::connectTo(Registration *source)
-    {
-        in_Connection = connect(source, this);
-    }
-
-    void StandardApplicationContext::DescriptorRegistration::PropertyInjector::notify(QObject* target) {
-       m_setter.setter(target, m_sourceProperty.read(m_boundSource));
-       auto notifier = detail::bindProperty(m_boundSource, m_sourceProperty, target, m_setter);
-       if(std::holds_alternative<QPropertyNotifier>(notifier)) {
-           bindings.push_back(std::get<QPropertyNotifier>(std::move(notifier)));
-       }
-       if(std::holds_alternative<QMetaObject::Connection>(notifier)) {
-           connections.push_back(std::get<QMetaObject::Connection>(notifier));
-       }
-
-    }
-
-    void StandardApplicationContext::DescriptorRegistration::PropertyInjector::cancel() {
-       for(auto iter = connections.begin(); iter != connections.end(); iter = connections.erase(iter)) {
-           QObject::disconnect(*iter);
-       }
-       //QPropertyNotifier will remove the binding in its destructor:
-       bindings.clear();
-       QObject::disconnect(out_Connection);
-       QObject::disconnect(in_Connection);
-    }
-
-    QStringList StandardApplicationContext::ServiceRegistration::getBeanRefs() const
-    {
-        if(beanRefsCache.has_value()) {
-            return beanRefsCache.value();
-        }
-        QStringList result;
-        for(auto entry : config().properties.asKeyValueRange()) {
-            auto key = entry.second.toString();
-            if(key.startsWith('&')) {
-                int dot = key.indexOf('.');
-                if(dot < 0) {
-                    dot = key.size();
-                }
-                result.push_back(key.mid(1, dot-1));
-            }
-        }
-        beanRefsCache = result;
-        return result;
-    }
-
-
-    void StandardApplicationContext::AutowireSubscription::notify(QObject *obj) {
-        if(auto sourceReg = dynamic_cast<registration_handle_t>(m_bound)) {
-            auto subscr = new AutowireSubscription{m_injector, obj};
-            sourceReg->subscribe(subscr);
-            subscriptions.push_back(subscr);
-        } else {
-            m_injector(m_bound, obj);
-        }
-    }
-
-    void StandardApplicationContext::AutowireSubscription::cancel() {
-        for(auto iter = subscriptions.begin(); iter != subscriptions.end(); iter = subscriptions.erase(iter)) {
-            auto subscr = *iter;
-            if(subscr) {
-                subscr->cancel();
-            }
-        }
-        QObject::disconnect(out_Connection);
-        QObject::disconnect(in_Connection);
-    }
-
-    void StandardApplicationContext::AutowireSubscription::connectTo(detail::Registration *source)
-    {
-        in_Connection = connect(source, this);
-    }
-
-    detail::Subscription *StandardApplicationContext::ProxyRegistration::createAutowiring(const type_info &type, detail::q_inject_t injector, Registration *source)
-    {
-        if(!autowirings.insert(type).second) {
-            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register autowiring for type " << type.name() << " in " << *this;
-            return nullptr;
-        }
-
-        return subscribe(new AutowireSubscription{injector, source});
-    }
 
 
 
