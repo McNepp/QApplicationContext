@@ -605,6 +605,8 @@ public:
 
     /**
      * @brief Cancels this Subscription.
+     * <br>**Thread-safety:** This function may only be called from the Thread that created this Subscription.
+     * (This is not necessarily the QApplicationContext's thread.)
      */
     void cancel() {
         if(m_subscription) {
@@ -688,6 +690,7 @@ public:
     /// Connects to the `publishedObjectsChanged` signal and propagates new QObjects to the callable.
     /// If the ApplicationContext has already been published, this method
     /// will invoke the callable immediately with the current publishedObjects().
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \tparam F is assumed to be a Callable that accepts an argument of type `S*`.
     /// \param context the target-context.
     /// \param callable the piece of code to execute.
@@ -708,6 +711,7 @@ public:
     /// Connects to the `objectPublished` signal and propagates new QObjects to the callable.
     /// If the ApplicationContext has already been published, this method
     /// will invoke the setter immediately with the current publishedObjects().
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \tparam T the target of the subscription. Must be derived from QObject.
     /// \param target the object on which the setter will be invoked.
     /// \param setter the method that will be invoked.
@@ -740,13 +744,13 @@ public:
     /// Whenever a service of the type `<D>` is published, it will be injected into every service
     /// of type `<S>`, using the supplied member-function.
     /// <br>For each source-type `D`, you can register at most one autowiring.
+    /// <br>**Thread-safety:** This function may only be called from the QApplicationContext's thread.
     /// \tparam D the type of service that will be injected into Services of type `<S>`.
     /// \param injectionSlot the member-function to invoke when a service of type `<D>` is published.
     /// \return the Subscription created by this autowiring. If an autowiring has already been registered
     /// for the type `D´, an invalid Subscription will be returned.
     ///
     template<typename D,typename R> Subscription autowire(R (S::*injectionSlot)(D*));
-
 
 
 
@@ -839,6 +843,7 @@ public:
     /// <br>If this function is successful, the Service can be referenced by the new name in addition to the
     /// name it was originally registered with. There can be multiple aliases for a Service.<br>
     /// Aliases must be unique within the ApplicationContext.
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \param alias the alias to use.
     /// \return `true` if the alias could be registered. `false` if this alias has already been registered before with a different registration.
     ///
@@ -961,6 +966,7 @@ template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, 
 /// \brief Binds a property of one ServiceRegistration to a property from  another Registration.
 /// <br>All changes made to the source-property will be propagated to the target-property.
 /// For each target-property, there can be only successful call to bind().
+/// <br>**Thread-safety:** This function may only be called from the QApplicationContext's thread.
 /// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
 /// \param sourceProperty the name of the Q_PROPERTY in the source.
 /// \param target the Registration with the target-property to which the source-property shall be bound.
@@ -978,6 +984,7 @@ template<typename S,typename T> inline Subscription bind(const ServiceRegistrati
 /// \brief Binds a property of one ServiceRegistration to a Setter from  another Registration.
 /// <br>All changes made to the source-property will be propagated to all Services represented by the target.
 /// For each target-property, there can be only successful call to bind().
+/// <br>**Thread-safety:** This function only may be called from the QApplicationContext's thread.
 /// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
 /// \param sourceProperty the name of the Q_PROPERTY in the source.
 /// \param target the Registration with the target-property to which the source-property shall be bound.
@@ -1801,6 +1808,7 @@ public:
 
     ///
     /// \brief Registers a service with this ApplicationContext.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
     /// \param serviceDeclaration comprises the services's primary advertised interface, its implementation-type and its dependencies to be injected
     /// via its constructor.
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
@@ -1819,6 +1827,7 @@ public:
     ///
     /// \brief Registers a service with no dependencies with this ApplicationContext.
     /// This is a convenience-function equivalent to `registerService(Service<S>{}, objectName, config)`.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
@@ -1839,6 +1848,7 @@ public:
     /// The object will immediately be published.
     /// You can either let the compiler's template-argument deduction figure out the servicetype `<S>` for you,
     /// or you can supply it explicitly, if it differs from the static type of the object.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
     /// \param obj must be non-null. Also, must be convertible to QObject.
     /// \param objName the name for this Object in the ApplicationContext.
     /// *Note*: this name will not be set as the QObject::objectName(). It will be the internal name within the ApplicationContext only.
@@ -1873,6 +1883,7 @@ public:
     /// <br>**Note:** If you do not provide an explicit type-argument, QObject will be assumed. This will, of course, match
     /// any service with the supplied name.<br>
     /// The returned ServiceRegistration may be narrowed to a more specific service-type using ServiceRegistration::as().
+    /// <br>**Thread-safety:** This function may be called safely  from any thread.
     /// \tparam S the required service-type.
     /// \param name the desired name of the registration.
     /// A valid ServiceRegistration will be returned only if exactly one Service that matches the requested type and name has been registered.
@@ -1894,7 +1905,7 @@ public:
     /// to invoking getRegistration().<br>
     /// This means that if you subscribe to it using Registration::subscribe(), you will be notified
     /// about all published services that match the Service-type.
-
+    /// <br>**Thread-safety:** This function may be called safely  from any thread.
     /// \tparam S the required service-type.
     /// \return a ProxyRegistration that corresponds to all registration that match the service-type.
     ///
@@ -1907,6 +1918,7 @@ public:
      * @brief Obtains a List of all Services that have been registered.
      * <br>The ServiceRegistrations have a type-argument `QObject`. You may
      * want to narrow them to the expected service-type using ServiceRegistration::as().
+     * <br>**Thread-safety:** This function may be called safely  from any thread.
      * @return a List of all Services that have been registered.
      */
     [[nodiscard]] QList<ServiceRegistration<QObject>> getRegistrations() const {
@@ -1924,6 +1936,7 @@ public:
     /// \brief Publishes this ApplicationContext.
     /// This method may be invoked multiple times.
     /// Each time it is invoked, it will attempt to instantiate all yet-unpublished services that have been registered with this ApplicationContext.
+    /// <br>**Thread-safety:** This function may only be called from the QApplicationContext's thread.
     /// \param allowPartial has the default-value `false`, this function will either return all services or no service at all.
     /// If `allowPartial == true`, the function will attempt to publish as many pending services as possible.
     /// Failures that may be fixed by further registrations will be logged with the level QtMsgType::QtWarningMessage.
@@ -1935,11 +1948,13 @@ public:
 
     ///
     /// \brief The number of published services.
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \return The number of published services.
     ///
     [[nodiscard]] virtual unsigned published() const = 0;
 
     /// \brief The number of yet unpublished services.
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \return the number of services that have been registered but not (yet) published.
     ///
     [[nodiscard]] virtual unsigned pendingPublication() const = 0;

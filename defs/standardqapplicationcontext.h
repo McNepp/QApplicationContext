@@ -6,11 +6,12 @@
 #include <deque>
 #include <typeindex>
 #include <QMetaProperty>
+#include <QMutex>
+#include <QWaitCondition>
 #include <QBindable>
 #include "qapplicationcontext.h"
 
 namespace mcnepp::qtdi {
-
 
 
 ///
@@ -19,6 +20,9 @@ namespace mcnepp::qtdi {
 class StandardApplicationContext final : public QApplicationContext
 {
     Q_OBJECT
+
+    class CreateRegistrationHandleEvent;
+
 public:
     explicit StandardApplicationContext(QObject *parent = nullptr);
 
@@ -482,12 +486,15 @@ private:
         };
 
 
-        ProxyRegistration(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent) :
+        ProxyRegistration(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent, const descriptor_list& registrations) :
             detail::ProxyRegistration{parent},
                 m_type(type),
             m_meta(metaObject)
         {
             proxySubscription = new ProxySubscription{this};
+            for(auto reg : registrations) {
+                add(reg);
+            }
         }
 
         virtual detail::Subscription* createAutowiring(const std::type_info& type, detail::q_inject_t injector, Registration* source) override;
@@ -501,18 +508,23 @@ private:
         }
 
         virtual QList<detail::ServiceRegistration*> registeredServices() const override {
+            QMutexLocker locker{&mutex};
             return QList<detail::ServiceRegistration*>{registrations.begin(), registrations.end()};
         }
 
 
 
         bool add(DescriptorRegistration* reg) {
-            if(reg->matches(m_type) && std::find(registrations.begin(), registrations.end(), reg) == registrations.end()) {
+            {
+                QMutexLocker locker{&mutex};
+                if(!reg->matches(m_type) || std::find(registrations.begin(), registrations.end(), reg) != registrations.end()) {
+                    return false;
+                }
                 registrations.push_back(reg);
-                reg->subscribe(proxySubscription);
-                return true;
             }
-            return false;
+            //May emit a signal, therefore do it after releasing the Mutex:
+            reg->subscribe(proxySubscription);
+            return true;
         }
 
 
@@ -521,7 +533,7 @@ private:
             detail::Subscription::connect(this, subscription);
             TemporarySubscriptionProxy tempProxy{subscription};
             //By subscribing to a TemporarySubscriptionProxy, we force exisiting objects to be signalled immediately, while not creating any new Connections:
-            for(auto reg : registrations) {
+            for(auto reg : registeredServices()) {
                 reg->subscribe(&tempProxy);
             }
         }
@@ -535,6 +547,7 @@ private:
 
 
         void remove(DescriptorRegistration* reg) {
+            QMutexLocker locker{&mutex};
             auto found = std::find(registrations.begin(), registrations.end(), reg);
             if(found != registrations.end()) {
                 registrations.erase(found);
@@ -549,6 +562,8 @@ private:
         }
 
         virtual bool registerBoundProperty(const char* name) override {
+            //We do not need to lock the mutex, as the member 'boundProperties' is only ever read and written to from the ApplicationContext's thread.
+            //See: DescriptorRegistration::createBindingTo()
             return boundProperties.insert(name).second;
         }
 
@@ -559,6 +574,7 @@ private:
         std::unordered_set<QString> boundProperties;
         std::unordered_set<std::type_index> autowirings;
         ProxySubscription* proxySubscription;
+        mutable QMutex mutex;
     };
 
 
@@ -609,6 +625,10 @@ private:
 
     std::pair<QVariant,Status> resolveProperty(const QString& group, const QVariant& valueOrPlaceholder, const QVariant& defaultValue, bool allowPartial);
 
+    // QObject interface
+public:
+    bool event(QEvent *event) override;
+
 private:
 
     descriptor_list registrations;
@@ -618,6 +638,8 @@ private:
 
 
     mutable std::unordered_map<std::type_index,ProxyRegistration*> proxyRegistrationCache;
+    mutable QMutex mutex;
+    mutable QWaitCondition condition;
 };
 
 

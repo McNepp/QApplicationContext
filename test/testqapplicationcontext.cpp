@@ -1,6 +1,9 @@
 #include <QTest>
 #include <QSettings>
 #include <QTemporaryFile>
+#include <QPromise>
+#include <QSemaphore>
+#include <QFuture>
 #include <iostream>
 #include "standardqapplicationcontext.h"
 #include "appcontexttestclasses.h"
@@ -9,6 +12,7 @@
 namespace mcnepp::qtdi {
 
 using namespace qtditest;
+
 
 template<> struct service_factory<BaseService> {
     using service_type = BaseService;
@@ -121,6 +125,30 @@ public:
 
     QObjectList processedObjects;
 };
+
+template<typename S> class SubscriptionThread : public QThread {
+protected:
+    void run() override {
+        QObject context;
+        auto registration = m_context->getRegistration<S>();
+        registration.subscribe(&context,[this](BaseService* srv) {
+            service.storeRelease(srv);
+            exit();//Leave event-loop
+        });
+
+        subscribed = 1;
+        QThread::run();
+    }
+public:
+    explicit SubscriptionThread(QApplicationContext* context) :
+        m_context(context) {
+    }
+
+    QAtomicPointer<BaseService> service;
+    QApplicationContext* const m_context;
+    QAtomicInt subscribed;
+};
+
 
 class ApplicationContextTest
  : public QObject {
@@ -1454,6 +1482,65 @@ private slots:
 
     }
 
+    void testPublishThenSubscribeInThread() {
+        auto registration = context->registerService<BaseService>();
+        RegistrationSlot<BaseService> slot{registration};
+        context->publish();
+        SubscriptionThread<BaseService> thread{context.get()};
+        thread.start();
+        bool hasSubscribed = QTest::qWaitFor([&thread] { return thread.subscribed;}, 1000);
+        QVERIFY(hasSubscribed);
+        QVERIFY(thread.service);
+        QCOMPARE(thread.service, slot.last());
+    }
+
+
+
+    void testSubscribeInThreadThenPublish() {
+        auto registration = context->registerService<BaseService>();
+        RegistrationSlot<BaseService> slot{registration};
+        SubscriptionThread<BaseService> thread{context.get()};
+        thread.start();
+        bool hasSubscribed = QTest::qWaitFor([&thread] { return thread.subscribed;}, 1000);
+        QVERIFY(hasSubscribed);
+        context->publish();
+        QVERIFY(thread.wait(1000));
+        QVERIFY(thread.service);
+        QCOMPARE(thread.service, slot.last());
+    }
+
+
+    void testPublishInThreadFails() {
+        auto registration = context->registerService<BaseService>();
+        RegistrationSlot<BaseService> slot{registration};
+
+        QAtomicInt success{-1};
+        QThread* thread = QThread::create([this,&success] {
+            success = context->publish();
+        });
+        thread->start();
+        bool hasSubscribed = QTest::qWaitFor([&success] { return success != -1;}, 1000);
+        QVERIFY(!success);
+        QVERIFY(!slot);
+        QVERIFY(thread->wait(1000));
+        delete thread;
+    }
+
+
+    void testGetRegistrationInThread() {
+        QMutex mutex;
+        ProxyRegistration<BaseService> reg;
+        QThread* thread = QThread::create([this,&reg,&mutex] {
+            QMutexLocker locker{&mutex};
+            reg = context->getRegistration<BaseService>();
+        });
+        thread->start();
+        bool hasSetParent = QTest::qWaitFor([&reg,&mutex] {QMutexLocker locker{&mutex}; return reg.isValid();}, 1000);
+        QVERIFY(hasSetParent);
+        QCOMPARE(reg.unwrap()->thread(), QThread::currentThread());
+        QVERIFY(thread->wait(1000));
+        delete thread;
+    }
 
 
     void testPublishAll() {
