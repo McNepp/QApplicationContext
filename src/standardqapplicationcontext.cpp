@@ -983,7 +983,6 @@ bool StandardApplicationContext::publish(bool allowPartial)
         return false;
     }
 
-    unsigned managed = 0;
     qsizetype publishedCount = 0;
     descriptor_list allCreated;
     descriptor_list toBePublished;
@@ -1004,46 +1003,45 @@ bool StandardApplicationContext::publish(bool allowPartial)
                 allCreated.push_back(reg);
             }
         }
-        if(toBePublished.empty() && needConfiguration.empty()) {
-            return true;
+    }
+    if(toBePublished.empty() && needConfiguration.empty()) {
+        return true;
+    }
+    validationResult = validate(allowPartial, allCreated, toBePublished);
+    if(validationResult == Status::fatal) {
+        return false;
+    }
+
+    qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext with " << toBePublished.size() << " unpublished Objects";
+    //Do several rounds and publish those services whose dependencies have already been published.
+    //For a service with an empty set of dependencies, this means that it will be published first.
+    for(auto reg : toBePublished) {
+        QVariantList dependencies;
+        QObject temporaryParent;
+        auto& dependencyInfos = reg->descriptor.dependencies;
+        if(!dependencyInfos.empty()) {
+            qCInfo(loggingCategory()).noquote().nospace() << "Resolving " << dependencyInfos.size() << " dependencies of " << *reg << ":";
+            for(auto& d : dependencyInfos) {
+                auto result = resolveDependency(allCreated, reg, d, allowPartial, true, &temporaryParent);
+                dependencies.push_back(result.first);
+            }
         }
-        validationResult = validate(allowPartial, allCreated, toBePublished);
-        if(validationResult == Status::fatal) {
+        auto service = reg->publish(dependencies);
+        if(!service) {
+            qCCritical(loggingCategory()).nospace().noquote() << "Could not publish " << *reg;
             return false;
         }
-
-        qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext with " << toBePublished.size() << " unpublished Objects";
-        //Do several rounds and publish those services whose dependencies have already been published.
-        //For a service with an empty set of dependencies, this means that it will be published first.
-        for(auto reg : toBePublished) {
-            QVariantList dependencies;
-            QObject temporaryParent;
-            auto& dependencyInfos = reg->descriptor.dependencies;
-            if(!dependencyInfos.empty()) {
-                qCInfo(loggingCategory()).noquote().nospace() << "Resolving " << dependencyInfos.size() << " dependencies of " << *reg << ":";
-                for(auto& d : dependencyInfos) {
-                    auto result = resolveDependency(allCreated, reg, d, allowPartial, true, &temporaryParent);
-                    dependencies.push_back(result.first);
-                }
-            }
-            auto service = reg->publish(dependencies);
-            if(!service) {
-                qCCritical(loggingCategory()).nospace().noquote() << "Could not publish " << *reg;
-                return false;
-            }
-            QObjectList tempChildren = temporaryParent.children(); //We must make a copy of the chilren, as we'll modify it indirectly in the loop.
-            for(auto child : tempChildren) {
-                child->setParent(service);
-            }
-            if(service->objectName().isEmpty()) {
-                service->setObjectName(reg->registeredName());
-            }
-            qCInfo(loggingCategory()).nospace().noquote() << "Published " << *reg;
-            allCreated.push_back(reg);
+        QObjectList tempChildren = temporaryParent.children(); //We must make a copy of the chilren, as we'll modify it indirectly in the loop.
+        for(auto child : tempChildren) {
+            child->setParent(service);
         }
-        managed = std::count_if(allCreated.begin(), allCreated.end(), std::mem_fn(&DescriptorRegistration::isManaged));
-
+        if(service->objectName().isEmpty()) {
+            service->setObjectName(reg->registeredName());
+        }
+        qCInfo(loggingCategory()).nospace().noquote() << "Published " << *reg;
+        allCreated.push_back(reg);
     }
+    unsigned managed = std::count_if(allCreated.begin(), allCreated.end(), std::mem_fn(&DescriptorRegistration::isManaged));
 
     QList<QApplicationContextPostProcessor*> postProcessors;
     for(auto reg : allCreated) {
