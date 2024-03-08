@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['bind_0',['bind',['../qapplicationcontext_8h.html#a61538a5d0087d717ffe0e3f5aeeed900',1,'mcnepp::qtdi::bind(const ServiceRegistration&lt; S &gt; &amp;source, const char *sourceProperty, Registration&lt; T &gt; &amp;target, const char *targetProperty)'],['../qapplicationcontext_8h.html#ab98c46421275c921141ad4a393a406af',1,'mcnepp::qtdi::bind(const ServiceRegistration&lt; S &gt; &amp;source, const char *sourceProperty, Registration&lt; T &gt; &amp;target, R(T::*setter)(A))']]]
+  ['bind_0',['bind',['../qapplicationcontext_8h.html#a0f11a14df333d20850559efeee464e15',1,'mcnepp::qtdi::bind(const ServiceRegistration&lt; S, scope &gt; &amp;source, const char *sourceProperty, Registration&lt; T &gt; &amp;target, const char *targetProperty)'],['../qapplicationcontext_8h.html#ae25ab68d0a118fe38340e5d1ddd2c95c',1,'mcnepp::qtdi::bind(const ServiceRegistration&lt; S, scope &gt; &amp;source, const char *sourceProperty, Registration&lt; T &gt; &amp;target, R(T::*setter)(A))']]]
 ];
