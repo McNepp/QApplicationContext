@@ -123,8 +123,8 @@ private:
             return descriptor.matches(type);
         }
 
-        bool matches(const std::type_index& type) const {
-            return descriptor.matches(type);
+        bool matches(const dependency_info& info) const {
+            return matches(info.type) && (!info.has_required_name() || info.expression == registeredName());
         }
 
 
@@ -134,17 +134,8 @@ private:
 
 
 
-        static auto matcher(const std::type_info& type) {
-            return [&type](DescriptorRegistration* reg) { return reg->matches(type); };
-        }
-
         static auto matcher(const dependency_info& info) {
-            return [&info](DescriptorRegistration* reg) {
-                if(!reg->matches(info.type)) {
-                    return false;
-                }
-                return !info.has_required_name() || reg->registeredName() == info.expression;
-            };
+            return [&info](DescriptorRegistration* reg) { return reg->matches(info); };
         }
 
 
@@ -639,21 +630,12 @@ private:
         fatal
     };
 
-    struct ResolvedBeanRef {
-        QVariant resolvedValue;
-        Status status;
-        bool resolved;
-        QMetaProperty sourceProperty;
-        QObject* source;
-    };
 
     Status validate(bool allowPartial, const descriptor_list& published, descriptor_list& unpublished);
 
-    template<typename C> static DescriptorRegistration* find_by_type(const C& regs, const std::type_info& type);
+    bool checkTransitiveDependentsOn(const service_descriptor& descriptor, const QString& name, const std::unordered_set<dependency_info>& dependencies) const;
 
-    bool checkTransitiveDependentsOn(const service_descriptor& descriptor, const std::unordered_set<std::type_index>& dependencies) const;
-
-    void findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<std::type_index>& dependents) const;
+    void findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& dependents) const;
 
     void unpublish();
 
@@ -672,10 +654,11 @@ private:
 
     DescriptorRegistration* registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, bool prototype);
 
-    Status configure(DescriptorRegistration*,QObject*, const QList<QApplicationContextPostProcessor*>& postProcessors, descriptor_list& toBePublished, bool allowPartial);
+    Status configure(DescriptorRegistration*, descriptor_list& toBePublished, bool allowPartial);
 
+    Status init(DescriptorRegistration*, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial);
 
-    ResolvedBeanRef resolveBeanRef(const QVariant& value, descriptor_list& toBePublished, bool allowPartial);
+    std::pair<Status,bool> resolveBeanRef(QVariant& value, descriptor_list& toBePublished, bool allowPartial);
 
     std::pair<QVariant,Status> resolveProperty(const QString& group, const QVariant& valueOrPlaceholder, const QVariant& defaultValue, bool allowPartial);
 

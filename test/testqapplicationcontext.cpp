@@ -367,7 +367,7 @@ private slots:
     }
 
 
-    void testBindToBeanProperty() {
+    void testInitializeWithBeanProperty() {
         QTimer timer1;
         BaseService base1;
         base1.setTimer(&timer1);
@@ -376,14 +376,9 @@ private slots:
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot2{reg2};
         QCOMPARE(baseSlot2->timer(), &timer1);
-
-        QTimer timer2;
-        base1.setTimer(&timer2);
-
-        QCOMPARE(baseSlot2->timer(), &timer2);
     }
 
-    void testBindToBindableBeanProperty() {
+    void testInitializeWithBeanProperty2() {
         QTimer timer1;
         timer1.setInterval(4711);
         context->registerObject(&timer1, "timer1");
@@ -391,11 +386,6 @@ private slots:
         QVERIFY(context->publish());
         RegistrationSlot<QTimer> timerSlot2{reg2};
         QCOMPARE(timerSlot2->interval(), 4711);
-
-        //Modify property "interval" of the timer1 (which resides in the BaseService):
-        timer1.setInterval(1908);
-        //The property "interval" of the timer2 has been bound to "base.timer.interval", thus should change:
-        QCOMPARE(timerSlot2->interval(), 1908);
     }
 
     void testBindServiceRegistrationToProperty() {
@@ -1474,6 +1464,19 @@ private slots:
     }
 
 
+    void testKeepOrderOfRegistrations() {
+        context->registerService(service<Interface1,BaseService>(), "base1");
+        context->registerService(service<Interface1,BaseService>(inject<CyclicDependency>()), "base2");
+        context->registerService(service<Interface1,BaseService>(), "base3");
+        auto regCard = context->registerService(service<CardinalityNService>(injectAll<Interface1>()));
+        auto regCyclic = context->registerService(service<CyclicDependency>(inject<BaseService>("base3")));
+        RegistrationSlot<CardinalityNService> slotCard{regCard};
+        QVERIFY(context->publish());
+        QCOMPARE(slotCard->my_bases.size(), 3);
+        QCOMPARE(static_cast<BaseService*>(slotCard->my_bases[0])->objectName(), "base1");
+        QCOMPARE(static_cast<BaseService*>(slotCard->my_bases[1])->objectName(), "base2");
+        QCOMPARE(static_cast<BaseService*>(slotCard->my_bases[2])->objectName(), "base3");
+    }
 
 
 

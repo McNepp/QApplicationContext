@@ -536,13 +536,10 @@ which makes this a *reference to another member*:
       {"summary", "&propFetcherAggregator"}
     }));
 
-## Binding source-properties to target-properties of other members of the ApplicationContext
 
-In the preceeding example, we used a reference to another member to initialize of a Q_PROPERTY with a type of `QType*`, where `QType` is a class derived from `QObject`.
+In the preceeding example, we used a reference to another member to initialize a.
 
-Since the value of such a property is another service in the ApplicationContext, the value can never change. 
-
-However, we might also want to **bind** a target-service's property to the corresponding source-property of another service.
+We can take this one step further and use *a reference to a property of another member*.
 This can be achieved by using a property-value with the format `"&ref.prop"`. The following example shows this:
 
     QTimer timer1;
@@ -552,14 +549,17 @@ This can be achieved by using a property-value with the format `"&ref.prop"`. Th
     auto reg2 = context -> registerService<QTimer>("timer2", make_config({{"interval", "&timer1.interval"}})); // 2
     
     context -> publish(); 
-    
-    timer1.setInterval(4711); // 3
 
 1. We register a `QTimer` as "timer1".
-2. We register a second `QTimer` as "timer2". We use mcnepp::qtdi::make_config() to bind the property `interval` of the second timer to the first timer's propery.
-3. We change the first timer's interval. This will also change the second timer's interval!
+2. We register a second `QTimer` as "timer2". We use mcnepp::qtdi::make_config() to initialize the property `interval` of the second timer with the first timer's propery.
 
-There is a second, more explicit way of achieving the same result:
+## Binding source-properties to target-properties of other members of the ApplicationContext
+
+In the preceeding example, we used a reference to another member for the purpose of **initializing** a Q_PROPERTY.
+
+However, we might also want to **bind** a target-service's property to the corresponding source-property of another service.
+
+This can be achieved using the function mcnepp::qtdi::bind() like this:
 
     QTimer timer1;
     
@@ -578,7 +578,7 @@ There is a second, more explicit way of achieving the same result:
 3. We bind the property `interval` of the second timer to the first timer's propery.
 4. We change the first timer's interval. This will also change the second timer's interval!
 
-The second approach of binding properties has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), 
+This way of binding properties has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), 
 aka those that represent more than one service. The source-property will be bound to every target-service automatically!
 
 ## Accessing a service after registration

@@ -8,6 +8,8 @@
 #include <QCoreApplication>
 #include "standardqapplicationcontext.h"
 
+
+
 namespace mcnepp::qtdi {
 
 
@@ -139,26 +141,6 @@ bool isBindable(const QMetaProperty& sourceProperty) {
 }
 
 
-std::variant<std::nullptr_t,QMetaObject::Connection,QPropertyNotifier> bindProperty(QObject* source, const QMetaProperty& sourceProperty, QObject* target, const detail::property_descriptor& setter) {
-    if(sourceProperty.hasNotifySignal()) {
-        detail::BindingProxy* proxy = new detail::BindingProxy{sourceProperty, source, setter, target};
-        auto connection = QObject::connect(source, sourceProperty.notifySignal(), proxy, detail::BindingProxy::notifySlot());
-        qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << sourceProperty.name() << "' of " << source << " to " << setter <<" of " << target;
-        return std::move(connection);
-    }
-    if(sourceProperty.isBindable()) {
-        auto sourceBindable = sourceProperty.bindable(source);
-        auto notifier = sourceBindable.addNotifier([sourceProperty,source,setter,target]{
-            setter.setter(target, sourceProperty.read(source));
-        });
-        qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << sourceProperty.name() << "' of " << source << " to " << setter << " of " << target;
-        return std::move(notifier);
-    }
-    qCInfo(loggingCategory()).nospace().noquote() << "Could not bind property '" << sourceProperty.name() << "' of " << source << " to " << setter << " of " << target;
-    return nullptr;
-}
-
-
 
 
 
@@ -278,13 +260,23 @@ public:
 
     void notify(QObject* target) {
         m_setter.setter(target, m_sourceProperty.read(m_boundSource));
-        auto notifier = detail::bindProperty(m_boundSource, m_sourceProperty, target, m_setter);
-        if(std::holds_alternative<QPropertyNotifier>(notifier)) {
-            bindings.push_back(std::get<QPropertyNotifier>(std::move(notifier)));
+        if(m_sourceProperty.hasNotifySignal()) {
+            detail::BindingProxy* proxy = new detail::BindingProxy{m_sourceProperty, m_boundSource, m_setter, target};
+            auto connection = QObject::connect(m_boundSource, m_sourceProperty.notifySignal(), proxy, detail::BindingProxy::notifySlot());
+            qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << m_sourceProperty.name() << "' of " << m_boundSource << " to " << m_setter <<" of " << target;
+            connections.push_back(std::move(connection));
+            return;
         }
-        if(std::holds_alternative<QMetaObject::Connection>(notifier)) {
-            connections.push_back(std::get<QMetaObject::Connection>(notifier));
+        if(m_sourceProperty.isBindable()) {
+            auto sourceBindable = m_sourceProperty.bindable(m_boundSource);
+            auto notifier = sourceBindable.addNotifier([this,target]{
+                m_setter.setter(target, m_sourceProperty.read(m_boundSource));
+            });
+            qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << m_sourceProperty.name() << "' of " << m_boundSource << " to " << m_setter << " of " << target;
+            bindings.push_back(std::move(notifier));
+            return;
         }
+        qCWarning(loggingCategory()).nospace().noquote() << "Could not bind property '" << m_sourceProperty.name() << "' of " << m_boundSource << " to " << m_setter << " of " << target;
 
     }
 
@@ -500,8 +492,7 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
 
     auto sourceProperty = getProperty(sourcePropertyName);
     if(!detail::isBindable(sourceProperty)) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Property '" << sourcePropertyName << "' in " << *this << " is not bindable";
-        return nullptr;
+        qCWarning(loggingCategory()).noquote().nospace() << "Property '" << sourcePropertyName << "' in " << *this << " is not bindable";
     }
     if(!setter.setter) {
         auto targetProperty = targetReg->getProperty(setter.name);
@@ -716,10 +707,7 @@ StandardApplicationContext::~StandardApplicationContext() {
     unpublish();
 }
 
-template<typename C> StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::find_by_type(const C& regs, const std::type_info& type) {
-    auto found = std::find_if(regs.begin(), regs.end(), DescriptorRegistration::matcher(type));
-    return found != regs.end() ? *found : nullptr;
-}
+
 
 
 
@@ -742,7 +730,7 @@ void StandardApplicationContext::unpublish()
         for(auto depend = published.begin(); depend != published.end(); ++depend) {
             auto dep = *depend;
             for(auto& t : dep->descriptor.dependencies) {
-                if(reg->descriptor.matches(t.type)) {
+                if(reg->matches(t)) {
                     published.erase(depend);
                     published.push_front(reg);
                     reg = dep;
@@ -750,7 +738,7 @@ void StandardApplicationContext::unpublish()
                 }
             }
             for(auto& beanRef : reg->getBeanRefs()) {
-                if(beanRef == reg->registeredName()) {
+                if(getRegistrationByName(beanRef) == reg) {
                     published.erase(depend);
                     published.push_front(reg);
                     reg = dep;
@@ -1002,6 +990,17 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
                 goto next_unpublished;
             }
         }
+        for(auto& beanRef : reg->getBeanRefs()) {
+            if(!getRegistrationByName(beanRef)) {
+                if(allowPartial) {
+                    status = Status::fixable;
+                    qCWarning(loggingCategory()).noquote().nospace() << "Cannot resolve reference '" << beanRef << "' from " << *reg;
+                    goto fetch_next;
+                }
+                qCCritical(loggingCategory()).noquote().nospace() << "Cannot resolve reference '" << beanRef << "' from " << *reg;
+                return Status::fatal;
+            }
+        }
         if(!dependencyInfos.empty()) {
             QObject temporaryParent;
             qCInfo(loggingCategory()).noquote().nospace() << "Resolving " << dependencyInfos.size() << " dependencies of " << *reg << ":";
@@ -1013,6 +1012,7 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
                         status = Status::fixable;
                         goto fetch_next;
                     }
+                    [[fallthrough]];
                 case Status::fatal:
                     return Status::fatal;
                 }
@@ -1053,7 +1053,6 @@ bool StandardApplicationContext::publish(bool allowPartial)
         return false;
     }
 
-    qsizetype publishedCount = 0;
     descriptor_list allCreated;
     descriptor_list toBePublished;
     descriptor_list needConfiguration;
@@ -1111,7 +1110,32 @@ bool StandardApplicationContext::publish(bool allowPartial)
 
     unsigned managed = std::count_if(allCreated.begin(), allCreated.end(), std::mem_fn(&DescriptorRegistration::isManaged));
 
+    //Add the services that have been been created in this round to those that need configuration:
+    needConfiguration.insert(needConfiguration.begin(), toBePublished.begin(), toBePublished.end());
+    toBePublished.clear();
+    //The services that have been instantiated during this methd-invocation will be configured in the order they have have been
+    //instantiated.
+    while(!needConfiguration.empty()) {
+        DescriptorRegistration* reg = pop_front(needConfiguration);
+        if(reg->isPublished()) {
+            continue;
+        }
+        auto configResult = configure(reg, needConfiguration, allowPartial);
+        switch(configResult) {
+        case Status::fatal:
+            qCCritical(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
+            return false;
+        case Status::fixable:
+            qCWarning(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
+            validationResult = Status::fixable;
+            continue;
 
+        case Status::ok:
+            qCInfo(loggingCategory()).noquote().nospace() << "Configured " << *reg;
+            toBePublished.push_back(reg);
+        }
+    }
+    qsizetype publishedCount = 0;
     QList<QApplicationContextPostProcessor*> postProcessors;
     for(auto reg : allCreated) {
         if(auto processor = dynamic_cast<QApplicationContextPostProcessor*>(reg->getObject())) {
@@ -1119,52 +1143,28 @@ bool StandardApplicationContext::publish(bool allowPartial)
             qCInfo(loggingCategory()).noquote().nospace() << "Detected PostProcessor " << *reg;
         }
     }
-    //Move PostProcessors to the front, so that they will be configured before they process other Services:
+
+    //Move PostProcessors to the front, so that they will be initialized before they process other Services:
     for(unsigned moved = 0, pos = 1; pos < toBePublished.size(); ++pos) {
         if(dynamic_cast<QApplicationContextPostProcessor*>(toBePublished[pos]->getObject())) {
             std::swap(toBePublished[moved++], toBePublished[pos]);
         }
     }
-    //Add the services that need configuration to those that have been been created in this round:
-    toBePublished.insert(toBePublished.end(), needConfiguration.begin(), needConfiguration.end());
-    //The services that have been instantiated during this methd-invocation will be configured in the order they have have been
-    //instantiated. However, if their configuration has bean-refs, this order may need to be modified.
-    while(!toBePublished.empty()) {
-        DescriptorRegistration* reg = pop_front(toBePublished);
-        if(reg->isPublished()) {
+    for(auto reg : toBePublished) {
+        auto initResult = init(reg, postProcessors, allowPartial);
+        switch(initResult) {
+        case Status::fatal:
+            qCCritical(loggingCategory()).nospace().noquote() << "Could not initialize " << *reg;
+            return false;
+        case Status::fixable:
+            qCWarning(loggingCategory()).nospace().noquote() << "Could not initialize " << *reg;
+            validationResult = Status::fixable;
             continue;
-        }
-        next_published:
-        for(auto& beanRef : reg->getBeanRefs()) {
-            auto foundReg = eraseIf(toBePublished, [&beanRef](DescriptorRegistration* r) { return r->registeredName() == beanRef;});
-            if(foundReg) {
-                toBePublished.push_front(reg);//Put the current Registration back where it came from. Will be processed after the dependency.
-                reg = foundReg;
-                goto next_published;
-            }
-        }
 
-        auto service = reg->getObject();
-        if(service) {
-            if(service->objectName().isEmpty()) {
-                service->setObjectName(reg->registeredName());
-            }
-
-            auto configResult = configure(reg, service, postProcessors, toBePublished, allowPartial);
-            switch(configResult) {
-            case Status::fatal:
-                qCCritical(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
-                return false;
-            case Status::fixable:
-                qCWarning(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
-                validationResult = Status::fixable;
-                continue;
-
-            case Status::ok:
-                qCInfo(loggingCategory()).noquote().nospace() << "Configured " << *reg;
-                ++publishedCount;
-                reg->notifyPublished();
-            }
+        case Status::ok:
+            ++publishedCount;
+            reg->notifyPublished();
+            qCInfo(loggingCategory()).noquote().nospace() << "Published " << *reg;
         }
     }
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has published " << publishedCount << " objects";
@@ -1206,11 +1206,11 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
         name = makeName(*descriptor.service_types.begin());
     }
 
-    std::unordered_set<std::type_index> dependencies;
+    std::unordered_set<dependency_info> dependencies{};
 
     findTransitiveDependenciesOf(descriptor, dependencies);
 
-    if(!checkTransitiveDependentsOn(descriptor, dependencies)) {
+    if(!checkTransitiveDependentsOn(descriptor, name, dependencies)) {
         qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register '" << name << "'. Cyclic dependency in dependency-chain of " << descriptor;
         return nullptr;
 
@@ -1351,15 +1351,13 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
 
 
 
-void StandardApplicationContext::findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<std::type_index>& result) const
+void StandardApplicationContext::findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& result) const
 {
     for(auto& t : descriptor.dependencies) {
-        if(find_by_type(registrations, t.type)) {
-            result.insert(t.type);
-            for(auto reg : registrations) {
-                if(reg->descriptor.matches(t.type)) {
-                    findTransitiveDependenciesOf(reg->descriptor, result);
-                }
+        for(auto reg : registrations) {
+            if(reg->matches(t)) {
+                result.insert(t);
+                findTransitiveDependenciesOf(reg->descriptor, result);
             }
         }
     }
@@ -1368,15 +1366,15 @@ void StandardApplicationContext::findTransitiveDependenciesOf(const service_desc
 
 
 
-bool StandardApplicationContext::checkTransitiveDependentsOn(const service_descriptor& descriptor, const std::unordered_set<std::type_index>& dependencies) const
+bool StandardApplicationContext::checkTransitiveDependentsOn(const service_descriptor& descriptor, const QString& name, const std::unordered_set<dependency_info>& dependencies) const
 {
     for(auto reg : registrations) {
         for(auto& t : reg->descriptor.dependencies) {
-            if(descriptor.matches(t.type)) {
+            if(descriptor.matches(t.type) && (!t.has_required_name() || t.expression == name))  {
                 if(std::find_if(dependencies.begin(), dependencies.end(), [reg](auto dep) { return reg->matches(dep);}) != dependencies.end()) {
                    return false;
                 }
-                if(!checkTransitiveDependentsOn(reg->descriptor, dependencies)) {
+                if(!checkTransitiveDependentsOn(reg->descriptor, reg->registeredName(), dependencies)) {
                     return false;
                 }
             }
@@ -1386,10 +1384,10 @@ bool StandardApplicationContext::checkTransitiveDependentsOn(const service_descr
 }
 
 
-StandardApplicationContext::ResolvedBeanRef StandardApplicationContext::resolveBeanRef(const QVariant &value, descriptor_list& toBePublished, bool allowPartial)
+std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::resolveBeanRef(QVariant &value, descriptor_list& toBePublished, bool allowPartial)
 {
     if(!value.isValid()) {
-        return {value, Status::fatal, false};
+        return {Status::fatal, false};
     }
     QString key = value.toString();
     auto match = beanRefPattern.match(key);
@@ -1399,38 +1397,36 @@ StandardApplicationContext::ResolvedBeanRef StandardApplicationContext::resolveB
         if(!(bean && bean->getObject())) {
             if(allowPartial) {
                 qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << key << "'";
-                return {QVariant{}, Status::fixable, false};
+                return { Status::fixable, false};
             }
             qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << key << "'";
-            return {QVariant{}, Status::fatal, false};
+            return {Status::fatal, false};
         }
-        QMetaProperty sourceProp;
-        QObject* parent = nullptr;
         QVariant resultValue = resolveDependency(QVariant::fromValue(bean->getObject()), toBePublished);
         if(match.hasCaptured(3)) {
             QString propName = match.captured(3);
-            parent = bean->getObject();
-            if(!parent) {
+            if(!resultValue.isValid()) {
                 if(allowPartial) {
                     qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
-                    return {QVariant{}, Status::fixable, false};
+                    return { Status::fixable, false};
                 }
                 qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
-                return {QVariant{}, Status::fatal, false};
+                return {Status::fatal, false};
             }
-            sourceProp = bean->getProperty(propName.toLatin1());
+            QMetaProperty sourceProp = bean->getProperty(propName.toLatin1());
             if(!sourceProp.isValid()) {
                 //Refering to a non-existing Q_PROPERTY is always non-fixable:
-                qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << parent;
-                return {QVariant{}, Status::fatal, false};
+                qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
+                return {Status::fatal, false};
             }
-            resultValue = sourceProp.read(parent);
+            resultValue = sourceProp.read(resultValue.value<QObject*>());
         }
 
         qCInfo(loggingCategory()).nospace().noquote() << "Resolved reference '" << key << "' to " << resultValue;
-        return {resultValue, Status::ok, true, sourceProp, parent};
+        value = resultValue;
+        return {Status::ok, true};
     }
-    return {value, Status::ok, false};
+    return {Status::ok, false};
 
 }
 
@@ -1590,23 +1586,26 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 }
 
 
-StandardApplicationContext::Status StandardApplicationContext::configure(DescriptorRegistration* reg, QObject* target, const QList<QApplicationContextPostProcessor*>& postProcessors, descriptor_list& toBePublished, bool allowPartial) {
+StandardApplicationContext::Status StandardApplicationContext::configure(DescriptorRegistration* reg, descriptor_list& toBePublished, bool allowPartial) {
+    QObject* target = reg->getObject();
     if(!target) {
         return Status::fatal;
     }
+    if(target->objectName().isEmpty()) {
+        target->setObjectName(reg->registeredName());
+    }
+
     auto metaObject = target->metaObject();
     auto& config = reg->config();
     if(metaObject) {
         std::unordered_set<QString> usedProperties;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
-            auto result = resolveBeanRef(value, toBePublished, allowPartial);
-            if(result.status != Status::ok) {
-                return result.status;
+            QVariant resolvedValue = value;
+            auto result = resolveBeanRef(resolvedValue, toBePublished, allowPartial);
+            if(result.first != Status::ok) {
+                return result.first;
             }
-            QVariant resolvedValue;
-            if(result.resolved) {
-                resolvedValue = result.resolvedValue;
-            } else {
+            if(!result.second) {
                 auto propertyResult = resolveProperty(config.group, value, QVariant{}, allowPartial);
                 if(propertyResult.second != Status::ok) {
                     return propertyResult.second;
@@ -1624,12 +1623,6 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 if(targetProperty.write(target, resolvedValue)) {
                     qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
                     usedProperties.insert(key);
-                    if(result.sourceProperty.isValid() && result.source) {
-                        auto notifier = detail::bindProperty(result.source, result.sourceProperty, target, detail::propertySetter(targetProperty));
-                        if(std::holds_alternative<QPropertyNotifier>(notifier)) {
-                            reg->bindings.push_back(std::get<QPropertyNotifier>(std::move(notifier)));
-                        }
-                    }
                 } else {
                     //An error while setting a Q_PROPERTY is always non-fixable:
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not set property '" << key << "' of " << *reg << " to value " << resolvedValue;
@@ -1677,7 +1670,16 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
         }
 
     }
+    return Status::ok;
+}
 
+StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRegistration* reg, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial) {
+    QObject* target = reg->getObject();
+    if(!target) {
+        return Status::fatal;
+    }
+    auto metaObject = target->metaObject();
+    auto& config = reg->config();
 
     for(auto processor : postProcessors) {
         if(processor != dynamic_cast<QApplicationContextPostProcessor*>(target)) {
@@ -1707,12 +1709,13 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 return Status::ok;
             }
             break;
-       }
-       qCCritical(loggingCategory()).nospace().noquote() << "Could not invoke init-method '" << method.methodSignature() << "' of " << *reg;
-       return Status::fatal;
+        }
+        qCCritical(loggingCategory()).nospace().noquote() << "Could not invoke init-method '" << method.methodSignature() << "' of " << *reg;
+        return Status::fatal;
     }
     return Status::ok;
 }
+
 
 
 

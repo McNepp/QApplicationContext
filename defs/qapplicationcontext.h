@@ -1445,7 +1445,7 @@ struct service_descriptor {
         return constructor ? constructor(dependencies) : nullptr;
     }
 
-    bool matches(const std::type_index& type) const {
+    bool matches(const std::type_info& type) const {
         return type == impl_type || service_types.find(type) != service_types.end();
     }
 
@@ -2286,5 +2286,14 @@ namespace std {
 
         std::hash<mcnepp::qtdi::proxy_registration_handle_t> hasher;
     };
+
+    template<> struct hash<mcnepp::qtdi::detail::dependency_info> {
+        std::size_t operator()(const mcnepp::qtdi::detail::dependency_info& info) const {
+            return typeHasher(info.type) ^ info.kind;
+        }
+        hash<std::type_index> typeHasher;
+    };
+
+
 
 }
