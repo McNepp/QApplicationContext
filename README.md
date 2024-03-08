@@ -231,7 +231,7 @@ There are some crucial differences between mcnepp::qtdi::QApplicationContext::re
 | |registerService|registerObject|
 |---|---|---|
 |Instantiation of the object|upon mcnepp::qtdi::QApplicationContext::publish(bool)|prior to the registration with the QApplicationContext|
-|When does the Q_PROPERTY `Registration::publishedObjects` become non-empty?|upon mcnepp::qtdi::QApplicationContext::publish(bool)|immediately after the registration|
+|When is the signal `objectPublished(QObject*)` emitted?|upon mcnepp::qtdi::QApplicationContext::publish(bool)|immediately after the registration|
 |Naming of the QObject|`QObject::objectName` is set to the name of the registration|`QObject::objectName` is not touched by QApplicationContext|
 |Handling of Properties|The key/value-pairs supplied at registration will be set as Q_PROPERTYs by QApplicationContext|All properties must be set before registration|
 |Processing by mcnepp::qtdi::QApplicationContextPostProcessor|Every service will be processed by the registered QApplicationContextPostProcessors|Object is not processed|
@@ -298,16 +298,6 @@ In case you have the ProxyRegistration for the dependency at hand, you may skip 
     context->registerService(service<PropFetcherAggregator>(networkRegistration));
 
 
-### PRIVATE_COPY
-
-Sometime, you may want to ensure that every instance of your service will get its own instance of a dependency. This might be necessary if the dependency shall be configured (i.e. modified) by the
-dependent service, thus potentially affecting other dependent services.  
-QApplicationContext defines the dependency-type PRIVATE_COPY for this. Applied to our example, you would enfore a private `QNetworkAccessManager` for both `RestPropFetcher`s like this:
-
-    context -> registerService(service<RestPropFetcher>(injectPrivateCopy<QNetworkAccessManager>()), "berlinWeather"); 
-    context -> registerService(service<RestPropFetcher>(injectPrivateCopy<QNetworkAccessManager<()), "hamburgWeather"); 
-    
-**Note:** The life-cycle of instances created with PRIVATE_COPY will not be managed by the ApplicationContext! Rather, the ApplicationContext will set the dependent object's `QObject::parent()` to the dependent service, thus it will be destructed when its parent is destructed.
     
 The following table sums up the characteristics of the different types of dependencies:
 
@@ -319,9 +309,6 @@ The following table sums up the characteristics of the different types of depend
 <tr><td>N</td><td>Injects all dependencies of the dependency-type that have been registered into the dependent service, using a `QList`</td>
 <td>Injects an empty `QList` into the dependent service.</td>
 <td>See 'Normal behaviour'</td></tr>
-<tr><td>PRIVATE_COPY</td><td>Injects a newly created instance of the dependency-type and sets its `QObject::parent()` to the dependent service.</td>
-<td>Publication of the ApplicationContext will fail.</td>
-<td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
 </table>
 
 ## Converting Dependencies
@@ -477,9 +464,9 @@ In order to advertise a `RestPropFetcher` as both a `PropFetcher` and a `QNetwor
 
     auto reg = context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher,QNetworkManagerAware>(), "hamburgWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
 
-**Note:** The return-value `reg` will be of type `ServiceRegistration<RestPropFetcher>`.
+**Note:** The return-value `reg` will be of type `ServiceRegistration<RestPropFetcher,ServiceScope::SINGLETON>`.
 
-You may convert this value to `ServiceRegistraton<PropFetcher>` as well as `ServiceRegistration<QNetworkManagerAware>`,
+You may convert this value to `ServiceRegistraton<PropFetcher,ServiceScope::SINGLETON>` as well as `ServiceRegistration<QNetworkManagerAware,ServiceScope::SINGLETON>`,
 using the member-function ServiceRegistration::as(). Conversions to other types will not succeed.
 
 ## The Service-lifefycle
@@ -490,12 +477,21 @@ However, some transitions may have observable side-effects.
 
 |External Trigger|Internal Step|State|Observable side-effect|
 |---|---|---|---|
-|ApplicationContext::registerService()||REGISTERED| |
-|ApplicationContext::publish(bool)|Instantiation via constructor or service_factory|NEW|Invocation of Services's constructor|
+|ApplicationContext::registerService()||INIT| |
+|ApplicationContext::publish(bool)|Instantiation via constructor or service_factory|CREATED|Invocation of Services's constructor|
 | |Set properties|AFTER_PROPERTIES_SET|Invocation of property-setters|
-| |Apply QApplicationContextPostProcessor|PROCESSED|Invocation of user-supplied QApplicationContextPostProcessor::process()| 
-| |if exists, invoke init-method|PUBLISHED|emit signal Registration::publishedObjectsChanged|
+| |Apply QApplicationContextPostProcessor|PROCESSED|Invocation of user-supplied mcnepp::qtdi::QApplicationContextPostProcessor::process()| 
+| |if exists, invoke init-method|READY|Anything that the init-method might do|
+| |emit signal `objectPublished(QObject*)`|PUBLISHED|Invocation of slots connected via mcnepp::qtdi::Registration::subscribe()|
 |~ApplicationContext()|delete service|DESTROYED|Invoke Services's destructor|
+
+### Service-prototypes
+
+As shown above, a service that was registered using mcnepp::qtdi::QApplicationContext::registerService() will be instantiated once mcnepp::qtdi::QApplicationContext::publish(bool) is invoked.
+A single instance of the service will be injected into every other service that depends on it.
+<br>However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::QApplicationContext::registerPrototype() instead.
+<br>Such a registration will not necessarily instantiate the service on mcnepp::qtdi::QApplicationContext::publish(bool).
+Only if there are other services depending on it will a new instance be created and injected into the dependent service.
 
 
 
@@ -540,13 +536,10 @@ which makes this a *reference to another member*:
       {"summary", "&propFetcherAggregator"}
     }));
 
-## Binding source-properties to target-properties of other members of the ApplicationContext
 
-In the preceeding example, we used a reference to another member to initialize of a Q_PROPERTY with a type of `QType*`, where `QType` is a class derived from `QObject`.
+In the preceeding example, we used a reference to another member to initialize a.
 
-Since the value of such a property is another service in the ApplicationContext, the value can never change. 
-
-However, we might also want to **bind** a target-service's property to the corresponding source-property of another service.
+We can take this one step further and use *a reference to a property of another member*.
 This can be achieved by using a property-value with the format `"&ref.prop"`. The following example shows this:
 
     QTimer timer1;
@@ -556,14 +549,17 @@ This can be achieved by using a property-value with the format `"&ref.prop"`. Th
     auto reg2 = context -> registerService<QTimer>("timer2", make_config({{"interval", "&timer1.interval"}})); // 2
     
     context -> publish(); 
-    
-    timer1.setInterval(4711); // 3
 
 1. We register a `QTimer` as "timer1".
-2. We register a second `QTimer` as "timer2". We use mcnepp::qtdi::make_config() to bind the property `interval` of the second timer to the first timer's propery.
-3. We change the first timer's interval. This will also change the second timer's interval!
+2. We register a second `QTimer` as "timer2". We use mcnepp::qtdi::make_config() to initialize the property `interval` of the second timer with the first timer's propery.
 
-There is a second, more explicit way of achieving the same result:
+## Binding source-properties to target-properties of other members of the ApplicationContext
+
+In the preceeding example, we used a reference to another member for the purpose of **initializing** a Q_PROPERTY.
+
+However, we might also want to **bind** a target-service's property to the corresponding source-property of another service.
+
+This can be achieved using the function mcnepp::qtdi::bind() like this:
 
     QTimer timer1;
     
@@ -582,7 +578,7 @@ There is a second, more explicit way of achieving the same result:
 3. We bind the property `interval` of the second timer to the first timer's propery.
 4. We change the first timer's interval. This will also change the second timer's interval!
 
-The second approach of binding properties has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), 
+This way of binding properties has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), 
 aka those that represent more than one service. The source-property will be bound to every target-service automatically!
 
 ## Accessing a service after registration
@@ -636,16 +632,75 @@ Any information that you might want to pass to a QApplicationContextPostProcesso
 so-called *private properties* via mcnepp::qtdi::make_config(). Just prefix the property-key with a dot.
 
 
-## 'Starting' services
+## Service-Initializers
 
 The last step done in mcnepp::qtdi::QApplicationContext::publish() for each service is the invocation of an *init-method*, should one have been 
-registered.
+specified.
 
-*Init-methods* are supplied as part of the `service_config`, for example like this:
+The same *init-method* should be used for every service of a certain type. In order to achieve this, you need to specialize
+mcnepp::qtdi::service_traits for your service-type and declare a type-alias named `initializer_type`.
 
-    context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator", make_config({}, "", false, "init"));
+A suitable type would be a callable `struct` with either one argument of the service-type, or with two arguments, the second being of type `QApplicationContext*`.
 
-Suitable *init-methods* are must be `Q_INVOKABLE` methods with either no arguments, or with one argument of type `QApplicationContext*`.
+    struct RestPropFetcher_initializer{
+      void operator()(PropFetcherAggregator* service) const {
+         service -> init();
+      }
+    };
+    
+    namespace mcnepp::qtdi {
+      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher> {
+         using initializer_type = RestPropFetcher_initializer;
+      };
+    }
+
+
+
+### Initialization by function-reference
+
+In the above example, the callable `struct RestPropFetcher_initializer` simply invokes the method `PropFetcherAggregator::init()`.
+Shouldn't we be able to get rid of the `struct RestPropFetcher_initializer` somehow?
+<br>This is indeed possible. The helper-type mcnepp::qtdi::service_initializer takes a pointer to a member-function and converts it into a type.
+That way, we can reference the member-function (almost) directly in our service_traits:
+
+    namespace mcnepp::qtdi {
+      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher> {
+         using initializer_type = service_initializer<&RestPropFetcher::init>;
+      };
+    }
+
+
+### Specifying initializers via interfaces
+
+Suppose that the init-method was part of the service-interface `PropFetcher` that was introduced above.
+
+    class PropFetcher  {
+
+      public:
+      
+      virtual QString value() const = 0;
+      
+      virtual void init() = 0;
+      
+      virtual ~PropFetcher() = default;
+    };
+
+We would like to specify the use of the member-function `PropFetcher::init()` for all services that implement this interface.
+<br>Well, this is how it's done:
+
+    namespace mcnepp::qtdi {
+      template<> struct service_traits<PropFetcher> : default_service_traits<RropFetcher> {
+         using initializer_type = service_initializer<&PropFetcher::init>;
+      };
+    }
+
+Of course, in order to take advantage of this, we must advertise our `RestPropFetcher` under the interface `PropFetcher`.
+<br>Now, if you advertise a service under more than one interface, an ambiguity could arise, in case more than one interface declares its own service_initializer.
+In that case, compilation will fail with a corresponding diganostic.
+<br>In order to fix this error, you should specify an initializer_type in the service_traits of the service's *implementation-type*. 
+
+
+
 
 ## Resolving ambiguities
 
@@ -666,7 +721,7 @@ In order for this to work, several pre-conditions must be true:
 
 1. the constructor of the service must be accessible, i.e. declared `public`.
 2. The number of mandatory arguments must match the arguments provided via `QApplicationContext::registerService()`, in excess of the service-name and, optionally, the `service_config`.
-3. For each `Dependency<T>` with `Kind::MANDATORY`, `Kind::OPTIONAL` or `Kind::PRIVATE_COPY`, the argument-type must be `T*`.
+3. For each `Dependency<T>` with `Kind::MANDATORY` or `Kind::OPTIONAL`, the argument-type must be `T*`.
 4. For each `Dependency<T>` with `Kind::N`, the argument-type must be `QList<T*>`.
 
 If any of these conditions fails, then the invocation of `QApplicationContext::registerService()` will fail compilation.
@@ -720,7 +775,7 @@ And, voila: We can register our service exactly as we did before!
 
 ### Provide a custom factory
 
-You custom factory must provide a suitable operator().
+Your custom factory must provide a suitable operator().
 Additionally, it should provide a type-declaration `service_type`:
 
 
@@ -733,9 +788,13 @@ Additionally, it should provide a type-declaration `service_type`:
       };
     }
 
-Now, when registering our service, we must supply an instance of the `propfetcher_factory`. We do this by using the function mcnepp::qtdi::serviceWithFactory() instead of mcnepp::qtdi::service():
+This factory should now be used with every service of type `PropFetcherAggregator`. To achieve this, you declare a type-alias named `factory_type` in the mcnepp::qtdi::service_traits:
 
-    context -> registerService(serviceWithFactory(propfetcher_factory{}, injectAll<PropFetcher>()));
+    namespace mcnepp::qtdi {
+      template<> struct service_traits<PropFetcherAggregator> : default_service_traits<PropFetcherAggregator> {
+        using factory_type = propfetcher_factory;
+      };
+    }
 
 
 
