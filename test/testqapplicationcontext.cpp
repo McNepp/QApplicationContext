@@ -37,6 +37,23 @@ template<> struct service_factory<BaseService> {
     int* pCalls;
 };
 
+///Just there in order to test whether we can use free functions as initializers, too.
+void initInterface(Interface1* srv) {
+    srv->init();
+}
+
+template<> struct service_traits<BaseService> : default_service_traits<BaseService> {
+    using initializer_type = service_initializer<&BaseService::initContext>;
+};
+
+
+template<> struct service_traits<Interface1> : default_service_traits<Interface1>  {
+    using initializer_type = service_initializer<initInterface>;
+
+};
+
+
+
 }
 
 namespace mcnepp::qtditest {
@@ -680,26 +697,36 @@ private slots:
         QVERIFY(srv->my_bases.contains(baseSlot2.last()));
     }
 
-
-    void testInitMethod() {
-        auto baseReg = context->registerService<BaseService>("base", make_config({}, "", false, "init"));
-        QVERIFY(context->publish());
-
-        RegistrationSlot<BaseService> baseSlot{baseReg};
-        QVERIFY(baseSlot->wasInitialized());
-    }
-
-    void testInitMethodWithContext() {
-        auto baseReg = context->registerService<BaseService>("base", make_config({}, "", false, "initContext"));
+    void testInitializerWithContext() {
+        auto baseReg = context->registerService<BaseService>("base with init");
         QVERIFY(context->publish());
 
         RegistrationSlot<BaseService> baseSlot{baseReg};
         QCOMPARE(baseSlot->context(), context.get());
+
     }
 
-    void testNonExistingInitMethod() {
-        QVERIFY(!context->registerService<BaseService>("base", make_config({}, "", false, "start")));
+
+    void testInitializerViaInterface() {
+        auto baseReg = context->registerService(service<Interface1,BaseService2>(), "base with init");
+        QVERIFY(context->publish());
+
+        RegistrationSlot<Interface1> baseSlot{baseReg};
+        QCOMPARE(dynamic_cast<BaseService2*>(baseSlot.last())->initCalled, 1);
+
     }
+
+    void testInitializerViaAdvertisedInterface() {
+        auto baseReg = context->registerService(service<BaseService2>().advertiseAs<Interface1>(), "base with init");
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService2> baseSlot{baseReg};
+        QCOMPARE(baseSlot.last()->initCalled, 1);
+
+    }
+
+
+
 
 
 
@@ -898,6 +925,7 @@ private slots:
         QVERIFY(context->publish());
         QVERIFY(threeSlot);
         QCOMPARE(baseSlot.invocationCount(), 2);
+        QVERIFY(base2Slot);
     }
 
 
@@ -1374,7 +1402,7 @@ private slots:
 
     void testRegisterWithExplicitServiceFactory() {
         int calledFactory = 0;
-        auto baseReg = context->registerService(serviceWithFactory(service_factory<BaseService>{&calledFactory}).advertiseAs<Interface1>());
+        auto baseReg = context->registerService(serviceFactory(service_factory<BaseService>{&calledFactory}).advertiseAs<Interface1>());
         QVERIFY(context->publish());
         QCOMPARE(calledFactory, 1);
     }
@@ -1382,11 +1410,11 @@ private slots:
     void testRegisterWithAnonymousServiceFactory() {
         int calledFactory = 0;
         auto baseFactory = [&calledFactory] { ++calledFactory; return new BaseService{}; };
-        auto baseReg = context->registerService(serviceWithFactory<decltype(baseFactory),BaseService>(baseFactory).advertiseAs<Interface1>());
+        auto baseReg = context->registerService(serviceFactory<decltype(baseFactory),BaseService>(baseFactory).advertiseAs<Interface1>());
         QVERIFY(context->publish());
         QCOMPARE(calledFactory, 1);
         auto depFactory = [&calledFactory](Interface1* dep) { ++calledFactory; return new DependentService{dep}; };
-        auto depReg = context->registerService(serviceWithFactory<decltype(depFactory),DependentService>(depFactory, baseReg));
+        auto depReg = context->registerService(serviceFactory<decltype(depFactory),DependentService>(depFactory, baseReg));
         QVERIFY(context->publish());
         QCOMPARE(calledFactory, 2);
     }

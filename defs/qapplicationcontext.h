@@ -24,6 +24,7 @@ namespace detail {
     class Subscription;
 }
 
+
 ///
 /// An opaque type that represents the Registration on a low level.
 /// <br>Clients should have no need to know any details about this type.
@@ -120,7 +121,11 @@ template<typename S,ServiceScope> class ServiceRegistration;
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
 
 
+
+
 namespace detail {
+
+
 
 template<typename S,typename V=QObject*> struct could_be_qobject : std::false_type {};
 
@@ -155,9 +160,6 @@ template<typename S> struct default_argument_converter<S,Kind::N> {
         return convertQList<S>(arg.value<QObjectList>());
     }
 };
-
-
-
 
 ///
 /// \brief The Subscription created by Registrations.
@@ -229,6 +231,12 @@ using q_setter_t = std::function<void(QObject*,QVariant)>;
 
 using q_inject_t = std::function<void(QObject*,QObject*)>;
 
+using q_init_t = std::function<void(QObject*,QApplicationContext*)>;
+
+
+
+
+
 
 struct property_descriptor {
     QByteArray name;
@@ -242,17 +250,17 @@ inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
     return out;
 }
 
-template<typename S> struct callable_adapter {
 
-    template<typename F> static auto adapt(F callable) {
-        return [callable](QObject* obj) {
-            if(S* ptr = dynamic_cast<S*>(obj)) {
-                callable(ptr);
-            }
-        };
-    }
+
+
+
+
+template<typename S> struct callable_adapter_base {
 
     template<typename A,typename R> static q_setter_t adaptSetter(R (S::*setter)(A)) {
+        if(!setter) {
+            return nullptr;
+        }
         using arg_type = std::remove_cv_t<std::remove_reference_t<A>>;
         return [setter](QObject* obj,QVariant arg) {
             if(S* ptr = dynamic_cast<S*>(obj)) {
@@ -262,17 +270,23 @@ template<typename S> struct callable_adapter {
     }
 };
 
-template<> struct callable_adapter<QObject> {
+
+template<typename S> struct callable_adapter : callable_adapter_base<S> {
+
+    template<typename F> static auto adapt(F callable) {
+        return [callable](QObject* obj) {
+            if(S* ptr = dynamic_cast<S*>(obj)) {
+                callable(ptr);
+            }
+        };
+    }
+
+};
+
+template<> struct callable_adapter<QObject> : callable_adapter_base<QObject> {
 
     template<typename F> static constexpr auto adapt(F callable) {
         return callable;
-    }
-
-    template<typename A,typename R> static q_setter_t adaptSetter(R (QObject::*setter)(A)) {
-        using arg_type = std::remove_cv_t<std::remove_reference_t<A>>;
-        return [setter](QObject* obj,QVariant arg) {
-            (obj->*setter)(arg.value<arg_type>());
-        };
     }
 };
 
@@ -509,7 +523,10 @@ protected:
 };
 
 
+
+
 }
+
 
 
 
@@ -1144,7 +1161,64 @@ template<typename S> struct service_factory {
 };
 
 
+///
+/// \brief Provides default-values for service_traits.
+/// <br>Specializations of service_traits in client-code are encouraged to extend this type!
+/// <br>this template provides the following declarations:
+/// - service_type an alias for S.
+/// - factory_type an alias for service_factory.
+/// - initializer_type an alias for std::nullptr_t.
+///
 
+template<typename S> struct default_service_traits {
+    static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
+
+    using service_type = S;
+
+    using factory_type = service_factory<S>;
+
+    using initializer_type = std::nullptr_t;
+};
+
+
+///
+/// \brief The traits for services.
+/// <br>Every specialization of this template must provide at least the following declarations:
+/// - `service_type` the type of service that this traits describe.
+/// - `factory_type` the type of the factory.
+/// - `initializer_type` the type of the initializer. Must be one of the following:
+///   -# pointer to a non-static member-function with no arguments
+///   -# pointer to a non-static member-function with one parameter of type `QApplicationContext*`
+///   -# address of a free function with one argument of the service-type.
+///   -# address of a free function with two arguments, the second being of type `QApplicationContext*`.
+///   -# type with a call-operator with one argument of the service-type.
+///   -# type with a call-operator with two arguments, the second being of type `QApplicationContext*`.
+///   -# `nullptr`
+///
+template<typename S> struct service_traits : default_service_traits<S> {
+};
+
+///
+/// \brief A helper-template that converts a pointer to a function or a pointer to a member-function into a distinct type.
+/// <br>The purpose of this template is to be used as the type-alias named `initializer_type` in the service_traits.
+/// The type of `func` must be one of the following:
+/// - `initializer_type` the type of the initializer. Must be one of the following:
+///   -# pointer to a non-static member-function with no arguments
+///   -# pointer to a non-static member-function with one parameter of type `QApplicationContext*`
+///   -# address of a free function with one argument of the service-type.
+///   -# address of a free function with two arguments, the second being of type `QApplicationContext*`.
+///
+/// Note that in contrast to the requirements for the declaration of the type-alias `initializer_type` in the service_traits,
+/// both std::nullptr_t and types with a call-operator are not permitted here.<br>
+/// The reason: those types can be aliased directly, without this helper-template!
+/// \tparam func the function or pointer to member-function.
+///
+template<auto func> struct service_initializer {
+
+    auto value() const {
+        return func;
+    }
+};
 
 
 
@@ -1351,14 +1425,13 @@ struct service_config final {
 
 
     friend inline bool operator==(const service_config& left, const service_config& right) {
-        return left.properties == right.properties && left.group == right.group && left.autowire == right.autowire && left.initMethod == right.initMethod;
+        return left.properties == right.properties && left.group == right.group && left.autowire == right.autowire;
     }
 
 
     QVariantMap properties;
     QString group;
     bool autowire = false;
-    QString initMethod;
 };
 
 ///
@@ -1366,15 +1439,67 @@ struct service_config final {
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
 /// \param group the `QSettings::group()` to be used.
 /// \param autowire if `true`, the QApplicationContext will attempt to initialize all Q_PROPERTYs of `QObject*`-type with the corresponding services.
-/// \param initMethod if not empty, will be invoked during publication of the service.
 /// \return the service_config.
 ///
-[[nodiscard]] inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties = {}, const QString& group = "", bool autowire = false, const QString& initMethod = "") {
-    return service_config{properties, group, autowire, initMethod};
+[[nodiscard]] inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties = {}, const QString& group = "", bool autowire = false) {
+    return service_config{properties, group, autowire};
 }
 
 
+
+
 namespace detail {
+
+
+
+
+template<typename S,typename F> static auto adaptInitializer(F func, std::nullptr_t) -> std::enable_if_t<std::is_invocable_v<F,S*,QApplicationContext*>,q_init_t> {
+    return [func](QObject* target,QApplicationContext* context) {
+        if(auto ptr =dynamic_cast<S*>(target)) {
+            func(ptr, context);
+        }};
+
+}
+
+template<typename S,typename F> static auto adaptInitializer(F func, std::nullptr_t) -> std::enable_if_t<std::is_invocable_v<F,S*>,q_init_t> {
+    return [func](QObject* target,QApplicationContext*) {
+        if(auto ptr =dynamic_cast<S*>(target)) {
+            func(ptr);
+        }};
+
+}
+
+
+template<typename S,typename R> static q_init_t adaptInitializer(R (S::*init)(QApplicationContext*), std::nullptr_t) {
+    if(!init) {
+        return nullptr;
+    }
+    return adaptInitializer<S>(std::mem_fn(init), nullptr);
+}
+
+template<typename S,typename R> static q_init_t adaptInitializer(R (S::*init)(), std::nullptr_t) {
+    if(!init) {
+        return nullptr;
+    }
+    return adaptInitializer<S>(std::mem_fn(init), nullptr);
+}
+
+
+template<typename S,auto func> static q_init_t adaptInitializer(service_initializer<func> initializer, std::nullptr_t) {
+    return adaptInitializer<S>(initializer.value(), nullptr);
+}
+
+//SFINAE fallback for everything that is not a callable:
+template<typename S,typename F> static q_init_t adaptInitializer(F func,int*) {
+    static_assert(std::is_same_v<F,std::nullptr_t>, "Type must be a callable object or a function or a member-function with either zero arguments or one argument of type QApplicationContext*");
+    return func;
+}
+
+
+template<typename S,typename F> static q_init_t adaptInitializer(F func=F{}) {
+    return adaptInitializer<S>(func, nullptr);
+}
+
 
 
 
@@ -1456,7 +1581,9 @@ struct service_descriptor {
     const QMetaObject* meta_object = nullptr;
     constructor_t constructor;
     std::vector<dependency_info> dependencies;
+    q_init_t init_method;
 };
+
 
 
 
@@ -1677,14 +1804,38 @@ constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4,
                 };
 }
 
+constexpr int NOT_FOUND = 1;
+constexpr int FOUND = 2;
+
+template<typename S> constexpr bool has_initializer = std::negation_v<std::is_same<std::nullptr_t,typename service_traits<S>::initializer_type>>;
+
+template<bool found,typename First,typename...Tail> q_init_t getInitializer() {
+    constexpr bool foundThis = has_initializer<First>;
+    static_assert(!(foundThis && found), "Ambiguous initializers in advertised interfaces");
+    if constexpr(sizeof...(Tail) > 0) {
+        //Invoke recursively, until we either trigger an assertion or find no other initializer:
+        auto result = getInitializer<foundThis,Tail...>();
+        if constexpr(!foundThis) {
+            return result;
+        }
+    }
+    return adaptInitializer<First>(typename service_traits<First>::initializer_type{});
+
+}
+
+
 
 template<typename Srv,typename Impl,typename F,typename...Dep> service_descriptor make_descriptor(F factory, Dep...deps) {
     detail::service_descriptor descriptor{{typeid(Srv)}, typeid(Impl), &Impl::staticMetaObject};
+    if constexpr(has_initializer<Impl>) {
+         descriptor.init_method = adaptInitializer<Impl>(typename service_traits<Impl>::initializer_type{});
+    } else {
+        descriptor.init_method = adaptInitializer<Srv>(typename service_traits<Srv>::initializer_type{});
+    }
     (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
     descriptor.constructor = service_creator<Impl>(factory, detail::dependency_helper<Dep>::converter(deps)...);
     return descriptor;
 }
-
 
 
 
@@ -1717,12 +1868,14 @@ template<typename Srv,typename Impl=Srv> struct Service {
 
     using impl_type = Impl;
 
-    template<typename...Dep> [[deprecated("Use function service() instead")]] Service(Dep...deps) : descriptor{detail::make_descriptor<Srv,Impl>(service_factory<Impl>{}, deps...)} {
+    template<typename...Dep> [[deprecated("Use function service() instead")]] Service(Dep...deps) : descriptor{detail::make_descriptor<Srv,Impl>(typename service_traits<Impl>::factory_type{}, deps...)} {
     }
 
     explicit Service(detail::service_descriptor&& descr) :
         descriptor{std::move(descr)} {
     }
+
+
 
     detail::service_descriptor descriptor;
 };
@@ -1750,7 +1903,7 @@ template<typename Impl> struct Service<Impl,Impl> {
     using impl_type = Impl;
 
 
-    template<typename...Dep> [[deprecated("Use function service() instead")]] Service(Dep...deps) : descriptor{detail::make_descriptor<Impl,Impl>(service_factory<Impl>{}, deps...)} {
+    template<typename...Dep> [[deprecated("Use function service() instead")]] Service(Dep...deps) : descriptor{detail::make_descriptor<Impl,Impl>(typename service_traits<Impl>::factory_type{}, deps...)} {
     }
 
 
@@ -1765,6 +1918,8 @@ template<typename Impl> struct Service<Impl,Impl> {
      *  <br>This function may be invoked only on temporary instances.
      * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
      * <br>If a type appears more than once in the set of types comprising `Impl` and `IFaces`, compilation will fail with a diagnostic.
+     * <br>Compilation will also fail if the service_traits for more than one of the interfaces have an `initializer_type` that is not the std::nullptr_t.
+     * <br>In order to fix this error, you need to declare a valid `initializer_type` in the service_traits for the implementation-type.
      * @return this Service.
      */
     template<typename...IFaces> Service<Impl,Impl>&& advertiseAs() && {
@@ -1775,6 +1930,9 @@ template<typename Impl> struct Service<Impl,Impl> {
            descriptor.service_types.erase(found);
         }
         (descriptor.service_types.insert(typeid(IFaces)), ...);
+        if constexpr(!detail::has_initializer<Impl>) {
+            descriptor.init_method = detail::getInitializer<false,IFaces...>();
+        }
         return std::move(*this);
     }
 
@@ -1805,7 +1963,7 @@ template<typename Impl> struct Service<Impl,Impl> {
 /// \tparam Impl the implementation-type of the service. If the factory-type F contains
 /// a type-declaration `service_type`, Impl will be deduced as that type.
 /// \return a Service that will use the provided factory.
-template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nodiscard]]Service<Impl,Impl> serviceWithFactory(F factory, Dep...dependencies) {
+template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nodiscard]]Service<Impl,Impl> serviceFactory(F factory, Dep...dependencies) {
     return Service<Impl,Impl>{detail::make_descriptor<Impl,Impl>(factory, dependencies...)};
 }
 
@@ -1814,11 +1972,11 @@ template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nod
 ///
 /// \brief Creates a Service with the default service-factory.
 /// \param dependencies the arguments to be injected into the service's constructor.
-/// \tparam the primary service-interface.
+/// \tparam S the primary service-interface.
 /// \tparam Impl the implementation-type of the service.
 /// \return a Service that will use the provided factory.
-template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]]Service<S,Impl> service(Dep...dependencies) {
-    return Service<S,Impl>{detail::make_descriptor<S,Impl>(service_factory<Impl>{}, dependencies...)};
+template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Impl> service(Dep...dependencies) {
+    return Service<S,Impl>{detail::make_descriptor<S,Impl>(typename service_traits<Impl>::factory_type{}, dependencies...)};
 }
 
 

@@ -16,6 +16,8 @@ public:
     virtual QString foo() const = 0;
 
     virtual void setFoo(const QString&) = 0;
+
+    virtual void init() = 0;
 };
 
 class TimerAware {
@@ -58,26 +60,25 @@ public:
         }
     }
 
+    void init() override {
+        ++initCalled;
+    }
+
 
 
     QTimer* m_timer;
+    int initCalled;
     QTimer *timer() const override;
     void setTimer(QTimer *newTimer);
     CyclicDependency *dependency() const;
 
 
-    Q_INVOKABLE void init() {
-        initCalled = true;
-    }
 
     Q_INVOKABLE void initContext(QApplicationContext* appContext) {
         m_appContext = appContext;
     }
 
 
-    bool wasInitialized() const {
-        return initCalled;
-    }
 
     QApplicationContext* context() const {
         return m_appContext;
@@ -96,7 +97,6 @@ private:
     explicit BaseService(CyclicDependency* dependency, QObject *parent = nullptr);
 
     CyclicDependency* m_dependency;
-    bool initCalled;
     QApplicationContext* m_appContext;
     QString m_foo;
 };
@@ -146,7 +146,11 @@ public:
 
     }
 
+    void init() override {
+        ++initCalled;
+    }
 
+    int initCalled = 0;
 };
 
 

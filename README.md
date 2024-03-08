@@ -632,16 +632,75 @@ Any information that you might want to pass to a QApplicationContextPostProcesso
 so-called *private properties* via mcnepp::qtdi::make_config(). Just prefix the property-key with a dot.
 
 
-## 'Starting' services
+## Service-Initializers
 
 The last step done in mcnepp::qtdi::QApplicationContext::publish() for each service is the invocation of an *init-method*, should one have been 
-registered.
+specified.
 
-*Init-methods* are supplied as part of the `service_config`, for example like this:
+The same *init-method* should be used for every service of a certain type. In order to achieve this, you need to specialize
+mcnepp::qtdi::service_traits for your service-type and declare a type-alias named `initializer_type`.
 
-    context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator", make_config({}, "", false, "init"));
+A suitable type would be a callable `struct` with either one argument of the service-type, or with two arguments, the second being of type `QApplicationContext*`.
 
-Suitable *init-methods* are must be `Q_INVOKABLE` methods with either no arguments, or with one argument of type `QApplicationContext*`.
+    struct RestPropFetcher_initializer{
+      void operator()(PropFetcherAggregator* service) const {
+         service -> init();
+      }
+    };
+    
+    namespace mcnepp::qtdi {
+      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher> {
+         using initializer_type = RestPropFetcher_initializer;
+      };
+    }
+
+
+
+### Initialization by function-reference
+
+In the above example, the callable `struct RestPropFetcher_initializer` simply invokes the method `PropFetcherAggregator::init()`.
+Shouldn't we be able to get rid of the `struct RestPropFetcher_initializer` somehow?
+<br>This is indeed possible. The helper-type mcnepp::qtdi::service_initializer takes a pointer to a member-function and converts it into a type.
+That way, we can reference the member-function (almost) directly in our service_traits:
+
+    namespace mcnepp::qtdi {
+      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher> {
+         using initializer_type = service_initializer<&RestPropFetcher::init>;
+      };
+    }
+
+
+### Specifying initializers via interfaces
+
+Suppose that the init-method was part of the service-interface `PropFetcher` that was introduced above.
+
+    class PropFetcher  {
+
+      public:
+      
+      virtual QString value() const = 0;
+      
+      virtual void init() = 0;
+      
+      virtual ~PropFetcher() = default;
+    };
+
+We would like to specify the use of the member-function `PropFetcher::init()` for all services that implement this interface.
+<br>Well, this is how it's done:
+
+    namespace mcnepp::qtdi {
+      template<> struct service_traits<PropFetcher> : default_service_traits<RropFetcher> {
+         using initializer_type = service_initializer<&PropFetcher::init>;
+      };
+    }
+
+Of course, in order to take advantage of this, we must advertise our `RestPropFetcher` under the interface `PropFetcher`.
+<br>Now, if you advertise a service under more than one interface, an ambiguity could arise, in case more than one interface declares its own service_initializer.
+In that case, compilation will fail with a corresponding diganostic.
+<br>In order to fix this error, you should specify an initializer_type in the service_traits of the service's *implementation-type*. 
+
+
+
 
 ## Resolving ambiguities
 
@@ -716,7 +775,7 @@ And, voila: We can register our service exactly as we did before!
 
 ### Provide a custom factory
 
-You custom factory must provide a suitable operator().
+Your custom factory must provide a suitable operator().
 Additionally, it should provide a type-declaration `service_type`:
 
 
@@ -729,9 +788,13 @@ Additionally, it should provide a type-declaration `service_type`:
       };
     }
 
-Now, when registering our service, we must supply an instance of the `propfetcher_factory`. We do this by using the function mcnepp::qtdi::serviceWithFactory() instead of mcnepp::qtdi::service():
+This factory should now be used with every service of type `PropFetcherAggregator`. To achieve this, you declare a type-alias named `factory_type` in the mcnepp::qtdi::service_traits:
 
-    context -> registerService(serviceWithFactory(propfetcher_factory{}, injectAll<PropFetcher>()));
+    namespace mcnepp::qtdi {
+      template<> struct service_traits<PropFetcherAggregator> : default_service_traits<PropFetcherAggregator> {
+        using factory_type = propfetcher_factory;
+      };
+    }
 
 
 

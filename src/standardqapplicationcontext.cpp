@@ -155,15 +155,6 @@ const QRegularExpression beanRefPattern{"^&([^.]+)(\\.([^.]+))?"};
 
 
 
-QMetaMethod methodByName(const QMetaObject* metaObject, const QString& name) {
-    for(int i = 0; i < metaObject->methodCount(); ++i) {
-        auto method = metaObject->method(i);
-            if(method.name() == name.toLatin1()) {
-                return method;
-            }
-        }
-        return {};
-    }
 
 
 template<typename C,typename P> auto eraseIf(C& container, P predicate) -> std::enable_if_t<std::is_pointer_v<typename C::value_type>,typename C::value_type> {
@@ -1223,13 +1214,6 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
                 return nullptr;
             }
         }
-        if(!config.initMethod.isEmpty()) {
-            auto initMethod = methodByName(descriptor.meta_object, config.initMethod);
-            if(!initMethod.isValid() || initMethod.parameterCount() > 1) {
-                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no invokable method '" << config.initMethod << "'";
-                return nullptr;
-            }
-        }
     }
 
     DescriptorRegistration* registration;
@@ -1678,8 +1662,6 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
     if(!target) {
         return Status::fatal;
     }
-    auto metaObject = target->metaObject();
-    auto& config = reg->config();
 
     for(auto processor : postProcessors) {
         if(processor != dynamic_cast<QApplicationContextPostProcessor*>(target)) {
@@ -1688,30 +1670,9 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
         }
     }
 
-    if(!config.initMethod.isEmpty()) {
-        QMetaMethod method = methodByName(metaObject, config.initMethod);
-        if(!method.isValid()) {
-            //Referingi to a non-existing init-method is always non-fixable:
-            qCCritical(loggingCategory()).nospace().noquote() << "Could not find init-method '" << config.initMethod << "'";
-            return Status::fatal;
-
-        }
-        switch(method.parameterCount()) {
-        case 0:
-            if(method.invoke(target)) {
-                qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method '" << config.initMethod << "' of " << *reg;
-                return Status::ok;
-            }
-            break;
-        case 1:
-            if(method.invoke(target, Q_ARG(QApplicationContext*,this))) {
-                qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method '" << config.initMethod << "' of " << *reg << ", passing the ApplicationContext";
-                return Status::ok;
-            }
-            break;
-        }
-        qCCritical(loggingCategory()).nospace().noquote() << "Could not invoke init-method '" << method.methodSignature() << "' of " << *reg;
-        return Status::fatal;
+    if(reg->descriptor.init_method) {
+        reg->descriptor.init_method(target, this);
+        qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
     }
     return Status::ok;
 }
