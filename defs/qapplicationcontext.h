@@ -73,13 +73,10 @@ using subscription_handle_t = detail::Subscription*;
 * <tr><td>MANDATORY</td><td>Injects one dependency into the dependent service.</td><td>Publication of the ApplicationContext will fail.</td>
 * <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
 * <tr><td>OPTIONAL</td><td>Injects one dependency into the dependent service</td><td>Injects `nullptr` into the dependent service.</td>
-* td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
 * <tr><td>N</td><td>Injects all dependencies of the dependency-type that have been registered into the dependent service, using a `QList`</td>
 * <td>Injects an empty `QList` into the dependent service.</td>
 * <td>See 'Normal behaviour'</td></tr>
-* <tr><td>PRIVATE_COPY</td><td>Injects a newly created instance of the dependency-type and sets its `QObject::parent()` to the dependent service.</td>
-* <td>Publication of the ApplicationContext will fail.</td>
-* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
 * </table>
 */
 enum class Kind {
@@ -92,23 +89,32 @@ enum class Kind {
     ///
     /// All Objects with the required service-type will be pushed into QList
     /// and provided to the constructor of the service that depends on them.
-    N,
-    ///
-    /// This dependency must be present in the ApplicationContext.
-    /// A copy will be made and provided to the constructor of the service that depends on them.
-    /// This copy will not be published in the ApplicationContext.
-    /// After construction, the QObject::parent() of the dependency will
-    /// be set to the service that owns it.
-    ///
-    PRIVATE_COPY
+    N
+
 };
 
-
-
+/**
+ * @brief Specifies the scope of a ServiceRegistration.
+ * <br>Serves as a non-type template-argument for ServiceRegistration.
+ * <table><tr><th>Scope</th><th>Produced by</th><th>Behaviour</th></tr>
+ * <tr><td>UNKNOWN</td><td>QApplicationContext::getRegistrations(), QApplicationContext::getRegistration(const QString&).</td><td>Could be either SINGLETON or PROTOTYPE.</td></tr>
+ * <tr><td>SINGLETON</td><td>QApplicationContext::registerService().</td><td>The service will be instantiated on QApplicationContext::publish(bool).<br>A reference to a single instance will be injected into every dependent service.</td></tr>
+ * <tr><td>PROTOTYPE</td><td>QApplicationContext::registerPrototype().</td><td>Instances of this service will only be created if another service needs it as a dependency.<br>
+ * A new instance will be injected into every dependent service.</td></tr>
+ * <tr><td>EXTERNAL</td><td>QApplicationContext::registerObject().</td><td>The service has been created externally.</td></tr>
+ *
+ * </table>
+ */
+enum class ServiceScope {
+    UNKNOWN,
+    SINGLETON,
+    PROTOTYPE,
+    EXTERNAL
+};
 
 template<typename S> class Registration;
 
-template<typename S> class ServiceRegistration;
+template<typename S,ServiceScope> class ServiceRegistration;
 
 
 Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
@@ -409,7 +415,7 @@ private:
 class ServiceRegistration : public Registration {
     Q_OBJECT
 
-    template<typename S> friend class mcnepp::qtdi::ServiceRegistration;
+    template<typename S,ServiceScope> friend class mcnepp::qtdi::ServiceRegistration;
 
 public:
     ///
@@ -420,6 +426,8 @@ public:
     Q_PROPERTY(QString registeredName READ registeredName CONSTANT)
 
     Q_PROPERTY(QVariantMap registeredProperties READ registeredProperties CONSTANT)
+
+    Q_PROPERTY(ServiceScope scope READ scope CONSTANT)
 
     ///
     /// \brief The name of this Registration.
@@ -434,6 +442,16 @@ public:
      * @return The properties that were supplied upon registration.
      */
     [[nodiscard]] virtual QVariantMap registeredProperties() const = 0;
+
+
+    /**
+     * @brief What scope has this ServiceRegistration?
+     * <br>If it was obtained by QApplicationContext::registerService(), will be ServiceScope::SINGLETON.
+     * <br>If it was obtained by QApplicationContext::registerObject(), will be ServiceScope::EXTERNAL.
+     * <br>If it was obtained by QApplicationContext::registerPrototype(), will be ServiceScope::PROTOTYPE.
+     * @return the scope of this ServiceRegistration.
+     */
+    [[nodiscard]] virtual ServiceScope scope() const = 0;
 
 protected:
 
@@ -815,14 +833,24 @@ template<typename U> void swap(Registration<U>& reg1, Registration<U>& reg2) {
 
 ///
 /// \brief A type-safe wrapper for a detail::ServiceRegistration.
+/// \tparam S the service-type.
+/// \tparam SCP the ServiceScope. If this ServiceRegistration was obtained via QApplicationContext::registerService(),
+/// it will have ServiceScope::SINGLETON.
+/// <br>If this ServiceRegistration was obtained via QApplicationContext::registerObject(),
+/// it will have ServiceScope::EXTERNAL.
+/// <br>If this ServiceRegistration was obtained via QApplicationContext::registerPrototype(), it will have ServiceScope::PROTOTYPE.
+/// <br>Otherwise, it will have ServiceScope::UNKNOWN.
 /// Instances of this class are being produces by the public function-templates QApplicationContext::registerService() and QApplicationContext::registerObject().
 ///
-template<typename S> class ServiceRegistration final : public Registration<S> {
-    template<typename F,typename T> friend Subscription bind(const ServiceRegistration<F>&, const char*, Registration<T>&, const char*);
+template<typename S,ServiceScope SCP=ServiceScope::UNKNOWN> class ServiceRegistration final : public Registration<S> {
+    template<typename F,typename T,ServiceScope scope> friend Subscription bind(const ServiceRegistration<F,scope>&, const char*, Registration<T>&, const char*);
 
-    template<typename F,typename T,typename A,typename R> friend Subscription bind(const ServiceRegistration<F>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A));
+    template<typename F,typename T,typename A,typename R,ServiceScope scope> friend Subscription bind(const ServiceRegistration<F,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A));
 
 public:
+    using service_type = S;
+
+    static constexpr ServiceScope Scope = SCP;
 
     [[nodiscard]] QString registeredName() const {
         return mcnepp::qtdi::registeredName(unwrap());
@@ -843,14 +871,29 @@ public:
      * <br>This function will yield a valid Registration only if this is valid Registration and its underlying registration-handle
      * matches the requested type. This will be the case (at least) if U is either an advertised service-interface
      * or the implementation-type of the service.
+     * <br>Additionally, the new ServiceScope must match the property `isPrototype` of the registration-handle.
+     * \tparam U the new service-type.
+     * \tparam newScope the new scope for the ServiceRegistration.
      * @return a ServiceRegistration of the requested type. May be invalid if this Registration is already invalid, or if
      * the types do not match
      */
-    template<typename U> [[nodiscard]] ServiceRegistration<U> as() const {
-        if constexpr(std::is_same_v<U,S>) {
+    template<typename U,ServiceScope newScope=SCP> [[nodiscard]] ServiceRegistration<U,newScope> as() const {
+        if constexpr(std::is_same_v<U,S> && newScope == SCP) {
             return *this;
+        } else {
+            return ServiceRegistration<U,newScope>::wrap(unwrap());
         }
-        return ServiceRegistration<U>::wrap(unwrap());
+    }
+
+    /**
+     * @brief operator Implicit conversion to a ServiceRegistration with ServiceScope::UNKNOWN.
+     */
+    operator ServiceRegistration<S,ServiceScope::UNKNOWN>() const {
+        if constexpr(SCP == ServiceScope::UNKNOWN) {
+            return *this;
+        } else {
+            return ServiceRegistration<S,ServiceScope::UNKNOWN>::wrap(unwrap());
+        }
     }
 
 
@@ -878,12 +921,16 @@ public:
     ///
     /// \brief Wraps a handle to a ServiceRegistration into a typesafe high-level ServiceRegistration.
     /// \param handle the handle to the ServiceRegistration.
-    /// \return a valid Registration if handle is not `nullptr` and if `Registration::matches<S>()`.
+    /// \return a valid Registration if handle is not `nullptr` and if `Registration::matches<S>()` and if `scope` matches the property `prototype` of the handle.
     /// \see unwrap().
     ///
-    [[nodiscard]] static ServiceRegistration<S> wrap(service_registration_handle_t handle) {
+    [[nodiscard]] static ServiceRegistration<S,SCP> wrap(service_registration_handle_t handle) {
         if(mcnepp::qtdi::matches<S>(handle)) {
-            return ServiceRegistration<S>{handle};
+            if constexpr(SCP == ServiceScope::UNKNOWN) {
+                return ServiceRegistration<S,SCP>{handle};
+            } else {
+               return ServiceRegistration{handle->scope() == SCP ? handle : nullptr};
+            }
         }
         return ServiceRegistration{};
     }
@@ -913,6 +960,7 @@ private:
 
 
 
+
 /**
  * @brief A Registration that manages several ServiceRegistrations of the same type.
  * You can do almost everything with a ProxyRegistration that you can do with a ServiceRegistration,
@@ -930,10 +978,10 @@ public:
      * Should you register more Services that match this service-type, you may need to invoke this method again.
      * @return the ServiceRegistrations that this proxy currently knows of.
      */
-    [[nodiscard]] QList<ServiceRegistration<S>> registeredServices() const {
-        QList<ServiceRegistration<S>> result;
+    [[nodiscard]] QList<ServiceRegistration<S,ServiceScope::UNKNOWN>> registeredServices() const {
+        QList<ServiceRegistration<S,ServiceScope::UNKNOWN>> result;
         for(auto srv : mcnepp::qtdi::registeredServices(unwrap())) {
-            result.push_back(ServiceRegistration<S>::wrap(srv));
+            result.push_back(ServiceRegistration<S,ServiceScope::UNKNOWN>::wrap(srv));
         }
         return result;
     }
@@ -993,7 +1041,9 @@ template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, 
 /// \tparam T the type of the target.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T> inline Subscription bind(const ServiceRegistration<S>& source, const char* sourceProperty, Registration<T>& target, const char* targetProperty) {
+template<typename S,typename T,ServiceScope scope> inline Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, const char* targetProperty) {
+    static_assert(scope != ServiceScope::PROTOTYPE, "Cannot bind to service with scope PROTOTYPE");
+    static_assert(scope != ServiceScope::UNKNOWN, "Cannot bind to service with scope UNKNOWN");
     static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
     return source.bind(sourceProperty, target.unwrap(), {targetProperty, nullptr});
 }
@@ -1011,7 +1061,9 @@ template<typename S,typename T> inline Subscription bind(const ServiceRegistrati
 /// \tparam T the type of the target.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename A,typename R> inline Subscription bind(const ServiceRegistration<S>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A)) {
+template<typename S,typename T,typename A,typename R,ServiceScope scope> inline Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A)) {
+    static_assert(scope != ServiceScope::PROTOTYPE, "Cannot bind to service with scope PROTOTYPE");
+    static_assert(scope != ServiceScope::UNKNOWN, "Cannot bind to service with scope UNKNOWN");
     if(!setter) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
@@ -1246,17 +1298,6 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::N> injectAll(con
 }
 
 
-///
-/// \brief Injects a Dependency of type Cardinality::PRIVATE_COPY
-/// \param requiredName the required name of the dependency. If empty, no name is required.
-/// \param converter an optional *Callable* object that can convert a QVariant to the target-type.
-/// \tparam S the service-type of the dependency.
-/// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
-/// \return a Dependency of the supplied type that will create its own private copy.
-///
-template<typename S,typename C=detail::default_argument_converter<S,Kind::PRIVATE_COPY>> [[nodiscard]] constexpr Dependency<S,Kind::PRIVATE_COPY,C> injectPrivateCopy(const QString& requiredName = "", C converter = C{}) {
-    return Dependency<S,Kind::PRIVATE_COPY,C>{requiredName, converter};
-}
 
 ///
 /// \brief A placeholder for a resolvable constructor-argument.
@@ -1488,17 +1529,17 @@ struct dependency_helper<Dependency<S,kind,C>> {
     }
 };
 
-template <typename S>
-struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S>> {
+template <typename S,ServiceScope scope>
+struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
     using type = S;
 
 
 
-    static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S>& dep) {
+    static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S,scope>& dep) {
         return { typeid(S), static_cast<int>(Kind::MANDATORY), dep.registeredName() };
     }
 
-    static auto converter(const mcnepp::qtdi::ServiceRegistration<S>& dep) {
+    static auto converter(const mcnepp::qtdi::ServiceRegistration<S,scope>& dep) {
         return default_argument_converter<S,Kind::MANDATORY>{};
     }
 
@@ -1837,8 +1878,28 @@ public:
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl> auto registerService(const Service<S,Impl>& serviceDeclaration, const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S> {
-        return ServiceRegistration<S>::wrap(registerService(objectName, serviceDeclaration.descriptor, config));
+    template<typename S,typename Impl> auto registerService(const Service<S,Impl>& serviceDeclaration, const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,ServiceScope::SINGLETON> {
+        return ServiceRegistration<S,ServiceScope::SINGLETON>::wrap(registerService(objectName, serviceDeclaration.descriptor, config, false));
+    }
+
+    ///
+    /// \brief Registers a service-prototype with this ApplicationContext.
+    /// <br>In contrast to registerService(const Service&,const QString&, const service_config&),
+    /// the service may not be instantiated on publish(bool). Only if another Service references it
+    /// as a dependency or via a property will an instance of the service-type be created. A new instance for each dependency will be created.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
+    /// \param serviceDeclaration comprises the services's primary advertised interface, its implementation-type and its dependencies to be injected
+    /// via its constructor.
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param config the Configuration for the service.
+    /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
+    /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
+    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
+    ///
+    template<typename S,typename Impl> auto registerPrototype(const Service<S,Impl>& serviceDeclaration, const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,ServiceScope::PROTOTYPE> {
+        return ServiceRegistration<S,ServiceScope::PROTOTYPE>::wrap(registerService(objectName, serviceDeclaration.descriptor, config, true));
     }
 
 
@@ -1853,8 +1914,23 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> auto registerService(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S> {
+    template<typename S> auto registerService(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,ServiceScope::SINGLETON> {
         return registerService(service<S>(), objectName, config);
+    }
+
+    ///
+    /// \brief Registers a service-prototype with no dependencies with this ApplicationContext.
+    /// This is a convenience-function equivalent to `registerPrototype(Service<S>{}, objectName, config)`.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param config the Configuration for the service.
+    /// \tparam S the service-type.
+    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
+    ///
+    template<typename S> auto registerPrototype(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,ServiceScope::PROTOTYPE> {
+        return registerPrototype(service<S>(), objectName, config);
     }
 
 
@@ -1874,24 +1950,24 @@ public:
     /// \tparam IFaces additional service-interfaces to be advertised. If a type appears more than once in the set of types comprising `S` and `IFaces`, compilation will fail with a diagnostic.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename... IFaces> ServiceRegistration<S> registerObject(S* obj, const QString& objName = "") {
+    template<typename S,typename... IFaces> ServiceRegistration<S,ServiceScope::EXTERNAL> registerObject(S* obj, const QString& objName = "") {
         static_assert(detail::could_be_qobject<S>::value, "Object is not potentially convertible to QObject");
         QObject* qObject = dynamic_cast<QObject*>(obj);
         if(!qObject) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Object is no QObject";
-            return ServiceRegistration<S>{};
+            return ServiceRegistration<S,ServiceScope::EXTERNAL>{};
         }
         if constexpr(sizeof...(IFaces) > 0) {
             static_assert(detail::check_unique_types<S,IFaces...>(), "All advertised interfaces must be distinct");
             auto check = detail::check_dynamic_types<S,IFaces...>(obj);
             if(!check.first)            {
                 qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << qObject << " as '" << objName << "'. Object does not implement " << check.second.name();
-                return ServiceRegistration<S>{};
+                return ServiceRegistration<S,ServiceScope::EXTERNAL>{};
             }
         }
         std::unordered_set<std::type_index> ifaces;
         (ifaces.insert(typeid(S)), ..., ifaces.insert(typeid(IFaces)));
-        return ServiceRegistration<S>::wrap(registerObject(objName, qObject, service_descriptor{ifaces, typeid(*obj)}));
+        return ServiceRegistration<S,ServiceScope::EXTERNAL>::wrap(registerObject(objName, qObject, service_descriptor{ifaces, typeid(*obj)}));
     }
 
     ///
@@ -1908,9 +1984,9 @@ public:
     /// \return a ServiceRegistration for the required type and name. If no single Service with a matching name and service-type could be found,
     /// an invalid ServiceRegistration will be returned.
     ///
-    template<typename S=QObject> [[nodiscard]] ServiceRegistration<S> getRegistration(const QString& name) const {
+    template<typename S=QObject> [[nodiscard]] ServiceRegistration<S,ServiceScope::UNKNOWN> getRegistration(const QString& name) const {
         static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
-        return ServiceRegistration<S>::wrap(getRegistrationHandle(name));
+        return ServiceRegistration<S,ServiceScope::UNKNOWN>::wrap(getRegistrationHandle(name));
     }
 
 
@@ -1939,10 +2015,10 @@ public:
      * <br>**Thread-safety:** This function may be called safely  from any thread.
      * @return a List of all Services that have been registered.
      */
-    [[nodiscard]] QList<ServiceRegistration<QObject>> getRegistrations() const {
-        QList<ServiceRegistration<QObject>> result;
+    [[nodiscard]] QList<ServiceRegistration<QObject,ServiceScope::UNKNOWN>> getRegistrations() const {
+        QList<ServiceRegistration<QObject,ServiceScope::UNKNOWN>> result;
         for(auto handle : getRegistrationHandles()) {
-            result.push_back(ServiceRegistration<QObject>::wrap(handle));
+            result.push_back(ServiceRegistration<QObject,ServiceScope::UNKNOWN>::wrap(handle));
         }
         return result;
     }
@@ -2014,7 +2090,7 @@ protected:
     /// \param config the configuration of the service.
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
-    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config) = 0;
+    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, bool prototype) = 0;
 
     ///
     /// \brief Registers an Object with this QApplicationContext.
@@ -2076,8 +2152,8 @@ protected:
     /// \param config
     /// \return the result of registerService(const QString&, service_descriptor*).
     ///
-    static service_registration_handle_t delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config) {
-        return appContext.registerService(name, descriptor, config);
+    static service_registration_handle_t delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config, bool prototype) {
+        return appContext.registerService(name, descriptor, config, prototype);
     }
 
     ///
@@ -2139,7 +2215,7 @@ protected:
 
 
 
-    template<typename S> friend class ServiceRegistration;
+    template<typename S,ServiceScope> friend class ServiceRegistration;
 };
 
 template<typename S> template<typename D,typename R> Subscription Registration<S>::autowire(R (S::*injectionSlot)(D*)) {
@@ -2194,8 +2270,8 @@ namespace std {
         std::hash<mcnepp::qtdi::subscription_handle_t> hasher;
     };
 
-    template<typename S> struct hash<mcnepp::qtdi::ServiceRegistration<S>> {
-        size_t operator()(const mcnepp::qtdi::ServiceRegistration<S>& sub, size_t seed = 0) const {
+    template<typename S,mcnepp::qtdi::ServiceScope scope> struct hash<mcnepp::qtdi::ServiceRegistration<S,scope>> {
+        size_t operator()(const mcnepp::qtdi::ServiceRegistration<S,scope>& sub, size_t seed = 0) const {
             return hasher(sub.unwrap());
         }
 
