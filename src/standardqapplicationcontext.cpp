@@ -593,13 +593,16 @@ StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(unsigne
 
 StandardApplicationContext::DescriptorRegistration *StandardApplicationContext::PrototypeRegistration::createInstance(const QVariantList& arg)
 {
-    auto service = descriptor.create(arg);
-    auto instanceReg = new PrototypeInstanceRegistration{++applicationContext()->nextIndex, this, service};
-    instanceRegistrations.push_back(instanceReg);
+    std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor, config(), applicationContext()}};
+    if(!instanceReg->createService(arg)) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
+        return nullptr;
+    }
+    instanceRegistrations.push_back(instanceReg.get());
     qCInfo(loggingCategory()).noquote().nospace() << "Created instance of " << *this;
 
     instanceReg->subscribe(proxySubscription);
-    return instanceReg;
+    return instanceReg.release();
 }
 
 int StandardApplicationContext::PrototypeRegistration::unpublish()
@@ -654,35 +657,7 @@ void StandardApplicationContext::PrototypeRegistration::instanceDestroyed(Descri
     }
 }
 
-StandardApplicationContext::PrototypeInstanceRegistration::PrototypeInstanceRegistration(unsigned index, PrototypeRegistration* prototype, QObject* theService) :
-    DescriptorRegistration{index, prototype->registeredName(), prototype->descriptor, prototype->applicationContext()},
-    m_prototype(prototype),
-    m_state(STATE_CREATED),
-    m_service(theService),
-    resolvedProperties(prototype->config().properties)
-{
-    //This Registration does not advertise any dependencies.
-    descriptor.dependencies.clear();
-    onDestroyed = connect(theService, &QObject::destroyed, this, &PrototypeInstanceRegistration::serviceDestroyed);
-}
 
-
-void StandardApplicationContext::PrototypeInstanceRegistration::print(QDebug out) const {
-    out.nospace().noquote() << "Instance of prototype '" << registeredName() << "' with " << this->descriptor;
-}
-
-
-void StandardApplicationContext::PrototypeInstanceRegistration::serviceDestroyed(QObject *srv) {
-    if(srv == m_service) {
-        //Somebody has destroyed a Service that is managed by this ApplicationContext.
-        //All we can do is log an error and set theService to nullptr.
-        //Yet, it might still be in use somewhere as a dependency.
-        qCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
-        m_service = nullptr;
-        m_state = STATE_INIT;
-        m_prototype->instanceDestroyed(this);
-    }
-}
 
 
 
@@ -1030,6 +1005,9 @@ QVariant StandardApplicationContext::resolveDependency(const QVariant &arg, desc
 {
     if(auto proto = arg.value<PrototypeRegistration*>()) {
         auto instance = proto->createInstance(resolveDependencies(proto->m_dependencies, created));
+        if(!instance) {
+            return QVariant{};
+        }
         created.push_back(instance);
         return QVariant::fromValue(instance->getObject());
     }
@@ -1075,7 +1053,8 @@ bool StandardApplicationContext::publish(bool allowPartial)
     qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext with " << toBePublished.size() << " unpublished Objects";
     //Do several rounds and publish those services whose dependencies have already been published.
     //For a service with an empty set of dependencies, this means that it will be published first.
-    for(auto reg : toBePublished) {
+    while(!toBePublished.empty()) {
+        auto reg = pop_front(toBePublished);
         QVariantList dependencies;
         auto& dependencyInfos = reg->descriptor.dependencies;
         if(!dependencyInfos.empty()) {
@@ -1094,6 +1073,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         }
         if(!reg->isPrototype()) {
             qCInfo(loggingCategory()).nospace().noquote() << "Created service " << *reg;
+            needConfiguration.push_back(reg);
         }
         allCreated.push_back(reg);
     }
@@ -1101,16 +1081,10 @@ bool StandardApplicationContext::publish(bool allowPartial)
 
     unsigned managed = std::count_if(allCreated.begin(), allCreated.end(), std::mem_fn(&DescriptorRegistration::isManaged));
 
-    //Add the services that have been been created in this round to those that need configuration:
-    needConfiguration.insert(needConfiguration.begin(), toBePublished.begin(), toBePublished.end());
-    toBePublished.clear();
     //The services that have been instantiated during this methd-invocation will be configured in the order they have have been
     //instantiated.
     while(!needConfiguration.empty()) {
-        DescriptorRegistration* reg = pop_front(needConfiguration);
-        if(reg->isPublished()) {
-            continue;
-        }
+        auto reg = pop_front(needConfiguration);
         auto configResult = configure(reg, needConfiguration, allowPartial);
         switch(configResult) {
         case Status::fatal:
@@ -1192,7 +1166,7 @@ QList<service_registration_handle_t> StandardApplicationContext::getRegistration
     return result;
 }
 
-StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, bool prototype) {
+StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, ServiceScope scope) {
     if(name.isEmpty()) {
         name = makeName(*descriptor.service_types.begin());
     }
@@ -1217,12 +1191,14 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
     }
 
     DescriptorRegistration* registration;
-    if(prototype) {
+    switch(scope) {
+    case ServiceScope::PROTOTYPE:
         registration = new PrototypeRegistration{++nextIndex, name, descriptor, config, this};
-    } else
-    if(obj) {
+        break;
+    case ServiceScope::EXTERNAL:
         registration = new ObjectRegistration{++nextIndex, name, descriptor, obj, this};
-    } else {
+        break;
+    default:
         registration = new ServiceRegistration{++nextIndex, name, descriptor, config, this};
     }
     registrationsByName.insert({name, registration});
@@ -1274,7 +1250,7 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
             }
         }
 
-        reg = registerDescriptor(name, descriptor, config, nullptr, prototype);
+        reg = registerDescriptor(name, descriptor, config, nullptr, prototype? ServiceScope::PROTOTYPE : ServiceScope::SINGLETON);
     }
     // Emit signal after mutex has been released:
     emit pendingPublicationChanged();
@@ -1323,7 +1299,7 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
             }
         }
 
-        reg = registerDescriptor(objName, descriptor, ObjectRegistration::defaultConfig, obj, false);
+        reg = registerDescriptor(objName, descriptor, ObjectRegistration::defaultConfig, obj, ServiceScope::EXTERNAL);
     }
     // Emit signal after mutex has been released:
     emit publishedChanged();

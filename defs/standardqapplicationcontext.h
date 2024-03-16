@@ -366,95 +366,6 @@ private:
         subscription_handle_t proxySubscription;
     };
 
-    class PrototypeInstanceRegistration  : public DescriptorRegistration {
-        friend class PrototypeRegistration;
-
-        PrototypeInstanceRegistration(unsigned index, PrototypeRegistration* prototype, QObject* theService);
-
-
-            int state() const override {
-                return m_state;
-            }
-
-
-            virtual QObject* getObject() const override {
-                return m_service;
-            }
-
-            virtual bool createService(const QVariantList& dependencies) override {
-                return true;
-            }
-
-
-
-
-            virtual ServiceScope scope() const override {
-                return ServiceScope::SINGLETON;
-            }
-
-
-            void notifyPublished() override {
-                if(m_state == STATE_CREATED) {
-                    emit objectPublished(m_service);
-                    m_state = STATE_PUBLISHED;
-                }
-            }
-
-
-            virtual void print(QDebug out) const override;
-
-            virtual const service_config& config() const override {
-                return m_prototype->config();
-            }
-
-            QVariantMap registeredProperties() const override {
-                return resolvedProperties;
-            }
-
-            virtual void resolveProperty(const QString& key, const QVariant& value) override {
-                resolvedProperties.insert(key, value);
-            }
-
-            void serviceDestroyed(QObject* srv);
-
-
-            virtual QStringList getBeanRefs() const override {
-                return m_prototype->getBeanRefs();
-            }
-
-
-
-            virtual void onSubscription(subscription_handle_t subscription) override {
-                //If the Service is already present, there is no need to connect to the signal:
-                if(isPublished()) {
-                    emit subscription->objectPublished(m_service);
-                } else {
-                    subscription->connectTo(this);
-                }
-            }
-
-            virtual QMetaProperty getProperty(const char* name) const override {
-                return m_prototype->getProperty(name);
-            }
-
-            virtual int unpublish() override {
-                if(m_state != STATE_INIT) {
-                    std::unique_ptr<QObject> srv{m_service};
-                    QObject::disconnect(onDestroyed);
-                    m_state = STATE_INIT;
-                    return 1;
-                }
-                return 0;
-            }
-
-
-            PrototypeRegistration* const m_prototype;
-            QObject* m_service;
-            QVariantMap resolvedProperties;
-            int m_state;
-            QMetaObject::Connection onDestroyed;
-        };
-
     class ObjectRegistration : public DescriptorRegistration {
 
         friend class StandardApplicationContext;
@@ -652,7 +563,7 @@ private:
 
     QVariant resolveDependency(const QVariant& arg, descriptor_list& created);
 
-    DescriptorRegistration* registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, bool prototype);
+    DescriptorRegistration* registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, ServiceScope scope);
 
     Status configure(DescriptorRegistration*, descriptor_list& toBePublished, bool allowPartial);
 
