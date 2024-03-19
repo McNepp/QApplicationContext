@@ -195,6 +195,17 @@ private slots:
 
 
 
+    void testGlobalInstance() {
+        QCOMPARE(context.get(), QApplicationContext::instance());
+        QVERIFY(context->isGlobalInstance());
+        StandardApplicationContext anotherContext;
+        QVERIFY(!anotherContext.isGlobalInstance());
+        QCOMPARE(QApplicationContext::instance(), context.get());
+        context.reset();
+        QVERIFY(!QApplicationContext::instance());
+    }
+
+
 
     void testRegisterNonQObject() {
         //std::cerr is no QObject. However, this cannot be detected at compile-time, as it has virtual functions and is thus _potentially convertible_ to QObject.

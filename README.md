@@ -880,6 +880,14 @@ The following table shows how this argument affects the outcome of the function:
   - syntactically erronous config-keys (such as `"$interval}"`).
 - Such "fatal errors" that occur while publishing a service will be logged with the level QtMsgType::QtCriticalMessage.
 
+## The global ApplicationContext
+
+In many applications, you will instantiate exactly one QApplicationContext.
+In that case, the static function mcnepp::qtdi::QApplicationContext::instance() is a convenient means of providing access to that single instance.
+<br>When you create a QApplicationContext, the constructor will set a global variable to the new QApplicationContext, unless
+it has already been set. Consequently, the first QApplicationContext that you create in your application will become the global instance.
+<br>(Please not that QCoreApplication::instance() exhibits the same behaviour.)
+
 ## Multi-threading
 
 Since the class mcnepp::qtdi::QApplicationContext is derived from QObject, each ApplicationContext has a *thread-affinity* to the thread that created it.
@@ -900,13 +908,14 @@ The following table sums this up:
 |mcnepp::qtdi::QApplicationContext::getRegistrations() const|any| |
 |mcnepp::qtdi::QApplicationContext::published() const|any| |
 |mcnepp::qtdi::QApplicationContext::pendingPublication() const|any| |
-|mcnepp::qtdi::Registration::subscribe()|any|the signal will be delivered to the target-thread using its event-queue.|
+|mcnepp::qtdi::QApplicationContext::instance()|any| |
 |mcnepp::qtdi::QApplicationContext::registerService()|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return an invalid ServiceRegistration.|
 |mcnepp::qtdi::QApplicationContext::registerObject()|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return an invalid ServiceRegistration.|
 |mcnepp::qtdi::ServiceRegistration::registerAlias(const QString&)|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return `false`.|
 |mcnepp::qtdi::Registration::autowire()|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return an invalid Subscription.|
 |mcnepp::qtdi::bind()|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return an invalid Subscription.|
 |mcnepp::qtdi::QApplicationContext::publish(bool)|only the ApplicationContext's|All published services will live in the ApplicationContext's thread.|
+
 
 
 
