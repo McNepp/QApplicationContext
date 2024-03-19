@@ -576,6 +576,21 @@ QStringList StandardApplicationContext::ServiceRegistration::getBeanRefs() const
     return result;
 }
 
+QObject* StandardApplicationContext::ServiceRegistration::createService(const QVariantList &dependencies, descriptor_list &created)
+{
+    switch(state()) {
+        case STATE_INIT:
+        if(!theService) {
+            theService = descriptor.create(resolveDependencies(dependencies, created));
+            if(theService) {
+                onDestroyed = connect(theService, &QObject::destroyed, this, &ServiceRegistration::serviceDestroyed);
+                m_state = STATE_CREATED;
+            }
+        }
+    }
+    return theService;
+}
+
 
 StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(unsigned index, const QString &name, const service_descriptor &desc, const service_config &config, StandardApplicationContext *parent) :
     DescriptorRegistration{index, name, desc, parent},
@@ -585,19 +600,6 @@ StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(unsigne
     proxySubscription = new ProxySubscription{this};
 }
 
-StandardApplicationContext::DescriptorRegistration *StandardApplicationContext::PrototypeRegistration::createInstance(const QVariantList& arg)
-{
-    std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor, config(), applicationContext()}};
-    if(!instanceReg->createService(arg)) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
-        return nullptr;
-    }
-    instanceRegistrations.push_back(instanceReg.get());
-    qCInfo(loggingCategory()).noquote().nospace() << "Created instance of " << *this;
-
-    instanceReg->subscribe(proxySubscription);
-    return instanceReg.release();
-}
 
 int StandardApplicationContext::PrototypeRegistration::unpublish()
 {
@@ -628,6 +630,34 @@ QStringList StandardApplicationContext::PrototypeRegistration::getBeanRefs() con
     }
     beanRefsCache = result;
     return result;
+}
+
+QObject* StandardApplicationContext::PrototypeRegistration::createService(const QVariantList& dependencies, descriptor_list& created) {
+    switch(state()) {
+    case STATE_INIT:
+        //Store dependencies for deferred creation of service-instances:
+        m_dependencies = dependencies;
+        m_state = STATE_PUBLISHED;
+        return this;
+    case STATE_PUBLISHED:
+        {
+            std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor, config(), applicationContext()}};
+            QObject* instance = instanceReg->createService(resolveDependencies(m_dependencies, created), created);
+            if(!instance) {
+                qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
+                return nullptr;
+            }
+            instanceRegistrations.push_back(instanceReg.get());
+            qCInfo(loggingCategory()).noquote().nospace() << "Created instance of " << *this;
+
+            instanceReg->subscribe(proxySubscription);
+            created.push_back(instanceReg.release());
+            return instance;
+        }
+    default:
+        qCCritical(loggingCategory()).noquote().nospace() << "Invalid state! Cannot create instance of " << *this;
+        return nullptr;
+    }
 }
 
 void StandardApplicationContext::PrototypeRegistration::print(QDebug out) const {
@@ -1004,13 +1034,12 @@ QVariantList StandardApplicationContext::resolveDependencies(const QVariantList&
 
 QVariant StandardApplicationContext::resolveDependency(const QVariant &arg, descriptor_list &created)
 {
-    if(auto proto = arg.value<PrototypeRegistration*>()) {
-        auto instance = proto->createInstance(resolveDependencies(proto->m_dependencies, created));
+    if(auto proto = arg.value<DescriptorRegistration*>(); proto && proto->isPrototype()) {
+        auto instance = proto->createService(QVariantList{}, created);
         if(!instance) {
             return QVariant{};
         }
-        created.push_back(instance);
-        return QVariant::fromValue(instance->getObject());
+        return QVariant::fromValue(instance);
     }
     return arg;
 }
@@ -1064,19 +1093,23 @@ bool StandardApplicationContext::publish(bool allowPartial)
                 auto result = resolveDependency(allCreated, reg, d, allowPartial);
                 dependencies.push_back(result.first);
             }
-            if(!reg->isPrototype()) {
-                dependencies = resolveDependencies(dependencies, needConfiguration);
-            }
         }
-        if(!reg->createService(dependencies)) {
+
+        reg->createService(dependencies, needConfiguration);
+
+        switch(reg->state()) {
+        case STATE_INIT:
             qCCritical(loggingCategory()).nospace().noquote() << "Could not create service " << *reg;
             return false;
-        }
-        if(!reg->isPrototype()) {
+
+        case STATE_CREATED:
             qCInfo(loggingCategory()).nospace().noquote() << "Created service " << *reg;
             needConfiguration.push_back(reg);
+            [[fallthrough]];
+        case STATE_PUBLISHED:
+            allCreated.push_back(reg);
+
         }
-        allCreated.push_back(reg);
     }
 
 
