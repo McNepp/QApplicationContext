@@ -693,6 +693,11 @@ allowPartial = true:</h2>
 <li>Such "fatal errors" that occur while publishing a service will be logged with the level QtMsgType::QtCriticalMessage.</li>
 </ul>
 <h1><a class="anchor" id="autotoc_md37"></a>
+The global ApplicationContext</h1>
+<p>In many applications, you will instantiate exactly one QApplicationContext. In that case, the static function <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abc1d419de6d4d3af4c38a8c5791edc4d" title="Obtains the global instance.  QApplicationContext&#39;s constructor will atomically install this as the g...">mcnepp::qtdi::QApplicationContext::instance()</a> is a convenient means of providing access to that single instance. <br  />
+When you create a QApplicationContext, the constructor will set a global variable to the new QApplicationContext, unless it has already been set. Consequently, the first QApplicationContext that you create in your application will become the global instance. <br  />
+(Please not that QCoreApplication::instance() exhibits the same behaviour.)</p>
+<h1><a class="anchor" id="autotoc_md38"></a>
 Multi-threading</h1>
 <p>Since the class <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">mcnepp::qtdi::QApplicationContext</a> is derived from QObject, each ApplicationContext has a <em>thread-affinity</em> to the thread that created it.</p>
 <p>As a consequence, there are some restrictions regarding the threads from which some of the ApplicationContext's functions may be invoked.</p>
@@ -713,7 +718,7 @@ Multi-threading</h1>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5514133528db14cb3308410984b2b2c1" title="How many services have been registered and not yet published? This property will initially yield 0....">mcnepp::qtdi::QApplicationContext::pendingPublication() const </a>  </td><td class="markdownTableBodyNone">any   </td><td class="markdownTableBodyNone"></td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">mcnepp::qtdi::Registration::subscribe()</a>   </td><td class="markdownTableBodyNone">any   </td><td class="markdownTableBodyNone">the signal will be delivered to the target-thread using its event-queue.    </td></tr>
+<td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abc1d419de6d4d3af4c38a8c5791edc4d" title="Obtains the global instance.  QApplicationContext&#39;s constructor will atomically install this as the g...">mcnepp::qtdi::QApplicationContext::instance()</a>   </td><td class="markdownTableBodyNone">any   </td><td class="markdownTableBodyNone"></td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad2d3d01edba9c46b0c75858b22b06dac" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return an invalid ServiceRegistration.    </td></tr>
 <tr class="markdownTableRowEven">

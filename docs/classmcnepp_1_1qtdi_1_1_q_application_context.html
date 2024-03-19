@@ -78,6 +78,7 @@ $(function() {
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#signals">Signals</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="#pro-static-methods">Static Protected Member Functions</a> &#124;
 <a href="#properties">Properties</a> &#124;
@@ -184,6 +185,19 @@ The ServiceRegistrations have a type-argument <code>QObject</code>. You may want
 <tr class="memdesc:aaa68903ec532fbeaa3975c4af668fe35"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number of yet unpublished services. <br  />
 <b>Thread-safety:</b> This function may be safely called from any thread.  <br /></td></tr>
 <tr class="separator:aaa68903ec532fbeaa3975c4af668fe35"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aefb81ffc9c91512a6ae0ec84453f39fa"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aefb81ffc9c91512a6ae0ec84453f39fa">isGlobalInstance</a> () const</td></tr>
+<tr class="memdesc:aefb81ffc9c91512a6ae0ec84453f39fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Is this the global instance?  <br /></td></tr>
+<tr class="separator:aefb81ffc9c91512a6ae0ec84453f39fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:abc1d419de6d4d3af4c38a8c5791edc4d"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abc1d419de6d4d3af4c38a8c5791edc4d">instance</a> ()</td></tr>
+<tr class="memdesc:abc1d419de6d4d3af4c38a8c5791edc4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the global instance. <br  />
+<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s constructor will atomically install <code>this</code> as the global instance, unless another instance has already been registered. <br  />
+QQpplicationContext's destructor will clear the global instance, if it currently points to <code>this</code>. <br  />
+You may determine whether a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> is the global instance using <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aefb81ffc9c91512a6ae0ec84453f39fa" title="Is this the global instance?">QApplicationContext::isGlobalInstance()</a>. <br  />
+<b>Note:</b> the global instance will not be deleted automatically! It is the responsibilty of the user to delete it.  <br /></td></tr>
+<tr class="separator:abc1d419de6d4d3af4c38a8c5791edc4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
@@ -782,6 +796,58 @@ Additionally, you may wrap the handles in a type-safe manner, using <a class="el
 The ServiceRegistrations have a type-argument <code>QObject</code>. You may want to narrow them to the expected service-type using <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a96d15a61bbd30df0d56c434bec2cccac" title="Attempts to cast this ServiceRegistration to a type.  This function will yield a valid Registration o...">ServiceRegistration::as()</a>. <br  />
 <b>Thread-safety:</b> This function may be called safely from any thread. </p>
 <dl class="section return"><dt>Returns</dt><dd>a List of all Services that have been registered. </dd></dl>
+
+</div>
+</div>
+<a id="abc1d419de6d4d3af4c38a8c5791edc4d" name="abc1d419de6d4d3af4c38a8c5791edc4d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abc1d419de6d4d3af4c38a8c5791edc4d">&#9670;&#160;</a></span>instance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> * mcnepp::qtdi::QApplicationContext::instance </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Obtains the global instance. <br  />
+<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s constructor will atomically install <code>this</code> as the global instance, unless another instance has already been registered. <br  />
+QQpplicationContext's destructor will clear the global instance, if it currently points to <code>this</code>. <br  />
+You may determine whether a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> is the global instance using <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aefb81ffc9c91512a6ae0ec84453f39fa" title="Is this the global instance?">QApplicationContext::isGlobalInstance()</a>. <br  />
+<b>Note:</b> the global instance will not be deleted automatically! It is the responsibilty of the user to delete it. </p>
+<dl class="section return"><dt>Returns</dt><dd>the global instance, or <code>nullptr</code> if no <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> is currently alive. </dd></dl>
+
+</div>
+</div>
+<a id="aefb81ffc9c91512a6ae0ec84453f39fa" name="aefb81ffc9c91512a6ae0ec84453f39fa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aefb81ffc9c91512a6ae0ec84453f39fa">&#9670;&#160;</a></span>isGlobalInstance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool mcnepp::qtdi::QApplicationContext::isGlobalInstance </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Is this the global instance? </p>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> if <code>this</code> has been installed as the global instance. </dd></dl>
 
 </div>
 </div>
