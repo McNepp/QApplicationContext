@@ -1990,6 +1990,20 @@ class QApplicationContext : public QObject
 
 public:
 
+
+    ///
+    /// \brief Obtains the global instance.
+    /// <br>QApplicationContext's constructor will atomically install `this` as the global instance,
+    /// unless another instance has already been registered.
+    /// <br>QQpplicationContext's destructor will clear the global instance, if it currently points to `this`.
+    /// <br>You may determine whether a QApplicationContext is the global instance using QApplicationContext::isGlobalInstance().
+    /// <br>**Note:** the global instance will not be deleted automatically! It is the responsibilty of the user to delete it.
+    /// \return  the global instance, or `nullptr` if no QApplicationContext is currently alive.
+    ///
+    static QApplicationContext* instance();
+
+
+
     ///
     /// \brief How many services have been published?
     /// This property will initially yield `false`, until publish(bool) is invoked.
@@ -2020,6 +2034,7 @@ public:
     ///
     using dependency_info = detail::dependency_info;
 
+    ~QApplicationContext();
 
 
 
@@ -2211,6 +2226,13 @@ public:
     ///
     [[nodiscard]] virtual unsigned pendingPublication() const = 0;
 
+    ///
+    /// \brief Is this the global instance?
+    /// \return `true` if `this` has been installed as the global instance.
+    ///
+    bool isGlobalInstance() const;
+
+
 
 
 signals:
@@ -2228,7 +2250,6 @@ signals:
     /// **Note:** the signal will not be emitted on destruction of this ApplicationContext!
     ///
     void pendingPublicationChanged();
-
 
 protected:
 
@@ -2374,6 +2395,13 @@ protected:
 
 
     template<typename S,ServiceScope> friend class ServiceRegistration;
+
+private:
+    static std::atomic<QApplicationContext*> theInstance;
+
+    static bool setInstance(QApplicationContext*);
+
+    const bool m_isInstance;
 };
 
 template<typename S> template<typename D,typename R> Subscription Registration<S>::autowire(R (S::*injectionSlot)(D*)) {

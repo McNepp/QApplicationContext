@@ -24,6 +24,8 @@ class StandardApplicationContext final : public QApplicationContext
 //Forward-declarations of nested class:
     class CreateRegistrationHandleEvent;
 
+    class DescriptorRegistration;
+
 public:
     explicit StandardApplicationContext(QObject *parent = nullptr);
 
@@ -67,6 +69,9 @@ private:
     };
 
 
+    using descriptor_set = std::unordered_set<DescriptorRegistration*>;
+
+    using descriptor_list = std::deque<DescriptorRegistration*>;
 
 
     static constexpr int STATE_INIT = 0;
@@ -142,7 +147,7 @@ private:
         DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* parent);
 
 
-        virtual bool createService(const QVariantList& dependencies) = 0;
+        virtual QObject* createService(const QVariantList& dependencies, descriptor_list& created) = 0;
 
         virtual int unpublish() = 0;
 
@@ -161,9 +166,6 @@ private:
         unsigned const m_index;
     };
 
-    using descriptor_set = std::unordered_set<DescriptorRegistration*>;
-
-    using descriptor_list = std::deque<DescriptorRegistration*>;
 
 
     class ServiceRegistration : public DescriptorRegistration {
@@ -227,16 +229,8 @@ private:
 
 
 
-        virtual bool createService(const QVariantList& dependencies) override {
-            if(!theService) {
-                theService = descriptor.create(dependencies);
-                if(theService) {
-                    onDestroyed = connect(theService, &QObject::destroyed, this, &ServiceRegistration::serviceDestroyed);
-                    m_state = STATE_CREATED;
-                }
-            }
-            return true;
-        }
+        virtual QObject* createService(const QVariantList& dependencies, descriptor_list& created) override;
+
 
         virtual void onSubscription(subscription_handle_t subscription) override {
             //If the Service is already present, there is no need to connect to the signal:
@@ -326,14 +320,7 @@ private:
 
 
 
-        virtual bool createService(const QVariantList& dependencies) override {
-            if(m_state == STATE_INIT) {
-                //Store dependencies for deferred creation of service-instances:
-                m_dependencies = dependencies;
-                m_state = STATE_PUBLISHED;
-            }
-            return true;
-        }
+        virtual QObject* createService(const QVariantList& dependencies, descriptor_list& created) override;
 
         virtual void onSubscription(subscription_handle_t subscription) override;
 
@@ -343,8 +330,6 @@ private:
             }
             return QMetaProperty{};
         }
-
-        DescriptorRegistration* createInstance(const QVariantList& args);
 
 
 
@@ -365,95 +350,6 @@ private:
         mutable std::optional<QStringList> beanRefsCache;
         subscription_handle_t proxySubscription;
     };
-
-    class PrototypeInstanceRegistration  : public DescriptorRegistration {
-        friend class PrototypeRegistration;
-
-        PrototypeInstanceRegistration(unsigned index, PrototypeRegistration* prototype, QObject* theService);
-
-
-            int state() const override {
-                return m_state;
-            }
-
-
-            virtual QObject* getObject() const override {
-                return m_service;
-            }
-
-            virtual bool createService(const QVariantList& dependencies) override {
-                return true;
-            }
-
-
-
-
-            virtual ServiceScope scope() const override {
-                return ServiceScope::SINGLETON;
-            }
-
-
-            void notifyPublished() override {
-                if(m_state == STATE_CREATED) {
-                    emit objectPublished(m_service);
-                    m_state = STATE_PUBLISHED;
-                }
-            }
-
-
-            virtual void print(QDebug out) const override;
-
-            virtual const service_config& config() const override {
-                return m_prototype->config();
-            }
-
-            QVariantMap registeredProperties() const override {
-                return resolvedProperties;
-            }
-
-            virtual void resolveProperty(const QString& key, const QVariant& value) override {
-                resolvedProperties.insert(key, value);
-            }
-
-            void serviceDestroyed(QObject* srv);
-
-
-            virtual QStringList getBeanRefs() const override {
-                return m_prototype->getBeanRefs();
-            }
-
-
-
-            virtual void onSubscription(subscription_handle_t subscription) override {
-                //If the Service is already present, there is no need to connect to the signal:
-                if(isPublished()) {
-                    emit subscription->objectPublished(m_service);
-                } else {
-                    subscription->connectTo(this);
-                }
-            }
-
-            virtual QMetaProperty getProperty(const char* name) const override {
-                return m_prototype->getProperty(name);
-            }
-
-            virtual int unpublish() override {
-                if(m_state != STATE_INIT) {
-                    std::unique_ptr<QObject> srv{m_service};
-                    QObject::disconnect(onDestroyed);
-                    m_state = STATE_INIT;
-                    return 1;
-                }
-                return 0;
-            }
-
-
-            PrototypeRegistration* const m_prototype;
-            QObject* m_service;
-            QVariantMap resolvedProperties;
-            int m_state;
-            QMetaObject::Connection onDestroyed;
-        };
 
     class ObjectRegistration : public DescriptorRegistration {
 
@@ -497,8 +393,8 @@ private:
 
 
 
-        virtual bool createService(const QVariantList& dependencies) override {
-            return true;
+        virtual QObject* createService(const QVariantList& dependencies, descriptor_list&) override {
+            return theObj;
         }
 
 
@@ -639,7 +535,7 @@ private:
 
     void unpublish();
 
-    QVariant getConfigurationValue(const QString& key, const QVariant& defaultValue) const;
+    QVariant getConfigurationValue(const QString& key, const QString& group) const;
 
     void contextObjectDestroyed(QObject*);
 
@@ -648,11 +544,11 @@ private:
 
     std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial);
 
-    QVariantList resolveDependencies(const QVariantList& dependencies, descriptor_list& created);
+    static QVariantList resolveDependencies(const QVariantList& dependencies, descriptor_list& created);
 
-    QVariant resolveDependency(const QVariant& arg, descriptor_list& created);
+    static QVariant resolveDependency(const QVariant& arg, descriptor_list& created);
 
-    DescriptorRegistration* registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, bool prototype);
+    DescriptorRegistration* registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, ServiceScope scope);
 
     Status configure(DescriptorRegistration*, descriptor_list& toBePublished, bool allowPartial);
 
@@ -660,7 +556,7 @@ private:
 
     std::pair<Status,bool> resolveBeanRef(QVariant& value, descriptor_list& toBePublished, bool allowPartial);
 
-    std::pair<QVariant,Status> resolveProperty(const QString& group, const QVariant& valueOrPlaceholder, const QVariant& defaultValue, bool allowPartial);
+    std::pair<QVariant,Status> resolvePlaceholders(const QString& key, const QString& group);
 
     // QObject interface
 public:

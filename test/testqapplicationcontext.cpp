@@ -195,6 +195,17 @@ private slots:
 
 
 
+    void testGlobalInstance() {
+        QCOMPARE(context.get(), QApplicationContext::instance());
+        QVERIFY(context->isGlobalInstance());
+        StandardApplicationContext anotherContext;
+        QVERIFY(!anotherContext.isGlobalInstance());
+        QCOMPARE(QApplicationContext::instance(), context.get());
+        context.reset();
+        QVERIFY(!QApplicationContext::instance());
+    }
+
+
 
     void testRegisterNonQObject() {
         //std::cerr is no QObject. However, this cannot be detected at compile-time, as it has virtual functions and is thus _potentially convertible_ to QObject.
@@ -857,7 +868,9 @@ private slots:
 
 
     void testPrototypeDependency() {
-        auto regProto = context->registerPrototype<BaseService>();
+        this->config->setValue("foo", "the foo");
+        context->registerObject(config.get());
+        auto regProto = context->registerPrototype<BaseService>("base", make_config({{"foo", "${foo}"}}));
         auto asSingleton = regProto.as<BaseService,ServiceScope::SINGLETON>();
         QVERIFY(!asSingleton);
 
@@ -874,6 +887,8 @@ private slots:
         QVERIFY(context->publish());
         QVERIFY(!protoDependentSlot);
         QCOMPARE(protoSlot.invocationCount(), 2);
+        QCOMPARE(protoSlot.objects()[0]->foo(), "the foo");
+        QCOMPARE(protoSlot.objects()[1]->foo(), "the foo");
         QVERIFY(dependentSlot->m_dependency);
         QVERIFY(dependentSlot2->m_dependency);
         QCOMPARE_NE(dependentSlot->m_dependency, dependentSlot2->m_dependency);
