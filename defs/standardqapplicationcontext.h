@@ -550,7 +550,7 @@ private:
 
     void unpublish();
 
-    QVariant getConfigurationValue(const QString& key, const QVariant& defaultValue) const;
+    QVariant getConfigurationValue(const QString& key, const QString& group) const;
 
     void contextObjectDestroyed(QObject*);
 
@@ -571,7 +571,7 @@ private:
 
     std::pair<Status,bool> resolveBeanRef(QVariant& value, descriptor_list& toBePublished, bool allowPartial);
 
-    std::pair<QVariant,Status> resolveProperty(const QString& group, const QVariant& valueOrPlaceholder, const QVariant& defaultValue, bool allowPartial);
+    std::pair<QVariant,Status> resolvePlaceholders(const QString& key, const QString& group);
 
     // QObject interface
 public:

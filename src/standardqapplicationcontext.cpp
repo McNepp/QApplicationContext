@@ -175,12 +175,6 @@ template<typename C> auto pop_front(C& container) -> typename C::value_type {
         return value;
 }
 
-QString makeConfigPath(const QString& group, const QString& key) {
-        if(group.isEmpty()) {
-            return key;
-        }
-        return group+"/"+key;
-}
 
 QString makeName(const std::type_index& type) {
     QString typeName{type.name()};
@@ -767,11 +761,18 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
     case detail::RESOLVABLE_KIND:
         {
-            auto resolved = resolveProperty(reg->config().group, d.expression, d.value, allowPartial);
-            if(resolved.second == Status::ok) {
+            auto resolved = resolvePlaceholders(d.expression, reg->config().group);
+            switch(resolved.second) {
+            case Status::ok:
                 qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << resolved.first;
+                return resolved;
+            case Status::fixable:
+                if(d.value.isValid()) {
+                    return {d.value, Status::ok};
+                }
+            default:
+                return resolved;
             }
-            return resolved;
         }
 
     case static_cast<int>(Kind::MANDATORY):
@@ -1391,22 +1392,17 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
 }
 
 
-std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolveProperty(const QString& group, const QVariant &valueOrPlaceholder, const QVariant& defaultValue, bool allowPartial)
+std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolvePlaceholders(const QString& key, const QString &group)
 {
     constexpr int STATE_INIT = 0;
     constexpr int STATE_FOUND_DOLLAR = 1;
     constexpr int STATE_FOUND_PLACEHOLDER = 2;
     constexpr int STATE_FOUND_DEFAULT_VALUE = 3;
     constexpr int STATE_ESCAPED = 4;
-    if(!valueOrPlaceholder.isValid()) {
-        return {valueOrPlaceholder, Status::fatal};
-    }
-    QString key = valueOrPlaceholder.toString();
     QVariant lastResolvedValue;
     QString resolvedString;
     QString token;
     QString defaultValueToken;
-    QVariant currentDefault;
 
     int lastStateBeforeEscape = STATE_INIT;
     int state = STATE_INIT;
@@ -1459,26 +1455,22 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             }
 
         case '}':
-            currentDefault = defaultValue;
             switch(state) {
             case STATE_ESCAPED:
                 resolvedString += '}';
                 state = lastStateBeforeEscape;
                 continue;
             case STATE_FOUND_DEFAULT_VALUE:
-                currentDefault = defaultValueToken;
-
             case STATE_FOUND_PLACEHOLDER:
                 if(!token.isEmpty()) {
-                    QString path = makeConfigPath(group, token);
-                    lastResolvedValue = getConfigurationValue(path, currentDefault);
+                    lastResolvedValue = getConfigurationValue(token, group);
                     if(!lastResolvedValue.isValid()) {
-                        if(allowPartial) {
-                            qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve configuration-key '" << path << "'";
+                        if(state == STATE_FOUND_DEFAULT_VALUE) {
+                            lastResolvedValue = defaultValueToken;
+                        } else {
+                            qCInfo(loggingCategory()).nospace().noquote() << "Could not resolve configuration-key '" << token << "'";
                             return {QVariant{}, Status::fixable};
                         }
-                        qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve configuration-key '" << path << "'";
-                        return {QVariant{}, Status::fatal};
                     }
                     if(resolvedString.isEmpty() && pos + 1 == key.length()) {
                         return {lastResolvedValue, Status::ok};
@@ -1499,9 +1491,9 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 resolvedString += ':';
                 state = lastStateBeforeEscape;
                 continue;
-                case STATE_FOUND_PLACEHOLDER:
-                    state = STATE_FOUND_DEFAULT_VALUE;
-                    continue;
+            case STATE_FOUND_PLACEHOLDER:
+                state = STATE_FOUND_DEFAULT_VALUE;
+                continue;
             }
 
         default:
@@ -1532,9 +1524,6 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     case STATE_FOUND_DOLLAR:
         resolvedString += '$';
     case STATE_INIT:
-        if(resolvedString == key) {
-            return {valueOrPlaceholder, Status::ok};
-        }
         return {resolvedString, Status::ok};
     case STATE_ESCAPED:
         resolvedString += '\\';
@@ -1566,7 +1555,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 return result.first;
             }
             if(!result.second) {
-                auto propertyResult = resolveProperty(config.group, value, QVariant{}, allowPartial);
+                auto propertyResult = resolvePlaceholders(value.toString(), config.group);
                 if(propertyResult.second != Status::ok) {
                     return propertyResult.second;
                 }
@@ -1658,18 +1647,19 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
 
 
 
-QVariant StandardApplicationContext::getConfigurationValue(const QString& key, const QVariant& defaultValue) const {
+QVariant StandardApplicationContext::getConfigurationValue(const QString& key, const QString& group) const {
+    QString path = group.isEmpty() ? key : (group + "/" + key);
     for(auto reg : registrations) {
         if(QSettings* settings = dynamic_cast<QSettings*>(reg->getObject())) {
-            auto value = settings->value(key);
+            auto value = settings->value(path);
             if(value.isValid()) {
-                qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << key << " = " << value << " from " << settings->fileName();
+                qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << path << " = " << value << " from " << settings->fileName();
                 return value;
             }
         }
     }
-    qCDebug(loggingCategory()).noquote().nospace() << "Use default-value for configuration-entry: " << key << " = " << defaultValue;
-    return defaultValue;
+    qCDebug(loggingCategory()).noquote().nospace() << "No value found for configuration-entry: " << path;
+    return QVariant{};
 }
 
 bool StandardApplicationContext::event(QEvent *event)
