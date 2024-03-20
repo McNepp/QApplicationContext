@@ -1587,7 +1587,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
             if(result.first != Status::ok) {
                 return result.first;
             }
-            if(!result.second) {
+            if(!result.second && value.userType() == QMetaType::QString) {
                 auto propertyResult = resolvePlaceholders(value.toString(), config.group);
                 if(propertyResult.second != Status::ok) {
                     return propertyResult.second;

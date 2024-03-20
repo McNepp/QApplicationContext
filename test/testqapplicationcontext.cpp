@@ -131,12 +131,20 @@ private:
 
 class PostProcessor : public QObject, public QApplicationContextPostProcessor {
 public:
+
+    struct info_t {
+        bool store;
+    };
+
     explicit PostProcessor(QObject* parent = nullptr) : QObject(parent) {}
 
     // QApplicationContextServicePostProcessor interface
     void process(QApplicationContext *appContext, QObject *service, const QVariantMap& additionalInfos) override {
         if(additionalInfos.contains(".store")) {
-            processedObjects.push_back(service);
+            auto info = additionalInfos[".store"].value<info_t>();
+            if(info.store) {
+                processedObjects.push_back(service);
+            }
         }
     }
 
@@ -1376,9 +1384,9 @@ private slots:
 
     void testPostProcessor() {
         auto processReg = context->registerService<PostProcessor>();
-        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1", service_config{{{".store", true}}});
+        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1", service_config{{{".store", QVariant::fromValue(PostProcessor::info_t{true})}}});
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
-        auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>()), "card", make_config({{".store", true}}));
+        auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>()), "card", make_config({{".store", QVariant::fromValue(PostProcessor::info_t{true})}}));
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
         RegistrationSlot<Interface1> base1{reg1};
