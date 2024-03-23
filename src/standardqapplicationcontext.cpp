@@ -545,7 +545,7 @@ detail::Subscription *StandardApplicationContext::DescriptorRegistration::create
 
 StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
     detail::ServiceRegistration(parent),
-    descriptor{desc},
+    m_descriptor{desc},
     m_name(name),
     m_index(index)
 {
@@ -557,7 +557,7 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(unsig
 
 
 void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
-    out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor;
+    out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor();
 }
 
 void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *srv) {
@@ -572,7 +572,7 @@ void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *
 }
 
 void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
-    out.nospace().noquote() << "Object '" << registeredName() << "' with " << this->descriptor;
+    out.nospace().noquote() << "Object '" << registeredName() << "' with " << this->descriptor();
 }
 
 
@@ -603,7 +603,7 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
     switch(state()) {
         case STATE_INIT:
         if(!theService) {
-            theService = descriptor.create(resolveDependencies(dependencies, created));
+                theService = descriptor().create(resolveDependencies(dependencies, created));
             if(theService) {
                 onDestroyed = connect(theService, &QObject::destroyed, this, &ServiceRegistration::serviceDestroyed);
                 m_state = STATE_CREATED;
@@ -663,7 +663,7 @@ QObject* StandardApplicationContext::PrototypeRegistration::createService(const 
         return this;
     case STATE_PUBLISHED:
         {
-            std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor, config(), applicationContext()}};
+        std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor(), config(), applicationContext()}};
             QObject* instance = instanceReg->createService(resolveDependencies(m_dependencies, created), created);
             if(!instance) {
                 qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
@@ -683,7 +683,7 @@ QObject* StandardApplicationContext::PrototypeRegistration::createService(const 
 }
 
 void StandardApplicationContext::PrototypeRegistration::print(QDebug out) const {
-    out.nospace().noquote() << "Prototype '" << registeredName() << "' with " << this->descriptor;
+    out.nospace().noquote() << "Prototype '" << registeredName() << "' with " << this->descriptor();
 }
 
 void StandardApplicationContext::PrototypeRegistration::onSubscription(subscription_handle_t subscription) {
@@ -741,7 +741,7 @@ void StandardApplicationContext::unpublish()
     next_published:
         for(auto depend = published.begin(); depend != published.end(); ++depend) {
             auto dep = *depend;
-            for(auto& t : dep->descriptor.dependencies) {
+            for(auto& t : dep->descriptor().dependencies) {
                 if(reg->matches(t)) {
                     published.erase(depend);
                     published.push_front(reg);
@@ -999,7 +999,7 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
         reg = pop_front(unpublished);
     next_unpublished:
 
-        auto& dependencyInfos = reg->descriptor.dependencies;
+        auto& dependencyInfos = reg->descriptor().dependencies;
         for(auto& d : dependencyInfos) {
             //If we find an unpublished dependency, we continue with that:
             auto foundReg = eraseIf(unpublished, DescriptorRegistration::matcher(d));
@@ -1108,7 +1108,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
     while(!toBePublished.empty()) {
         auto reg = pop_front(toBePublished);
         QVariantList dependencies;
-        auto& dependencyInfos = reg->descriptor.dependencies;
+        auto& dependencyInfos = reg->descriptor().dependencies;
         if(!dependencyInfos.empty()) {
             qCInfo(loggingCategory()).noquote().nospace() << "Resolving " << dependencyInfos.size() << " dependencies of " << *reg << ":";
             for(auto& d : dependencyInfos) {
@@ -1280,7 +1280,7 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
             //If we have a registration under the same name, we'll return it only if it has the same descriptor and config:
             if(reg) {
                 //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
-                if(reg->isManaged() && descriptor == reg->descriptor && reg->config() == config) {
+                if(reg->isManaged() && descriptor == reg->descriptor() && reg->config() == config) {
                     return reg;
                 }
                 //Otherwise, we have a conflicting registration
@@ -1292,7 +1292,7 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
             for(auto reg : registrations) {
                 //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
                 if(reg->isManaged() && reg->config() == config) {
-                    switch(detail::match(descriptor, reg->descriptor)) {
+                    switch(detail::match(descriptor, reg->descriptor())) {
                     case detail::DESCRIPTOR_IDENTICAL:
                         return reg;
                     case detail::DESCRIPTOR_INTERSECTS:
@@ -1332,7 +1332,7 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
             auto reg = getRegistrationByName(objName);
             //If we have a registration under the same name, we'll return it only if it's for the same object and it has the same descriptor:
             if(reg) {
-                if(!reg->isManaged() && reg->getObject() == obj && descriptor == reg->descriptor) {
+                if(!reg->isManaged() && reg->getObject() == obj && descriptor == reg->descriptor()) {
                     return reg;
                 }
                 //Otherwise, we have a conflicting registration
@@ -1346,7 +1346,7 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
             //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
             if(!reg->isManaged() && obj == reg->getObject()) {
                 //An identical anonymous registration is allowed:
-                if(descriptor == reg->descriptor && objName.isEmpty()) {
+                if(descriptor == reg->descriptor() && objName.isEmpty()) {
                     return reg;
                 }
                 //Otherwise, we have a conflicting registration
@@ -1373,7 +1373,7 @@ void StandardApplicationContext::findTransitiveDependenciesOf(const service_desc
         for(auto reg : registrations) {
             if(reg->matches(t)) {
                 result.insert(t);
-                findTransitiveDependenciesOf(reg->descriptor, result);
+                findTransitiveDependenciesOf(reg->descriptor(), result);
             }
         }
     }
@@ -1385,12 +1385,12 @@ void StandardApplicationContext::findTransitiveDependenciesOf(const service_desc
 bool StandardApplicationContext::checkTransitiveDependentsOn(const service_descriptor& descriptor, const QString& name, const std::unordered_set<dependency_info>& dependencies) const
 {
     for(auto reg : registrations) {
-        for(auto& t : reg->descriptor.dependencies) {
+        for(auto& t : reg->descriptor().dependencies) {
             if(descriptor.matches(t.type) && (!t.has_required_name() || t.expression == name))  {
                 if(std::find_if(dependencies.begin(), dependencies.end(), [reg](auto dep) { return reg->matches(dep);}) != dependencies.end()) {
                    return false;
                 }
-                if(!checkTransitiveDependentsOn(reg->descriptor, reg->registeredName(), dependencies)) {
+                if(!checkTransitiveDependentsOn(reg->descriptor(), reg->registeredName(), dependencies)) {
                     return false;
                 }
             }
@@ -1690,8 +1690,8 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
         }
     }
 
-    if(reg->descriptor.init_method) {
-        reg->descriptor.init_method(target, this);
+    if(reg->descriptor().init_method) {
+        reg->descriptor().init_method(target, this);
         qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
     }
     return Status::ok;

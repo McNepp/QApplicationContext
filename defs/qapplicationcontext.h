@@ -233,6 +233,7 @@ using q_inject_t = std::function<void(QObject*,QObject*)>;
 
 using q_init_t = std::function<void(QObject*,QApplicationContext*)>;
 
+struct service_descriptor;
 
 
 
@@ -426,6 +427,7 @@ private:
 
 
 
+
 class ServiceRegistration : public Registration {
     Q_OBJECT
 
@@ -457,6 +459,11 @@ public:
      */
     [[nodiscard]] virtual QVariantMap registeredProperties() const = 0;
 
+    /**
+     * @brief The service_descriptor that was used to register this Service.
+     * @return The service_descriptor that was used to register this Service.
+     */
+    [[nodiscard]] virtual const service_descriptor& descriptor() const = 0;
 
     /**
      * @brief What scope has this ServiceRegistration?

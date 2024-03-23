@@ -119,6 +119,17 @@ private:
             return scope() != ServiceScope::EXTERNAL;
         }
 
+        virtual const service_descriptor& descriptor() const final override {
+            return m_descriptor;
+        }
+
+        virtual QMetaProperty getProperty(const char* name) const override {
+            if(descriptor().meta_object) {
+                return descriptor().meta_object->property(descriptor().meta_object->indexOfProperty(name));
+            }
+            return QMetaProperty{};
+        }
+
 
         virtual const service_config& config() const = 0;
 
@@ -132,7 +143,7 @@ private:
         }
 
         bool matches(const std::type_info& type) const override {
-            return descriptor.matches(type);
+            return descriptor().matches(type);
         }
 
         bool matches(const dependency_info& info) const {
@@ -165,7 +176,7 @@ private:
         virtual void resolveProperty(const QString& key, const QVariant& value) = 0;
     protected:
 
-        service_descriptor descriptor;
+        service_descriptor m_descriptor;
         QString m_name;
         std::vector<QPropertyNotifier> bindings;
         std::unordered_set<QString> boundProperties;
@@ -216,6 +227,8 @@ private:
 
 
 
+
+
         virtual void print(QDebug out) const override;
 
         virtual const service_config& config() const override {
@@ -248,12 +261,7 @@ private:
             }
         }
 
-        virtual QMetaProperty getProperty(const char* name) const override {
-            if(descriptor.meta_object) {
-                return descriptor.meta_object->property(descriptor.meta_object->indexOfProperty(name));
-            }
-            return QMetaProperty{};
-        }
+
 
         void serviceDestroyed(QObject* srv);
 
@@ -331,12 +339,6 @@ private:
 
         virtual void onSubscription(subscription_handle_t subscription) override;
 
-        virtual QMetaProperty getProperty(const char* name) const override {
-            if(descriptor.meta_object) {
-                return descriptor.meta_object->property(descriptor.meta_object->indexOfProperty(name));
-            }
-            return QMetaProperty{};
-        }
 
 
 
