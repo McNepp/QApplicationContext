@@ -2332,74 +2332,90 @@ protected:
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
-    /// If you are implementing registerService(const QString&, service_descriptor*) and want to delegate
+    /// <br>If you are implementing registerService(const QString&, service_descriptor*) and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    ///
+    /// <br>If this function is invoked with `appContext == nullptr`, it will return `nullptr`.
     /// \param appContext the target on which to invoke registerService(const QString&, service_descriptor*).
     /// \param name
     /// \param descriptor
     /// \param config
     /// \return the result of registerService(const QString&, service_descriptor*).
     ///
-    static service_registration_handle_t delegateRegisterService(QApplicationContext& appContext, const QString& name, const service_descriptor& descriptor, const service_config& config, bool prototype) {
-        return appContext.registerService(name, descriptor, config, prototype);
+    static service_registration_handle_t delegateRegisterService(QApplicationContext* appContext, const QString& name, const service_descriptor& descriptor, const service_config& config, bool prototype) {
+        if(!appContext) {
+            return nullptr;
+        }
+        return appContext->registerService(name, descriptor, config, prototype);
     }
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
-    /// If you are implementing registerObject(const QString& name, QObject*, service_descriptor*) and want to delegate
+    /// <br>If you are implementing registerObject(const QString& name, QObject*, service_descriptor*) and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    ///
+    /// <br>If this function is invoked with `appContext == nullptr`, it will return `nullptr`.
     /// \param appContext the target on which to invoke registerObject(const QString& name, QObject*, service_descriptor*).
     /// \param name
     /// \param obj
     /// \param descriptor
     /// \return the result of registerObject<S>(const QString& name, QObject*, service_descriptor*).
     ///
-    static service_registration_handle_t delegateRegisterObject(QApplicationContext& appContext, const QString& name, QObject* obj, const service_descriptor& descriptor) {
-        return appContext.registerObject(name, obj, descriptor);
+    static service_registration_handle_t delegateRegisterObject(QApplicationContext* appContext, const QString& name, QObject* obj, const service_descriptor& descriptor) {
+        if(!appContext) {
+            return nullptr;
+        }
+        return appContext->registerObject(name, obj, descriptor);
     }
 
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
-    /// If you are implementing getRegistrationHandle(const std::type_info&,const QMetaObject*) const and want to delegate
+    /// <br>If you are implementing getRegistrationHandle(const std::type_info&,const QMetaObject*) const and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    ///
+    /// <br>If this function is invoked with `appContext == nullptr`, it will return `nullptr`.
     /// \param appContext the target on which to invoke getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
     /// \param service_type
     /// \param metaObject the QMetaObject of the service_type. May be omitted.
     /// \return the result of getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
     ///
-    static proxy_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext& appContext, const std::type_info& service_type, const QMetaObject* metaObject) {
-        return appContext.getRegistrationHandle(service_type, metaObject);
+    static proxy_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext* appContext, const std::type_info& service_type, const QMetaObject* metaObject) {
+        if(!appContext) {
+            return nullptr;
+        }
+        return appContext->getRegistrationHandle(service_type, metaObject);
     }
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
-    /// If you are implementing getRegistrationHandle(const QString&) const and want to delegate
+    /// <br>If you are implementing getRegistrationHandle(const QString&) const and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    ///
+    /// <br>If this function is invoked with `appContext == nullptr`, it will return `nullptr`.
     /// \param appContext the target on which to invoke getRegistrationHandle(const QString&) const.
     /// \param name the name under which the service is looked up.
     /// \return the result of getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
     ///
-    static service_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext& appContext, const QString& name) {
-        return appContext.getRegistrationHandle(name);
+    static service_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext* appContext, const QString& name) {
+        if(!appContext) {
+            return nullptr;
+        }
+
+        return appContext->getRegistrationHandle(name);
     }
 
 
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
-    /// If you are implementing getRegistrationHandles() const and want to delegate
+    /// <br>If you are implementing getRegistrationHandles() const and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    ///
+    /// <br>If this function is invoked with `appContext == nullptr`, it will return an empty QList.
     /// \param appContext the target on which to invoke getRegistrationHandles() const.
     /// \return the result of getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
     ///
-    static QList<service_registration_handle_t> delegateGetRegistrationHandles(const QApplicationContext& appContext) {
-        return appContext.getRegistrationHandles();
+    static QList<service_registration_handle_t> delegateGetRegistrationHandles(const QApplicationContext* appContext) {
+        if(!appContext) {
+            return QList<service_registration_handle_t>{};
+        }
+        return appContext->getRegistrationHandles();
     }
 
 
