@@ -57,8 +57,8 @@ int match(const service_descriptor& left, const service_descriptor& right) {
 
 
 BindingProxy::BindingProxy(QMetaProperty sourceProp, QObject* source, const detail::property_descriptor& setter, QObject* target) : QObject(source),
-    m_source(source),
     m_sourceProp(sourceProp),
+    m_source(source),
     m_target(target),
     m_setter(setter) {
 
@@ -163,7 +163,7 @@ template<typename T> struct Collector : public detail::Subscription {
 
     }
 
-    void connectTo(registration_handle_t source) override {
+    void connectTo(registration_handle_t) override {
 
     }
 
@@ -389,7 +389,7 @@ public:
         QObject::connect(this, &Subscription::objectPublished, target, &Subscription::objectPublished);
     }
 
-    void connectTo(registration_handle_t source) override {
+    void connectTo(registration_handle_t) override {
         //Does nothing intentionally
     }
 
@@ -502,16 +502,16 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         qCWarning(loggingCategory()).noquote().nospace() << "Property '" << sourcePropertyName << "' in " << *this << " is not bindable";
     }
     if(!setter.setter) {
-        auto targetProperty = targetReg->getProperty(setter.name);
-        if(!targetProperty.isValid() || !targetProperty.isWritable()) {
+        auto targetProp = targetReg->getProperty(setter.name);
+        if(!targetProp.isValid() || !targetProp.isWritable()) {
             qCCritical(loggingCategory()).noquote().nospace() << setter << " is not a writable property for " << *target;
             return nullptr;
         }
-        if(!QMetaType::canConvert(sourceProperty.metaType(), targetProperty.metaType())) {
+        if(!QMetaType::canConvert(sourceProperty.metaType(), targetProp.metaType())) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << setter << " of " << *target << " with incompatible types";
             return nullptr;
         }
-        setter = detail::propertySetter(targetProperty);
+        setter = detail::propertySetter(targetProp);
     }
     if(!targetReg->registerBoundProperty(setter.name)) {
         qCCritical(loggingCategory()).noquote().nospace() << setter << " has already been bound to " << *target;
@@ -766,9 +766,9 @@ void StandardApplicationContext::unpublish()
     }
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has been un-published. " << unpublished << " Objects have been successfully destroyed.";
     QStringList remainingNames;
-    for(auto reg : registrations) {
-        if(reg->isPublished() && !reg->isManaged()) {
-            remainingNames.push_back(reg->registeredName());
+    for(auto regist : registrations) {
+        if(regist->isPublished() && !regist->isManaged()) {
+            remainingNames.push_back(regist->registeredName());
         }
     }
     if(!remainingNames.isEmpty()) {
@@ -822,6 +822,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 if(d.value.isValid()) {
                     return {d.value, Status::ok};
                 }
+                [[fallthrough]];
             default:
                 return resolved;
             }
@@ -1034,6 +1035,7 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
                     [[fallthrough]];
                 case Status::fatal:
                     return Status::fatal;
+                default: break;
                 }
             }
         }
@@ -1172,7 +1174,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         }
     }
     for(auto reg : toBePublished) {
-        auto initResult = init(reg, postProcessors, allowPartial);
+        auto initResult = init(reg, postProcessors);
         switch(initResult) {
         case Status::fatal:
             qCCritical(loggingCategory()).nospace().noquote() << "Could not initialize " << *reg;
@@ -1289,15 +1291,15 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
             }
         } else {
             //For an anonymous registration, we have to loop over all registrations:
-            for(auto reg : registrations) {
+            for(auto regist : registrations) {
                 //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
-                if(reg->isManaged() && reg->config() == config) {
-                    switch(detail::match(descriptor, reg->descriptor())) {
+                if(regist->isManaged() && regist->config() == config) {
+                    switch(detail::match(descriptor, regist->descriptor())) {
                     case detail::DESCRIPTOR_IDENTICAL:
-                        return reg;
+                        return regist;
                     case detail::DESCRIPTOR_INTERSECTS:
                         //Otherwise, we have a conflicting registration
-                        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << ". Has already been registered as " << *reg;
+                        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << ". Has already been registered as " << *regist;
                         return nullptr;
                     default:
                         continue;
@@ -1329,7 +1331,7 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
         QMutexLocker<QMutex> locker{&mutex};
         QString objName = name.isEmpty() ? obj->objectName() : name;
         if(!objName.isEmpty()) {
-            auto reg = getRegistrationByName(objName);
+            reg = getRegistrationByName(objName);
             //If we have a registration under the same name, we'll return it only if it's for the same object and it has the same descriptor:
             if(reg) {
                 if(!reg->isManaged() && reg->getObject() == obj && descriptor == reg->descriptor()) {
@@ -1342,15 +1344,15 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
         }
         //For object-registrations, even if we supply an explicit name, we still have to loop over all registrations,
         //as we need to check whether the same object has been registered before.
-        for(auto reg : registrations) {
+        for(auto regist : registrations) {
             //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
-            if(!reg->isManaged() && obj == reg->getObject()) {
+            if(!regist->isManaged() && obj == regist->getObject()) {
                 //An identical anonymous registration is allowed:
-                if(descriptor == reg->descriptor() && objName.isEmpty()) {
-                    return reg;
+                if(descriptor == regist->descriptor() && objName.isEmpty()) {
+                    return regist;
                 }
                 //Otherwise, we have a conflicting registration
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Has already been registered as " << *reg;
+                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Has already been registered as " << *regist;
                 return nullptr;
             }
         }
@@ -1449,7 +1451,7 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
 
 std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolvePlaceholders(const QString& key, const QString &group)
 {
-    constexpr int STATE_INIT = 0;
+    constexpr int STATE_START = 0;
     constexpr int STATE_FOUND_DOLLAR = 1;
     constexpr int STATE_FOUND_PLACEHOLDER = 2;
     constexpr int STATE_FOUND_DEFAULT_VALUE = 3;
@@ -1459,8 +1461,8 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     QString token;
     QString defaultValueToken;
 
-    int lastStateBeforeEscape = STATE_INIT;
-    int state = STATE_INIT;
+    int lastStateBeforeEscape = STATE_START;
+    int state = STATE_START;
     for(int pos = 0; pos < key.length(); ++pos) {
         auto ch = key[pos];
         switch(ch.toLatin1()) {
@@ -1485,7 +1487,8 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 continue;
             case STATE_FOUND_DOLLAR:
                 resolvedString += '$';
-            case STATE_INIT:
+                [[fallthrough]];
+            case STATE_START:
                 state = STATE_FOUND_DOLLAR;
                 continue;
             default:
@@ -1504,7 +1507,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 state = STATE_FOUND_PLACEHOLDER;
                 continue;
             default:
-                state = STATE_INIT;
+                state = STATE_START;
                 resolvedString += ch;
                 continue;
             }
@@ -1534,7 +1537,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                     token.clear();
                     defaultValueToken.clear();
                 }
-                state = STATE_INIT;
+                state = STATE_START;
                 continue;
             default:
                 resolvedString += ch;
@@ -1555,8 +1558,9 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             switch(state) {
             case STATE_FOUND_DOLLAR:
                 resolvedString += '$';
-                state = STATE_INIT;
-            case STATE_INIT:
+                state = STATE_START;
+                [[fallthrough]];
+            case STATE_START:
                 resolvedString += ch;
                 continue;
             case STATE_FOUND_PLACEHOLDER:
@@ -1578,7 +1582,8 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     switch(state) {
     case STATE_FOUND_DOLLAR:
         resolvedString += '$';
-    case STATE_INIT:
+        [[fallthrough]];
+    case STATE_START:
         return {resolvedString, Status::ok};
     case STATE_ESCAPED:
         resolvedString += '\\';
@@ -1650,13 +1655,13 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 DescriptorRegistration* candidate = getRegistrationByName(prop.name()); //First, try by name
                 if(!(candidate && QMetaType::canConvert(candidate->getObject()->metaObject()->metaType(), propObjectType))) {
                     //No matching name found, now we iterate over all registrations:
-                    for(auto reg : registrations) {
-                        auto obj = reg->getObject();
+                    for(auto regist : registrations) {
+                        auto obj = regist->getObject();
                         if(!obj || obj == target) {
                             continue;
                         }
                         if(QMetaType::canConvert(obj->metaObject()->metaType(), propObjectType)) {
-                            candidate = reg;
+                            candidate = regist;
                             break;
                         }
                     }
@@ -1677,7 +1682,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
     return Status::ok;
 }
 
-StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRegistration* reg, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial) {
+StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRegistration* reg, const QList<QApplicationContextPostProcessor*>& postProcessors) {
     QObject* target = reg->getObject();
     if(!target) {
         return Status::fatal;

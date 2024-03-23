@@ -72,6 +72,7 @@ private:
 
         virtual bool registerBoundProperty(const char* name) = 0;
 
+        virtual ~StandardRegistrationImpl() = default;
 
     };
 
@@ -324,7 +325,7 @@ private:
             return QVariantMap{};
         }
 
-        virtual void resolveProperty(const QString& key, const QVariant& value) override {
+        virtual void resolveProperty(const QString&, const QVariant&) override {
         }
 
 
@@ -397,12 +398,12 @@ private:
             return QVariantMap{};
         }
 
-        virtual void resolveProperty(const QString& key, const QVariant& value) override {
+        virtual void resolveProperty(const QString&, const QVariant&) override {
         }
 
 
 
-        virtual QObject* createService(const QVariantList& dependencies, descriptor_list&) override {
+        virtual QObject* createService(const QVariantList&, descriptor_list&) override {
             return theObj;
         }
 
@@ -559,7 +560,7 @@ private:
 
     Status configure(DescriptorRegistration*, descriptor_list& toBePublished, bool allowPartial);
 
-    Status init(DescriptorRegistration*, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial);
+    Status init(DescriptorRegistration*, const QList<QApplicationContextPostProcessor*>& postProcessors);
 
     std::pair<Status,bool> resolveBeanRef(QVariant& value, descriptor_list& toBePublished, bool allowPartial);
 

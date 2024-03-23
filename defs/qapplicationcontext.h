@@ -1573,8 +1573,8 @@ inline bool operator==(const dependency_info& info1, const dependency_info& info
 
 struct service_descriptor {
 
-    QObject* create(const QVariantList& dependencies) const {
-        return constructor ? constructor(dependencies) : nullptr;
+    QObject* create(const QVariantList& args) const {
+        return constructor ? constructor(args) : nullptr;
     }
 
     bool matches(const std::type_info& type) const {
@@ -2482,7 +2482,7 @@ public:
 
 namespace std {
     template<> struct hash<mcnepp::qtdi::Subscription> {
-        size_t operator()(const mcnepp::qtdi::Subscription& sub, size_t seed = 0) const {
+        size_t operator()(const mcnepp::qtdi::Subscription& sub, [[maybe_unused]] size_t seed = 0) const {
             return hasher(sub.unwrap());
         }
 
@@ -2490,7 +2490,7 @@ namespace std {
     };
 
     template<typename S,mcnepp::qtdi::ServiceScope scope> struct hash<mcnepp::qtdi::ServiceRegistration<S,scope>> {
-        size_t operator()(const mcnepp::qtdi::ServiceRegistration<S,scope>& sub, size_t seed = 0) const {
+        size_t operator()(const mcnepp::qtdi::ServiceRegistration<S,scope>& sub, [[maybe_unused]] size_t seed = 0) const {
             return hasher(sub.unwrap());
         }
 
@@ -2499,7 +2499,7 @@ namespace std {
 
 
     template<typename S> struct hash<mcnepp::qtdi::ProxyRegistration<S>> {
-        size_t operator()(const mcnepp::qtdi::ProxyRegistration<S>& sub, size_t seed = 0) const {
+        size_t operator()(const mcnepp::qtdi::ProxyRegistration<S>& sub, [[maybe_unused]] size_t seed = 0) const {
             return hasher(sub.unwrap());
         }
 
