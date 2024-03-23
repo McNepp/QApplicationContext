@@ -37,8 +37,13 @@ public:
 
     virtual unsigned pendingPublication() const override;
 
-    virtual QList<service_registration_handle_t> getRegistrationHandles() const override;
+    virtual QVariant getConfigurationValue(const QString& key) const override;
 
+    using QApplicationContext::registerObject;
+
+    using QApplicationContext::registerService;
+
+    using QApplicationContext::registerPrototype;
 
 protected:
 
@@ -49,6 +54,8 @@ protected:
     virtual service_registration_handle_t getRegistrationHandle(const QString& name) const override;
 
     virtual proxy_registration_handle_t getRegistrationHandle(const std::type_info& service_type, const QMetaObject* metaObject) const override;
+
+    virtual QList<service_registration_handle_t> getRegistrationHandles() const override;
 
 
 private:
@@ -534,8 +541,6 @@ private:
     void findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& dependents) const;
 
     void unpublish();
-
-    QVariant getConfigurationValue(const QString& key, const QString& group) const;
 
     void contextObjectDestroyed(QObject*);
 

@@ -2233,7 +2233,17 @@ public:
     bool isGlobalInstance() const;
 
 
-
+    ///
+    /// \brief Retrieves a value from the ApplicationContext's configuration.
+    /// <br>This function will be used to resolve placeholders in Service-configurations.
+    /// Whenever a *placeholder* shall be looked up, the ApplicationContext will search the following sources, until it can resolve the *placeholder*:
+    /// -# The environment, for a variable corresponding to the *placeholder*.
+    /// -# The instances of `QSettings` that have been registered in the ApplicationContext.
+    /// \sa mcnepp::qtdi::make_config()
+    /// \param key the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections.
+    /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
+    ///
+    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key) const = 0;
 
 signals:
 

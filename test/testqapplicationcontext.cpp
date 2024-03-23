@@ -131,7 +131,6 @@ private:
 
 class PostProcessor : public QObject, public QApplicationContextPostProcessor {
 public:
-
     struct info_t {
         bool store;
     };
@@ -198,6 +197,7 @@ private slots:
 
     void cleanup() {
         context.reset();
+        settingsFile.reset();
     }
 
 
@@ -263,10 +263,22 @@ private slots:
     }
 
 
+
+    void testPropertyConfiguredInEnvironment() {
+        auto envKey = QUuid::createUuid().toByteArray(QUuid::WithoutBraces);
+        qputenv(envKey, "value from the environment");
+        QCOMPARE("value from the environment", context->getConfigurationValue(envKey));
+    }
+
+
+
+
+
     void testWithPlaceholderProperty() {
         config->setValue("timerInterval", 4711);
         context->registerObject(config.get());
 
+        QCOMPARE(4711, context->getConfigurationValue("timerInterval"));
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${timerInterval}"}}));
         QCOMPARE(reg.registeredProperties()["interval"], "${timerInterval}");
         QVERIFY(context->publish());
@@ -359,7 +371,7 @@ private slots:
         config->setValue("timers/interval", 4711);
         config->setValue("timers/single", "true");
         context->registerObject(config.get());
-
+        QCOMPARE(4711, context->getConfigurationValue("timers/interval"));
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${interval}"},
                                                                           {"singleShot", "${single}"}}, "timers"));
         QVERIFY(context->publish());
@@ -1384,7 +1396,7 @@ private slots:
 
     void testPostProcessor() {
         auto processReg = context->registerService<PostProcessor>();
-        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1", service_config{{{".store", QVariant::fromValue(PostProcessor::info_t{true})}}});
+        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1", make_config({{".store", QVariant::fromValue(PostProcessor::info_t{true})}}));
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
         auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>()), "card", make_config({{".store", QVariant::fromValue(PostProcessor::info_t{true})}}));
         QVERIFY(context->publish());

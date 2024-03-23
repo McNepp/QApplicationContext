@@ -1,10 +1,10 @@
 #include <QThread>
+#include <QSettings>
 #include <QEvent>
 #include <QMetaMethod>
 #include <QLoggingCategory>
 #include <QUuid>
 #include <QRegularExpression>
-#include <QSettings>
 #include <QCoreApplication>
 #include "standardqapplicationcontext.h"
 
@@ -151,6 +151,28 @@ namespace {
 const QRegularExpression beanRefPattern{"^&([^.]+)(\\.([^.]+))?"};
 
 
+template<typename T> struct Collector : public detail::Subscription {
+
+    Collector() {
+        QObject::connect(this, &detail::Subscription::objectPublished, this, &Collector::collect);
+    }
+
+    QList<T*> collected;
+
+    void cancel() override {
+
+    }
+
+    void connectTo(registration_handle_t source) override {
+
+    }
+
+    void collect(QObject* obj) {
+        if(auto ptr = dynamic_cast<T*>(obj)) {
+            collected.push_back(ptr);
+        }
+    }
+};
 
 
 
@@ -1496,7 +1518,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             case STATE_FOUND_DEFAULT_VALUE:
             case STATE_FOUND_PLACEHOLDER:
                 if(!token.isEmpty()) {
-                    lastResolvedValue = getConfigurationValue(token, group);
+                    lastResolvedValue = getConfigurationValue(group.isEmpty() ? token : group + "/" + token);
                     if(!lastResolvedValue.isValid()) {
                         if(state == STATE_FOUND_DEFAULT_VALUE) {
                             lastResolvedValue = defaultValueToken;
@@ -1678,22 +1700,31 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
 
 
 
+QVariant StandardApplicationContext::getConfigurationValue(const QString& key) const {
+    if(auto bytes = QString{key}.replace('/', '.').toLocal8Bit(); qEnvironmentVariableIsSet(bytes)) {
+        auto value = qEnvironmentVariable(bytes);
+        qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << bytes << " = '" << value << "' from enviroment";
+        return value;
+    }
 
-
-QVariant StandardApplicationContext::getConfigurationValue(const QString& key, const QString& group) const {
-    QString path = group.isEmpty() ? key : (group + "/" + key);
-    for(auto reg : registrations) {
-        if(QSettings* settings = dynamic_cast<QSettings*>(reg->getObject())) {
-            auto value = settings->value(path);
-            if(value.isValid()) {
-                qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << path << " = " << value << " from " << settings->fileName();
-                return value;
-            }
+    Collector<QSettings> collector;
+    for(auto reg : getRegistrationHandles()) {
+        reg->subscribe(&collector);
+    }
+    for(QSettings* settings : collector.collected) {
+        auto value = settings->value(key);
+        if(value.isValid()) {
+            qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << key << " = " << value << " from " << settings->fileName();
+            return value;
         }
     }
-    qCDebug(loggingCategory()).noquote().nospace() << "No value found for configuration-entry: " << path;
+
+    qCDebug(loggingCategory()).noquote().nospace() << "No value found for configuration-entry: " << key;
     return QVariant{};
 }
+
+
+
 
 bool StandardApplicationContext::event(QEvent *event)
 {

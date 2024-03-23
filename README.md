@@ -132,6 +132,13 @@ You could even improve on this by re-factoring the common part of the Url into i
     context -> registerService(service<RestPropFetcher>(resolve("${baseUrl}?stationIds=${hamburgStationId}"), inject<QNetworkAccessManager>()), "hamburgWeather"); 
     context -> registerService(service<RestPropFetcher>(resolve("${baseUrl}?stationIds=${berlinStationId}"), inject<QNetworkAccessManager>()), "berlinWeather"); 
 
+### Order of lookup
+
+Whenever a *placeholder* shall be looked up, the ApplicationContext will search the following sources, until it can resolve the *placeholder*:
+
+-# The environment, for a variable corresponding to the *placeholder*.
+-# The instances of `QSettings` that have been registered in the ApplicationContext.
+
 ### Configuring values of non-String types
 
 With mcnepp::qtdi::resolve(), you can also process arguments of types other than `QString`.
