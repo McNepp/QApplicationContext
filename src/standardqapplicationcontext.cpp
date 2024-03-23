@@ -1,10 +1,10 @@
 #include <QThread>
+#include <QSettings>
 #include <QEvent>
 #include <QMetaMethod>
 #include <QLoggingCategory>
 #include <QUuid>
 #include <QRegularExpression>
-#include <QSettings>
 #include <QCoreApplication>
 #include "standardqapplicationcontext.h"
 
@@ -57,8 +57,8 @@ int match(const service_descriptor& left, const service_descriptor& right) {
 
 
 BindingProxy::BindingProxy(QMetaProperty sourceProp, QObject* source, const detail::property_descriptor& setter, QObject* target) : QObject(source),
-    m_source(source),
     m_sourceProp(sourceProp),
+    m_source(source),
     m_target(target),
     m_setter(setter) {
 
@@ -151,6 +151,28 @@ namespace {
 const QRegularExpression beanRefPattern{"^&([^.]+)(\\.([^.]+))?"};
 
 
+template<typename T> struct Collector : public detail::Subscription {
+
+    Collector() {
+        QObject::connect(this, &detail::Subscription::objectPublished, this, &Collector::collect);
+    }
+
+    QList<T*> collected;
+
+    void cancel() override {
+
+    }
+
+    void connectTo(registration_handle_t) override {
+
+    }
+
+    void collect(QObject* obj) {
+        if(auto ptr = dynamic_cast<T*>(obj)) {
+            collected.push_back(ptr);
+        }
+    }
+};
 
 
 
@@ -367,7 +389,7 @@ public:
         QObject::connect(this, &Subscription::objectPublished, target, &Subscription::objectPublished);
     }
 
-    void connectTo(registration_handle_t source) override {
+    void connectTo(registration_handle_t) override {
         //Does nothing intentionally
     }
 
@@ -480,16 +502,16 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         qCWarning(loggingCategory()).noquote().nospace() << "Property '" << sourcePropertyName << "' in " << *this << " is not bindable";
     }
     if(!setter.setter) {
-        auto targetProperty = targetReg->getProperty(setter.name);
-        if(!targetProperty.isValid() || !targetProperty.isWritable()) {
+        auto targetProp = targetReg->getProperty(setter.name);
+        if(!targetProp.isValid() || !targetProp.isWritable()) {
             qCCritical(loggingCategory()).noquote().nospace() << setter << " is not a writable property for " << *target;
             return nullptr;
         }
-        if(!QMetaType::canConvert(sourceProperty.metaType(), targetProperty.metaType())) {
+        if(!QMetaType::canConvert(sourceProperty.metaType(), targetProp.metaType())) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << setter << " of " << *target << " with incompatible types";
             return nullptr;
         }
-        setter = detail::propertySetter(targetProperty);
+        setter = detail::propertySetter(targetProp);
     }
     if(!targetReg->registerBoundProperty(setter.name)) {
         qCCritical(loggingCategory()).noquote().nospace() << setter << " has already been bound to " << *target;
@@ -523,7 +545,7 @@ detail::Subscription *StandardApplicationContext::DescriptorRegistration::create
 
 StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
     detail::ServiceRegistration(parent),
-    descriptor{desc},
+    m_descriptor{desc},
     m_name(name),
     m_index(index)
 {
@@ -535,7 +557,7 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(unsig
 
 
 void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
-    out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor;
+    out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor();
 }
 
 void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *srv) {
@@ -550,7 +572,7 @@ void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *
 }
 
 void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
-    out.nospace().noquote() << "Object '" << registeredName() << "' with " << this->descriptor;
+    out.nospace().noquote() << "Object '" << registeredName() << "' with " << this->descriptor();
 }
 
 
@@ -581,7 +603,7 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
     switch(state()) {
         case STATE_INIT:
         if(!theService) {
-            theService = descriptor.create(resolveDependencies(dependencies, created));
+                theService = descriptor().create(resolveDependencies(dependencies, created));
             if(theService) {
                 onDestroyed = connect(theService, &QObject::destroyed, this, &ServiceRegistration::serviceDestroyed);
                 m_state = STATE_CREATED;
@@ -641,7 +663,7 @@ QObject* StandardApplicationContext::PrototypeRegistration::createService(const 
         return this;
     case STATE_PUBLISHED:
         {
-            std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor, config(), applicationContext()}};
+        std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor(), config(), applicationContext()}};
             QObject* instance = instanceReg->createService(resolveDependencies(m_dependencies, created), created);
             if(!instance) {
                 qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
@@ -661,7 +683,7 @@ QObject* StandardApplicationContext::PrototypeRegistration::createService(const 
 }
 
 void StandardApplicationContext::PrototypeRegistration::print(QDebug out) const {
-    out.nospace().noquote() << "Prototype '" << registeredName() << "' with " << this->descriptor;
+    out.nospace().noquote() << "Prototype '" << registeredName() << "' with " << this->descriptor();
 }
 
 void StandardApplicationContext::PrototypeRegistration::onSubscription(subscription_handle_t subscription) {
@@ -719,7 +741,7 @@ void StandardApplicationContext::unpublish()
     next_published:
         for(auto depend = published.begin(); depend != published.end(); ++depend) {
             auto dep = *depend;
-            for(auto& t : dep->descriptor.dependencies) {
+            for(auto& t : dep->descriptor().dependencies) {
                 if(reg->matches(t)) {
                     published.erase(depend);
                     published.push_front(reg);
@@ -744,9 +766,9 @@ void StandardApplicationContext::unpublish()
     }
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has been un-published. " << unpublished << " Objects have been successfully destroyed.";
     QStringList remainingNames;
-    for(auto reg : registrations) {
-        if(reg->isPublished() && !reg->isManaged()) {
-            remainingNames.push_back(reg->registeredName());
+    for(auto regist : registrations) {
+        if(regist->isPublished() && !regist->isManaged()) {
+            remainingNames.push_back(regist->registeredName());
         }
     }
     if(!remainingNames.isEmpty()) {
@@ -800,6 +822,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 if(d.value.isValid()) {
                     return {d.value, Status::ok};
                 }
+                [[fallthrough]];
             default:
                 return resolved;
             }
@@ -977,7 +1000,7 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
         reg = pop_front(unpublished);
     next_unpublished:
 
-        auto& dependencyInfos = reg->descriptor.dependencies;
+        auto& dependencyInfos = reg->descriptor().dependencies;
         for(auto& d : dependencyInfos) {
             //If we find an unpublished dependency, we continue with that:
             auto foundReg = eraseIf(unpublished, DescriptorRegistration::matcher(d));
@@ -1012,6 +1035,7 @@ StandardApplicationContext::Status StandardApplicationContext::validate(bool all
                     [[fallthrough]];
                 case Status::fatal:
                     return Status::fatal;
+                default: break;
                 }
             }
         }
@@ -1086,7 +1110,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
     while(!toBePublished.empty()) {
         auto reg = pop_front(toBePublished);
         QVariantList dependencies;
-        auto& dependencyInfos = reg->descriptor.dependencies;
+        auto& dependencyInfos = reg->descriptor().dependencies;
         if(!dependencyInfos.empty()) {
             qCInfo(loggingCategory()).noquote().nospace() << "Resolving " << dependencyInfos.size() << " dependencies of " << *reg << ":";
             for(auto& d : dependencyInfos) {
@@ -1150,7 +1174,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         }
     }
     for(auto reg : toBePublished) {
-        auto initResult = init(reg, postProcessors, allowPartial);
+        auto initResult = init(reg, postProcessors);
         switch(initResult) {
         case Status::fatal:
             qCCritical(loggingCategory()).nospace().noquote() << "Could not initialize " << *reg;
@@ -1258,7 +1282,7 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
             //If we have a registration under the same name, we'll return it only if it has the same descriptor and config:
             if(reg) {
                 //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
-                if(reg->isManaged() && descriptor == reg->descriptor && reg->config() == config) {
+                if(reg->isManaged() && descriptor == reg->descriptor() && reg->config() == config) {
                     return reg;
                 }
                 //Otherwise, we have a conflicting registration
@@ -1267,15 +1291,15 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
             }
         } else {
             //For an anonymous registration, we have to loop over all registrations:
-            for(auto reg : registrations) {
+            for(auto regist : registrations) {
                 //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
-                if(reg->isManaged() && reg->config() == config) {
-                    switch(detail::match(descriptor, reg->descriptor)) {
+                if(regist->isManaged() && regist->config() == config) {
+                    switch(detail::match(descriptor, regist->descriptor())) {
                     case detail::DESCRIPTOR_IDENTICAL:
-                        return reg;
+                        return regist;
                     case detail::DESCRIPTOR_INTERSECTS:
                         //Otherwise, we have a conflicting registration
-                        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << ". Has already been registered as " << *reg;
+                        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << ". Has already been registered as " << *regist;
                         return nullptr;
                     default:
                         continue;
@@ -1307,10 +1331,10 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
         QMutexLocker<QMutex> locker{&mutex};
         QString objName = name.isEmpty() ? obj->objectName() : name;
         if(!objName.isEmpty()) {
-            auto reg = getRegistrationByName(objName);
+            reg = getRegistrationByName(objName);
             //If we have a registration under the same name, we'll return it only if it's for the same object and it has the same descriptor:
             if(reg) {
-                if(!reg->isManaged() && reg->getObject() == obj && descriptor == reg->descriptor) {
+                if(!reg->isManaged() && reg->getObject() == obj && descriptor == reg->descriptor()) {
                     return reg;
                 }
                 //Otherwise, we have a conflicting registration
@@ -1320,15 +1344,15 @@ detail::ServiceRegistration * StandardApplicationContext::registerObject(const Q
         }
         //For object-registrations, even if we supply an explicit name, we still have to loop over all registrations,
         //as we need to check whether the same object has been registered before.
-        for(auto reg : registrations) {
+        for(auto regist : registrations) {
             //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
-            if(!reg->isManaged() && obj == reg->getObject()) {
+            if(!regist->isManaged() && obj == regist->getObject()) {
                 //An identical anonymous registration is allowed:
-                if(descriptor == reg->descriptor && objName.isEmpty()) {
-                    return reg;
+                if(descriptor == regist->descriptor() && objName.isEmpty()) {
+                    return regist;
                 }
                 //Otherwise, we have a conflicting registration
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Has already been registered as " << *reg;
+                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Has already been registered as " << *regist;
                 return nullptr;
             }
         }
@@ -1351,7 +1375,7 @@ void StandardApplicationContext::findTransitiveDependenciesOf(const service_desc
         for(auto reg : registrations) {
             if(reg->matches(t)) {
                 result.insert(t);
-                findTransitiveDependenciesOf(reg->descriptor, result);
+                findTransitiveDependenciesOf(reg->descriptor(), result);
             }
         }
     }
@@ -1363,12 +1387,12 @@ void StandardApplicationContext::findTransitiveDependenciesOf(const service_desc
 bool StandardApplicationContext::checkTransitiveDependentsOn(const service_descriptor& descriptor, const QString& name, const std::unordered_set<dependency_info>& dependencies) const
 {
     for(auto reg : registrations) {
-        for(auto& t : reg->descriptor.dependencies) {
+        for(auto& t : reg->descriptor().dependencies) {
             if(descriptor.matches(t.type) && (!t.has_required_name() || t.expression == name))  {
                 if(std::find_if(dependencies.begin(), dependencies.end(), [reg](auto dep) { return reg->matches(dep);}) != dependencies.end()) {
                    return false;
                 }
-                if(!checkTransitiveDependentsOn(reg->descriptor, reg->registeredName(), dependencies)) {
+                if(!checkTransitiveDependentsOn(reg->descriptor(), reg->registeredName(), dependencies)) {
                     return false;
                 }
             }
@@ -1427,7 +1451,7 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
 
 std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolvePlaceholders(const QString& key, const QString &group)
 {
-    constexpr int STATE_INIT = 0;
+    constexpr int STATE_START = 0;
     constexpr int STATE_FOUND_DOLLAR = 1;
     constexpr int STATE_FOUND_PLACEHOLDER = 2;
     constexpr int STATE_FOUND_DEFAULT_VALUE = 3;
@@ -1437,8 +1461,8 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     QString token;
     QString defaultValueToken;
 
-    int lastStateBeforeEscape = STATE_INIT;
-    int state = STATE_INIT;
+    int lastStateBeforeEscape = STATE_START;
+    int state = STATE_START;
     for(int pos = 0; pos < key.length(); ++pos) {
         auto ch = key[pos];
         switch(ch.toLatin1()) {
@@ -1463,7 +1487,8 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 continue;
             case STATE_FOUND_DOLLAR:
                 resolvedString += '$';
-            case STATE_INIT:
+                [[fallthrough]];
+            case STATE_START:
                 state = STATE_FOUND_DOLLAR;
                 continue;
             default:
@@ -1482,7 +1507,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 state = STATE_FOUND_PLACEHOLDER;
                 continue;
             default:
-                state = STATE_INIT;
+                state = STATE_START;
                 resolvedString += ch;
                 continue;
             }
@@ -1496,7 +1521,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             case STATE_FOUND_DEFAULT_VALUE:
             case STATE_FOUND_PLACEHOLDER:
                 if(!token.isEmpty()) {
-                    lastResolvedValue = getConfigurationValue(token, group);
+                    lastResolvedValue = getConfigurationValue(group.isEmpty() ? token : group + "/" + token);
                     if(!lastResolvedValue.isValid()) {
                         if(state == STATE_FOUND_DEFAULT_VALUE) {
                             lastResolvedValue = defaultValueToken;
@@ -1512,7 +1537,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                     token.clear();
                     defaultValueToken.clear();
                 }
-                state = STATE_INIT;
+                state = STATE_START;
                 continue;
             default:
                 resolvedString += ch;
@@ -1533,8 +1558,9 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             switch(state) {
             case STATE_FOUND_DOLLAR:
                 resolvedString += '$';
-                state = STATE_INIT;
-            case STATE_INIT:
+                state = STATE_START;
+                [[fallthrough]];
+            case STATE_START:
                 resolvedString += ch;
                 continue;
             case STATE_FOUND_PLACEHOLDER:
@@ -1556,7 +1582,8 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     switch(state) {
     case STATE_FOUND_DOLLAR:
         resolvedString += '$';
-    case STATE_INIT:
+        [[fallthrough]];
+    case STATE_START:
         return {resolvedString, Status::ok};
     case STATE_ESCAPED:
         resolvedString += '\\';
@@ -1587,7 +1614,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
             if(result.first != Status::ok) {
                 return result.first;
             }
-            if(!result.second) {
+            if(!result.second && value.userType() == QMetaType::QString) {
                 auto propertyResult = resolvePlaceholders(value.toString(), config.group);
                 if(propertyResult.second != Status::ok) {
                     return propertyResult.second;
@@ -1628,13 +1655,13 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 DescriptorRegistration* candidate = getRegistrationByName(prop.name()); //First, try by name
                 if(!(candidate && QMetaType::canConvert(candidate->getObject()->metaObject()->metaType(), propObjectType))) {
                     //No matching name found, now we iterate over all registrations:
-                    for(auto reg : registrations) {
-                        auto obj = reg->getObject();
+                    for(auto regist : registrations) {
+                        auto obj = regist->getObject();
                         if(!obj || obj == target) {
                             continue;
                         }
                         if(QMetaType::canConvert(obj->metaObject()->metaType(), propObjectType)) {
-                            candidate = reg;
+                            candidate = regist;
                             break;
                         }
                     }
@@ -1655,7 +1682,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
     return Status::ok;
 }
 
-StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRegistration* reg, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial) {
+StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRegistration* reg, const QList<QApplicationContextPostProcessor*>& postProcessors) {
     QObject* target = reg->getObject();
     if(!target) {
         return Status::fatal;
@@ -1668,8 +1695,8 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
         }
     }
 
-    if(reg->descriptor.init_method) {
-        reg->descriptor.init_method(target, this);
+    if(reg->descriptor().init_method) {
+        reg->descriptor().init_method(target, this);
         qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
     }
     return Status::ok;
@@ -1678,22 +1705,31 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
 
 
 
+QVariant StandardApplicationContext::getConfigurationValue(const QString& key) const {
+    if(auto bytes = QString{key}.replace('/', '.').toLocal8Bit(); qEnvironmentVariableIsSet(bytes)) {
+        auto value = qEnvironmentVariable(bytes);
+        qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << bytes << " = '" << value << "' from enviroment";
+        return value;
+    }
 
-
-QVariant StandardApplicationContext::getConfigurationValue(const QString& key, const QString& group) const {
-    QString path = group.isEmpty() ? key : (group + "/" + key);
-    for(auto reg : registrations) {
-        if(QSettings* settings = dynamic_cast<QSettings*>(reg->getObject())) {
-            auto value = settings->value(path);
-            if(value.isValid()) {
-                qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << path << " = " << value << " from " << settings->fileName();
-                return value;
-            }
+    Collector<QSettings> collector;
+    for(auto reg : getRegistrationHandles()) {
+        reg->subscribe(&collector);
+    }
+    for(QSettings* settings : collector.collected) {
+        auto value = settings->value(key);
+        if(value.isValid()) {
+            qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << key << " = " << value << " from " << settings->fileName();
+            return value;
         }
     }
-    qCDebug(loggingCategory()).noquote().nospace() << "No value found for configuration-entry: " << path;
+
+    qCDebug(loggingCategory()).noquote().nospace() << "No value found for configuration-entry: " << key;
     return QVariant{};
 }
+
+
+
 
 bool StandardApplicationContext::event(QEvent *event)
 {

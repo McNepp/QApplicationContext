@@ -1,15 +1,14 @@
 #include <QMetaProperty>
 #include <QCoreApplication>
-#include <QThread>
 #include "qapplicationcontext.h"
+
 
 namespace mcnepp::qtdi {
 
 
 
 
-
-std::atomic<QApplicationContext*> QApplicationContext::theInstance;
+std::atomic<QApplicationContext*> QApplicationContext::theInstance = nullptr;
 
 
 Q_LOGGING_CATEGORY(loggingCategory, "qtdi")

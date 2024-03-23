@@ -16,6 +16,10 @@ FILE(GLOB sources src/*.cpp src/*.h defs/*.h)
 add_library(${PROJECT_NAME} STATIC ${sources})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
+if(MSVC)
+  target_compile_options(${PROJECT_NAME} PRIVATE /W4 /w45262 /w44062)
+endif()
+
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/defs)
 
 get_target_property(QApplicationContext_INCLUDE_DIRS ${PROJECT_NAME} INCLUDE_DIRECTORIES)

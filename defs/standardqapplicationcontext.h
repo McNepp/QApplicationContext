@@ -37,8 +37,13 @@ public:
 
     virtual unsigned pendingPublication() const override;
 
-    virtual QList<service_registration_handle_t> getRegistrationHandles() const override;
+    virtual QVariant getConfigurationValue(const QString& key) const override;
 
+    using QApplicationContext::registerObject;
+
+    using QApplicationContext::registerService;
+
+    using QApplicationContext::registerPrototype;
 
 protected:
 
@@ -49,6 +54,8 @@ protected:
     virtual service_registration_handle_t getRegistrationHandle(const QString& name) const override;
 
     virtual proxy_registration_handle_t getRegistrationHandle(const std::type_info& service_type, const QMetaObject* metaObject) const override;
+
+    virtual QList<service_registration_handle_t> getRegistrationHandles() const override;
 
 
 private:
@@ -65,6 +72,7 @@ private:
 
         virtual bool registerBoundProperty(const char* name) = 0;
 
+        virtual ~StandardRegistrationImpl() = default;
 
     };
 
@@ -112,6 +120,17 @@ private:
             return scope() != ServiceScope::EXTERNAL;
         }
 
+        virtual const service_descriptor& descriptor() const final override {
+            return m_descriptor;
+        }
+
+        virtual QMetaProperty getProperty(const char* name) const override {
+            if(descriptor().meta_object) {
+                return descriptor().meta_object->property(descriptor().meta_object->indexOfProperty(name));
+            }
+            return QMetaProperty{};
+        }
+
 
         virtual const service_config& config() const = 0;
 
@@ -125,7 +144,7 @@ private:
         }
 
         bool matches(const std::type_info& type) const override {
-            return descriptor.matches(type);
+            return descriptor().matches(type);
         }
 
         bool matches(const dependency_info& info) const {
@@ -158,7 +177,7 @@ private:
         virtual void resolveProperty(const QString& key, const QVariant& value) = 0;
     protected:
 
-        service_descriptor descriptor;
+        service_descriptor m_descriptor;
         QString m_name;
         std::vector<QPropertyNotifier> bindings;
         std::unordered_set<QString> boundProperties;
@@ -209,6 +228,8 @@ private:
 
 
 
+
+
         virtual void print(QDebug out) const override;
 
         virtual const service_config& config() const override {
@@ -241,12 +262,7 @@ private:
             }
         }
 
-        virtual QMetaProperty getProperty(const char* name) const override {
-            if(descriptor.meta_object) {
-                return descriptor.meta_object->property(descriptor.meta_object->indexOfProperty(name));
-            }
-            return QMetaProperty{};
-        }
+
 
         void serviceDestroyed(QObject* srv);
 
@@ -309,7 +325,7 @@ private:
             return QVariantMap{};
         }
 
-        virtual void resolveProperty(const QString& key, const QVariant& value) override {
+        virtual void resolveProperty(const QString&, const QVariant&) override {
         }
 
 
@@ -324,12 +340,6 @@ private:
 
         virtual void onSubscription(subscription_handle_t subscription) override;
 
-        virtual QMetaProperty getProperty(const char* name) const override {
-            if(descriptor.meta_object) {
-                return descriptor.meta_object->property(descriptor.meta_object->indexOfProperty(name));
-            }
-            return QMetaProperty{};
-        }
 
 
 
@@ -388,12 +398,12 @@ private:
             return QVariantMap{};
         }
 
-        virtual void resolveProperty(const QString& key, const QVariant& value) override {
+        virtual void resolveProperty(const QString&, const QVariant&) override {
         }
 
 
 
-        virtual QObject* createService(const QVariantList& dependencies, descriptor_list&) override {
+        virtual QObject* createService(const QVariantList&, descriptor_list&) override {
             return theObj;
         }
 
@@ -535,8 +545,6 @@ private:
 
     void unpublish();
 
-    QVariant getConfigurationValue(const QString& key, const QString& group) const;
-
     void contextObjectDestroyed(QObject*);
 
     DescriptorRegistration* getRegistrationByName(const QString& name) const;
@@ -552,7 +560,7 @@ private:
 
     Status configure(DescriptorRegistration*, descriptor_list& toBePublished, bool allowPartial);
 
-    Status init(DescriptorRegistration*, const QList<QApplicationContextPostProcessor*>& postProcessors, bool allowPartial);
+    Status init(DescriptorRegistration*, const QList<QApplicationContextPostProcessor*>& postProcessors);
 
     std::pair<Status,bool> resolveBeanRef(QVariant& value, descriptor_list& toBePublished, bool allowPartial);
 
