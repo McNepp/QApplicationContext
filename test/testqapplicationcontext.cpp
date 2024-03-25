@@ -1236,7 +1236,7 @@ private slots:
 
     }
 
-    void testPutlishPartialDependencyWithRequiredName() {
+    void testPublishPartialDependencyWithRequiredName() {
         auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1");
         RegistrationSlot<Interface1> slot1{reg1};
         auto reg = context->registerService(service<DependentService>(inject<Interface1>("base2")));
@@ -1594,6 +1594,7 @@ private slots:
         thread.start();
         bool hasSubscribed = QTest::qWaitFor([&thread] { return thread.subscribed;}, 1000);
         QVERIFY(hasSubscribed);
+        QVERIFY(thread.wait(1000));
         QVERIFY(thread.service);
         QCOMPARE(thread.service, slot.last());
     }
