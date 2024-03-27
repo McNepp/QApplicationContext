@@ -138,7 +138,7 @@ public:
     explicit PostProcessor(QObject* parent = nullptr) : QObject(parent) {}
 
     // QApplicationContextServicePostProcessor interface
-    void process(QApplicationContext *appContext, QObject *service, const QVariantMap& additionalInfos) override {
+    void process(QApplicationContext *, QObject *service, const QVariantMap& additionalInfos) override {
         if(additionalInfos.contains(".store")) {
             auto info = additionalInfos[".store"].value<info_t>();
             if(info.store) {
@@ -224,7 +224,6 @@ private slots:
 
     void testNoDependency() {
         auto reg = context->registerService<BaseService>();
-        reg.subscribe(this, [](BaseService* srv) {});
         QVERIFY(reg);
         QVERIFY(!context->getRegistration<BaseService>("anotherName"));
         QCOMPARE(context->getRegistration<BaseService>(reg.registeredName()), reg);
@@ -999,10 +998,10 @@ private slots:
         auto bases = context->getRegistration<BaseService>().registeredServices();
         QCOMPARE(bases.size(), 2);
         int timerCount = 0;
-        for(auto& reg : bases) {
-            if(reg.as<TimerAware>()) {
+        for(auto& regBase : bases) {
+            if(regBase.as<TimerAware>()) {
                 ++timerCount;
-                QCOMPARE(reg, timerReg);
+                QCOMPARE(regBase, timerReg);
             }
         }
         QCOMPARE(timerCount, 1);
@@ -1625,6 +1624,7 @@ private slots:
         });
         thread->start();
         bool hasSubscribed = QTest::qWaitFor([&success] { return success != -1;}, 1000);
+        QVERIFY(hasSubscribed);
         QVERIFY(!success);
         QVERIFY(!slot);
         QVERIFY(thread->wait(1000));
