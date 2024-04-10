@@ -101,7 +101,7 @@ private:
 
 
         virtual StandardApplicationContext* applicationContext() const final override {
-            return static_cast<StandardApplicationContext*>(parent());
+            return m_context;
         }
 
         virtual QObject* getObject() const = 0;
@@ -163,8 +163,12 @@ private:
         }
 
 
-        DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* parent);
+        DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* context, QObject* parent);
 
+        DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
+        DescriptorRegistration{index, name, desc, parent, parent} {
+
+        }
 
         virtual QObject* createService(const QVariantList& dependencies, descriptor_list& created) = 0;
 
@@ -183,6 +187,7 @@ private:
         std::unordered_set<QString> boundProperties;
         std::unordered_set<std::type_index> autowirings;
         unsigned const m_index;
+        StandardApplicationContext* const m_context;
     };
 
 
@@ -191,14 +196,20 @@ private:
 
         friend class StandardApplicationContext;
 
-        ServiceRegistration(unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
-            DescriptorRegistration{index, name, desc, parent},
+        ServiceRegistration(unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
+            DescriptorRegistration{index, name, desc, context, parent},
             theService(nullptr),
             m_config(config),
             resolvedProperties{config.properties},
             m_state(STATE_INIT)        {
 
         }
+
+        ServiceRegistration(unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
+        ServiceRegistration{index, name, desc, config, parent, parent} {
+
+        }
+
 
         virtual ServiceScope scope() const override {
             return ServiceScope::SINGLETON;
@@ -346,8 +357,6 @@ private:
 
         virtual int unpublish() override;
 
-        void instanceDestroyed(DescriptorRegistration*);
-
 
         QVariantList m_dependencies;
 
@@ -355,8 +364,6 @@ private:
     private:
         int m_state;
         service_config m_config;
-        QMetaObject::Connection onDestroyed;
-        descriptor_list instanceRegistrations;
         mutable std::optional<QStringList> beanRefsCache;
         subscription_handle_t proxySubscription;
     };
@@ -448,7 +455,7 @@ private:
 
         friend class StandardApplicationContext;
 
-        ProxyRegistrationImpl(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent, const descriptor_list& registrations);
+        ProxyRegistrationImpl(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent);
 
 
         virtual subscription_handle_t createAutowiring(const std::type_info& type, detail::q_inject_t injector, registration_handle_t source) override;
@@ -461,27 +468,17 @@ private:
             return static_cast<StandardApplicationContext*>(parent());
         }
 
-        virtual QList<service_registration_handle_t> registeredServices() const override {
-            QMutexLocker locker{&mutex};
-            return QList<service_registration_handle_t>{registrations.begin(), registrations.end()};
-        }
+        virtual QList<service_registration_handle_t> registeredServices() const override;
 
 
 
-        bool add(DescriptorRegistration* reg) {
-            {
-                QMutexLocker locker{&mutex};
-                if(!reg->matches(m_type) || std::find(registrations.begin(), registrations.end(), reg) != registrations.end()) {
-                    return false;
-                }
-                registrations.push_back(reg);
+        bool add(service_registration_handle_t reg) {
+            if(reg->matches(m_type)) {
+                reg->subscribe(proxySubscription);
+                return true;
             }
-            //May emit a signal, therefore do it after releasing the Mutex:
-            reg->subscribe(proxySubscription);
-            return true;
+            return false;
         }
-
-
 
         virtual void onSubscription(subscription_handle_t subscription) override;
 
@@ -493,19 +490,10 @@ private:
         }
 
 
-        void remove(DescriptorRegistration* reg) {
-            QMutexLocker locker{&mutex};
-            auto found = std::find(registrations.begin(), registrations.end(), reg);
-            if(found != registrations.end()) {
-                registrations.erase(found);
-            }
-        }
-
-
 
 
         virtual void print(QDebug out) const final override {
-            out.nospace().noquote() << "Services [" << registrations.size() << "] with service-type '" << m_type.name() << "'";
+            out.nospace().noquote() << "Services [" << registeredServices().size() << "] with service-type '" << m_type.name() << "'";
         }
 
         virtual bool registerBoundProperty(const char* name) override {
@@ -516,12 +504,10 @@ private:
 
 
         const std::type_info& m_type;
-        descriptor_list registrations;
         const QMetaObject* m_meta;
         std::unordered_set<QString> boundProperties;
         std::unordered_set<std::type_index> autowirings;
         subscription_handle_t proxySubscription;
-        mutable QMutex mutex;
     };
 
 

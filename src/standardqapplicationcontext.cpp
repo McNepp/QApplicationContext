@@ -341,9 +341,9 @@ public:
     }
 
     PropertyBindingSubscription(registration_handle_t target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(target),
+        m_target(target),
         m_sourceProperty(sourceProperty),
-        m_setter(setter),
-        m_target(target) {
+        m_setter(setter) {
         out_Connection = QObject::connect(this, &Subscription::objectPublished, this, &PropertyBindingSubscription::notify);
     }
 private:
@@ -419,7 +419,7 @@ public:
     }
 
     void createHandle(StandardApplicationContext* context) {
-        *m_result = new ProxyRegistrationImpl{m_service_type, m_metaObject, context, context->registrations};
+        *m_result = new ProxyRegistrationImpl{m_service_type, m_metaObject, context};
     }
 
     QSharedPointer<std::optional<ProxyRegistrationImpl*>> result() const {
@@ -433,22 +433,33 @@ private:
 };
 
 
-StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent, const descriptor_list& registrations) :
+StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent) :
     detail::ProxyRegistration{parent},
     m_type(type),
     m_meta(metaObject)
 {
     proxySubscription = new ProxySubscription{this};
-    for(auto reg : registrations) {
+    for(auto reg : parent->registrations) {
         add(reg);
     }
 }
+
+QList<service_registration_handle_t> StandardApplicationContext::ProxyRegistrationImpl::registeredServices() const {
+    QList<service_registration_handle_t> result;
+    for(auto handle : applicationContext() -> getRegistrationHandles()) {
+        if(auto reg = dynamic_cast<DescriptorRegistration*>(handle); reg && reg->matches(m_type)) {
+            result.push_back(reg);
+        }
+    }
+    return result;
+}
+
 
 
 void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscription_handle_t subscription) {
     detail::Subscription::connect(this, subscription);
     TemporarySubscriptionProxy tempProxy{subscription};
-    //By subscribing to a TemporarySubscriptionProxy, we force exisiting objects to be signalled immediately, while not creating any new Connections:
+    //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
     for(auto reg : registeredServices()) {
         reg->subscribe(&tempProxy);
     }
@@ -543,11 +554,12 @@ detail::Subscription *StandardApplicationContext::DescriptorRegistration::create
 
 
 
-StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
+StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* context, QObject* parent) :
     detail::ServiceRegistration(parent),
     m_descriptor{desc},
     m_name(name),
-    m_index(index)
+    m_index(index),
+    m_context(context)
 {
 }
 
@@ -616,8 +628,8 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
 
 StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(unsigned index, const QString &name, const service_descriptor &desc, const service_config &config, StandardApplicationContext *parent) :
     DescriptorRegistration{index, name, desc, parent},
-    m_config(config),
-    m_state(STATE_INIT)
+    m_state(STATE_INIT),
+    m_config(config)
 {
     proxySubscription = new ProxySubscription{this};
 }
@@ -626,9 +638,11 @@ StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(unsigne
 int StandardApplicationContext::PrototypeRegistration::unpublish()
 {
     int success = 0;
-    for(auto reg : instanceRegistrations) {
-        if(reg->unpublish()) {
-            ++success;
+    for(auto child : children()) {
+        if(auto reg = dynamic_cast<DescriptorRegistration*>(child)) {
+            if(reg->unpublish()) {
+                ++success;
+            }
         }
     }
     return success;
@@ -663,13 +677,12 @@ QObject* StandardApplicationContext::PrototypeRegistration::createService(const 
         return this;
     case STATE_PUBLISHED:
         {
-        std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor(), config(), applicationContext()}};
+            std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor(), config(), applicationContext(), this}};
             QObject* instance = instanceReg->createService(resolveDependencies(m_dependencies, created), created);
             if(!instance) {
                 qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
                 return nullptr;
             }
-            instanceRegistrations.push_back(instanceReg.get());
             qCInfo(loggingCategory()).noquote().nospace() << "Created instance of " << *this;
 
             instanceReg->subscribe(proxySubscription);
@@ -690,18 +703,13 @@ void StandardApplicationContext::PrototypeRegistration::onSubscription(subscript
     detail::Subscription::connect(this, subscription);
     TemporarySubscriptionProxy tempProxy{subscription};
     //By subscribing to a TemporarySubscriptionProxy, we force exisiting objects to be signalled immediately, while not creating any new Connections:
-    for(auto reg : instanceRegistrations) {
-        reg->subscribe(&tempProxy);
+    for(auto child : children()) {
+        if(auto reg = dynamic_cast<DescriptorRegistration*>(child)) {
+            reg->subscribe(&tempProxy);
+        }
     }
 }
 
-void StandardApplicationContext::PrototypeRegistration::instanceDestroyed(DescriptorRegistration* reg) {
-    auto found = std::find(instanceRegistrations.begin(), instanceRegistrations.end(), reg);
-    if(found != instanceRegistrations.end()) {
-        instanceRegistrations.erase(found);
-        delete reg;
-    }
-}
 
 
 
@@ -894,7 +902,7 @@ detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(con
     }
     ProxyRegistrationImpl* proxyReg;
     if(QThread::currentThread() == thread()) {
-        proxyReg = new ProxyRegistrationImpl{service_type, metaObject, const_cast<StandardApplicationContext*>(this), registrations};
+        proxyReg = new ProxyRegistrationImpl{service_type, metaObject, const_cast<StandardApplicationContext*>(this)};
     } else {
         //We are in a different Thread than the QApplicationContext's. Let's post an Event that will create the ProxyRegistration asynchronously:
         auto event = new CreateRegistrationHandleEvent{service_type, metaObject};
@@ -963,9 +971,6 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
             std::unique_ptr<DescriptorRegistration> regPtr{*iter};
             iter = registrations.erase(iter);
             qCInfo(loggingCategory()).noquote().nospace() << *regPtr << " has been destroyed externally";
-            for(auto& entry : proxyRegistrationCache) {
-                entry.second->remove(regPtr.get());
-            }
         } else {
             ++iter;
         }

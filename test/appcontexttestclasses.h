@@ -142,7 +142,7 @@ public:
         return "BaseService";
     }
 
-    virtual void setFoo(const QString& foo) override {
+    virtual void setFoo(const QString&) override {
 
     }
 

@@ -256,7 +256,7 @@ inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
 
 
 
-template<typename S> struct callable_adapter_base {
+template<typename S> struct callable_adapter {
 
     template<typename A,typename R> static q_setter_t adaptSetter(R (S::*setter)(A)) {
         if(!setter) {
@@ -264,32 +264,39 @@ template<typename S> struct callable_adapter_base {
         }
         using arg_type = std::remove_cv_t<std::remove_reference_t<A>>;
         return [setter](QObject* obj,QVariant arg) {
+            if constexpr(std::is_same_v<S,QObject>) {
+                (obj->*setter)(arg.value<arg_type>());
+            } else
             if(S* ptr = dynamic_cast<S*>(obj)) {
                 (ptr->*setter)(arg.value<arg_type>());
             }
         };
     }
-};
-
-
-template<typename S> struct callable_adapter : callable_adapter_base<S> {
 
     template<typename F> static auto adapt(F callable) {
         return [callable](QObject* obj) {
+            if constexpr(std::is_same_v<S,QObject>) {
+                callable(obj);
+            } else
             if(S* ptr = dynamic_cast<S*>(obj)) {
                 callable(ptr);
             }
         };
     }
 
-};
-
-template<> struct callable_adapter<QObject> : callable_adapter_base<QObject> {
-
-    template<typename F> static constexpr auto adapt(F callable) {
-        return callable;
+    template<typename R,typename T> static auto adapt(T* target, R(T::*memFun)(S*)) {
+        return [target,memFun](QObject* obj) {
+            if constexpr(std::is_same_v<S,QObject>) {
+                (target->*memFun)(obj);
+            } else
+               if(S* ptr = dynamic_cast<S*>(obj)) {
+                (target->*memFun)(ptr);
+            }
+        };
     }
+
 };
+
 
 
 
@@ -408,7 +415,7 @@ public:
 
     template<typename F> CallableSubscription(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) : Subscription(context)
     {
-        out_connection = QObject::connect(this, &Subscription::objectPublished, context, callable);
+        out_connection = QObject::connect(this, &Subscription::objectPublished, context, callable, connectionType);
     }
 
     void cancel() override {
@@ -784,8 +791,7 @@ public:
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
             return Subscription{};
         }
-        auto callable = std::bind(std::mem_fn(setter), target, std::placeholders::_1);
-        auto subscription = new detail::CallableSubscription{target, detail::callable_adapter<S>::adapt(callable), connectionType};
+        auto subscription = new detail::CallableSubscription{target, detail::callable_adapter<S>::adapt(target, setter), connectionType};
         return Subscription{unwrap()->subscribe(subscription)};
      }
 
@@ -1222,7 +1228,7 @@ template<typename S> struct service_traits : default_service_traits<S> {
 ///
 template<auto func> struct service_initializer {
 
-    auto value() const {
+    constexpr auto value() const {
         return func;
     }
 };
@@ -1643,7 +1649,7 @@ struct dependency_helper {
         return { typeid(S), VALUE_KIND, "", QVariant::fromValue(dep) };
     }
 
-    static auto converter(S dep) {
+    static auto converter(S) {
         return &convert;
     }
 
@@ -1673,7 +1679,7 @@ struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
         return { typeid(S), static_cast<int>(Kind::MANDATORY), dep.registeredName() };
     }
 
-    static auto converter(const mcnepp::qtdi::ServiceRegistration<S,scope>& dep) {
+    static auto converter(const mcnepp::qtdi::ServiceRegistration<S,scope>&) {
         return default_argument_converter<S,Kind::MANDATORY>{};
     }
 
@@ -1707,7 +1713,7 @@ struct dependency_helper<Resolvable<S>> {
         return { typeid(S), RESOLVABLE_KIND, dep.expression, dep.defaultValue };
     }
 
-    static auto converter(const Resolvable<S>& resolv) {
+    static auto converter(const Resolvable<S>&) {
         return &dependency_helper<S>::convert;
     }
 };
@@ -1749,7 +1755,7 @@ template<typename T,typename First, typename...Tail> constexpr std::pair<bool,co
 
 
 template <typename T,typename F> constructor_t service_creator(F factory) {
-    return [factory](const QVariantList &dependencies) {
+    return [factory](const QVariantList&) {
         return factory();
     };
 }
@@ -1811,8 +1817,6 @@ constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4,
                 };
 }
 
-constexpr int NOT_FOUND = 1;
-constexpr int FOUND = 2;
 
 template<typename S> constexpr bool has_initializer = std::negation_v<std::is_same<std::nullptr_t,typename service_traits<S>::initializer_type>>;
 

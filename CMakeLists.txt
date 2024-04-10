@@ -31,6 +31,11 @@ target_link_libraries(${PROJECT_NAME} Qt6::Core)
 
 
 qt_add_executable(testqapplicationcontext ${CMAKE_CURRENT_LIST_DIR}/test/testqapplicationcontext.cpp ${CMAKE_CURRENT_LIST_DIR}/test/appcontexttestclasses.cpp)
+
+if(MSVC)
+  target_compile_options(testqapplicationcontext PRIVATE /W4 /w45262 /w44062)
+endif()
+
 target_link_libraries(testqapplicationcontext PRIVATE QApplicationContext Qt::Core Qt::Test)
 add_Test(testqapplicationcontext testqapplicationcontext)
  
