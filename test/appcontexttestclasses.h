@@ -132,10 +132,14 @@ signals:
 
 
 class BaseService2 : public QObject, public Interface1 {
+    Q_OBJECT
 public:
-    explicit BaseService2(QObject* parent = nullptr) : QObject(parent) {
+    explicit BaseService2(QObject* parent = nullptr) : QObject(parent),
+        m_reference(nullptr)    {
 
     }
+
+    Q_PROPERTY(QObject *reference READ reference WRITE setReference NOTIFY referenceChanged FINAL)
 
 
     virtual QString foo() const override {
@@ -150,7 +154,15 @@ public:
         ++initCalled;
     }
 
+    void setReference(QObject* ref);
+
+    QObject* reference() const;
+
+
     int initCalled = 0;
+    QObject* m_reference;
+signals:
+    void referenceChanged();
 };
 
 

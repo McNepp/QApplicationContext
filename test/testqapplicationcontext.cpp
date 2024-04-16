@@ -592,6 +592,38 @@ private slots:
         QCOMPARE(baseSlot->m_timer, &timer);
     }
 
+    void testAmbiguousAutowiringByType() {
+        QTimer timer1;
+        context->registerObject(&timer1);
+        QTimer timer2;
+        context->registerObject(&timer2);
+
+        auto reg = context->registerService<BaseService>("base", make_config({}, "", true));
+
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> baseSlot{reg};
+        QVERIFY(!baseSlot->m_timer);
+
+    }
+
+    void testDoNotAutowireSelf() {
+        auto reg = context->registerService<BaseService2>("base", make_config({}, "", true));
+
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService2> baseSlot{reg};
+        QVERIFY(!baseSlot->m_reference);
+
+    }
+
+    void testSetPropertyToSelf() {
+        auto reg = context->registerService<BaseService2>("base", make_config({{"reference", "&base"}}));
+
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService2> baseSlot{reg};
+        QCOMPARE(baseSlot->m_reference, baseSlot.last());
+
+    }
+
 
     void testExplicitPropertyOverridesAutowired() {
         auto regBase = context->registerService<BaseService>("dependency");
