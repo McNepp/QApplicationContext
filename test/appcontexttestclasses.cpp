@@ -52,4 +52,17 @@ void CyclicDependency::setDependency(BaseService *newDependency)
     emit dependencyChanged();
 }
 
+void BaseService2::setReference(QObject *ref)
+{
+    if (m_reference == ref)
+        return;
+    m_reference = ref;
+    emit referenceChanged();
+}
+
+QObject* BaseService2::reference() const {
+    return m_reference;
+}
+
+
 }

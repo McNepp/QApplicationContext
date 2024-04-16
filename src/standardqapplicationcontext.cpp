@@ -1599,6 +1599,31 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     }
 }
 
+StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::findAutowiringCandidate(DescriptorRegistration* target, const QMetaProperty& prop) {
+    auto propMetaType = prop.metaType().metaObject();
+    DescriptorRegistration* candidate = getRegistrationByName(prop.name()); //First, try by name
+    //If the candidate is assignable to the property, return it, unless it is the target. (We never autowire a property with a pointer to the same service)
+    if(candidate && candidate != target && candidate -> getObject() && candidate->getObject()->metaObject()->inherits(propMetaType)) {
+        return candidate;
+    }
+    candidate = nullptr;
+    //No matching name found, now we iterate over all registrations:
+    for(auto regist : registrations) {
+        if(regist == target) {
+            //We never autowire a property with a pointer to the same service
+            continue;
+        }
+        auto obj = regist->getObject();
+        if(obj && obj->metaObject()->inherits(propMetaType)) {
+            if(candidate) {
+                return nullptr; //Ambiguous candidate => return immediately
+            }
+            candidate = regist;
+        }
+    }
+    return candidate;
+}
+
 
 StandardApplicationContext::Status StandardApplicationContext::configure(DescriptorRegistration* reg, descriptor_list& toBePublished, bool allowPartial) {
     QObject* target = reg->getObject();
@@ -1655,31 +1680,16 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 if(!(propType.flags() & QMetaType::PointerToQObject)) {
                     continue;
                 }
-                QString propTypeName = propType.name();
-                auto propObjectType = QMetaType::fromName(propTypeName.first(propTypeName.length()-1).toUtf8()); //Remove the '*'
-                DescriptorRegistration* candidate = getRegistrationByName(prop.name()); //First, try by name
-                if(!(candidate && QMetaType::canConvert(candidate->getObject()->metaObject()->metaType(), propObjectType))) {
-                    //No matching name found, now we iterate over all registrations:
-                    for(auto regist : registrations) {
-                        auto obj = regist->getObject();
-                        if(!obj || obj == target) {
-                            continue;
-                        }
-                        if(QMetaType::canConvert(obj->metaObject()->metaType(), propObjectType)) {
-                            candidate = regist;
-                            break;
-                        }
-                    }
-                }
+                DescriptorRegistration* candidate = findAutowiringCandidate(reg, prop);
                 if(candidate) {
                     if(prop.write(target, QVariant::fromValue(candidate->getObject()))) {
                         qCInfo(loggingCategory()).nospace() << "Autowired property '" << prop.name() << "' of " << *reg << " to " << *candidate;
-                        break;
                     } else {
-                        qCInfo(loggingCategory()).nospace().noquote() << "Could not autowire property '" << prop.name()  << "' of " << *reg << " to " << *candidate;
+                        qCWarning(loggingCategory()).nospace().noquote() << "Autowiring property '" << prop.name()  << "' of " << *reg << " to " << *candidate << " failed.";
                     }
+                } else {
+                    qCInfo(loggingCategory()).nospace().noquote() << "Could not autowire property '" << prop.name()  << "' of " << *reg;
                 }
-
             }
         }
 

@@ -552,6 +552,8 @@ private:
 
     std::pair<QVariant,Status> resolvePlaceholders(const QString& key, const QString& group);
 
+    DescriptorRegistration* findAutowiringCandidate(DescriptorRegistration*, const QMetaProperty&);
+
     // QObject interface
 public:
     bool event(QEvent *event) override;
