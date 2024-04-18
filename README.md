@@ -224,6 +224,16 @@ Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPo
 
 
 
+## Service-prototypes
+
+As shown above, a service that was registered using mcnepp::qtdi::QApplicationContext::registerService() will be instantiated once mcnepp::qtdi::QApplicationContext::publish(bool) is invoked.
+A single instance of the service will be injected into every other service that depends on it.
+<br>However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::QApplicationContext::registerPrototype() instead.
+<br>Such a registration will not necessarily instantiate the service on mcnepp::qtdi::QApplicationContext::publish(bool).
+Only if there are other services depending on it will a new instance be created and injected into the dependent service.
+
+
+
 ## Managed Services vs. Un-managed Objects
 
 The function mcnepp::qtdi::QApplicationContext::registerService() that was shown in the preceeding example results in the creation of a `managed service`.  
@@ -233,17 +243,18 @@ A reason for this may be that the constructor of the class does not merely accep
 A good example would be registering objects of type `QSettings`, which play an important role in *Externalized Configuration* (see below).  
 
 
-There are some crucial differences between mcnepp::qtdi::QApplicationContext::registerService() and mcnepp::qtdi::QApplicationContext::registerObject(), as the following table shows:
+There are some crucial differences between mcnepp::qtdi::QApplicationContext::registerService(), mcnepp::qtdi::QApplicationContext::registerPrototype() and mcnepp::qtdi::QApplicationContext::registerObject(), as the following table shows:
 
-| |registerService|registerObject|
-|---|---|---|
-|Instantiation of the object|upon mcnepp::qtdi::QApplicationContext::publish(bool)|prior to the registration with the QApplicationContext|
-|When is the signal `objectPublished(QObject*)` emitted?|upon mcnepp::qtdi::QApplicationContext::publish(bool)|immediately after the registration|
-|Naming of the QObject|`QObject::objectName` is set to the name of the registration|`QObject::objectName` is not touched by QApplicationContext|
-|Handling of Properties|The key/value-pairs supplied at registration will be set as Q_PROPERTYs by QApplicationContext|All properties must be set before registration|
-|Processing by mcnepp::qtdi::QApplicationContextPostProcessor|Every service will be processed by the registered QApplicationContextPostProcessors|Object is not processed|
-|Invocation of *init-method*|If present, will be invoked by QApplicationContext|If present, must have been invoked prior to registration|
-|Destruction of the object|upon destruction of the QApplicationContext|at the discrection of the code that created it|
+| |registerService|registerPrototype|registerObject|
+|---|---|---|---|
+|Instantiation of the object|Upon mcnepp::qtdi::QApplicationContext::publish()|In mcnepp::qtdi::QApplicationContext::publish(),<br>but only if another service requests it|Prior to the registration with the QApplicationContext|
+|When is the signal `objectPublished(QObject*)` emitted?|Upon mcnepp::qtdi::QApplicationContext::publish()|In mcnepp::qtdi::QApplicationContext::publish(),<br>but only if another service requests it|Immediately after the registration|
+|Naming of the QObject|`QObject::objectName` is set to the name of the registration||`QObject::objectName` is not touched by QApplicationContext|
+|Handling of Properties|The key/value-pairs supplied at registration will be set as Q_PROPERTYs by QApplicationContext||All properties must be set before registration|
+|Processing by mcnepp::qtdi::QApplicationContextPostProcessor|Every service will be processed by the registered QApplicationContextPostProcessors||Object is not processed|
+|Invocation of *init-method*|If present, will be invoked by QApplicationContext||If present, must have been invoked prior to registration|
+|Parent/Child-relation|If a Service has no parent after its *init-method* has run, the ApplicationContext will become the service's parent.||The parent of the Object will not be touched.|
+|Destruction of the object|Upon destruction of the QApplicationContext||At the discrection of the code that created it|
 
 
 
@@ -476,29 +487,6 @@ In order to advertise a `RestPropFetcher` as both a `PropFetcher` and a `QNetwor
 You may convert this value to `ServiceRegistraton<PropFetcher,ServiceScope::SINGLETON>` as well as `ServiceRegistration<QNetworkManagerAware,ServiceScope::SINGLETON>`,
 using the member-function ServiceRegistration::as(). Conversions to other types will not succeed.
 
-## The Service-lifefycle
-
-Every service that is registered with a QApplicationContext will go through the following states, in the order shown.
-The names of these states are shown for illustration-purposes only. They are not visible outside the QApplicationContext.  
-However, some transitions may have observable side-effects.
-
-|External Trigger|Internal Step|State|Observable side-effect|
-|---|---|---|---|
-|ApplicationContext::registerService()||INIT| |
-|ApplicationContext::publish(bool)|Instantiation via constructor or service_factory|CREATED|Invocation of Services's constructor|
-| |Set properties|AFTER_PROPERTIES_SET|Invocation of property-setters|
-| |Apply QApplicationContextPostProcessor|PROCESSED|Invocation of user-supplied mcnepp::qtdi::QApplicationContextPostProcessor::process()| 
-| |if exists, invoke init-method|READY|Anything that the init-method might do|
-| |emit signal `objectPublished(QObject*)`|PUBLISHED|Invocation of slots connected via mcnepp::qtdi::Registration::subscribe()|
-|~ApplicationContext()|delete service|DESTROYED|Invoke Services's destructor|
-
-### Service-prototypes
-
-As shown above, a service that was registered using mcnepp::qtdi::QApplicationContext::registerService() will be instantiated once mcnepp::qtdi::QApplicationContext::publish(bool) is invoked.
-A single instance of the service will be injected into every other service that depends on it.
-<br>However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::QApplicationContext::registerPrototype() instead.
-<br>Such a registration will not necessarily instantiate the service on mcnepp::qtdi::QApplicationContext::publish(bool).
-Only if there are other services depending on it will a new instance be created and injected into the dependent service.
 
 
 
