@@ -209,16 +209,15 @@ QString makeName(const std::type_index& type) {
 
 
 
-class AutowireSubscription : public detail::Subscription {
+class AutowireSubscription : public detail::CallableSubscription {
 public:
-    AutowireSubscription(detail::q_inject_t injector, QObject* bound) : Subscription(bound),
+    AutowireSubscription(detail::q_inject_t injector, QObject* bound) : CallableSubscription(bound),
         m_injector(injector),
         m_bound(bound)
     {
-        out_Connection = QObject::connect(this, &Subscription::objectPublished, this, &AutowireSubscription::notify);
     }
 
-     void notify(QObject *obj) {
+     void notify(QObject *obj) override {
         if(auto sourceReg = dynamic_cast<registration_handle_t>(m_bound)) {
             auto subscr = new AutowireSubscription{m_injector, obj};
             sourceReg->subscribe(subscr);
@@ -235,13 +234,7 @@ public:
                 subscr->cancel();
             }
         }
-        QObject::disconnect(out_Connection);
-        QObject::disconnect(in_Connection);
-    }
-
-    void connectTo(detail::Registration *source) override
-    {
-        in_Connection = connect(source, this);
+        detail::CallableSubscription::cancel();
     }
 
 
@@ -251,21 +244,15 @@ private:
     detail::q_inject_t m_injector;
     QObject* m_bound;
     std::vector<QPointer<detail::Subscription>> subscriptions;
-    QMetaObject::Connection out_Connection;
-    QMetaObject::Connection in_Connection;
 };
 
 
-class PropertyInjector : public detail::Subscription {
+class PropertyInjector : public detail::CallableSubscription {
     friend class PropertyBindingSubscription;
 public:
 
-    void connectTo(registration_handle_t source) override
-    {
-        in_Connection = connect(source, this);
-    }
 
-    void notify(QObject* target) {
+    void notify(QObject* target) override {
         m_setter.setter(target, m_sourceProperty.read(m_boundSource));
         if(m_sourceProperty.hasNotifySignal()) {
             detail::BindingProxy* proxy = new detail::BindingProxy{m_sourceProperty, m_boundSource, m_setter, target};
@@ -293,32 +280,28 @@ public:
         }
         //QPropertyNotifier will remove the binding in its destructor:
         bindings.clear();
-        QObject::disconnect(out_Connection);
-        QObject::disconnect(in_Connection);
+        detail::CallableSubscription::cancel();
     }
 
 private:
 
-    PropertyInjector(QObject* boundSource, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(boundSource),
+    PropertyInjector(QObject* boundSource, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::CallableSubscription(boundSource),
         m_sourceProperty(sourceProperty),
         m_setter(setter),
         m_boundSource(boundSource) {
-        out_Connection = QObject::connect(this, &Subscription::objectPublished, this, &PropertyInjector::notify);
     }
     QMetaProperty m_sourceProperty;
     detail::property_descriptor m_setter;
     QObject* m_boundSource;
     std::vector<QPropertyNotifier> bindings;
     std::vector<QMetaObject::Connection> connections;
-    QMetaObject::Connection out_Connection;
-    QMetaObject::Connection in_Connection;
 };
 
-class PropertyBindingSubscription : public detail::Subscription {
+class PropertyBindingSubscription : public detail::CallableSubscription {
 public:
 
 
-    void notify(QObject* obj) {
+    void notify(QObject* obj) override {
         auto subscr = new PropertyInjector{obj, m_sourceProperty, m_setter};
         m_target->subscribe(subscr);
         subscriptions.push_back(subscr);
@@ -331,28 +314,19 @@ public:
                 subscription->cancel();
             }
         }
-        QObject::disconnect(out_Connection);
-        QObject::disconnect(in_Connection);
+        detail::CallableSubscription::cancel();
     }
 
-    void connectTo(registration_handle_t source) override
-    {
-        in_Connection = connect(source, this);
-    }
-
-    PropertyBindingSubscription(registration_handle_t target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::Subscription(target),
+    PropertyBindingSubscription(registration_handle_t target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::CallableSubscription(target),
         m_target(target),
         m_sourceProperty(sourceProperty),
         m_setter(setter) {
-        out_Connection = QObject::connect(this, &Subscription::objectPublished, this, &PropertyBindingSubscription::notify);
     }
 private:
     registration_handle_t m_target;
     QMetaProperty m_sourceProperty;
     detail::property_descriptor m_setter;
     std::vector<QPointer<Subscription>> subscriptions;
-    QMetaObject::Connection out_Connection;
-    QMetaObject::Connection in_Connection;
 };
 
 
@@ -364,7 +338,7 @@ public:
     }
 
     void connectTo(registration_handle_t source) override {
-        in_connections.push_back(connect(source, this));
+        in_connections.push_back(detail::connect(source, this));
     }
 
     void cancel() override {
@@ -457,7 +431,7 @@ QList<service_registration_handle_t> StandardApplicationContext::ProxyRegistrati
 
 
 void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscription_handle_t subscription) {
-    detail::Subscription::connect(this, subscription);
+    detail::connect(this, subscription);
     TemporarySubscriptionProxy tempProxy{subscription};
     //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
     for(auto reg : registeredServices()) {
@@ -700,7 +674,7 @@ void StandardApplicationContext::PrototypeRegistration::print(QDebug out) const 
 }
 
 void StandardApplicationContext::PrototypeRegistration::onSubscription(subscription_handle_t subscription) {
-    detail::Subscription::connect(this, subscription);
+    detail::connect(this, subscription);
     TemporarySubscriptionProxy tempProxy{subscription};
     //By subscribing to a TemporarySubscriptionProxy, we force exisiting objects to be signalled immediately, while not creating any new Connections:
     for(auto child : children()) {

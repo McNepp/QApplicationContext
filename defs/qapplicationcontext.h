@@ -194,14 +194,6 @@ public:
     ///
     virtual void connectTo(registration_handle_t source) = 0;
 
-    ///
-    /// \brief Convenience-function that connects the incoming signal of a Registration with the outgoing signal of a Subscription.
-    /// \param source
-    /// \param target
-    /// \param connectionType
-    /// \return the Connection.
-    ///
-    static QMetaObject::Connection connect(registration_handle_t source, subscription_handle_t target, Qt::ConnectionType connectionType = Qt::AutoConnection);
 
 protected:
     explicit Subscription(QObject* parent = nullptr) : QObject(parent) {
@@ -398,7 +390,14 @@ protected:
 
 };
 
-inline QMetaObject::Connection Subscription::connect(registration_handle_t source, subscription_handle_t target, Qt::ConnectionType connectionType) {
+///
+/// \brief Convenience-function that connects the incoming signal of a Registration with the outgoing signal of a Subscription.
+/// \param source
+/// \param target
+/// \param connectionType
+/// \return the Connection.
+///
+inline QMetaObject::Connection connect(registration_handle_t source, subscription_handle_t target, Qt::ConnectionType connectionType = Qt::AutoConnection) {
     if(source && target) {
         return QObject::connect(source, &Registration::objectPublished, target, &Subscription::objectPublished, connectionType);
     }
@@ -410,13 +409,20 @@ inline QMetaObject::Connection Subscription::connect(registration_handle_t sourc
 ///
 /// \brief A basic implementation of the detail::Subscription.
 ///
-class CallableSubscription : public detail::Subscription {
+class CallableSubscription : public Subscription {
 public:
 
-    template<typename F> CallableSubscription(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) : Subscription(context)
+    explicit CallableSubscription(QObject* parent = nullptr) : Subscription(parent)
     {
+        out_connection = QObject::connect(this, &Subscription::objectPublished, this, &CallableSubscription::notify);
+    }
+
+    template<typename T,typename F> CallableSubscription(T* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) : Subscription(context)
+    {
+        static_assert(std::is_base_of_v<QObject,T>, "Context must be derived from QObject");
         out_connection = QObject::connect(this, &Subscription::objectPublished, context, callable, connectionType);
     }
+
 
     void cancel() override {
         QObject::disconnect(out_connection);
@@ -424,7 +430,13 @@ public:
     }
 
     void connectTo(registration_handle_t source) override {
-        in_connection = connect(source, this);
+        in_connection = detail::connect(source, this);
+    }
+
+protected:
+
+    virtual void notify(QObject*) {
+
     }
 
 private:
