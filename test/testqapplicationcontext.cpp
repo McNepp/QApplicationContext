@@ -116,8 +116,8 @@ public:
         return m_obj.size();
     }
 
-    const QList<S*>& objects() const {
-        return m_obj;
+    S* operator[](std::size_t index) const {
+        return m_obj[index];
     }
 
     Subscription& subscription() {
@@ -239,6 +239,7 @@ private slots:
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> slot{reg};
         QVERIFY(slot);
+        QCOMPARE(slot->parent(), context.get());
     }
 
     void testQObjectRegistration() {
@@ -717,6 +718,7 @@ private slots:
         QVERIFY(baseSlot);
         QVERIFY(context->publish());
         QCOMPARE(baseSlot.invocationCount(), 1);
+        QVERIFY(!base.parent());
     }
 
     void testOptionalDependency() {
@@ -938,8 +940,10 @@ private slots:
         QVERIFY(context->publish());
         QVERIFY(!protoDependentSlot);
         QCOMPARE(protoSlot.invocationCount(), 2);
-        QCOMPARE(protoSlot.objects()[0]->foo(), "the foo");
-        QCOMPARE(protoSlot.objects()[1]->foo(), "the foo");
+        QCOMPARE(protoSlot[0]->foo(), "the foo");
+        QCOMPARE(protoSlot[1]->foo(), "the foo");
+        QCOMPARE(protoSlot[0]->parent(), context.get());
+        QCOMPARE(protoSlot[1]->parent(), context.get());
         QVERIFY(dependentSlot->m_dependency);
         QVERIFY(dependentSlot2->m_dependency);
         QCOMPARE_NE(dependentSlot->m_dependency, dependentSlot2->m_dependency);

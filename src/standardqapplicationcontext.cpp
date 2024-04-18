@@ -1688,6 +1688,11 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
         reg->descriptor().init_method(target, this);
         qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
     }
+    if(!target->parent()) {
+        //If the service has no parent, make it a child of this ApplicationContext:
+        //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
+        target->setParent(this);
+    }
     return Status::ok;
 }
 
