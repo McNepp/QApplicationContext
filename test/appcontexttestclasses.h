@@ -139,7 +139,7 @@ public:
 
     }
 
-    Q_PROPERTY(QObject *reference READ reference WRITE setReference NOTIFY referenceChanged FINAL)
+    Q_PROPERTY(BaseService2 *reference READ reference WRITE setReference NOTIFY referenceChanged FINAL)
 
 
     virtual QString foo() const override {
@@ -154,13 +154,13 @@ public:
         ++initCalled;
     }
 
-    void setReference(QObject* ref);
+    void setReference(BaseService2* ref);
 
-    QObject* reference() const;
+    BaseService2* reference() const;
 
 
     int initCalled = 0;
-    QObject* m_reference;
+    BaseService2* m_reference;
 signals:
     void referenceChanged();
 };

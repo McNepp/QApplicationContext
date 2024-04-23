@@ -227,8 +227,9 @@ Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPo
 ## Service-prototypes
 
 As shown above, a service that was registered using mcnepp::qtdi::QApplicationContext::registerService() will be instantiated once mcnepp::qtdi::QApplicationContext::publish(bool) is invoked.
-A single instance of the service will be injected into every other service that depends on it.
-<br>However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::QApplicationContext::registerPrototype() instead.
+<br>A single instance of the service will be injected into every other service that depends on it.
+
+However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::QApplicationContext::registerPrototype() instead.
 <br>Such a registration will not necessarily instantiate the service on mcnepp::qtdi::QApplicationContext::publish(bool).
 Only if there are other services depending on it will a new instance be created and injected into the dependent service.
 
@@ -882,6 +883,23 @@ In that case, the static function mcnepp::qtdi::QApplicationContext::instance() 
 <br>When you create a QApplicationContext, the constructor will set a global variable to the new QApplicationContext, unless
 it has already been set. Consequently, the first QApplicationContext that you create in your application will become the global instance.
 <br>(Please not that QCoreApplication::instance() exhibits the same behaviour.)
+
+## The implicitly registered Services
+
+There are two Services that will be implicitly available in all instances of mcnepp::qtdi::StandardApplicationContext:
+
+- The ApplicationContext itself, registered under the name "context".
+- The QCoreApplication::instance(), registered under the name "application".
+
+Both Services will have `ServiceScope::EXTERNAL`.
+
+Of course, the QCoreApplication::instance() can only be registered if it has been created before the StandardApplicationContext.
+
+If that is not the case, a hook will be installed that will register 
+the QCoreApplication::instance() with the mcnepp::qtdi::QApplicationContext::instance() later.
+
+
+
 
 ## Multi-threading
 

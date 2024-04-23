@@ -18,13 +18,15 @@ bool QApplicationContext::setInstance(QApplicationContext* context) {
     return theInstance.compare_exchange_weak(expected, context);
 }
 
+bool QApplicationContext::unsetInstance(QApplicationContext* context) {
+    QApplicationContext* expected = context;
+    return theInstance.compare_exchange_weak(expected, nullptr);
+}
+
+
 
 QApplicationContext::QApplicationContext(QObject* parent) :
-    QObject(parent),
-    m_isInstance(setInstance(this)) {
-    if(m_isInstance)    {
-        qCInfo(loggingCategory()).noquote().nospace() << "Installed QApplicationContext " << this << " as global instance";
-    }
+    QObject(parent) {
 }
 
 QApplicationContext* QApplicationContext::instance() {
@@ -34,17 +36,16 @@ QApplicationContext* QApplicationContext::instance() {
 
 
 QApplicationContext::~QApplicationContext() {
-    QApplicationContext* instance = this;
-    if(m_isInstance && theInstance.compare_exchange_weak(instance, nullptr)) {
-        qCInfo(loggingCategory()).noquote().nospace() << "Removed QApplicationContext " << this << " as global instance";
+    //This is a the last resort: a derived class has forgotten to un-set itsefl while it was still alive. Better late than sorry!
+    if(unsetInstance(this)) {
+        qCWarning(loggingCategory()).noquote().nospace() << "Removed destroyed QApplicationContext " << this << " as global instance";
     }
 }
 
 bool QApplicationContext::isGlobalInstance() const
 {
-    return m_isInstance;
+    return theInstance.load() == this;
 }
-
 
 
 }//mcnepp::qtdi

@@ -687,6 +687,15 @@ void StandardApplicationContext::PrototypeRegistration::onSubscription(subscript
 
 
 
+void registerAppInGlobalContext() {
+    auto globalContext = QApplicationContext::instance();
+    if(globalContext && !globalContext->getRegistration("application")) {
+        globalContext->registerObject(QCoreApplication::instance(), "application");
+    }
+}
+
+Q_COREAPP_STARTUP_FUNCTION(registerAppInGlobalContext)
+
 
 
 
@@ -694,10 +703,24 @@ void StandardApplicationContext::PrototypeRegistration::onSubscription(subscript
 StandardApplicationContext::StandardApplicationContext(QObject* parent) :
 QApplicationContext(parent)
 {
+    if(auto app = QCoreApplication::instance()) {
+        registerObject(app, "application");
+    }
+
+    registerObject<QApplicationContext>(this, "context");
+
+
+    if(setInstance(this)) {
+        qCInfo(loggingCategory()).noquote().nospace() << "Installed QApplicationContext " << this << " as global instance";
+    }
 }
 
 
 StandardApplicationContext::~StandardApplicationContext() {
+    //Before we un-publish, we unset this instance as the global instance:
+    if(unsetInstance(this)) {
+        qCInfo(loggingCategory()).noquote().nospace() << "Removed QApplicationContext " << this << " as global instance";
+    }
     unpublish();
 }
 

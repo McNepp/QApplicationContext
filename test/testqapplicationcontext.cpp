@@ -233,9 +233,20 @@ private slots:
         auto asPrototype = reg.as<BaseService,ServiceScope::PROTOTYPE>();
         QVERIFY(!asPrototype);
         auto registrations = context->getRegistrations();
-        QCOMPARE(registrations.size(), 1);
-        QVERIFY(registrations[0]);
-        QVERIFY(registrations[0].as<BaseService>());
+        QCOMPARE(registrations.size(), 3); //One is our BaseService, one is the QCoreApplication and one is the QApplicationContext.
+        int foundBits = 0;
+        for(auto& reg : registrations) {
+            if(reg.as<QCoreApplication>()) {
+                foundBits |= 1;
+            }
+            if(reg.as<QApplicationContext>()) {
+                foundBits |= 2;
+            }
+            if(reg.as<BaseService>()) {
+                foundBits |= 4;
+            }
+        }
+        QCOMPARE(foundBits, 7);
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> slot{reg};
         QVERIFY(slot);
@@ -253,6 +264,48 @@ private slots:
         RegistrationSlot<QObject> slot{qReg};
         QVERIFY(slot);
     }
+
+    void testApplicationRegisteredAsObject() {
+        auto reg = context->getRegistration<QCoreApplication>();
+        QVERIFY(context->publish());
+        RegistrationSlot<QCoreApplication> slot{reg};
+        QVERIFY(slot);
+        QCOMPARE(slot.last(), QCoreApplication::instance());
+        auto regByName = context->getRegistration("application").as<QCoreApplication,ServiceScope::EXTERNAL>();
+        QVERIFY(regByName);
+        RegistrationSlot<QCoreApplication> slotByName{regByName};
+        QCOMPARE(slotByName.last(), QCoreApplication::instance());
+    }
+
+    void testApplicationContextRegisteredAsObject() {
+        auto reg = context->getRegistration<QApplicationContext>();
+        QVERIFY(context->publish());
+        RegistrationSlot<QApplicationContext> slot{reg};
+        QVERIFY(slot);
+        QCOMPARE(slot.last(), context.get());
+        auto regByName = context->getRegistration("context").as<QApplicationContext,ServiceScope::EXTERNAL>();
+        QVERIFY(regByName);
+        RegistrationSlot<QApplicationContext> slotByName{regByName};
+        QCOMPARE(slotByName.last(), context.get());
+    }
+
+    void testDependOnApplicationAsParent() {
+        auto reg = context->registerService(service<QTimer>(inject<QCoreApplication>()), "timer");
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot{reg};
+        QVERIFY(slot);
+        QCOMPARE(slot->parent(), QCoreApplication::instance());
+    }
+
+    void testDependOnApplicationContextAsParent() {
+        auto reg = context->registerService(service<QTimer>(inject<QApplicationContext>()), "timer");
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot{reg};
+        QVERIFY(slot);
+        QCOMPARE(slot->parent(), context.get());
+    }
+
+
 
 
     void testWithProperty() {
@@ -1591,10 +1644,10 @@ private slots:
         auto regDep = context->registerService(service<DependentService>(inject<Interface1>()));
         RegistrationSlot<DependentService> depSlot{regDep};
         QCOMPARE(contextPending, 2);
-        QCOMPARE(contextPublished, 0);
+        QCOMPARE(contextPublished, 2); //The QCoreApplication and the QApplicationContext.
         QVERIFY(context->publish());
         QCOMPARE(contextPending, 0);
-        QCOMPARE(contextPublished, 2);
+        QCOMPARE(contextPublished, 4);
 
         QVERIFY(baseSlot);
         QVERIFY(depSlot);
@@ -1602,18 +1655,18 @@ private slots:
 
         auto anotherBaseReg = context->registerService(service<Interface1,BaseService2>(), "anotherBase");
         QCOMPARE(contextPending, 1);
-        QCOMPARE(contextPublished, 2);
+        QCOMPARE(contextPublished, 4);
 
         RegistrationSlot<Interface1> anotherBaseSlot{anotherBaseReg};
         auto regCard = context->registerService(service<CardinalityNService>(injectAll<Interface1>()));
         QCOMPARE(contextPending, 2);
-        QCOMPARE(contextPublished, 2);
+        QCOMPARE(contextPublished, 4);
 
 
         RegistrationSlot<CardinalityNService> cardSlot{regCard};
         QVERIFY(context->publish());
         QCOMPARE(contextPending, 0);
-        QCOMPARE(contextPublished, 4);
+        QCOMPARE(contextPublished, 6);
         QVERIFY(cardSlot);
         QCOMPARE(cardSlot->my_bases.size(), 2);
         QCOMPARE(baseSlot.invocationCount(), 2);
@@ -1729,7 +1782,7 @@ private slots:
         QCOMPARE(publishedInOrder.size(), 8);
 
         auto serviceHandles = context->getRegistrations();
-        QCOMPARE(serviceHandles.size(), 8);
+        QCOMPARE(serviceHandles.size(), 10); // We have 8 registered services, plus the QCoreApplication and the QApplicationContex that are registered by default!
 
         //1. BaseService must be initialized before BaseService2 (because the order of registration shall be kept, barring other restrictions).
         //2. DependentService must be initialized after both BaseService.

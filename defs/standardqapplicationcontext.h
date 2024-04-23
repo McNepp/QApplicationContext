@@ -375,7 +375,10 @@ private:
         ObjectRegistration(unsigned index, const QString& name, const service_descriptor& desc, QObject* obj, StandardApplicationContext* parent) :
             DescriptorRegistration{index, name, desc, parent},
             theObj(obj){
-            connect(obj, &QObject::destroyed, parent, &StandardApplicationContext::contextObjectDestroyed);
+            //Do not connect the signal QObject::destroyed if obj is the ApplicationContext itself:
+            if(obj != parent) {
+                connect(obj, &QObject::destroyed, parent, &StandardApplicationContext::contextObjectDestroyed);
+            }
         }
 
         void notifyPublished() override {

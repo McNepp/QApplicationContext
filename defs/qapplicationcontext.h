@@ -2441,16 +2441,15 @@ protected:
         return appContext->getRegistrationHandles();
     }
 
+    static bool setInstance(QApplicationContext*);
+
+    static bool unsetInstance(QApplicationContext*);
 
 
     template<typename S,ServiceScope> friend class ServiceRegistration;
 
 private:
     static std::atomic<QApplicationContext*> theInstance;
-
-    static bool setInstance(QApplicationContext*);
-
-    const bool m_isInstance;
 };
 
 template<typename S> template<typename D,typename R> Subscription Registration<S>::autowire(R (S::*injectionSlot)(D*)) {
