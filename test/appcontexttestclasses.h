@@ -166,7 +166,44 @@ signals:
 };
 
 
+class QObjectService : public QObject {
 
+    Q_OBJECT
+
+    Q_PROPERTY(QObject* dependency READ dependency WRITE setDependency NOTIFY dependencyChanged)
+public:
+
+    QObjectService() {
+
+    }
+
+    explicit QObjectService(const QObjectList& dependencies) :
+        m_dependencies{dependencies} {
+
+    }
+
+    void setDependency(QObject* dep) {
+        if(m_dependencies.empty()) {
+            m_dependencies.push_back(dep);
+            emit dependencyChanged(dep);
+        } else {
+            if(m_dependencies[0] != dep) {
+                m_dependencies[0] = dep;
+                emit dependencyChanged(dep);
+            }
+        }
+    }
+
+    QObject* dependency() const {
+        return m_dependencies.empty() ? nullptr : m_dependencies[0];
+    }
+
+signals:
+    void dependencyChanged(QObject*);
+
+public:
+    QObjectList m_dependencies;
+};
 
 class DependentService : public QObject {
 public:

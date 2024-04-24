@@ -144,7 +144,7 @@ private:
         }
 
         bool matches(const std::type_info& type) const override {
-            return descriptor().matches(type);
+            return descriptor().matches(type) || type == typeid(QObject);
         }
 
         bool matches(const dependency_info& info) const {
@@ -464,7 +464,7 @@ private:
         virtual subscription_handle_t createAutowiring(const std::type_info& type, detail::q_inject_t injector, registration_handle_t source) override;
 
         bool matches(const std::type_info& type) const override {
-            return m_type == type;
+            return m_type == type || type == typeid(QObject);
         }
 
         virtual StandardApplicationContext* applicationContext() const final override {

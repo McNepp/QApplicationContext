@@ -253,15 +253,59 @@ private slots:
         QCOMPARE(slot->parent(), context.get());
     }
 
+    void testQObjectsDependency() {
+        QTimer timer;
+        context->registerObject(&timer);
+        context->registerService<BaseService>();
+        auto reg = context->registerService(service<QObjectService>(injectAll<QObject>()));
+        QVERIFY(context->publish());
+
+        RegistrationSlot<QObjectService> slot{reg};
+        QVERIFY(slot.last());
+        QCOMPARE(slot->m_dependencies.size(), 4); //QTimer, BaseService, QCoreApplication, QApplicationContext
+        int foundBits = 0;
+        for(auto obj : slot->m_dependencies) {
+            if(dynamic_cast<QApplicationContext*>(obj)) {
+                foundBits |= 1;
+            }
+            if(dynamic_cast<QCoreApplication*>(obj)) {
+                foundBits |= 2;
+            }
+            if(dynamic_cast<QTimer*>(obj)) {
+                foundBits |= 4;
+            }
+            if(dynamic_cast<BaseService*>(obj)) {
+                foundBits |= 8;
+            }
+        }
+        QCOMPARE(foundBits, 15);
+    }
+
+    void testQObjectProperty() {
+        auto reg = context->registerService<QObjectService>("qobjects", make_config({{"dependency", "&context"}}));
+        QVERIFY(context->publish());
+
+        RegistrationSlot<QObjectService> slot{reg};
+        QVERIFY(slot.last());
+        QCOMPARE(slot->dependency(), context.get());
+    }
+
+
+
+
     void testQObjectRegistration() {
         auto reg = context->registerService<BaseService>();
         QVERIFY(reg);
-        auto qReg = context->getRegistration(reg.registeredName());
-        QCOMPARE(qReg, reg);
-        QVERIFY(qReg.matches<BaseService>());
+        auto regByName = context->getRegistration(reg.registeredName());
+        QCOMPARE(regByName, reg);
+        QVERIFY(regByName.matches<BaseService>());
+        QVERIFY(regByName.matches<QObject>());
+
+        auto qReg = context->getRegistration<QObject>();
+        QCOMPARE(qReg.registeredServices().size(), 3); //BaseService, QCoreApplication, QApplicationContext
         QVERIFY(qReg.matches<QObject>());
         QVERIFY(context->publish());
-        RegistrationSlot<QObject> slot{qReg};
+        RegistrationSlot<QObject> slot{regByName};
         QVERIFY(slot);
     }
 
@@ -666,6 +710,15 @@ private slots:
         QVERIFY(context->publish());
         RegistrationSlot<BaseService2> baseSlot{reg};
         QVERIFY(!baseSlot->m_reference);
+
+    }
+
+    void testDoNotAutowireQObjectSelf() {
+        auto reg = context->registerService<QObjectService>("base", make_config({}, "", true));
+
+        QVERIFY(context->publish());
+        RegistrationSlot<QObjectService> baseSlot{reg};
+        QVERIFY(!baseSlot->dependency());
 
     }
 

@@ -566,16 +566,6 @@ template<typename T> [[nodiscard]] inline bool matches(registration_handle_t han
     return handle && handle->matches(typeid(T));
 }
 
-///
-/// \brief Determines whether a handle to a Registration matches QObject.
-/// <br>This specizaliation always yields `true` if the handle is valid, as every
-/// service can be dynamically cast to QObject.
-/// \param handle the handle to the Registration.
-/// \return `true` if the handle is valid.
-///
-template<> [[nodiscard]] constexpr bool matches<QObject>(registration_handle_t handle) {
-    return handle;
-}
 
 
 ///
