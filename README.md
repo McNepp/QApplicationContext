@@ -227,8 +227,9 @@ Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPo
 ## Service-prototypes
 
 As shown above, a service that was registered using mcnepp::qtdi::QApplicationContext::registerService() will be instantiated once mcnepp::qtdi::QApplicationContext::publish(bool) is invoked.
-A single instance of the service will be injected into every other service that depends on it.
-<br>However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::QApplicationContext::registerPrototype() instead.
+<br>A single instance of the service will be injected into every other service that depends on it.
+
+However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::QApplicationContext::registerPrototype() instead.
 <br>Such a registration will not necessarily instantiate the service on mcnepp::qtdi::QApplicationContext::publish(bool).
 Only if there are other services depending on it will a new instance be created and injected into the dependent service.
 
@@ -576,6 +577,30 @@ This can be achieved using the function mcnepp::qtdi::bind() like this:
 This way of binding properties has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), 
 aka those that represent more than one service. The source-property will be bound to every target-service automatically!
 
+### Type-safe bindings
+
+The above binding used property-names to denote the source- and target-properties.
+<br>In case the source-service offers a signal that corresponds with the property, you can use pointers to member-functions instead, which is more type-safe.
+<br>Here is an example:
+
+    QTimer timer1;
+    
+    auto reg1 = context -> registerObject(&timer1, "timer1"); // 1
+    
+    auto reg2 = context -> registerService<QTimer>("timer2"); // 2
+    
+    bind(reg1, &QTimer::objectNameChanged, reg2, &QTimer::setObjectName); // 3
+    
+    context -> publish(); 
+    
+    timer1.setObjectName("new Name"); // 4
+
+1. We register a `QTimer` as "timer1".
+2. We register a second `QTimer` as "timer2". 
+3. We bind the property `objectName` of the second timer to the first timer's propery.
+4. We change the first timer's objectName. This will also change the second timer's objectName!
+
+
 ## Accessing a service after registration
 
 So far, we have published the ApplicationContext and let it take care of wiring all the components together.  
@@ -882,6 +907,23 @@ In that case, the static function mcnepp::qtdi::QApplicationContext::instance() 
 <br>When you create a QApplicationContext, the constructor will set a global variable to the new QApplicationContext, unless
 it has already been set. Consequently, the first QApplicationContext that you create in your application will become the global instance.
 <br>(Please not that QCoreApplication::instance() exhibits the same behaviour.)
+
+## The implicitly registered Services
+
+There are two Services that will be implicitly available in all instances of mcnepp::qtdi::StandardApplicationContext:
+
+- The ApplicationContext itself, registered under the name "context".
+- The QCoreApplication::instance(), registered under the name "application".
+
+Both Services will have `ServiceScope::EXTERNAL`.
+
+Of course, the QCoreApplication::instance() can only be registered if it has been created before the StandardApplicationContext.
+
+If that is not the case, a hook will be installed that will register 
+the QCoreApplication::instance() with the mcnepp::qtdi::QApplicationContext::instance() later.
+
+
+
 
 ## Multi-threading
 

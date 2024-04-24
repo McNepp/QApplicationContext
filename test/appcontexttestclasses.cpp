@@ -29,7 +29,7 @@ void BaseService::setTimer(QTimer *newTimer)
     if (m_timer == newTimer)
         return;
     m_timer = newTimer;
-    emit timerChanged();
+    emit timerChanged(newTimer);
 }
 
 
@@ -52,7 +52,7 @@ void CyclicDependency::setDependency(BaseService *newDependency)
     emit dependencyChanged();
 }
 
-void BaseService2::setReference(QObject *ref)
+void BaseService2::setReference(BaseService2 *ref)
 {
     if (m_reference == ref)
         return;
@@ -60,7 +60,7 @@ void BaseService2::setReference(QObject *ref)
     emit referenceChanged();
 }
 
-QObject* BaseService2::reference() const {
+BaseService2* BaseService2::reference() const {
     return m_reference;
 }
 

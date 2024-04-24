@@ -85,11 +85,13 @@ public:
     }
 
 signals:
-    void timerChanged();
+    void timerChanged(QTimer*);
 
     void dependencyChanged();
 
     void fooChanged();
+
+    void signalWithoutProperty();
 
 private:
 
@@ -139,7 +141,7 @@ public:
 
     }
 
-    Q_PROPERTY(QObject *reference READ reference WRITE setReference NOTIFY referenceChanged FINAL)
+    Q_PROPERTY(BaseService2 *reference READ reference WRITE setReference NOTIFY referenceChanged FINAL)
 
 
     virtual QString foo() const override {
@@ -154,19 +156,56 @@ public:
         ++initCalled;
     }
 
-    void setReference(QObject* ref);
+    void setReference(BaseService2* ref);
 
-    QObject* reference() const;
+    BaseService2* reference() const;
 
 
     int initCalled = 0;
-    QObject* m_reference;
+    BaseService2* m_reference;
 signals:
     void referenceChanged();
 };
 
 
+class QObjectService : public QObject {
 
+    Q_OBJECT
+
+    Q_PROPERTY(QObject* dependency READ dependency WRITE setDependency NOTIFY dependencyChanged)
+public:
+
+    QObjectService() {
+
+    }
+
+    explicit QObjectService(const QObjectList& dependencies) :
+        m_dependencies{dependencies} {
+
+    }
+
+    void setDependency(QObject* dep) {
+        if(m_dependencies.empty()) {
+            m_dependencies.push_back(dep);
+            emit dependencyChanged(dep);
+        } else {
+            if(m_dependencies[0] != dep) {
+                m_dependencies[0] = dep;
+                emit dependencyChanged(dep);
+            }
+        }
+    }
+
+    QObject* dependency() const {
+        return m_dependencies.empty() ? nullptr : m_dependencies[0];
+    }
+
+signals:
+    void dependencyChanged(QObject*);
+
+public:
+    QObjectList m_dependencies;
+};
 
 class DependentService : public QObject {
 public:

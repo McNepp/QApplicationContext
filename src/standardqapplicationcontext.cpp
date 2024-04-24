@@ -460,18 +460,8 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         qCritical(loggingCategory()).noquote().nospace() << "Cannot create binding in different thread";
         return nullptr;
     }
-    if(isPrototype()) {
-        qCritical(loggingCategory()).noquote().nospace() << "Cannot create binding from " << *this;
-        return nullptr;
-
-    }
 
     detail::property_descriptor setter = targetProperty;
-    auto targetReg = dynamic_cast<StandardRegistrationImpl*>(target);
-    if(!targetReg) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << *target;
-        return nullptr;
-    }
     if(this == target && QString{sourcePropertyName} == setter.name) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to self";
         return nullptr;
@@ -482,12 +472,12 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         return nullptr;
     }
 
-    auto sourceProperty = getProperty(sourcePropertyName);
+    auto sourceProperty = getProperty(this, sourcePropertyName);
     if(!detail::isBindable(sourceProperty)) {
         qCWarning(loggingCategory()).noquote().nospace() << "Property '" << sourcePropertyName << "' in " << *this << " is not bindable";
     }
     if(!setter.setter) {
-        auto targetProp = targetReg->getProperty(setter.name);
+        auto targetProp = getProperty(target, setter.name);
         if(!targetProp.isValid() || !targetProp.isWritable()) {
             qCCritical(loggingCategory()).noquote().nospace() << setter << " is not a writable property for " << *target;
             return nullptr;
@@ -498,12 +488,10 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         }
         setter = detail::propertySetter(targetProp);
     }
-    if(!targetReg->registerBoundProperty(setter.name)) {
+    if(!applicationContext()->registerBoundProperty(target, setter.name)) {
         qCCritical(loggingCategory()).noquote().nospace() << setter << " has already been bound to " << *target;
         return nullptr;
-
     }
-
 
     auto subscription = new PropertyBindingSubscription{target, sourceProperty, setter};
     qCInfo(loggingCategory()).noquote().nospace() << "Created Subscription for binding property '" << sourceProperty.name() << "' of " << *this << " to " << setter << " of " << *target;
@@ -673,10 +661,16 @@ void StandardApplicationContext::PrototypeRegistration::print(QDebug out) const 
     out.nospace().noquote() << "Prototype '" << registeredName() << "' with " << this->descriptor();
 }
 
+subscription_handle_t StandardApplicationContext::PrototypeRegistration::createBindingTo(const char*, registration_handle_t, const detail::property_descriptor&)
+{
+    qCritical(loggingCategory()).noquote().nospace() << "Cannot create binding from " << *this;
+    return nullptr;
+}
+
 void StandardApplicationContext::PrototypeRegistration::onSubscription(subscription_handle_t subscription) {
     detail::connect(this, subscription);
     TemporarySubscriptionProxy tempProxy{subscription};
-    //By subscribing to a TemporarySubscriptionProxy, we force exisiting objects to be signalled immediately, while not creating any new Connections:
+    //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
     for(auto child : children()) {
         if(auto reg = dynamic_cast<DescriptorRegistration*>(child)) {
             reg->subscribe(&tempProxy);
@@ -687,6 +681,15 @@ void StandardApplicationContext::PrototypeRegistration::onSubscription(subscript
 
 
 
+void registerAppInGlobalContext() {
+    auto globalContext = QApplicationContext::instance();
+    if(globalContext && !globalContext->getRegistration("application")) {
+        globalContext->registerObject(QCoreApplication::instance(), "application");
+    }
+}
+
+Q_COREAPP_STARTUP_FUNCTION(registerAppInGlobalContext)
+
 
 
 
@@ -694,10 +697,24 @@ void StandardApplicationContext::PrototypeRegistration::onSubscription(subscript
 StandardApplicationContext::StandardApplicationContext(QObject* parent) :
 QApplicationContext(parent)
 {
+    if(auto app = QCoreApplication::instance()) {
+        registerObject(app, "application");
+    }
+
+    registerObject<QApplicationContext>(this, "context");
+
+
+    if(setInstance(this)) {
+        qCInfo(loggingCategory()).noquote().nospace() << "Installed QApplicationContext " << this << " as global instance";
+    }
 }
 
 
 StandardApplicationContext::~StandardApplicationContext() {
+    //Before we un-publish, we unset this instance as the global instance:
+    if(unsetInstance(this)) {
+        qCInfo(loggingCategory()).noquote().nospace() << "Removed QApplicationContext " << this << " as global instance";
+    }
     unpublish();
 }
 
@@ -1410,7 +1427,7 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
                 qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
                 return {Status::fatal, false};
             }
-            QMetaProperty sourceProp = bean->getProperty(propName.toLatin1());
+            QMetaProperty sourceProp = getProperty(bean, propName.toLatin1());
             if(!sourceProp.isValid()) {
                 //Refering to a non-existing Q_PROPERTY is always non-fixable:
                 qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
@@ -1596,6 +1613,11 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
         }
     }
     return candidate;
+}
+
+bool StandardApplicationContext::registerBoundProperty(registration_handle_t target, const char *propName)
+{
+    return m_boundProperties[target].insert(propName).second;
 }
 
 

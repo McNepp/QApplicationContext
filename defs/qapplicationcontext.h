@@ -10,7 +10,7 @@
 #include <QObject>
 #include <QVariant>
 #include <QPointer>
-#include <QUuid>
+#include <QMetaMethod>
 #include <QLoggingCategory>
 
 namespace mcnepp::qtdi {
@@ -325,6 +325,16 @@ public:
     ///
     [[nodiscard]] virtual QApplicationContext* applicationContext() const = 0;
 
+    /**
+      * @brief the QMetaObject of the Service.
+      * <br>For every Registration obtained via QApplicationContext::registerService(), QApplicationContext::registerObject() or QApplicationContext::registerPrototype(),
+      * this functio will yield the QMetaObject belonging to the service's implementation-type.
+      * <br>For every Registration obtained via QApplicationContext::getRegistration(), this method may yield `nullptr`, in case
+      * that the type-argument specifies a non-QObject interface.
+      * @return the QMetaObject of the Service, or `nullptr` if this is a Registration for a non-QObject interface.
+      */
+    virtual const QMetaObject* serviceMetaObject() const = 0;
+
 
 
     friend QDebug operator<<(QDebug out, const Registration& reg) {
@@ -493,6 +503,10 @@ public:
      */
     [[nodiscard]] virtual ServiceScope scope() const = 0;
 
+
+    virtual const QMetaObject* serviceMetaObject() const override;
+
+
 protected:
 
 
@@ -521,6 +535,8 @@ protected:
     ///
     virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) = 0;
 
+
+
 };
 
 class ProxyRegistration : public Registration {
@@ -545,10 +561,9 @@ protected:
 
     }
 
-
 };
 
-
+    QMetaProperty findPropertyBySignal(const QMetaMethod& signalFunction, const QMetaObject* metaObject);
 
 
 }
@@ -566,16 +581,6 @@ template<typename T> [[nodiscard]] inline bool matches(registration_handle_t han
     return handle && handle->matches(typeid(T));
 }
 
-///
-/// \brief Determines whether a handle to a Registration matches QObject.
-/// <br>This specizaliation always yields `true` if the handle is valid, as every
-/// service can be dynamically cast to QObject.
-/// \param handle the handle to the Registration.
-/// \return `true` if the handle is valid.
-///
-template<> [[nodiscard]] constexpr bool matches<QObject>(registration_handle_t handle) {
-    return handle;
-}
 
 
 ///
@@ -612,6 +617,15 @@ template<> [[nodiscard]] constexpr bool matches<QObject>(registration_handle_t h
  */
 [[nodiscard]] inline proxy_registration_handle_t asProxy(registration_handle_t handle) {
     return dynamic_cast<proxy_registration_handle_t>(handle);
+}
+
+///
+/// \brief Obtains the QMetaObject from a handle to a Registration.
+/// \param handle the handle to the  Registration.
+/// \return the QMetaObject that this Registration was registered with, or `nullptr` if this Registration is a proxy for a non-QObject interface.
+///
+[[nodiscard]] inline const QMetaObject* serviceMetaObject(registration_handle_t handle) {
+    return handle ? handle->serviceMetaObject() : nullptr;
 }
 
 
@@ -748,6 +762,9 @@ public:
         return mcnepp::qtdi::applicationContext(unwrap());
     }
 
+    [[nodiscard]] const QMetaObject* serviceMetaObject() const {
+        return mcnepp::qtdi::serviceMetaObject(unwrap());
+    }
 
     /**
      * @brief Tests whether this Registration matches a type.
@@ -889,6 +906,7 @@ template<typename S,ServiceScope SCP=ServiceScope::UNKNOWN> class ServiceRegistr
 
     template<typename F,typename T,typename A,typename R,ServiceScope scope> friend Subscription bind(const ServiceRegistration<F,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A));
 
+
 public:
     using service_type = S;
 
@@ -990,6 +1008,9 @@ private:
 
     Subscription bind(const char* sourceProperty, registration_handle_t target, const detail::property_descriptor& descriptor) const {
         static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
+        static_assert(SCP != ServiceScope::PROTOTYPE, "Cannot bind to service with scope PROTOTYPE");
+        static_assert(SCP != ServiceScope::UNKNOWN, "Cannot bind to service with scope UNKNOWN");
+
         if(!target || !*this) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << *this << " to " << target;
             return Subscription{};
@@ -1084,8 +1105,6 @@ template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, 
 /// \return the Subscription established by this binding.
 ///
 template<typename S,typename T,ServiceScope scope> inline Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, const char* targetProperty) {
-    static_assert(scope != ServiceScope::PROTOTYPE, "Cannot bind to service with scope PROTOTYPE");
-    static_assert(scope != ServiceScope::UNKNOWN, "Cannot bind to service with scope UNKNOWN");
     static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
     return source.bind(sourceProperty, target.unwrap(), {targetProperty, nullptr});
 }
@@ -1104,13 +1123,67 @@ template<typename S,typename T,ServiceScope scope> inline Subscription bind(cons
 /// \return the Subscription established by this binding.
 ///
 template<typename S,typename T,typename A,typename R,ServiceScope scope> inline Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A)) {
-    static_assert(scope != ServiceScope::PROTOTYPE, "Cannot bind to service with scope PROTOTYPE");
-    static_assert(scope != ServiceScope::UNKNOWN, "Cannot bind to service with scope UNKNOWN");
     if(!setter) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
     return source.bind(sourceProperty, target.unwrap(), {"", detail::callable_adapter<T>::adaptSetter(setter)});
+}
+
+
+///
+/// \brief Binds a property of one ServiceRegistration to a Setter from  another Registration.
+/// <br>This function identifies the source-property by the signal that is emitted when the property changes.
+/// The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding
+/// to a property of the source-service.
+/// <br>All changes made to the source-property will be propagated to all Services represented by the target.
+/// For each target-property, there can be only successful call to bind().
+/// <br>**Thread-safety:** This function only may be called from the QApplicationContext's thread.
+/// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
+/// \param signalFunction the address of the member-function that is emitted as the signal for the property.
+/// \param target the Registration with the target-property to which the source-property shall be bound.
+/// \param setter the method in the target which shall be bound to the source-property.
+/// \tparam S the type of the source.
+/// \tparam T the type of the target.
+/// \return the Subscription established by this binding.
+///
+template<typename S,typename T,typename AS,typename AT,typename R,ServiceScope scope> inline auto bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(AS), Registration<T>& target, R(T::*setter)(AT)) ->
+    std::enable_if_t<std::is_convertible_v<AS,AT>,Subscription> {
+    if(!setter || !signalFunction || !source || !target) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << source << " to null";
+        return Subscription{};
+    }
+    if(auto signalProperty = detail::findPropertyBySignal(QMetaMethod::fromSignal(signalFunction), source.serviceMetaObject()); signalProperty.isValid()) {
+        return bind(source, signalProperty.name(), target, setter);
+    }
+    return Subscription{};
+}
+
+///
+/// \brief Binds a property of one ServiceRegistration to a Setter from  another Registration.
+/// <br>This function identifies the source-property by the signal that is emitted when the property changes.
+/// The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding
+/// to a property of the source-service.
+/// <br>All changes made to the source-property will be propagated to all Services represented by the target.
+/// For each target-property, there can be only successful call to bind().
+/// <br>**Thread-safety:** This function only may be called from the QApplicationContext's thread.
+/// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
+/// \param signalFunction the address of the member-function that is emitted as the signal for the property.
+/// \param target the Registration with the target-property to which the source-property shall be bound.
+/// \param setter the method in the target which shall be bound to the source-property.
+/// \tparam S the type of the source.
+/// \tparam T the type of the target.
+/// \return the Subscription established by this binding.
+///
+template<typename S,typename T,typename A,typename R,ServiceScope scope> inline Subscription bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(), Registration<T>& target, R(T::*setter)(A)) {
+    if(!setter || !signalFunction || !source || !target) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << source << " to null";
+        return Subscription{};
+    }
+    if(auto signalProperty = detail::findPropertyBySignal(QMetaMethod::fromSignal(signalFunction), source.serviceMetaObject()); signalProperty.isValid()) {
+        return bind(source, signalProperty.name(), target, setter);
+    }
+    return Subscription{};
 }
 
 
@@ -2163,7 +2236,7 @@ public:
         }
         std::unordered_set<std::type_index> ifaces;
         (ifaces.insert(typeid(S)), ..., ifaces.insert(typeid(IFaces)));
-        return ServiceRegistration<S,ServiceScope::EXTERNAL>::wrap(registerObject(objName, qObject, service_descriptor{ifaces, typeid(*obj)}));
+        return ServiceRegistration<S,ServiceScope::EXTERNAL>::wrap(registerObject(objName, qObject, service_descriptor{ifaces, typeid(*obj), qObject->metaObject()}));
     }
 
     ///
@@ -2441,16 +2514,15 @@ protected:
         return appContext->getRegistrationHandles();
     }
 
+    static bool setInstance(QApplicationContext*);
+
+    static bool unsetInstance(QApplicationContext*);
 
 
     template<typename S,ServiceScope> friend class ServiceRegistration;
 
 private:
     static std::atomic<QApplicationContext*> theInstance;
-
-    static bool setInstance(QApplicationContext*);
-
-    const bool m_isInstance;
 };
 
 template<typename S> template<typename D,typename R> Subscription Registration<S>::autowire(R (S::*injectionSlot)(D*)) {
