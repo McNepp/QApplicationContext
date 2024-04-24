@@ -85,11 +85,13 @@ public:
     }
 
 signals:
-    void timerChanged();
+    void timerChanged(QTimer*);
 
     void dependencyChanged();
 
     void fooChanged();
+
+    void signalWithoutProperty();
 
 private:
 

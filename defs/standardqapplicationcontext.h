@@ -64,18 +64,6 @@ private:
     bool registerAlias(service_registration_handle_t reg, const QString& alias);
 
 
-    class StandardRegistrationImpl {
-
-       friend class StandardApplicationContext;
-
-        virtual QMetaProperty getProperty(const char* name) const = 0;
-
-        virtual bool registerBoundProperty(const char* name) = 0;
-
-        virtual ~StandardRegistrationImpl() = default;
-
-    };
-
 
     using descriptor_set = std::unordered_set<DescriptorRegistration*>;
 
@@ -86,7 +74,7 @@ private:
     static constexpr int STATE_CREATED = 1;
     static constexpr int STATE_PUBLISHED = 3;
 
-    class DescriptorRegistration : public detail::ServiceRegistration, public StandardRegistrationImpl {
+    class DescriptorRegistration : public detail::ServiceRegistration {
         friend class StandardApplicationContext;
 
         virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
@@ -103,6 +91,7 @@ private:
         virtual StandardApplicationContext* applicationContext() const final override {
             return m_context;
         }
+
 
         virtual QObject* getObject() const = 0;
 
@@ -122,13 +111,6 @@ private:
 
         virtual const service_descriptor& descriptor() const final override {
             return m_descriptor;
-        }
-
-        virtual QMetaProperty getProperty(const char* name) const override {
-            if(descriptor().meta_object) {
-                return descriptor().meta_object->property(descriptor().meta_object->indexOfProperty(name));
-            }
-            return QMetaProperty{};
         }
 
 
@@ -174,17 +156,12 @@ private:
 
         virtual int unpublish() = 0;
 
-        virtual bool registerBoundProperty(const char* name) override {
-            return boundProperties.insert(name).second;
-        }
-
         virtual void resolveProperty(const QString& key, const QVariant& value) = 0;
     protected:
 
         service_descriptor m_descriptor;
         QString m_name;
         std::vector<QPropertyNotifier> bindings;
-        std::unordered_set<QString> boundProperties;
         std::unordered_set<std::type_index> autowirings;
         unsigned const m_index;
         StandardApplicationContext* const m_context;
@@ -215,9 +192,6 @@ private:
             return ServiceScope::SINGLETON;
         }
 
-        virtual bool registerBoundProperty(const char* name) override {
-            return boundProperties.insert(name).second;
-        }
 
 
 
@@ -340,7 +314,7 @@ private:
         }
 
 
-
+        virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
 
         virtual QStringList getBeanRefs() const override;
 
@@ -432,15 +406,7 @@ private:
             emit subscription->objectPublished(theObj);
         }
 
-        virtual QMetaProperty getProperty(const char* name) const override {
-            auto meta = theObj->metaObject();
-            return meta->property(meta->indexOfProperty(name));
-        }
 
-
-        virtual bool registerBoundProperty(const char* name) override {
-            return boundProperties.insert(name).second;
-        }
 
 
 
@@ -453,7 +419,7 @@ private:
     };
 
 
-    class ProxyRegistrationImpl : public detail::ProxyRegistration, public StandardRegistrationImpl {
+    class ProxyRegistrationImpl : public detail::ProxyRegistration {
 
 
         friend class StandardApplicationContext;
@@ -473,6 +439,10 @@ private:
 
         virtual QList<service_registration_handle_t> registeredServices() const override;
 
+        virtual const QMetaObject* serviceMetaObject() const override {
+            return m_meta;
+        }
+
 
 
         bool add(service_registration_handle_t reg) {
@@ -485,36 +455,30 @@ private:
 
         virtual void onSubscription(subscription_handle_t subscription) override;
 
-        virtual QMetaProperty getProperty(const char* name) const override {
-            if(m_meta) {
-                return m_meta->property(m_meta->indexOfProperty(name));
-            }
-            return QMetaProperty{};
-        }
-
-
 
 
         virtual void print(QDebug out) const final override {
             out.nospace().noquote() << "Services [" << registeredServices().size() << "] with service-type '" << m_type.name() << "'";
         }
 
-        virtual bool registerBoundProperty(const char* name) override {
-            //We do not need to lock the mutex, as the member 'boundProperties' is only ever read and written to from the ApplicationContext's thread.
-            //See: DescriptorRegistration::createBindingTo()
-            return boundProperties.insert(name).second;
-        }
+
 
 
         const std::type_info& m_type;
         const QMetaObject* m_meta;
-        std::unordered_set<QString> boundProperties;
         std::unordered_set<std::type_index> autowirings;
         subscription_handle_t proxySubscription;
     };
 
 
 
+
+    static QMetaProperty getProperty(registration_handle_t reg, const char* name) {
+        if(auto meta = reg->serviceMetaObject()) {
+            return meta->property(meta->indexOfProperty(name));
+        }
+        return QMetaProperty{};
+    }
 
 
 
@@ -557,6 +521,8 @@ private:
 
     DescriptorRegistration* findAutowiringCandidate(DescriptorRegistration*, const QMetaProperty&);
 
+    bool registerBoundProperty(registration_handle_t target, const char* propName);
+
     // QObject interface
 public:
     bool event(QEvent *event) override;
@@ -572,6 +538,7 @@ private:
     mutable std::unordered_map<std::type_index,ProxyRegistrationImpl*> proxyRegistrationCache;
     mutable QMutex mutex;
     mutable QWaitCondition condition;
+    std::unordered_map<registration_handle_t,std::unordered_set<QString>> m_boundProperties;
     std::atomic<unsigned> nextIndex;
 };
 

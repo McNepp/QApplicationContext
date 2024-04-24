@@ -663,7 +663,42 @@ private slots:
         QCOMPARE(timer.objectName(), "newFoo");
     }
 
+    void testBindParameterlessSignalToObjectSetter() {
 
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer).as<QObject>();
+        auto regBase = context->registerService<BaseService>("base", make_config({{"foo", "baseFoo"}}));
+        void (QObject::*setter)(const QString&) = &QObject::setObjectName;//We need this temporary variable, as setObjectName has two overloads!
+        bind(regBase, &BaseService::fooChanged, regTimer, setter);
+        QVERIFY(context->publish());
+        QCOMPARE(timer.objectName(), "baseFoo");
+        RegistrationSlot<BaseService> baseSlot{regBase};
+        baseSlot->setFoo("newFoo");
+        QCOMPARE(timer.objectName(), "newFoo");
+    }
+
+
+    void testBindSignalWithParameterToObjectSetter() {
+
+        QTimer timer;
+        auto regBase1 = context->registerService<BaseService>("base1");
+        auto regBase2 = context->registerService<BaseService>("base2");
+        auto regBases = context->getRegistration<BaseService>();
+        bind(regBase1, &BaseService::timerChanged, regBases, &BaseService::setTimer);
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> baseSlot1{regBase1};
+        RegistrationSlot<BaseService> baseSlot2{regBase2};
+        baseSlot1->setTimer(&timer);
+        QCOMPARE(baseSlot2->timer(), &timer);
+    }
+
+    void testCannotBindToSignalWithoutProperty() {
+
+        auto regBase1 = context->registerService<BaseService>("base1");
+        QVERIFY(!bind(regBase1, &BaseService::signalWithoutProperty, regBase1, &BaseService::setTimer));
+    }
 
 
     void testAutowiredPropertyByName() {

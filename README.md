@@ -577,6 +577,30 @@ This can be achieved using the function mcnepp::qtdi::bind() like this:
 This way of binding properties has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), 
 aka those that represent more than one service. The source-property will be bound to every target-service automatically!
 
+### Type-safe bindings
+
+The above binding used property-names to denote the source- and target-properties.
+<br>In case the source-service offers a signal that corresponds with the property, you can use pointers to member-functions instead, which is more type-safe.
+<br>Here is an example:
+
+    QTimer timer1;
+    
+    auto reg1 = context -> registerObject(&timer1, "timer1"); // 1
+    
+    auto reg2 = context -> registerService<QTimer>("timer2"); // 2
+    
+    bind(reg1, &QTimer::objectNameChanged, reg2, &QTimer::setObjectName); // 3
+    
+    context -> publish(); 
+    
+    timer1.setObjectName("new Name"); // 4
+
+1. We register a `QTimer` as "timer1".
+2. We register a second `QTimer` as "timer2". 
+3. We bind the property `objectName` of the second timer to the first timer's propery.
+4. We change the first timer's objectName. This will also change the second timer's objectName!
+
+
 ## Accessing a service after registration
 
 So far, we have published the ApplicationContext and let it take care of wiring all the components together.  

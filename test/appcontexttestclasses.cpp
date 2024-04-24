@@ -29,7 +29,7 @@ void BaseService::setTimer(QTimer *newTimer)
     if (m_timer == newTimer)
         return;
     m_timer = newTimer;
-    emit timerChanged();
+    emit timerChanged(newTimer);
 }
 
 

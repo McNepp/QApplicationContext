@@ -47,5 +47,32 @@ bool QApplicationContext::isGlobalInstance() const
     return theInstance.load() == this;
 }
 
+namespace detail {
+
+QMetaProperty findPropertyBySignal(const QMetaMethod &signalFunction, const QMetaObject* metaObject)
+{
+    auto owner = signalFunction.enclosingMetaObject();
+    if(owner && metaObject && owner == metaObject) {
+        for(int index = 0; index < owner->propertyCount(); ++index) {
+            auto prop = owner->property(index);
+            if(prop.hasNotifySignal() && prop.notifySignal() == signalFunction) {
+                return prop;
+            }
+        }
+    }
+    if(metaObject) {
+        qCritical(loggingCategory()).noquote().nospace() << "Signal " << signalFunction.name() << " does not correspond to a property of " << metaObject->className();
+    } else {
+        qCritical(loggingCategory()).noquote().nospace() << "Signal " << signalFunction.name() << " cannot be validated to correspond to any property";
+    }
+    return QMetaProperty{};
+}
+
+const QMetaObject *ServiceRegistration::serviceMetaObject() const
+{
+    return descriptor().meta_object;
+}
+
+}
 
 }//mcnepp::qtdi
