@@ -101,10 +101,6 @@ private:
             return state() == STATE_PUBLISHED;
         }
 
-        bool isPrototype() const {
-            return scope() == ServiceScope::PROTOTYPE;
-        }
-
         bool isManaged() const {
             return scope() != ServiceScope::EXTERNAL;
         }

@@ -1083,8 +1083,8 @@ private slots:
         QCOMPARE(protoSlot.invocationCount(), 2);
         QCOMPARE(protoSlot[0]->foo(), "the foo");
         QCOMPARE(protoSlot[1]->foo(), "the foo");
-        QCOMPARE(protoSlot[0]->parent(), context.get());
-        QCOMPARE(protoSlot[1]->parent(), context.get());
+        QCOMPARE(protoSlot[0]->parent(), dependentSlot.last());
+        QCOMPARE(protoSlot[1]->parent(), dependentSlot2.last());
         QVERIFY(dependentSlot->m_dependency);
         QVERIFY(dependentSlot2->m_dependency);
         QCOMPARE_NE(dependentSlot->m_dependency, dependentSlot2->m_dependency);
@@ -1099,6 +1099,8 @@ private slots:
         QVERIFY(dependentSlot);
         QVERIFY(context->publish());
         QVERIFY(protoSlot);
+        QCOMPARE(dependentSlot->m_dependency, protoSlot.last());
+        QCOMPARE(protoSlot.last()->parent(), dependentSlot.last());
 
     }
 
@@ -1113,6 +1115,7 @@ private slots:
         QVERIFY(context->publish());
         QCOMPARE(protoSlot.invocationCount(), 2);
         QVERIFY(dependentSlot->m_dependency);
+        QCOMPARE(dynamic_cast<QObject*>(dependentSlot->m_dependency)->parent(), dependentSlot.last());
 
         delete dependentSlot->m_dependency;
         RegistrationSlot<BaseService> newProtoSlot{regProto};
@@ -1135,8 +1138,17 @@ private slots:
         RegistrationSlot<ServiceWithThreeArgs> threeSlot{threeReg};
         QVERIFY(context->publish());
         QVERIFY(threeSlot);
+        QCOMPARE(threeSlot->m_base2->parent(), threeSlot.last());
+        QCOMPARE(threeSlot->m_dep->parent(), threeSlot.last());
         QCOMPARE(baseSlot.invocationCount(), 2);
-        QVERIFY(base2Slot);
+        if(baseSlot[0] == threeSlot->m_base) {
+            QCOMPARE(baseSlot[0]->parent(), threeSlot.last());
+            QCOMPARE(baseSlot[1]->parent(), threeSlot->m_dep);
+        } else {
+            QCOMPARE(baseSlot[0]->parent(), threeSlot->m_dep);
+            QCOMPARE(baseSlot[1]->parent(), threeSlot.last());
+        }
+        QCOMPARE(base2Slot.invocationCount(), 1);
     }
 
 

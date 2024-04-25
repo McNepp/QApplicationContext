@@ -151,6 +151,12 @@ namespace {
 const QRegularExpression beanRefPattern{"^&([^.]+)(\\.([^.]+))?"};
 
 
+inline void setParentIfNotSet(QObject* obj, QObject* newParent) {
+    if(!obj->parent()) {
+        obj->setParent(newParent);
+    }
+}
+
 template<typename T> struct Collector : public detail::Subscription {
 
     Collector() {
@@ -536,10 +542,14 @@ void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
 
 void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *srv) {
     if(srv == theService) {
-        //Somebody has destroyed a Service that is managed by this ApplicationContext.
-        //All we can do is log an error and set theService to nullptr.
-        //Yet, it might still be in use somewhere as a dependency.
-        qCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
+        if(auto parentReg = dynamic_cast<service_registration_handle_t>(parent()); parentReg && parentReg -> scope() == ServiceScope::PROTOTYPE) {
+            qInfo(loggingCategory()).noquote().nospace() << "Instance of Prototype " << *this << " has been destroyed";
+        } else {
+            //Somebody has destroyed a Service that is managed by this ApplicationContext.
+            //All we can do is log an error and set theService to nullptr.
+            //Yet, it might still be in use somewhere as a dependency.
+            qCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
+        }
         theService = nullptr;
         m_state = STATE_INIT;
     }
@@ -577,7 +587,13 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
     switch(state()) {
         case STATE_INIT:
         if(!theService) {
-                theService = descriptor().create(resolveDependencies(dependencies, created));
+                descriptor_list createdForThis;
+                theService = descriptor().create(resolveDependencies(dependencies, createdForThis));
+                //If any instances of prototypes have been created while resolving dependencies, make them children of the newly created service:
+                for(auto child : createdForThis) {
+                    setParentIfNotSet(child->getObject(), theService);
+                }
+                created.insert(created.end(), createdForThis.begin(), createdForThis.end());
             if(theService) {
                 onDestroyed = connect(theService, &QObject::destroyed, this, &ServiceRegistration::serviceDestroyed);
                 m_state = STATE_CREATED;
@@ -599,15 +615,7 @@ StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(unsigne
 
 int StandardApplicationContext::PrototypeRegistration::unpublish()
 {
-    int success = 0;
-    for(auto child : children()) {
-        if(auto reg = dynamic_cast<DescriptorRegistration*>(child)) {
-            if(reg->unpublish()) {
-                ++success;
-            }
-        }
-    }
-    return success;
+    return 0;
 }
 
 QStringList StandardApplicationContext::PrototypeRegistration::getBeanRefs() const
@@ -640,7 +648,7 @@ QObject* StandardApplicationContext::PrototypeRegistration::createService(const 
     case STATE_PUBLISHED:
         {
             std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor(), config(), applicationContext(), this}};
-            QObject* instance = instanceReg->createService(resolveDependencies(m_dependencies, created), created);
+            QObject* instance = instanceReg->createService(m_dependencies, created);
             if(!instance) {
                 qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
                 return nullptr;
@@ -1054,7 +1062,7 @@ QVariantList StandardApplicationContext::resolveDependencies(const QVariantList&
 
 QVariant StandardApplicationContext::resolveDependency(const QVariant &arg, descriptor_list &created)
 {
-    if(auto proto = arg.value<DescriptorRegistration*>(); proto && proto->isPrototype()) {
+    if(auto proto = arg.value<DescriptorRegistration*>(); proto && proto->scope() == ServiceScope::PROTOTYPE) {
         auto instance = proto->createService(QVariantList{}, created);
         if(!instance) {
             return QVariant{};
@@ -1634,9 +1642,10 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
     auto& config = reg->config();
     if(metaObject) {
         std::unordered_set<QString> usedProperties;
+        descriptor_list createdForThis;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
             QVariant resolvedValue = value;
-            auto result = resolveBeanRef(resolvedValue, toBePublished, allowPartial);
+            auto result = resolveBeanRef(resolvedValue, createdForThis, allowPartial);
             if(result.first != Status::ok) {
                 return result.first;
             }
@@ -1665,6 +1674,11 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 }
             }
         }
+        //If any instances of prototypes have been created while configuring the properties, make them children of the target:
+        for(auto child : createdForThis) {
+            setParentIfNotSet(child->getObject(), target);
+        }
+        toBePublished.insert(toBePublished.end(), createdForThis.begin(), createdForThis.end());
         if(config.autowire) {
             for(int p = 0; p < metaObject->propertyCount(); ++p) {
                 auto prop = metaObject->property(p);
@@ -1710,11 +1724,9 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
         reg->descriptor().init_method(target, this);
         qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
     }
-    if(!target->parent()) {
-        //If the service has no parent, make it a child of this ApplicationContext:
-        //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
-        target->setParent(this);
-    }
+    //If the service has no parent, make it a child of this ApplicationContext:
+    //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
+    setParentIfNotSet(target, this);
     return Status::ok;
 }
 

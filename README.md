@@ -233,6 +233,11 @@ However, there may be some services that cannot be shared between dependent serv
 <br>Such a registration will not necessarily instantiate the service on mcnepp::qtdi::QApplicationContext::publish(bool).
 Only if there are other services depending on it will a new instance be created and injected into the dependent service.
 
+Every instance of a service-protoype that gets injected into a dependent service will be made a QObject-child of the dependent service.
+In other words, the dependent service becomes the *owner* of the prototype-instance.
+
+The same is true for *references to other members*: if a protoype is referenced via the ampersand-syntax, the instance of that prototype will be made a child of the service that references it.
+
 
 
 ## Managed Services vs. Un-managed Objects
@@ -254,8 +259,8 @@ There are some crucial differences between mcnepp::qtdi::QApplicationContext::re
 |Handling of Properties|The key/value-pairs supplied at registration will be set as Q_PROPERTYs by QApplicationContext||All properties must be set before registration|
 |Processing by mcnepp::qtdi::QApplicationContextPostProcessor|Every service will be processed by the registered QApplicationContextPostProcessors||Object is not processed|
 |Invocation of *init-method*|If present, will be invoked by QApplicationContext||If present, must have been invoked prior to registration|
-|Parent/Child-relation|If a Service has no parent after its *init-method* has run, the ApplicationContext will become the service's parent.||The parent of the Object will not be touched.|
-|Destruction of the object|Upon destruction of the QApplicationContext||At the discrection of the code that created it|
+|Parent/Child-relation|If a Service has no parent after its *init-method* has run, the ApplicationContext will become the service's parent.|The instance of the prototype will be made a child of the service that required it.|The parent of the Object will not be touched.|
+|Destruction of the object|Upon destruction of the QApplicationContext|Upon destruction of the Service that owns the prototype-instance.|At the discrection of the code that created it|
 
 
 
