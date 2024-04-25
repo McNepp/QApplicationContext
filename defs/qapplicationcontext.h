@@ -1537,10 +1537,22 @@ struct service_config final {
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
 /// \param group the `QSettings::group()` to be used.
 /// \param autowire if `true`, the QApplicationContext will attempt to initialize all Q_PROPERTYs of `QObject*`-type with the corresponding services.
+/// Those properties that have explicitly been supplied will not be auto-wired.
 /// \return the service_config.
 ///
-[[nodiscard]] inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties = {}, const QString& group = "", bool autowire = false) {
+[[nodiscard]] inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties, const QString& group = "", bool autowire = false) {
     return service_config{properties, group, autowire};
+}
+
+///
+/// \brief Makes a service_config that will autowire a service.
+/// <br>Equivalent to `make_config({}, group, true)`.
+/// \param group the `QSettings::group()` to be used.
+/// \return the service_config.
+/// \sa mcnepp::qtdi::make_config(std::initializer_list<std::pair<QString,QVariant>>, const QString&, bool)
+///
+[[nodiscard]] inline service_config make_autowire_config(const QString& group = "") {
+    return service_config{{}, group, true};
 }
 
 

@@ -705,7 +705,7 @@ private slots:
         QTimer timer;
         timer.setObjectName("timer");
         context->registerObject(&timer);
-        auto reg = context->registerService<BaseService>("base", make_config({}, "", true));
+        auto reg = context->registerService<BaseService>("base", make_autowire_config());
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{reg};
@@ -716,7 +716,7 @@ private slots:
         QTimer timer;
         timer.setObjectName("IAmTheRealTimer");
         context->registerObject(&timer);
-        auto reg = context->registerService<BaseService>("base", make_config({}, "", true));
+        auto reg = context->registerService<BaseService>("base", make_autowire_config());
 
         context->registerService<BaseService2>("timer");
 
@@ -731,7 +731,7 @@ private slots:
         QTimer timer2;
         context->registerObject(&timer2);
 
-        auto reg = context->registerService<BaseService>("base", make_config({}, "", true));
+        auto reg = context->registerService<BaseService>("base", make_autowire_config());
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{reg};
@@ -740,7 +740,7 @@ private slots:
     }
 
     void testDoNotAutowireSelf() {
-        auto reg = context->registerService<BaseService2>("base", make_config({}, "", true));
+        auto reg = context->registerService<BaseService2>("base", make_autowire_config());
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService2> baseSlot{reg};
@@ -749,7 +749,7 @@ private slots:
     }
 
     void testDoNotAutowireQObjectSelf() {
-        auto reg = context->registerService<QObjectService>("base", make_config({}, "", true));
+        auto reg = context->registerService<QObjectService>("base", make_autowire_config());
 
         QVERIFY(context->publish());
         RegistrationSlot<QObjectService> baseSlot{reg};
@@ -784,7 +784,7 @@ private slots:
         QObject timer;
         timer.setObjectName("timer");
         context->registerObject(&timer);
-        auto reg = context->registerService<BaseService>("base", make_config({}, "", true));
+        auto reg = context->registerService<BaseService>("base", make_autowire_config());
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{reg};
@@ -1700,7 +1700,7 @@ private slots:
 
 
 
-        auto regCyclic = context->registerService<CyclicDependency>( "cyclic", make_config({}, "", true));
+        auto regCyclic = context->registerService<CyclicDependency>( "cyclic", make_autowire_config());
         QVERIFY(regCyclic);
 
         QVERIFY(context->publish());
