@@ -1534,6 +1534,33 @@ struct service_config final {
 
 ///
 /// \brief Makes a service_config.
+/// <br>The service must have a Q_PROPERTY for every key contained in `properties`.<br>
+/// Example:
+///
+///     `make_config({{"interval", 42}});`
+/// will set the Q_PROPERTY `interval` to the value 42.
+/// ### Private Properties
+/// A key that starts with a dot is considered to denote a *private property*, and no attempt will be made to set a corresponding Q_PROPERTY
+/// on the Service. You may evaluate such private properties via a `QApplicationContextPostProcessor`.<br>
+/// Example:
+///
+///     `make_config({{".debug", true}});`
+///
+/// ### Placeholders
+/// Values may contain *placeholders*, indicated by the syntax `${placeholder}`. Such a placeholder will be looked
+/// up via `QApplicationContext::getConfigurationValue(const QString&)`.<br>
+/// Example:
+///
+///     `make_config({{"interval", "${timerInterval}"}});`
+/// will set the Q_PROPERTY `interval` to the value configured with the name `timerInterval`.
+/// <br>Should you want to specify a property-value containg the character-sequence "${", you must escape this with the backslash.
+/// ### Service-references
+/// If a value starts with an ampersand, the property will be resolved with a registered service of that name.
+/// Example:
+///
+///     `make_config({{"dataProvider", "&dataProviderService"}});`
+/// will set the Q_PROPERTY `dataProvider` to the service that was registered under the name `dataProviderService`.
+/// <br>Should you want to specify a property-value starting with an ampersand, you must escape this with the backslash.
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
 /// \param group the `QSettings::group()` to be used.
 /// \param autowire if `true`, the QApplicationContext will attempt to initialize all Q_PROPERTYs of `QObject*`-type with the corresponding services.

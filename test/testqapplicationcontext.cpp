@@ -503,6 +503,15 @@ private slots:
         QCOMPARE(baseSlot->m_timer, &timer);
     }
 
+
+    void testEscapedBeanRef() {
+
+        auto reg = context->registerService<BaseService>("base", make_config({{"objectName", "\\&another"}}));
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> slot{reg};
+        QCOMPARE(slot->objectName(), "&another");
+    }
+
     void testWithEscapedBeanRefProperty() {
         auto reg = context->registerService<QTimer>("", make_config({{"objectName", "\\&aTimer"}}));
 

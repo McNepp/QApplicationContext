@@ -181,7 +181,20 @@ template<typename T> struct Collector : public detail::Subscription {
 };
 
 
-
+QStringList determineBeanRefs(const QVariantMap& properties) {
+    QStringList result;
+    for(auto entry : properties.asKeyValueRange()) {
+        auto key = entry.second.toString();
+        if(key.length() > 1 && key.startsWith('&')) {
+            int dot = key.indexOf('.');
+            if(dot < 0) {
+                dot = key.size();
+            }
+            result.push_back(key.mid(1, dot-1));
+        }
+    }
+    return result;
+}
 
 
 
@@ -564,22 +577,11 @@ void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
 
 QStringList StandardApplicationContext::ServiceRegistration::getBeanRefs() const
 {
-    if(beanRefsCache.has_value()) {
-        return beanRefsCache.value();
+    if(!beanRefsCache.has_value()) {
+        beanRefsCache = determineBeanRefs(config().properties);
     }
-    QStringList result;
-    for(auto entry : config().properties.asKeyValueRange()) {
-        auto key = entry.second.toString();
-        if(key.startsWith('&')) {
-            int dot = key.indexOf('.');
-            if(dot < 0) {
-                dot = key.size();
-            }
-            result.push_back(key.mid(1, dot-1));
-        }
-    }
-    beanRefsCache = result;
-    return result;
+    return beanRefsCache.value();
+
 }
 
 QObject* StandardApplicationContext::ServiceRegistration::createService(const QVariantList &dependencies, descriptor_list &created)
@@ -620,22 +622,10 @@ int StandardApplicationContext::PrototypeRegistration::unpublish()
 
 QStringList StandardApplicationContext::PrototypeRegistration::getBeanRefs() const
 {
-    if(beanRefsCache.has_value()) {
-        return beanRefsCache.value();
+    if(!beanRefsCache.has_value()) {
+        beanRefsCache = determineBeanRefs(config().properties);
     }
-    QStringList result;
-    for(auto entry : config().properties.asKeyValueRange()) {
-        auto key = entry.second.toString();
-        if(key.startsWith('&')) {
-            int dot = key.indexOf('.');
-            if(dot < 0) {
-                dot = key.size();
-            }
-            result.push_back(key.mid(1, dot-1));
-        }
-    }
-    beanRefsCache = result;
-    return result;
+    return beanRefsCache.value();
 }
 
 QObject* StandardApplicationContext::PrototypeRegistration::createService(const QVariantList& dependencies, descriptor_list& created) {
@@ -1233,24 +1223,7 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
         name = makeName(*descriptor.service_types.begin());
     }
 
-    std::unordered_set<dependency_info> dependencies{};
 
-    findTransitiveDependenciesOf(descriptor, dependencies);
-
-    if(!checkTransitiveDependentsOn(descriptor, name, dependencies)) {
-        qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register '" << name << "'. Cyclic dependency in dependency-chain of " << descriptor;
-        return nullptr;
-
-    }
-
-    if(descriptor.meta_object) {
-        for(auto& key : config.properties.keys()) {
-            if(!key.startsWith('.') && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
-                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
-                return nullptr;
-            }
-        }
-    }
 
     DescriptorRegistration* registration;
     switch(scope) {
@@ -1312,6 +1285,24 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
             }
         }
 
+        std::unordered_set<dependency_info> dependencies{};
+
+        findTransitiveDependenciesOf(descriptor, dependencies);
+
+        if(!checkTransitiveDependentsOn(descriptor, name, dependencies)) {
+            qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register '" << name << "'. Cyclic dependency in dependency-chain of " << descriptor;
+            return nullptr;
+
+        }
+
+        if(descriptor.meta_object) {
+            for(auto& key : config.properties.keys()) {
+                if(!key.startsWith('.') && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
+                    qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
+                    return nullptr;
+                }
+            }
+        }
         reg = registerDescriptor(name, descriptor, config, nullptr, prototype? ServiceScope::PROTOTYPE : ServiceScope::SINGLETON);
     }
     // Emit signal after mutex has been released:
