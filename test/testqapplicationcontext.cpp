@@ -567,6 +567,45 @@ private slots:
         QCOMPARE(baseSlot->foo(), "another timer");
     }
 
+    void testBindServiceRegistrationToPropertyOfServiceTemplate() {
+
+        QTimer timer;
+        timer.setObjectName("timer");
+        auto regTimer = context->registerObject(&timer);
+        auto regBase = context->registerServiceTemplate<BaseService>("base");
+
+        auto regDerived = context->registerService(service<DerivedService>(), regBase);
+        RegistrationSlot<DerivedService> derivedSlot{regDerived};
+
+
+        auto subscription = bind(regTimer, "objectName", regBase, "foo");
+        QVERIFY(subscription);
+
+
+        QVERIFY(context->publish());
+
+        QCOMPARE(derivedSlot->foo(), "timer");
+        timer.setObjectName("another timer");
+        QCOMPARE(derivedSlot->foo(), "another timer");
+        subscription.cancel();
+        timer.setObjectName("back to timer");
+        QCOMPARE(derivedSlot->foo(), "another timer");
+    }
+
+    void testConfigurePrivatePropertyInServiceTemplate() {
+        auto serviceTemplate = context->registerServiceTemplate<BaseService>("baseTemplate", make_config({{"foo", "${id}-foo"}}));
+
+        auto base1 = context->registerService(service<BaseService>(), serviceTemplate, "base1", make_config({{".id", 4711}}));
+        auto base2 = context->registerService(service<BaseService>(), serviceTemplate, "base2", make_config({{".id", 3141}}));
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> slot1{base1};
+        RegistrationSlot<BaseService> slot2{base2};
+
+        QCOMPARE(slot1->foo(), "4711-foo");
+        QCOMPARE(slot2->foo(), "3141-foo");
+    }
+
     void testBindServiceRegistrationToPropertyOfSelf() {
 
 
@@ -709,6 +748,129 @@ private slots:
 
         auto regBase1 = context->registerService<BaseService>("base1");
         QVERIFY(!bind(regBase1, &BaseService::signalWithoutProperty, regBase1, &BaseService::setTimer));
+    }
+
+    void testServiceTemplate() {
+        QTimer timer;
+        timer.setObjectName("aTimer");
+        context->registerObject(&timer);
+        auto abstractReg = context->registerServiceTemplate<BaseService>("abstractBase", make_config({{"timer", "&aTimer"}}));
+
+        auto reg = context->registerService(service<DerivedService>(), abstractReg, "base");
+
+        QVERIFY(context->publish());
+        RegistrationSlot<DerivedService> derivedSlot{reg};
+        RegistrationSlot<BaseService> abstractBaseSlot{abstractReg};
+        QCOMPARE(derivedSlot.last(), abstractBaseSlot.last());
+        QCOMPARE(derivedSlot->m_timer, &timer);
+        QCOMPARE(derivedSlot->context(), context.get());
+    }
+
+    void testInvalidServiceTemplate() {
+        ServiceRegistration<BaseService,ServiceScope::TEMPLATE> abstractReg;
+
+        auto reg = context->registerService(service<DerivedService>(), abstractReg, "base");
+        QVERIFY(!reg);
+    }
+
+
+    void testPrototypeWithTemplate() {
+        QTimer timer;
+        timer.setObjectName("aTimer");
+        context->registerObject(&timer);
+        auto abstractReg = context->registerServiceTemplate<BaseService>("abstractBase", make_config({{"timer", "&aTimer"}}));
+
+        auto protoReg = context->registerService(prototype<DerivedService>(), abstractReg, "base");
+
+        auto depReg = context->registerService(service<DependentService>(protoReg));
+
+        QVERIFY(context->publish());
+
+        RegistrationSlot<DependentService> depSlot{depReg};
+        QVERIFY(depSlot);
+        QVERIFY(depSlot->m_dependency);
+        QCOMPARE(static_cast<BaseService*>(depSlot->m_dependency)->timer(), &timer);
+    }
+
+    void testServiceTemplateWithNoDefaultConstructor() {
+        BaseService base;
+        auto baseReg = context->registerObject(&base);
+        auto abstractReg = context->registerServiceTemplate<DependentService>("abstractDep");
+
+        auto reg = context->registerService(service<DependentService>(baseReg), abstractReg, "dep");
+
+        QVERIFY(context->publish());
+        RegistrationSlot<DependentService> depSlot{reg};
+        RegistrationSlot<DependentService> abstractBaseSlot{abstractReg};
+        QCOMPARE(depSlot->m_dependency, &base);
+    }
+
+
+    void testAdvertiseViaServiceTemplate() {
+        QTimer timer;
+        timer.setObjectName("aTimer");
+        context->registerObject(&timer);
+        auto abstractReg = context->registerService(serviceTemplate<BaseService>().advertiseAs<Interface1,TimerAware>(), "abstractBase", make_config({{"timer", "&aTimer"}}));
+
+        auto reg = context->registerService(service<BaseService>(), abstractReg, "base");
+
+        auto timerAwareReg = context->getRegistration<TimerAware>();
+
+        QCOMPARE(timerAwareReg.registeredServices().size(), 2);
+        QVERIFY(timerAwareReg.registeredServices().contains(abstractReg));
+        QVERIFY(timerAwareReg.registeredServices().contains(reg));
+
+
+        auto interfaceReg = context->getRegistration<Interface1>();
+
+        QCOMPARE(interfaceReg.registeredServices().size(), 2);
+        QVERIFY(interfaceReg.registeredServices().contains(abstractReg));
+        QVERIFY(interfaceReg.registeredServices().contains(reg));
+        auto depReg = context->registerService(service<DependentService>(inject<Interface1>()));
+        QVERIFY(context->publish());
+        RegistrationSlot<DependentService> depSlot{depReg};
+        RegistrationSlot<BaseService> baseSlot{reg};
+        QVERIFY(depSlot);
+        QCOMPARE(depSlot->m_dependency, baseSlot.last());
+        QCOMPARE(baseSlot->timer(), &timer);
+    }
+
+
+    void testUseInitMethodFromServiceTemplate() {
+        auto abstractReg = context->registerService(serviceTemplate<Interface1,BaseService2>(), "interface1");
+
+        auto reg = context->registerService(service<BaseService2>(), abstractReg);
+
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService2> derivedSlot{reg};
+        QCOMPARE(derivedSlot->initCalled, 1);
+    }
+
+    void testUseSecondLevelServiceTemplate() {
+        BaseService2 base2;
+        auto abstractInterfacReg = context->registerService(serviceTemplate<Interface1,BaseService2>(), "interface1");
+
+        auto abstractBase = context->registerService(serviceTemplate<BaseService2>(), abstractInterfacReg);
+
+        auto reg = context->registerService(service<BaseService2>(), abstractBase, "", make_config({{"reference", "&base2"}}));
+
+        context->registerObject(&base2, "base2");
+
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService2> derivedSlot{reg};
+        QCOMPARE(derivedSlot->initCalled, 1);
+        QCOMPARE(derivedSlot->reference(), &base2);
+    }
+
+
+
+    void testMustNotFindServiceTemplateAsBeanRef() {
+        QTimer timer;
+        timer.setObjectName("aTimer");
+        context->registerServiceTemplate<QTimer>("timer");
+        auto abstractReg = context->registerService<BaseService>("base", make_config({{"timer", "&timer"}}));
+
+        QVERIFY(!context->publish());
     }
 
 
@@ -1395,7 +1557,7 @@ private slots:
 
 
     void testRegisterInvalidDependency() {
-        ServiceRegistration<Interface1> invalidReg;
+        ServiceRegistration<Interface1,ServiceScope::SINGLETON> invalidReg;
         QVERIFY(!context->registerService(service<DependentService>(invalidReg)));
     }
 

@@ -103,14 +103,16 @@ enum class Kind {
  * <tr><td>PROTOTYPE</td><td>QApplicationContext::registerService(prototype()).</td><td>Instances of this service will only be created if another service needs it as a dependency.<br>
  * A new instance will be injected into every dependent service.</td></tr>
  * <tr><td>EXTERNAL</td><td>QApplicationContext::registerObject().</td><td>The service has been created externally.</td></tr>
- *
+ * <tr><td>TEMPLATE</td><td>QApplicationContext::registerService(serviceTemplate()).</td><td>No Instances will ever by created.<br>
+ * The ServiceRegistration can be supplied as an additional parameter when registering other services.</td></tr>
  * </table>
  */
 enum class ServiceScope {
     UNKNOWN,
     SINGLETON,
     PROTOTYPE,
-    EXTERNAL
+    EXTERNAL,
+    TEMPLATE
 };
 
 template<typename S> class Registration;
@@ -128,17 +130,28 @@ namespace detail {
 
 template<ServiceScope scope> struct service_scope_traits {
     static constexpr bool is_binding_source = false;
+    static constexpr bool is_constructable = false;
+    static constexpr bool is_dependency = false;
 };
 
 template<> struct service_scope_traits<ServiceScope::SINGLETON> {
     static constexpr bool is_binding_source = true;
+    static constexpr bool is_constructable = true;
+    static constexpr bool is_dependency = true;
 };
 
 
 template<> struct service_scope_traits<ServiceScope::EXTERNAL> {
     static constexpr bool is_binding_source = true;
+    static constexpr bool is_constructable = false;
+    static constexpr bool is_dependency = true;
 };
 
+template<> struct service_scope_traits<ServiceScope::PROTOTYPE> {
+    static constexpr bool is_binding_source = false;
+    static constexpr bool is_constructable = true;
+    static constexpr bool is_dependency = true;
+};
 
 
 
@@ -1565,10 +1578,21 @@ struct service_config final {
 /// will set the Q_PROPERTY `interval` to the value 42.
 /// ### Private Properties
 /// A key that starts with a dot is considered to denote a *private property*, and no attempt will be made to set a corresponding Q_PROPERTY
-/// on the Service. You may evaluate such private properties via a `QApplicationContextPostProcessor`.<br>
-/// Example:
+/// on the Service.<br>
+/// There are two ways of putting such private properties to use:<br>
+/// Either, you may evaluate them via a `QApplicationContextPostProcessor`.<br>
+/// Or, you can use them in conjunction with a *service-template*.
+/// Suppose, for example, you have a class `RestService` with a Q_PROPERTY `url`.
+/// You want to construct this URL by using the same pattern for every service of type `RestService`.
+/// However, one part of the URL will be unique for each Service.
+/// This is how you would do this:
 ///
-///     `make_config({{".debug", true}});`
+///     auto restServiceTemplate = context -> registerService<RestService>(serviceTemplate<RestService>(), "restTemplate", make_config({{"url", "https://myserver/rest/${path}"}}));
+///
+/// Now, whenever you register a concrete RestService, you must supply the `templateReg` as an additional argument.
+/// Also, you must specify the value for `${path}` as a *private property*:
+///
+///     context -> registerService(service<RestService>(), restServiceTemplate, "temperatureService", make_config({{".path", "temperature"}}));
 ///
 /// ### Placeholders
 /// Values may contain *placeholders*, indicated by the syntax `${placeholder}`. Such a placeholder will be looked
@@ -1731,6 +1755,8 @@ inline bool operator==(const dependency_info& info1, const dependency_info& info
     }
 }
 
+QDebug operator << (QDebug out, const dependency_info& info);
+
 
 struct service_descriptor {
 
@@ -1753,7 +1779,7 @@ struct service_descriptor {
 };
 
 
-
+QDebug operator << (QDebug out, const service_descriptor& descriptor);
 
 
 
@@ -1829,6 +1855,7 @@ struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
     using type = S;
 
 
+    static_assert(service_scope_traits<scope>::is_dependency, "ServiceRegistration with this ServiceScope cannot be a dependency");
 
     static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S,scope>& dep) {
         if(dep) {
@@ -1997,7 +2024,7 @@ template<bool found,typename First,typename...Tail> q_init_t getInitializer() {
 
 
 
-template<typename Srv,typename Impl,typename F,typename...Dep> service_descriptor make_descriptor(F factory, Dep...deps) {
+template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep> service_descriptor make_descriptor(F factory, Dep...deps) {
     detail::service_descriptor descriptor{{typeid(Srv)}, typeid(Impl), &Impl::staticMetaObject};
     if constexpr(has_initializer<Impl>) {
          descriptor.init_method = adaptInitializer<Impl>(typename service_traits<Impl>::initializer_type{});
@@ -2005,7 +2032,9 @@ template<typename Srv,typename Impl,typename F,typename...Dep> service_descripto
         descriptor.init_method = adaptInitializer<Srv>(typename service_traits<Srv>::initializer_type{});
     }
     (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
-    descriptor.constructor = service_creator<Impl>(factory, detail::dependency_helper<Dep>::converter(deps)...);
+    if constexpr(detail::service_scope_traits<scope>::is_constructable) {
+        descriptor.constructor = service_creator<Impl>(factory, detail::dependency_helper<Dep>::converter(deps)...);
+    }
     return descriptor;
 }
 
@@ -2131,7 +2160,7 @@ template<typename Impl,ServiceScope scope> struct Service<Impl,Impl,scope> {
 /// a type-declaration `service_type`, Impl will be deduced as that type.
 /// \return a Service that will use the provided factory.
 template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nodiscard]]Service<Impl,Impl,ServiceScope::SINGLETON> serviceFactory(F factory, Dep...dependencies) {
-    return Service<Impl,Impl,ServiceScope::SINGLETON>{detail::make_descriptor<Impl,Impl>(factory, dependencies...)};
+    return Service<Impl,Impl,ServiceScope::SINGLETON>{detail::make_descriptor<Impl,Impl,ServiceScope::SINGLETON>(factory, dependencies...)};
 }
 
 
@@ -2143,9 +2172,8 @@ template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nod
 /// \tparam Impl the implementation-type of the service.
 /// \return a Service-declaration
 template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Impl,ServiceScope::SINGLETON> service(Dep...dependencies) {
-    return Service<S,Impl,ServiceScope::SINGLETON>{detail::make_descriptor<S,Impl>(typename service_traits<Impl>::factory_type{}, dependencies...)};
+    return Service<S,Impl,ServiceScope::SINGLETON>{detail::make_descriptor<S,Impl,ServiceScope::SINGLETON>(typename service_traits<Impl>::factory_type{}, dependencies...)};
 }
-
 
 ///
 /// \brief Creates a Service-prototype with the default service-factory.
@@ -2154,7 +2182,17 @@ template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Imp
 /// \tparam Impl the implementation-type of the service.
 /// \return a Prototype-declaration
 template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Impl,ServiceScope::PROTOTYPE> prototype(Dep...dependencies) {
-    return Service<S,Impl,ServiceScope::PROTOTYPE>{detail::make_descriptor<S,Impl>(typename service_traits<Impl>::factory_type{}, dependencies...)};
+    return Service<S,Impl,ServiceScope::PROTOTYPE>{detail::make_descriptor<S,Impl,ServiceScope::PROTOTYPE>(typename service_traits<Impl>::factory_type{}, dependencies...)};
+}
+
+///
+/// \brief Creates a Service-template with no dependencies and no constructor.
+/// <br>The returned Service cannot be instantiated. It just serves as an additional parameter
+/// for registering other services.
+/// \tparam S the implementation-type of the service.
+/// \return a Service that cannot be instantiated.
+template<typename S,typename Impl=S>  [[nodiscard]] Service<S,Impl,ServiceScope::TEMPLATE> serviceTemplate() {
+    return Service<S,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<S,Impl,ServiceScope::TEMPLATE>(nullptr)};
 }
 
 
@@ -2234,6 +2272,30 @@ public:
     }
 
 
+    ///
+    /// \brief Registers a service with this ApplicationContext.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
+    /// \param serviceDeclaration comprises the services's primary advertised interface, its implementation-type and its dependencies to be injected
+    /// via its constructor.
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param config the Configuration for the service.
+    /// \param templateRegistration the registration of the service-template that this service shall inherit from. Must be valid!
+    /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
+    /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
+    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
+    ///
+    template<typename S,typename Impl,typename B,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,scope> {
+        static_assert(std::is_base_of_v<B,Impl>, "Service-type does not extend type of Service-template.");
+        if(!templateRegistration) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << serviceDeclaration.descriptor << " with name '" << objectName << "'. Invalid service-template";
+            return ServiceRegistration<S,scope>{};
+        }
+        return ServiceRegistration<S,scope>::wrap(registerService(objectName, serviceDeclaration.descriptor, config, scope, templateRegistration.unwrap()));
+    }
+
+
 
 
 
@@ -2271,6 +2333,22 @@ public:
 
 
 
+
+
+    ///
+    /// \brief Registers a service-template with no dependencies with this ApplicationContext.
+    /// This is a convenience-function equivalent to `registerService(serviceTemplate<S>(), objectName, config)`.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param config the Configuration for the service.
+    /// \tparam S the service-type.
+    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
+    ///
+    template<typename S> auto registerServiceTemplate(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
+        return registerService(serviceTemplate<S>(), objectName, config);
+    }
 
     ///
     /// \brief Registers an object with this ApplicationContext.
@@ -2439,10 +2517,10 @@ protected:
     /// \param name the name of the service.
     /// \param descriptor the descriptor of the service.
     /// \param config the configuration of the service.
-    /// \param obj in case scope == ServiceScope::EXTERNAL, this is the external object to register.
+    /// \param baseObject in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template.
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
-    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* obj) = 0;
+    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObject) = 0;
 
 
     ///
@@ -2492,14 +2570,14 @@ protected:
     /// \param name
     /// \param descriptor
     /// \param config
-    /// \param obj in case scope == ServiceScope::EXTERNAL, this is the external object to register.
+    /// \param baseObj
     /// \return the result of registerService(const QString&, service_descriptor*,const service_config&,ServiceScope,QObject*).
     ///
-    static service_registration_handle_t delegateRegisterService(QApplicationContext* appContext, const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* obj) {
+    static service_registration_handle_t delegateRegisterService(QApplicationContext* appContext, const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj) {
         if(!appContext) {
             return nullptr;
         }
-        return appContext->registerService(name, descriptor, config, scope, obj);
+        return appContext->registerService(name, descriptor, config, scope, baseObj);
     }
 
 
