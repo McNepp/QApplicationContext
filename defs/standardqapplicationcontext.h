@@ -47,9 +47,7 @@ public:
 
 protected:
 
-    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, bool prototype) override;
-
-    virtual service_registration_handle_t registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
+    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj) override;
 
     virtual service_registration_handle_t getRegistrationHandle(const QString& name) const override;
 
@@ -102,7 +100,13 @@ private:
         }
 
         bool isManaged() const {
-            return scope() != ServiceScope::EXTERNAL;
+            switch(scope()) {
+            case ServiceScope::PROTOTYPE:
+            case ServiceScope::SINGLETON:
+                return true;
+            default:
+                return false;
+            }
         }
 
         virtual const service_descriptor& descriptor() const final override {
@@ -126,7 +130,7 @@ private:
         }
 
         bool matches(const dependency_info& info) const {
-            return matches(info.type) && (!info.has_required_name() || info.expression == registeredName());
+            return info.isValid() && matches(info.type) && (!info.has_required_name() || info.expression == registeredName());
         }
 
 
@@ -270,7 +274,6 @@ private:
         int m_state;
         mutable std::optional<QStringList> beanRefsCache;
     };
-
 
 
     class PrototypeRegistration : public DescriptorRegistration {
@@ -440,6 +443,9 @@ private:
         }
 
 
+        virtual const std::type_info& serviceType() const override {
+            return m_type;
+        }
 
         bool add(service_registration_handle_t reg) {
             if(reg->matches(m_type)) {
@@ -490,7 +496,7 @@ private:
 
     bool checkTransitiveDependentsOn(const service_descriptor& descriptor, const QString& name, const std::unordered_set<dependency_info>& dependencies) const;
 
-    void findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& dependents) const;
+    bool findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& dependents) const;
 
     void unpublish();
 
@@ -505,7 +511,7 @@ private:
 
     static QVariant resolveDependency(const QVariant& arg, descriptor_list& created);
 
-    DescriptorRegistration* registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, ServiceScope scope);
+    Status configure(DescriptorRegistration*, QObject*, descriptor_list& toBePublished, bool allowPartial);
 
     Status configure(DescriptorRegistration*, descriptor_list& toBePublished, bool allowPartial);
 
@@ -515,7 +521,7 @@ private:
 
     std::pair<QVariant,Status> resolvePlaceholders(const QString& key, const QString& group);
 
-    DescriptorRegistration* findAutowiringCandidate(DescriptorRegistration*, const QMetaProperty&);
+    DescriptorRegistration* findAutowiringCandidate(service_registration_handle_t, const QMetaProperty&);
 
     bool registerBoundProperty(registration_handle_t target, const char* propName);
 

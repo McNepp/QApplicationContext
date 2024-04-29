@@ -230,19 +230,21 @@ private slots:
         QVERIFY(reg.matches<BaseService>());
         QVERIFY(reg.as<BaseService>());
         QVERIFY(!reg.as<BaseService2>());
-        auto asPrototype = reg.as<BaseService,ServiceScope::PROTOTYPE>();
+        auto asUnknown = reg.as<BaseService,ServiceScope::UNKNOWN>();
+        QVERIFY(asUnknown);
+        auto asPrototype = asUnknown.as<BaseService,ServiceScope::PROTOTYPE>();
         QVERIFY(!asPrototype);
         auto registrations = context->getRegistrations();
         QCOMPARE(registrations.size(), 3); //One is our BaseService, one is the QCoreApplication and one is the QApplicationContext.
         int foundBits = 0;
-        for(auto& reg : registrations) {
-            if(reg.as<QCoreApplication>()) {
+        for(auto& r : registrations) {
+            if(r.as<QCoreApplication>()) {
                 foundBits |= 1;
             }
-            if(reg.as<QApplicationContext>()) {
+            if(r.as<QApplicationContext>()) {
                 foundBits |= 2;
             }
-            if(reg.as<BaseService>()) {
+            if(r.as<BaseService>()) {
                 foundBits |= 4;
             }
         }
@@ -1074,8 +1076,6 @@ private slots:
         this->config->setValue("foo", "the foo");
         context->registerObject(config.get());
         auto regProto = context->registerPrototype<BaseService>("base", make_config({{"foo", "${foo}"}}));
-        auto asSingleton = regProto.as<BaseService,ServiceScope::SINGLETON>();
-        QVERIFY(!asSingleton);
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> protoSlot{regProto};
@@ -1083,7 +1083,7 @@ private slots:
         auto depReg1 = context->registerService(service<DependentService>(regProto), "dependent1");
         auto depReg2 = context->registerService(service<DependentService>(regProto), "dependent2");
 
-        auto protoDepReg = context->registerPrototype(service<DependentService>(regProto), "dependent3");
+        auto protoDepReg = context->registerService(prototype<DependentService>(regProto), "dependent3");
         RegistrationSlot<DependentService> dependentSlot{depReg1};
         RegistrationSlot<DependentService> dependentSlot2{depReg2};
         RegistrationSlot<DependentService> protoDependentSlot{protoDepReg};
@@ -1137,7 +1137,7 @@ private slots:
         auto regBaseProto = context->registerPrototype<BaseService>();
         RegistrationSlot<BaseService> baseSlot{context->getRegistration<BaseService>()};
         RegistrationSlot<BaseService2> base2Slot{context->getRegistration<BaseService2>()};
-        auto depProtoReg = context->registerPrototype(service<DependentService>(regBaseProto), "dependent1");
+        auto depProtoReg = context->registerService(prototype<DependentService>(regBaseProto), "dependent1");
         RegistrationSlot<DependentService> depSlot{depProtoReg};
         QVERIFY(context->publish());
         QVERIFY(!baseSlot);
@@ -1393,6 +1393,16 @@ private slots:
         QCOMPARE(reg2, reg);
     }
 
+
+    void testRegisterInvalidDependency() {
+        ServiceRegistration<Interface1> invalidReg;
+        QVERIFY(!context->registerService(service<DependentService>(invalidReg)));
+    }
+
+    void testRegisterInvalidProxyDependency() {
+        ProxyRegistration<Interface1> invalidReg;
+        QVERIFY(!context->registerService(service<CardinalityNService>(invalidReg)));
+    }
 
 
     void testServiceRegistrationEquality() {

@@ -13,6 +13,22 @@
 namespace mcnepp::qtdi {
 
 
+inline QDebug operator<<(QDebug out, ServiceScope scope) {
+    switch(scope) {
+    case ServiceScope::EXTERNAL:
+        return out.noquote().nospace() << "EXTERNAL";
+    case ServiceScope::SINGLETON:
+        return out.noquote().nospace() << "SINGLETON";
+    case ServiceScope::PROTOTYPE:
+        return out.noquote().nospace() << "PROTOTYPE";
+    case ServiceScope::UNKNOWN:
+        return out.noquote().nospace() << "UNKNOWN";
+    default:
+        return out.noquote().nospace() << "Invalid ServiceScope";
+
+    }
+
+}
 
 namespace detail {
 
@@ -92,6 +108,8 @@ inline QString kindToString(int kind) {
         return "value";
     case RESOLVABLE_KIND:
         return "resolvable";
+    case INVALID_KIND:
+        return "invalid";
     default:
         return "unknown";
 
@@ -115,6 +133,7 @@ inline QDebug operator<<(QDebug out, const dependency_info& info) {
     }
     return out;
 }
+
 
 inline QDebug operator << (QDebug out, const service_descriptor& descriptor) {
     QDebug tmp = out.nospace().noquote();
@@ -460,6 +479,10 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
 
 detail::Subscription *StandardApplicationContext::ProxyRegistrationImpl::createAutowiring(const type_info &type, detail::q_inject_t injector, Registration *source)
 {
+    if(QThread::currentThread() != this->thread()) {
+        qCritical(loggingCategory()).noquote().nospace() << "Cannot create autowiring in different thread";
+        return nullptr;
+    }
     if(!autowirings.insert(type).second) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register autowiring for type " << type.name() << " in " << *this;
         return nullptr;
@@ -604,6 +627,7 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
     }
     return theService;
 }
+
 
 
 StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(unsigned index, const QString &name, const service_descriptor &desc, const service_config &config, StandardApplicationContext *parent) :
@@ -875,7 +899,7 @@ detail::ServiceRegistration *StandardApplicationContext::getRegistrationHandle(c
     if(reg) {
         return reg;
     }
-    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name;
+    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name << "'";
     return nullptr;
 }
 
@@ -1218,34 +1242,9 @@ QList<service_registration_handle_t> StandardApplicationContext::getRegistration
     return result;
 }
 
-StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, ServiceScope scope) {
-    if(name.isEmpty()) {
-        name = makeName(*descriptor.service_types.begin());
-    }
 
 
-
-    DescriptorRegistration* registration;
-    switch(scope) {
-    case ServiceScope::PROTOTYPE:
-        registration = new PrototypeRegistration{++nextIndex, name, descriptor, config, this};
-        break;
-    case ServiceScope::EXTERNAL:
-        registration = new ObjectRegistration{++nextIndex, name, descriptor, obj, this};
-        break;
-    default:
-        registration = new ServiceRegistration{++nextIndex, name, descriptor, config, this};
-    }
-    registrationsByName.insert({name, registration});
-    registrations.push_back(registration);
-    for(auto& entry : proxyRegistrationCache) {
-        entry.second->add(registration);
-    }
-    qCInfo(loggingCategory()).noquote().nospace() << "Registered " << *registration;
-    return registration;
-}
-
-detail::ServiceRegistration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, bool prototype)
+service_registration_handle_t StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj)
 {
     if(QThread::currentThread() != this->thread()) {
         qCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
@@ -1254,127 +1253,162 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
     DescriptorRegistration* reg;
     {
         QMutexLocker<QMutex> locker{&mutex};
-        if(!name.isEmpty()) {
-            reg = getRegistrationByName(name);
-            //If we have a registration under the same name, we'll return it only if it has the same descriptor and config:
-            if(reg) {
-                //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
-                if(reg->isManaged() && descriptor == reg->descriptor() && reg->config() == config) {
-                    return reg;
-                }
-                //Otherwise, we have a conflicting registration
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << " as '" << name << "'. Has already been registered as " << *reg;
+        QString objName = name;
+
+        switch(scope) {
+        case ServiceScope::EXTERNAL:
+            if(!baseObj) {
+                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << descriptor;
                 return nullptr;
             }
-        } else {
-            //For an anonymous registration, we have to loop over all registrations:
-            for(auto regist : registrations) {
-                //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
-                if(regist->isManaged() && regist->config() == config) {
-                    switch(detail::match(descriptor, regist->descriptor())) {
-                    case detail::DESCRIPTOR_IDENTICAL:
-                        return regist;
-                    case detail::DESCRIPTOR_INTERSECTS:
-                        //Otherwise, we have a conflicting registration
-                        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << ". Has already been registered as " << *regist;
-                        return nullptr;
-                    default:
-                        continue;
-                    }
-                }
+            if(objName.isEmpty()) {
+                objName = baseObj->objectName();
             }
-        }
-
-        std::unordered_set<dependency_info> dependencies{};
-
-        findTransitiveDependenciesOf(descriptor, dependencies);
-
-        if(!checkTransitiveDependentsOn(descriptor, name, dependencies)) {
-            qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register '" << name << "'. Cyclic dependency in dependency-chain of " << descriptor;
-            return nullptr;
-
-        }
-
-        if(descriptor.meta_object) {
-            for(auto& key : config.properties.keys()) {
-                if(!key.startsWith('.') && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
-                    qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
+            if(!objName.isEmpty()) {
+                reg = getRegistrationByName(objName);
+                //If we have a registration under the same name, we'll return it only if it's for the same object and it has the same descriptor:
+                if(reg) {
+                    if(!reg->isManaged() && reg->getObject() == baseObj && descriptor == reg->descriptor()) {
+                        return reg;
+                    }
+                    //Otherwise, we have a conflicting registration
+                    qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << baseObj << " as '" << objName << "'. Has already been registered as " << *reg;
                     return nullptr;
                 }
             }
+            //For object-registrations, even if we supply an explicit name, we still have to loop over all registrations,
+            //as we need to check whether the same object has been registered before.
+            for(auto regist : registrations) {
+                //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
+                if(!regist->isManaged() && baseObj == regist->getObject()) {
+                    //An identical anonymous registration is allowed:
+                    if(descriptor == regist->descriptor() && objName.isEmpty()) {
+                        return regist;
+                    }
+                    //Otherwise, we have a conflicting registration
+                    qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << baseObj << " as '" << objName << "'. Has already been registered as " << *regist;
+                    return nullptr;
+                }
+            }
+            if(objName.isEmpty()) {
+                objName = makeName(*descriptor.service_types.begin());
+            }
+            reg = new ObjectRegistration{++nextIndex, objName, descriptor, baseObj, this};
+
+            break;
+
+        case ServiceScope::SINGLETON:
+        case ServiceScope::PROTOTYPE:
+
+            if(!name.isEmpty()) {
+                reg = getRegistrationByName(name);
+                //If we have a registration under the same name, we'll return it only if it has the same descriptor and config:
+                if(reg) {
+                    //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
+                    if(reg->isManaged() && descriptor == reg->descriptor() && reg->config() == config) {
+                        return reg;
+                    }
+                    //Otherwise, we have a conflicting registration
+                    qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << " as '" << name << "'. Has already been registered as " << *reg;
+                    return nullptr;
+                }
+            } else {
+                //For an anonymous registration, we have to loop over all registrations:
+                for(auto regist : registrations) {
+                    //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
+                    if(regist->isManaged() && regist->config() == config) {
+                        switch(detail::match(descriptor, regist->descriptor())) {
+                        case detail::DESCRIPTOR_IDENTICAL:
+                            return regist;
+                        case detail::DESCRIPTOR_INTERSECTS:
+                            //Otherwise, we have a conflicting registration
+                            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << ". Has already been registered as " << *regist;
+                            return nullptr;
+                        default:
+                            continue;
+                        }
+                    }
+                }
+                objName = makeName(*descriptor.service_types.begin());
+            }
+
+            {
+                std::unordered_set<dependency_info> dependencies{};
+
+                if(!findTransitiveDependenciesOf(descriptor, dependencies)) {
+                    qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register " << descriptor << ". Found invalid dependency";
+                    return nullptr;
+                 }
+
+                if(!checkTransitiveDependentsOn(descriptor, name, dependencies)) {
+                    qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register '" << name << "'. Cyclic dependency in dependency-chain of " << descriptor;
+                    return nullptr;
+
+                }
+            }
+
+            if(descriptor.meta_object) {
+                for(auto& key : config.properties.keys()) {
+                    if(!key.startsWith('.') && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
+                        qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
+                        return nullptr;
+                    }
+                }
+            }
+
+            switch(scope) {
+            case ServiceScope::PROTOTYPE:
+                reg = new PrototypeRegistration{++nextIndex, objName, descriptor, config, this};
+                break;
+            case ServiceScope::SINGLETON:
+                reg = new ServiceRegistration{++nextIndex, objName, descriptor, config, this};
+                break;
+            default:
+                reg = nullptr;
+                break;
+            }
+
+
+            break;
+        default:
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << descriptor << "with scope " << scope;
+            return nullptr;
         }
-        reg = registerDescriptor(name, descriptor, config, nullptr, prototype? ServiceScope::PROTOTYPE : ServiceScope::SINGLETON);
+
+        registrationsByName.insert({objName, reg});
+        registrations.push_back(reg);
+        for(auto& entry : proxyRegistrationCache) {
+            entry.second->add(reg);
+        }
+        qCInfo(loggingCategory()).noquote().nospace() << "Registered " << *reg;
     }
+
     // Emit signal after mutex has been released:
     emit pendingPublicationChanged();
     return reg;
 }
 
-detail::ServiceRegistration * StandardApplicationContext::registerObject(const QString &name, QObject *obj, const service_descriptor& descriptor)
-{
-    if(!obj) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << descriptor;
-        return nullptr;
-    }
-    if(QThread::currentThread() != this->thread()) {
-        qCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
-        return nullptr;
-    }
-
-    DescriptorRegistration* reg;
-    {// A scope for the QMutexLocker
-        QMutexLocker<QMutex> locker{&mutex};
-        QString objName = name.isEmpty() ? obj->objectName() : name;
-        if(!objName.isEmpty()) {
-            reg = getRegistrationByName(objName);
-            //If we have a registration under the same name, we'll return it only if it's for the same object and it has the same descriptor:
-            if(reg) {
-                if(!reg->isManaged() && reg->getObject() == obj && descriptor == reg->descriptor()) {
-                    return reg;
-                }
-                //Otherwise, we have a conflicting registration
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Has already been registered as " << *reg;
-                return nullptr;
-            }
-        }
-        //For object-registrations, even if we supply an explicit name, we still have to loop over all registrations,
-        //as we need to check whether the same object has been registered before.
-        for(auto regist : registrations) {
-            //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
-            if(!regist->isManaged() && obj == regist->getObject()) {
-                //An identical anonymous registration is allowed:
-                if(descriptor == regist->descriptor() && objName.isEmpty()) {
-                    return regist;
-                }
-                //Otherwise, we have a conflicting registration
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Has already been registered as " << *regist;
-                return nullptr;
-            }
-        }
-
-        reg = registerDescriptor(objName, descriptor, ObjectRegistration::defaultConfig, obj, ServiceScope::EXTERNAL);
-    }
-    // Emit signal after mutex has been released:
-    emit publishedChanged();
-    return reg;
-
-
-}
 
 
 
 
-void StandardApplicationContext::findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& result) const
+
+bool StandardApplicationContext::findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& result) const
 {
     for(auto& t : descriptor.dependencies) {
+        if(!t.isValid()) {
+            return false;
+        }
         for(auto reg : registrations) {
             if(reg->matches(t)) {
                 result.insert(t);
-                findTransitiveDependenciesOf(reg->descriptor(), result);
+                if(!findTransitiveDependenciesOf(reg->descriptor(), result)) {
+                    return false;
+                }
             }
         }
     }
-
+    return true;
 }
 
 
@@ -1589,7 +1623,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     }
 }
 
-StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::findAutowiringCandidate(DescriptorRegistration* target, const QMetaProperty& prop) {
+StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::findAutowiringCandidate(service_registration_handle_t target, const QMetaProperty& prop) {
     auto propMetaType = prop.metaType().metaObject();
     DescriptorRegistration* candidate = getRegistrationByName(prop.name()); //First, try by name
     //If the candidate is assignable to the property, return it, unless it is the target. (We never autowire a property with a pointer to the same service)

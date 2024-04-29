@@ -229,7 +229,8 @@ Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPo
 As shown above, a service that was registered using mcnepp::qtdi::QApplicationContext::registerService() will be instantiated once mcnepp::qtdi::QApplicationContext::publish(bool) is invoked.
 <br>A single instance of the service will be injected into every other service that depends on it.
 
-However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::QApplicationContext::registerPrototype() instead.
+However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::prototype() instead of mcnepp::qtdi::service()
+as an argument to mcnepp::qtdi::QApplicationContext::registerService().
 <br>Such a registration will not necessarily instantiate the service on mcnepp::qtdi::QApplicationContext::publish(bool).
 Only if there are other services depending on it will a new instance be created and injected into the dependent service.
 
@@ -249,9 +250,10 @@ A reason for this may be that the constructor of the class does not merely accep
 A good example would be registering objects of type `QSettings`, which play an important role in *Externalized Configuration* (see below).  
 
 
-There are some crucial differences between mcnepp::qtdi::QApplicationContext::registerService(), mcnepp::qtdi::QApplicationContext::registerPrototype() and mcnepp::qtdi::QApplicationContext::registerObject(), as the following table shows:
+There are some crucial differences between mcnepp::qtdi::QApplicationContext::registerService(), when invoked with either mcnepp::qtdi::service() or mcnepp::qtdi::prototype().
+Also, there are differences to mcnepp::qtdi::QApplicationContext::registerObject(), as the following table shows:
 
-| |registerService|registerPrototype|registerObject|
+| |registerService(service())|registerService(prototype())|registerObject|
 |---|---|---|---|
 |Instantiation of the object|Upon mcnepp::qtdi::QApplicationContext::publish()|In mcnepp::qtdi::QApplicationContext::publish(),<br>but only if another service requests it|Prior to the registration with the QApplicationContext|
 |When is the signal `objectPublished(QObject*)` emitted?|Upon mcnepp::qtdi::QApplicationContext::publish()|In mcnepp::qtdi::QApplicationContext::publish(),<br>but only if another service requests it|Immediately after the registration|

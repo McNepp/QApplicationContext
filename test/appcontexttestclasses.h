@@ -104,6 +104,10 @@ private:
 };
 
 
+class DerivedService : public BaseService {
+
+};
+
 
 
 class CyclicDependency : public QObject {
