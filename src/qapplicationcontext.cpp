@@ -47,6 +47,7 @@ bool QApplicationContext::isGlobalInstance() const
     return theInstance.load() == this;
 }
 
+
 namespace detail {
 
 QMetaProperty findPropertyBySignal(const QMetaMethod &signalFunction, const QMetaObject* metaObject)
@@ -72,6 +73,70 @@ const QMetaObject *ServiceRegistration::serviceMetaObject() const
 {
     return descriptor().meta_object;
 }
+
+inline QString kindToString(int kind) {
+    switch(kind) {
+    case static_cast<int>(Kind::N):
+        return "N";
+    case static_cast<int>(Kind::OPTIONAL):
+        return "optional";
+    case static_cast<int>(Kind::MANDATORY):
+        return "mandatory";
+    case VALUE_KIND:
+        return "value";
+    case RESOLVABLE_KIND:
+        return "resolvable";
+    case INVALID_KIND:
+        return "invalid";
+    default:
+        return "unknown";
+
+    }
+}
+
+
+QDebug operator<<(QDebug out, const dependency_info& info) {
+    QDebugStateSaver state{out};
+    out.noquote().nospace() << "Dependency<" << info.type.name() << "> [" << kindToString(info.kind) << ']';
+    switch(info.kind) {
+    case detail::VALUE_KIND:
+        out << " with value " << info.value;
+        break;
+    case detail::RESOLVABLE_KIND:
+        out << " with expression '" << info.expression << "'";
+        break;
+    default:
+        if(!info.expression.isEmpty()) {
+            out << " with required name '" << info.expression << "'";
+        }
+    }
+    return out;
+}
+
+
+
+
+QDebug operator << (QDebug out, const service_descriptor& descriptor) {
+    QDebugStateSaver state{out};
+    out.nospace().noquote() << "Descriptor [service-types=";
+    const char* del = "";
+    for(auto& t : descriptor.service_types) {
+        out << del << t.name();
+        del = ", ";
+    }
+    out << "]";
+    if(!descriptor.dependencies.empty()) {
+        out << " with " << descriptor.dependencies.size() << " dependencies ";
+        const char* sep = "";
+        for(auto& dep : descriptor.dependencies) {
+            out << sep << dep;
+            sep = ", ";
+        }
+    }
+    return out;
+}
+
+
 
 }
 

@@ -13,6 +13,24 @@
 namespace mcnepp::qtdi {
 
 
+inline QDebug operator<<(QDebug out, ServiceScope scope) {
+    switch(scope) {
+    case ServiceScope::EXTERNAL:
+        return out.noquote().nospace() << "EXTERNAL";
+    case ServiceScope::SINGLETON:
+        return out.noquote().nospace() << "SINGLETON";
+    case ServiceScope::PROTOTYPE:
+        return out.noquote().nospace() << "PROTOTYPE";
+    case ServiceScope::TEMPLATE:
+        return out.noquote().nospace() << "TEMPLATE";
+    case ServiceScope::UNKNOWN:
+        return out.noquote().nospace() << "UNKNOWN";
+    default:
+        return out.noquote().nospace() << "Invalid ServiceScope";
+
+    }
+
+}
 
 namespace detail {
 
@@ -80,61 +98,8 @@ inline detail::property_descriptor propertySetter(const QMetaProperty& property)
     return {property.name(), [property](QObject* target, QVariant value) {property.write(target, value);}};
 }
 
-inline QString kindToString(int kind) {
-    switch(kind) {
-    case static_cast<int>(Kind::N):
-        return "N";
-    case static_cast<int>(Kind::OPTIONAL):
-        return "optional";
-    case static_cast<int>(Kind::MANDATORY):
-        return "mandatory";
-    case VALUE_KIND:
-        return "value";
-    case RESOLVABLE_KIND:
-        return "resolvable";
-    default:
-        return "unknown";
-
-    }
-}
 
 
-inline QDebug operator<<(QDebug out, const dependency_info& info) {
-    QDebug tmp = out.noquote().nospace() << "Dependency<" << info.type.name() << "> [" << kindToString(info.kind) << ']';
-    switch(info.kind) {
-    case detail::VALUE_KIND:
-        tmp << " with value " << info.value;
-        break;
-    case detail::RESOLVABLE_KIND:
-        tmp << " with expression '" << info.expression << "'";
-        break;
-    default:
-        if(!info.expression.isEmpty()) {
-            tmp << " with required name '" << info.expression << "'";
-        }
-    }
-    return out;
-}
-
-inline QDebug operator << (QDebug out, const service_descriptor& descriptor) {
-    QDebug tmp = out.nospace().noquote();
-    tmp << "Descriptor [service-types=";
-    const char* del = "";
-    for(auto& t : descriptor.service_types) {
-        tmp << del << t.name();
-        del = ", ";
-    }
-    tmp << "]";
-    if(!descriptor.dependencies.empty()) {
-        tmp << " with " << descriptor.dependencies.size() << " dependencies ";
-        const char* sep = "";
-        for(auto& dep : descriptor.dependencies) {
-            tmp << sep << dep;
-            sep = ", ";
-        }
-    }
-    return out;
-}
 
 bool isBindable(const QMetaProperty& sourceProperty) {
     return sourceProperty.hasNotifySignal() || sourceProperty.isBindable();
@@ -150,6 +115,16 @@ namespace {
 
 const QRegularExpression beanRefPattern{"^&([^.]+)(\\.([^.]+))?"};
 
+
+inline bool isPrivateProperty(const QString& key) {
+    return key.startsWith('.');
+}
+
+inline void setParentIfNotSet(QObject* obj, QObject* newParent) {
+    if(!obj->parent()) {
+        obj->setParent(newParent);
+    }
+}
 
 template<typename T> struct Collector : public detail::Subscription {
 
@@ -175,7 +150,20 @@ template<typename T> struct Collector : public detail::Subscription {
 };
 
 
-
+QStringList determineBeanRefs(const QVariantMap& properties) {
+    QStringList result;
+    for(auto entry : properties.asKeyValueRange()) {
+        auto key = entry.second.toString();
+        if(key.length() > 1 && key.startsWith('&')) {
+            int dot = key.indexOf('.');
+            if(dot < 0) {
+                dot = key.size();
+            }
+            result.push_back(key.mid(1, dot-1));
+        }
+    }
+    return result;
+}
 
 
 
@@ -441,6 +429,10 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
 
 detail::Subscription *StandardApplicationContext::ProxyRegistrationImpl::createAutowiring(const type_info &type, detail::q_inject_t injector, Registration *source)
 {
+    if(QThread::currentThread() != this->thread()) {
+        qCritical(loggingCategory()).noquote().nospace() << "Cannot create autowiring in different thread";
+        return nullptr;
+    }
     if(!autowirings.insert(type).second) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register autowiring for type " << type.name() << " in " << *this;
         return nullptr;
@@ -516,12 +508,13 @@ detail::Subscription *StandardApplicationContext::DescriptorRegistration::create
 
 
 
-StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* context, QObject* parent) :
+StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* context, QObject* parent) :
     detail::ServiceRegistration(parent),
     m_descriptor{desc},
     m_name(name),
     m_index(index),
-    m_context(context)
+    m_context(context),
+    m_base(base)
 {
 }
 
@@ -536,10 +529,14 @@ void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
 
 void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *srv) {
     if(srv == theService) {
-        //Somebody has destroyed a Service that is managed by this ApplicationContext.
-        //All we can do is log an error and set theService to nullptr.
-        //Yet, it might still be in use somewhere as a dependency.
-        qCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
+        if(auto parentReg = dynamic_cast<service_registration_handle_t>(parent()); parentReg && parentReg -> scope() == ServiceScope::PROTOTYPE) {
+            qInfo(loggingCategory()).noquote().nospace() << "Instance of Prototype " << *this << " has been destroyed";
+        } else {
+            //Somebody has destroyed a Service that is managed by this ApplicationContext.
+            //All we can do is log an error and set theService to nullptr.
+            //Yet, it might still be in use somewhere as a dependency.
+            qCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
+        }
         theService = nullptr;
         m_state = STATE_INIT;
     }
@@ -554,22 +551,11 @@ void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
 
 QStringList StandardApplicationContext::ServiceRegistration::getBeanRefs() const
 {
-    if(beanRefsCache.has_value()) {
-        return beanRefsCache.value();
+    if(!beanRefsCache.has_value()) {
+        beanRefsCache = determineBeanRefs(config().properties);
     }
-    QStringList result;
-    for(auto entry : config().properties.asKeyValueRange()) {
-        auto key = entry.second.toString();
-        if(key.startsWith('&')) {
-            int dot = key.indexOf('.');
-            if(dot < 0) {
-                dot = key.size();
-            }
-            result.push_back(key.mid(1, dot-1));
-        }
-    }
-    beanRefsCache = result;
-    return result;
+    return beanRefsCache.value();
+
 }
 
 QObject* StandardApplicationContext::ServiceRegistration::createService(const QVariantList &dependencies, descriptor_list &created)
@@ -577,7 +563,13 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
     switch(state()) {
         case STATE_INIT:
         if(!theService) {
-                theService = descriptor().create(resolveDependencies(dependencies, created));
+                descriptor_list createdForThis;
+                theService = descriptor().create(resolveDependencies(dependencies, createdForThis));
+                //If any instances of prototypes have been created while resolving dependencies, make them children of the newly created service:
+                for(auto child : createdForThis) {
+                    setParentIfNotSet(child->getObject(), theService);
+                }
+                created.insert(created.end(), createdForThis.begin(), createdForThis.end());
             if(theService) {
                 onDestroyed = connect(theService, &QObject::destroyed, this, &ServiceRegistration::serviceDestroyed);
                 m_state = STATE_CREATED;
@@ -587,9 +579,50 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
     return theService;
 }
 
+StandardApplicationContext::ServiceTemplateRegistration::ServiceTemplateRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
+    DescriptorRegistration{base, index, name, desc, context, parent},
+    m_config(config),
+    resolvedProperties{config.properties} {
+    proxySubscription = new ProxySubscription{this};
+}
 
-StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(unsigned index, const QString &name, const service_descriptor &desc, const service_config &config, StandardApplicationContext *parent) :
-    DescriptorRegistration{index, name, desc, parent},
+
+QStringList StandardApplicationContext::ServiceTemplateRegistration::getBeanRefs() const
+{
+    if(!beanRefsCache.has_value()) {
+        beanRefsCache = determineBeanRefs(config().properties);
+    }
+    return beanRefsCache.value();
+
+}
+
+subscription_handle_t StandardApplicationContext::ServiceTemplateRegistration::createBindingTo(const char*, registration_handle_t, const detail::property_descriptor&)
+{
+    qCritical(loggingCategory()).noquote().nospace() << "Cannot create binding from " << *this;
+    return nullptr;
+}
+
+
+QObject* StandardApplicationContext::ServiceTemplateRegistration::createService(const QVariantList&, descriptor_list&) {
+    return nullptr;
+}
+
+void StandardApplicationContext::ServiceTemplateRegistration::print(QDebug out) const {
+    out.nospace().noquote() << "Service-template '" << registeredName() << "' of type " << descriptor().impl_type.name();
+}
+
+void StandardApplicationContext::ServiceTemplateRegistration::onSubscription(subscription_handle_t subscription) {
+    detail::connect(this, subscription);
+    TemporarySubscriptionProxy tempProxy{subscription};
+    //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
+    for(auto reg : derivedServices) {
+        reg->subscribe(&tempProxy);
+    }
+}
+
+
+StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(DescriptorRegistration* base, unsigned index, const QString &name, const service_descriptor &desc, const service_config &config, StandardApplicationContext *parent) :
+    DescriptorRegistration{base, index, name, desc, parent},
     m_state(STATE_INIT),
     m_config(config)
 {
@@ -599,35 +632,15 @@ StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(unsigne
 
 int StandardApplicationContext::PrototypeRegistration::unpublish()
 {
-    int success = 0;
-    for(auto child : children()) {
-        if(auto reg = dynamic_cast<DescriptorRegistration*>(child)) {
-            if(reg->unpublish()) {
-                ++success;
-            }
-        }
-    }
-    return success;
+    return 0;
 }
 
 QStringList StandardApplicationContext::PrototypeRegistration::getBeanRefs() const
 {
-    if(beanRefsCache.has_value()) {
-        return beanRefsCache.value();
+    if(!beanRefsCache.has_value()) {
+        beanRefsCache = determineBeanRefs(config().properties);
     }
-    QStringList result;
-    for(auto entry : config().properties.asKeyValueRange()) {
-        auto key = entry.second.toString();
-        if(key.startsWith('&')) {
-            int dot = key.indexOf('.');
-            if(dot < 0) {
-                dot = key.size();
-            }
-            result.push_back(key.mid(1, dot-1));
-        }
-    }
-    beanRefsCache = result;
-    return result;
+    return beanRefsCache.value();
 }
 
 QObject* StandardApplicationContext::PrototypeRegistration::createService(const QVariantList& dependencies, descriptor_list& created) {
@@ -639,8 +652,8 @@ QObject* StandardApplicationContext::PrototypeRegistration::createService(const 
         return this;
     case STATE_PUBLISHED:
         {
-            std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{++applicationContext()->nextIndex, registeredName(), descriptor(), config(), applicationContext(), this}};
-            QObject* instance = instanceReg->createService(resolveDependencies(m_dependencies, created), created);
+        std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{base(), ++applicationContext()->nextIndex, registeredName(), descriptor(), config(), applicationContext(), this}};
+            QObject* instance = instanceReg->createService(m_dependencies, created);
             if(!instance) {
                 qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
                 return nullptr;
@@ -790,7 +803,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     QList<DescriptorRegistration*> depRegs;
 
     for(auto pub : published) {
-        if(pub->matches(type)) {
+        if(pub->matches(type) && pub->scope() != ServiceScope::TEMPLATE) {
             if(d.has_required_name()) {
                 auto byName = getRegistrationByName(d.expression);
                 if(!byName || byName != pub) {
@@ -812,7 +825,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
     case detail::RESOLVABLE_KIND:
         {
-            auto resolved = resolvePlaceholders(d.expression, reg->config().group);
+            auto resolved = resolvePlaceholders(d.expression, reg->config());
             switch(resolved.second) {
             case Status::ok:
                 qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << resolved.first;
@@ -877,7 +890,7 @@ detail::ServiceRegistration *StandardApplicationContext::getRegistrationHandle(c
     if(reg) {
         return reg;
     }
-    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name;
+    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name << "'";
     return nullptr;
 }
 
@@ -1054,7 +1067,7 @@ QVariantList StandardApplicationContext::resolveDependencies(const QVariantList&
 
 QVariant StandardApplicationContext::resolveDependency(const QVariant &arg, descriptor_list &created)
 {
-    if(auto proto = arg.value<DescriptorRegistration*>(); proto && proto->isPrototype()) {
+    if(auto proto = arg.value<DescriptorRegistration*>(); proto && proto->scope() == ServiceScope::PROTOTYPE) {
         auto instance = proto->createService(QVariantList{}, created);
         if(!instance) {
             return QVariant{};
@@ -1139,7 +1152,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
     //instantiated.
     while(!needConfiguration.empty()) {
         auto reg = pop_front(needConfiguration);
-        auto configResult = configure(reg, needConfiguration, allowPartial);
+        auto configResult = configure(reg, reg->config(), reg->getObject(), needConfiguration, allowPartial);
         switch(configResult) {
         case Status::fatal:
             qCCritical(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
@@ -1220,51 +1233,9 @@ QList<service_registration_handle_t> StandardApplicationContext::getRegistration
     return result;
 }
 
-StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, ServiceScope scope) {
-    if(name.isEmpty()) {
-        name = makeName(*descriptor.service_types.begin());
-    }
 
-    std::unordered_set<dependency_info> dependencies{};
 
-    findTransitiveDependenciesOf(descriptor, dependencies);
-
-    if(!checkTransitiveDependentsOn(descriptor, name, dependencies)) {
-        qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register '" << name << "'. Cyclic dependency in dependency-chain of " << descriptor;
-        return nullptr;
-
-    }
-
-    if(descriptor.meta_object) {
-        for(auto& key : config.properties.keys()) {
-            if(!key.startsWith('.') && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
-                qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
-                return nullptr;
-            }
-        }
-    }
-
-    DescriptorRegistration* registration;
-    switch(scope) {
-    case ServiceScope::PROTOTYPE:
-        registration = new PrototypeRegistration{++nextIndex, name, descriptor, config, this};
-        break;
-    case ServiceScope::EXTERNAL:
-        registration = new ObjectRegistration{++nextIndex, name, descriptor, obj, this};
-        break;
-    default:
-        registration = new ServiceRegistration{++nextIndex, name, descriptor, config, this};
-    }
-    registrationsByName.insert({name, registration});
-    registrations.push_back(registration);
-    for(auto& entry : proxyRegistrationCache) {
-        entry.second->add(registration);
-    }
-    qCInfo(loggingCategory()).noquote().nospace() << "Registered " << *registration;
-    return registration;
-}
-
-detail::ServiceRegistration* StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, bool prototype)
+service_registration_handle_t StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj)
 {
     if(QThread::currentThread() != this->thread()) {
         qCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
@@ -1273,109 +1244,188 @@ detail::ServiceRegistration* StandardApplicationContext::registerService(const Q
     DescriptorRegistration* reg;
     {
         QMutexLocker<QMutex> locker{&mutex};
-        if(!name.isEmpty()) {
-            reg = getRegistrationByName(name);
-            //If we have a registration under the same name, we'll return it only if it has the same descriptor and config:
-            if(reg) {
-                //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
-                if(reg->isManaged() && descriptor == reg->descriptor() && reg->config() == config) {
-                    return reg;
-                }
-                //Otherwise, we have a conflicting registration
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << " as '" << name << "'. Has already been registered as " << *reg;
+        QString objName = name;
+
+        ServiceTemplateRegistration* base = nullptr;
+        switch(scope) {
+        case ServiceScope::EXTERNAL:
+            if(!baseObj) {
+                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << descriptor;
                 return nullptr;
             }
-        } else {
-            //For an anonymous registration, we have to loop over all registrations:
+            if(objName.isEmpty()) {
+                objName = baseObj->objectName();
+            }
+            if(!objName.isEmpty()) {
+                reg = getRegistrationByName(objName);
+                //If we have a registration under the same name, we'll return it only if it's for the same object and it has the same descriptor:
+                if(reg) {
+                    if(!reg->isManaged() && reg->getObject() == baseObj && descriptor == reg->descriptor()) {
+                        return reg;
+                    }
+                    //Otherwise, we have a conflicting registration
+                    qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << baseObj << " as '" << objName << "'. Has already been registered as " << *reg;
+                    return nullptr;
+                }
+            }
+            //For object-registrations, even if we supply an explicit name, we still have to loop over all registrations,
+            //as we need to check whether the same object has been registered before.
             for(auto regist : registrations) {
-                //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
-                if(regist->isManaged() && regist->config() == config) {
-                    switch(detail::match(descriptor, regist->descriptor())) {
-                    case detail::DESCRIPTOR_IDENTICAL:
+                //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
+                if(!regist->isManaged() && baseObj == regist->getObject()) {
+                    //An identical anonymous registration is allowed:
+                    if(descriptor == regist->descriptor() && objName.isEmpty()) {
                         return regist;
-                    case detail::DESCRIPTOR_INTERSECTS:
-                        //Otherwise, we have a conflicting registration
-                        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << ". Has already been registered as " << *regist;
+                    }
+                    //Otherwise, we have a conflicting registration
+                    qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << baseObj << " as '" << objName << "'. Has already been registered as " << *regist;
+                    return nullptr;
+                }
+            }
+            if(objName.isEmpty()) {
+                objName = makeName(*descriptor.service_types.begin());
+            }
+            reg = new ObjectRegistration{++nextIndex, objName, descriptor, baseObj, this};
+
+            break;
+
+        case ServiceScope::SINGLETON:
+        case ServiceScope::PROTOTYPE:
+            {
+                std::unordered_set<dependency_info> dependencies{};
+
+                if(!findTransitiveDependenciesOf(descriptor, dependencies)) {
+                    qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register " << descriptor << ". Found invalid dependency";
+                    return nullptr;
+                }
+
+                if(!checkTransitiveDependentsOn(descriptor, name, dependencies)) {
+                    qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register '" << name << "'. Cyclic dependency in dependency-chain of " << descriptor;
+                    return nullptr;
+
+                }
+            }
+            [[fallthrough]];
+
+        case ServiceScope::TEMPLATE:
+
+            if(!name.isEmpty()) {
+                reg = getRegistrationByName(name);
+                //If we have a registration under the same name, we'll return it only if it has the same descriptor and config:
+                if(reg) {
+                    //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
+                    if(reg->isManaged() && descriptor == reg->descriptor() && reg->config() == config) {
+                        return reg;
+                    }
+                    //Otherwise, we have a conflicting registration
+                    qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << " as '" << name << "'. Has already been registered as " << *reg;
+                    return nullptr;
+                }
+            } else {
+                //For an anonymous registration, we have to loop over all registrations:
+                for(auto regist : registrations) {
+                    //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
+                    if(regist->isManaged() && regist->config() == config) {
+                        switch(detail::match(descriptor, regist->descriptor())) {
+                        case detail::DESCRIPTOR_IDENTICAL:
+                            return regist;
+                        case detail::DESCRIPTOR_INTERSECTS:
+                            //Otherwise, we have a conflicting registration
+                            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << ". Has already been registered as " << *regist;
+                            return nullptr;
+                        default:
+                            continue;
+                        }
+                    }
+                }
+                objName = makeName(*descriptor.service_types.begin());
+            }
+
+            if(descriptor.meta_object) {
+                for(auto& key : config.properties.keys()) {
+                    if(!isPrivateProperty(key) && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
+                        qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
                         return nullptr;
-                    default:
-                        continue;
                     }
                 }
             }
+            if(auto baseRegistration = dynamic_cast<service_registration_handle_t>(baseObj)) {
+                if(baseRegistration->scope() != ServiceScope::TEMPLATE) {
+                    qCCritical(loggingCategory()).noquote().nospace() << "Template-Registration " << *baseRegistration << " must have scope TEMPLATE, but has scope " << baseRegistration->scope();
+                    return nullptr;
+
+                }
+                if(baseRegistration->applicationContext() != this) {
+                    qCCritical(loggingCategory()).noquote().nospace() << "Template-Registration " << *baseRegistration << " not registered in this ApplicationContext";
+                    return nullptr;
+                }
+                if(descriptor.meta_object && baseRegistration->descriptor().meta_object) {
+                    if(!descriptor.meta_object->inherits(baseRegistration->descriptor().meta_object)) {
+                        qCCritical(loggingCategory()).noquote().nospace() << "Registration " << descriptor << " does not inherit Base-Registration " << *baseRegistration;
+                        return nullptr;
+                    }
+                }
+                base = dynamic_cast<ServiceTemplateRegistration*>(baseRegistration);
+            }
+            switch(scope) {
+            case ServiceScope::PROTOTYPE:
+                reg = new PrototypeRegistration{base, ++nextIndex, objName, descriptor, config, this};
+                break;
+            case ServiceScope::SINGLETON:
+                reg = new ServiceRegistration{base, ++nextIndex, objName, descriptor, config, this};
+                break;
+            case ServiceScope::TEMPLATE:
+                reg = new ServiceTemplateRegistration{base, ++nextIndex, objName, descriptor, config, this};
+                break;
+            default:
+                reg = nullptr;
+                break;
+            }
+
+            if(base) {
+                base->add(reg);
+            }
+
+            break;
+        default:
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << descriptor << "with scope " << scope;
+            return nullptr;
         }
 
-        reg = registerDescriptor(name, descriptor, config, nullptr, prototype? ServiceScope::PROTOTYPE : ServiceScope::SINGLETON);
+        registrationsByName.insert({objName, reg});
+        registrations.push_back(reg);
+        for(auto& entry : proxyRegistrationCache) {
+            entry.second->add(reg);
+        }
+        qCInfo(loggingCategory()).noquote().nospace() << "Registered " << *reg;
     }
+
     // Emit signal after mutex has been released:
     emit pendingPublicationChanged();
     return reg;
 }
 
-detail::ServiceRegistration * StandardApplicationContext::registerObject(const QString &name, QObject *obj, const service_descriptor& descriptor)
-{
-    if(!obj) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << descriptor;
-        return nullptr;
-    }
-    if(QThread::currentThread() != this->thread()) {
-        qCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
-        return nullptr;
-    }
-
-    DescriptorRegistration* reg;
-    {// A scope for the QMutexLocker
-        QMutexLocker<QMutex> locker{&mutex};
-        QString objName = name.isEmpty() ? obj->objectName() : name;
-        if(!objName.isEmpty()) {
-            reg = getRegistrationByName(objName);
-            //If we have a registration under the same name, we'll return it only if it's for the same object and it has the same descriptor:
-            if(reg) {
-                if(!reg->isManaged() && reg->getObject() == obj && descriptor == reg->descriptor()) {
-                    return reg;
-                }
-                //Otherwise, we have a conflicting registration
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Has already been registered as " << *reg;
-                return nullptr;
-            }
-        }
-        //For object-registrations, even if we supply an explicit name, we still have to loop over all registrations,
-        //as we need to check whether the same object has been registered before.
-        for(auto regist : registrations) {
-            //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
-            if(!regist->isManaged() && obj == regist->getObject()) {
-                //An identical anonymous registration is allowed:
-                if(descriptor == regist->descriptor() && objName.isEmpty()) {
-                    return regist;
-                }
-                //Otherwise, we have a conflicting registration
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Has already been registered as " << *regist;
-                return nullptr;
-            }
-        }
-
-        reg = registerDescriptor(objName, descriptor, ObjectRegistration::defaultConfig, obj, ServiceScope::EXTERNAL);
-    }
-    // Emit signal after mutex has been released:
-    emit publishedChanged();
-    return reg;
-
-
-}
 
 
 
 
-void StandardApplicationContext::findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& result) const
+
+bool StandardApplicationContext::findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& result) const
 {
     for(auto& t : descriptor.dependencies) {
+        if(!t.isValid()) {
+            return false;
+        }
         for(auto reg : registrations) {
             if(reg->matches(t)) {
                 result.insert(t);
-                findTransitiveDependenciesOf(reg->descriptor(), result);
+                if(!findTransitiveDependenciesOf(reg->descriptor(), result)) {
+                    return false;
+                }
             }
         }
     }
-
+    return true;
 }
 
 
@@ -1445,7 +1495,7 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
 }
 
 
-std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolvePlaceholders(const QString& key, const QString &group)
+std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolvePlaceholders(const QString& key, const service_config& config)
 {
     constexpr int STATE_START = 0;
     constexpr int STATE_FOUND_DOLLAR = 1;
@@ -1456,6 +1506,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     QString resolvedString;
     QString token;
     QString defaultValueToken;
+    const QString& group = config.group;
 
     int lastStateBeforeEscape = STATE_START;
     int state = STATE_START;
@@ -1519,11 +1570,17 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 if(!token.isEmpty()) {
                     lastResolvedValue = getConfigurationValue(group.isEmpty() ? token : group + "/" + token);
                     if(!lastResolvedValue.isValid()) {
-                        if(state == STATE_FOUND_DEFAULT_VALUE) {
-                            lastResolvedValue = defaultValueToken;
-                        } else {
-                            qCInfo(loggingCategory()).nospace().noquote() << "Could not resolve configuration-key '" << token << "'";
-                            return {QVariant{}, Status::fixable};
+                        //If not found in ApplicationContext's configuration, look in the "private properties":
+                        lastResolvedValue = config.properties["." + token];
+                        if(!lastResolvedValue.isValid()) {
+                            if(state == STATE_FOUND_DEFAULT_VALUE) {
+                                lastResolvedValue = defaultValueToken;
+                            } else {
+                                if(!lastResolvedValue.isValid()) {
+                                    qCInfo(loggingCategory()).nospace().noquote() << "Could not resolve configuration-key '" << token << "'";
+                                    return {QVariant{}, Status::fixable};
+                                }
+                            }
                         }
                     }
                     if(resolvedString.isEmpty() && pos + 1 == key.length()) {
@@ -1590,7 +1647,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     }
 }
 
-StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::findAutowiringCandidate(DescriptorRegistration* target, const QMetaProperty& prop) {
+StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::findAutowiringCandidate(service_registration_handle_t target, const QMetaProperty& prop) {
     auto propMetaType = prop.metaType().metaObject();
     DescriptorRegistration* candidate = getRegistrationByName(prop.name()); //First, try by name
     //If the candidate is assignable to the property, return it, unless it is the target. (We never autowire a property with a pointer to the same service)
@@ -1621,8 +1678,7 @@ bool StandardApplicationContext::registerBoundProperty(registration_handle_t tar
 }
 
 
-StandardApplicationContext::Status StandardApplicationContext::configure(DescriptorRegistration* reg, descriptor_list& toBePublished, bool allowPartial) {
-    QObject* target = reg->getObject();
+StandardApplicationContext::Status StandardApplicationContext::configure(DescriptorRegistration* reg, const service_config& config, QObject* target, descriptor_list& toBePublished, bool allowPartial) {
     if(!target) {
         return Status::fatal;
     }
@@ -1630,25 +1686,39 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
         target->setObjectName(reg->registeredName());
     }
 
+    if(reg->base()) {
+        service_config mergedConfig{reg->base()->config()};
+        //Add the 'private properties' from the current Reg to the properties from the base. Current values will overwrite inherited values:
+        for(auto[key,value] : config.properties.asKeyValueRange()) {
+            if(isPrivateProperty(key)) {
+                mergedConfig.properties.insert(key, value);
+            }
+        }
+        auto baseStatus = configure(reg->base(), mergedConfig, target, toBePublished, allowPartial);
+        if(baseStatus != Status::ok) {
+            return baseStatus;
+        }
+    }
+
     auto metaObject = target->metaObject();
-    auto& config = reg->config();
     if(metaObject) {
         std::unordered_set<QString> usedProperties;
+        descriptor_list createdForThis;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
             QVariant resolvedValue = value;
-            auto result = resolveBeanRef(resolvedValue, toBePublished, allowPartial);
+            auto result = resolveBeanRef(resolvedValue, createdForThis, allowPartial);
             if(result.first != Status::ok) {
                 return result.first;
             }
             if(!result.second && value.userType() == QMetaType::QString) {
-                auto propertyResult = resolvePlaceholders(value.toString(), config.group);
+                auto propertyResult = resolvePlaceholders(value.toString(), config);
                 if(propertyResult.second != Status::ok) {
                     return propertyResult.second;
                 }
                 resolvedValue = propertyResult.first;
             }
             reg->resolveProperty(key, resolvedValue);
-            if(!key.startsWith('.')) {
+            if(!isPrivateProperty(key)) {
                 auto targetProperty = metaObject->property(metaObject->indexOfProperty(key.toLatin1()));
                 if(!targetProperty.isValid() || !targetProperty.isWritable()) {
                     //Refering to a non-existing Q_PROPERTY by name is always non-fixable:
@@ -1665,6 +1735,11 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 }
             }
         }
+        //If any instances of prototypes have been created while configuring the properties, make them children of the target:
+        for(auto child : createdForThis) {
+            setParentIfNotSet(child->getObject(), target);
+        }
+        toBePublished.insert(toBePublished.end(), createdForThis.begin(), createdForThis.end());
         if(config.autowire) {
             for(int p = 0; p < metaObject->propertyCount(); ++p) {
                 auto prop = metaObject->property(p);
@@ -1706,15 +1781,16 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
         }
     }
 
-    if(reg->descriptor().init_method) {
-        reg->descriptor().init_method(target, this);
-        qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
+    for(DescriptorRegistration* self = reg; self; self = self->base()) {
+        if(self->descriptor().init_method) {
+            self->descriptor().init_method(target, this);
+            qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
+            break;
+       }
     }
-    if(!target->parent()) {
-        //If the service has no parent, make it a child of this ApplicationContext:
-        //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
-        target->setParent(this);
-    }
+    //If the service has no parent, make it a child of this ApplicationContext:
+    //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
+    setParentIfNotSet(target, this);
     return Status::ok;
 }
 

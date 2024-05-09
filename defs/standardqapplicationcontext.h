@@ -47,9 +47,7 @@ public:
 
 protected:
 
-    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, bool prototype) override;
-
-    virtual service_registration_handle_t registerObject(const QString& name, QObject* obj, const service_descriptor& descriptor) override;
+    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj) override;
 
     virtual service_registration_handle_t getRegistrationHandle(const QString& name) const override;
 
@@ -73,6 +71,8 @@ private:
     static constexpr int STATE_INIT = 0;
     static constexpr int STATE_CREATED = 1;
     static constexpr int STATE_PUBLISHED = 3;
+    //The state reported by a Service-Template
+    static constexpr int STATE_IGNORE = 4;
 
     class DescriptorRegistration : public detail::ServiceRegistration {
         friend class StandardApplicationContext;
@@ -101,12 +101,14 @@ private:
             return state() == STATE_PUBLISHED;
         }
 
-        bool isPrototype() const {
-            return scope() == ServiceScope::PROTOTYPE;
-        }
-
         bool isManaged() const {
-            return scope() != ServiceScope::EXTERNAL;
+            switch(scope()) {
+            case ServiceScope::PROTOTYPE:
+            case ServiceScope::SINGLETON:
+                return true;
+            default:
+                return false;
+            }
         }
 
         virtual const service_descriptor& descriptor() const final override {
@@ -126,11 +128,14 @@ private:
         }
 
         bool matches(const std::type_info& type) const override {
-            return descriptor().matches(type) || type == typeid(QObject);
+            if(descriptor().matches(type) || type == typeid(QObject)) {
+                return true;
+            }
+            return m_base && m_base->matches(type);
         }
 
         bool matches(const dependency_info& info) const {
-            return matches(info.type) && (!info.has_required_name() || info.expression == registeredName());
+            return info.isValid() && matches(info.type) && (!info.has_required_name() || info.expression == registeredName());
         }
 
 
@@ -145,10 +150,10 @@ private:
         }
 
 
-        DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* context, QObject* parent);
+        DescriptorRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* context, QObject* parent);
 
-        DescriptorRegistration(unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
-        DescriptorRegistration{index, name, desc, parent, parent} {
+        DescriptorRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
+        DescriptorRegistration{base, index, name, desc, parent, parent} {
 
         }
 
@@ -157,6 +162,10 @@ private:
         virtual int unpublish() = 0;
 
         virtual void resolveProperty(const QString& key, const QVariant& value) = 0;
+
+        DescriptorRegistration* base() const {
+            return m_base;
+        }
     protected:
 
         service_descriptor m_descriptor;
@@ -165,6 +174,7 @@ private:
         std::unordered_set<std::type_index> autowirings;
         unsigned const m_index;
         StandardApplicationContext* const m_context;
+        DescriptorRegistration* const m_base;
     };
 
 
@@ -173,8 +183,8 @@ private:
 
         friend class StandardApplicationContext;
 
-        ServiceRegistration(unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
-            DescriptorRegistration{index, name, desc, context, parent},
+        ServiceRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
+            DescriptorRegistration{base, index, name, desc, context, parent},
             theService(nullptr),
             m_config(config),
             resolvedProperties{config.properties},
@@ -182,8 +192,8 @@ private:
 
         }
 
-        ServiceRegistration(unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
-        ServiceRegistration{index, name, desc, config, parent, parent} {
+        ServiceRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
+        ServiceRegistration{base, index, name, desc, config, parent, parent} {
 
         }
 
@@ -275,13 +285,94 @@ private:
         mutable std::optional<QStringList> beanRefsCache;
     };
 
+    class ServiceTemplateRegistration : public DescriptorRegistration {
+
+        friend class StandardApplicationContext;
+
+        ServiceTemplateRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent);
+
+        ServiceTemplateRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
+            ServiceTemplateRegistration{base, index, name, desc, config, parent, parent} {
+
+        }
+
+
+        virtual ServiceScope scope() const override {
+            return ServiceScope::TEMPLATE;
+        }
+
+
+        void add(DescriptorRegistration* handle) {
+            derivedServices.push_back(handle);
+            handle->subscribe(proxySubscription);
+        }
+
+        virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
+
+        void notifyPublished() override {
+        }
+
+        virtual int state() const override {
+            return STATE_IGNORE;
+        }
+
+        virtual QObject* getObject() const override {
+            return nullptr;
+        }
+
+
+
+
+
+        virtual void print(QDebug out) const override;
+
+        virtual const service_config& config() const override {
+            return m_config;
+        }
+
+        QVariantMap registeredProperties() const override {
+            return resolvedProperties;
+        }
+
+        virtual void resolveProperty(const QString& key, const QVariant& value) override {
+            resolvedProperties.insert(key, value);
+        }
+
+
+
+        virtual QStringList getBeanRefs() const override;
+
+
+
+        virtual QObject* createService(const QVariantList& dependencies, descriptor_list& created) override;
+
+
+        virtual void onSubscription(subscription_handle_t) override;
+
+
+
+
+
+        virtual int unpublish() override {
+            return 0;
+        }
+
+
+
+    private:
+        service_config m_config;
+        QVariantMap resolvedProperties;
+        mutable std::optional<QStringList> beanRefsCache;
+        subscription_handle_t proxySubscription;
+        descriptor_list derivedServices;
+    };
 
 
     class PrototypeRegistration : public DescriptorRegistration {
 
         friend class StandardApplicationContext;
 
-        PrototypeRegistration(unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent);
+        PrototypeRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent);
 
         virtual ServiceScope scope() const override {
             return ServiceScope::PROTOTYPE;
@@ -347,7 +438,7 @@ private:
         friend class StandardApplicationContext;
 
         ObjectRegistration(unsigned index, const QString& name, const service_descriptor& desc, QObject* obj, StandardApplicationContext* parent) :
-            DescriptorRegistration{index, name, desc, parent},
+            DescriptorRegistration{nullptr, index, name, desc, parent},
             theObj(obj){
             //Do not connect the signal QObject::destroyed if obj is the ApplicationContext itself:
             if(obj != parent) {
@@ -444,6 +535,9 @@ private:
         }
 
 
+        virtual const std::type_info& serviceType() const override {
+            return m_type;
+        }
 
         bool add(service_registration_handle_t reg) {
             if(reg->matches(m_type)) {
@@ -494,7 +588,7 @@ private:
 
     bool checkTransitiveDependentsOn(const service_descriptor& descriptor, const QString& name, const std::unordered_set<dependency_info>& dependencies) const;
 
-    void findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& dependents) const;
+    bool findTransitiveDependenciesOf(const service_descriptor& descriptor, std::unordered_set<dependency_info>& dependents) const;
 
     void unpublish();
 
@@ -509,17 +603,15 @@ private:
 
     static QVariant resolveDependency(const QVariant& arg, descriptor_list& created);
 
-    DescriptorRegistration* registerDescriptor(QString name, const service_descriptor& descriptor, const service_config& config, QObject* obj, ServiceScope scope);
-
-    Status configure(DescriptorRegistration*, descriptor_list& toBePublished, bool allowPartial);
+    Status configure(DescriptorRegistration*, const service_config& config, QObject*, descriptor_list& toBePublished, bool allowPartial);
 
     Status init(DescriptorRegistration*, const QList<QApplicationContextPostProcessor*>& postProcessors);
 
     std::pair<Status,bool> resolveBeanRef(QVariant& value, descriptor_list& toBePublished, bool allowPartial);
 
-    std::pair<QVariant,Status> resolvePlaceholders(const QString& key, const QString& group);
+    std::pair<QVariant,Status> resolvePlaceholders(const QString& key, const service_config& config);
 
-    DescriptorRegistration* findAutowiringCandidate(DescriptorRegistration*, const QMetaProperty&);
+    DescriptorRegistration* findAutowiringCandidate(service_registration_handle_t, const QMetaProperty&);
 
     bool registerBoundProperty(registration_handle_t target, const char* propName);
 

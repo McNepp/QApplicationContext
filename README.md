@@ -112,13 +112,16 @@ Whenever we want to express a dependency for a Service and we have the correspon
     context -> registerService(service<RestPropFetcher>(QString{"https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"), networkRegistration}, "hamburgWeather"); // 3
 
 
-## Externalized Configuration
+## Externalized Configuration {#externalized-configuration}
 
 In the above example, we were configuring the Url with a String-literal in the code. This is less than optimal, as we usually want to be able
 to change such configuration-values without re-compiling the program.  
 This is made possible with so-called *placeholders* in the configured values:  
 When passed to the function mcnepp::qtdi::resolve(), a placeholder embedded in `${   }` will be resolved by the QApplicationContext using Qt's `QSettings` class.  
 You simply register one or more instances of `QSettings` with the context, using mcnepp::qtdi::QApplicationContext::registerObject().
+
+### Using Constructor-arguments {#constructor-arguments}
+
 This is what it looks like if you out-source the "url" configuration-value into an external configuration-file:
 
     context -> registerObject(new QSettings{"application.ini", QSettings::IniFormat, context});
@@ -157,9 +160,9 @@ Sometimes, you may want to provide a constructor-argument that can be externally
 
 There are two ways of doing this:
 
-1. You can supply a default-value to the function-template mcnepp::qtdi::resolve() as its second argument: `resolve("${connectionTimeout}", 5000)`. This works only for constructor-arguments (see previous section).
+1. You can supply a default-value to the function-template mcnepp::qtdi::resolve() as its second argument: `resolve("${connectionTimeout}", 5000)`. This works only for constructor-arguments (see [Using Constructor-arguments](#constructor-arguments)).
 2. You can put a default-value into the placeholder-expression, separated from the placeholder by a colon: `"${connectionTimeout:5000}"`. Such an embedded default-value
-takes precedence over one supplied to mqnepp::qtdi::resolve(). This works for both constructor-arguments and Q_PROPERTYs (see next section).
+takes precedence over one supplied to mqnepp::qtdi::resolve(). This works for both constructor-arguments and Q_PROPERTYs (see [Configuring services with Q_PROPERTY](#configuring-services)).
 
 ### Specifying an explicit Group
 
@@ -171,7 +174,7 @@ are assumed to reside in the group named "mcnepp":
     appContext -> registerService(decl, "hamburgWeather", make_config({}, "mcnepp"));
 
 
-## Configuring services with Q_PROPERTY
+## Configuring services with Q_PROPERTY {#configuring-services}
 
 We have seen how we can inject configuration-values into Service-constructors. Another way of configuring Services is to use Q_PROPERTY declarations.
 Suppose we modify the declaration of `RestPropFetcher` like this:
@@ -220,7 +223,9 @@ the service's url and connectionTimeouts as Q_PROPERTYs.
 **Note:** Every property supplied to mcnepp::qtdi::QApplicationContext::registerService() will be considered a potential Q_PROPERTY of the target-service. mcnepp::qtdi::QApplicationContext::publish() will fail if no such property can be
 found.  
 However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
-Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPostProcessor (see section "Tweaking services" below).
+Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPostProcessor (see section [Tweaking services](#tweaking-services) below).
+
+Alsol, *priavte properties* can be very useful in conjunction with [Service-templates](#service-templates).
 
 
 
@@ -229,9 +234,46 @@ Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPo
 As shown above, a service that was registered using mcnepp::qtdi::QApplicationContext::registerService() will be instantiated once mcnepp::qtdi::QApplicationContext::publish(bool) is invoked.
 <br>A single instance of the service will be injected into every other service that depends on it.
 
-However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::QApplicationContext::registerPrototype() instead.
+However, there may be some services that cannot be shared between dependent services. In this case, use mcnepp::qtdi::prototype() instead of mcnepp::qtdi::service()
+as an argument to mcnepp::qtdi::QApplicationContext::registerService().
 <br>Such a registration will not necessarily instantiate the service on mcnepp::qtdi::QApplicationContext::publish(bool).
 Only if there are other services depending on it will a new instance be created and injected into the dependent service.
+
+Every instance of a service-protoype that gets injected into a dependent service will be made a QObject-child of the dependent service.
+In other words, the dependent service becomes the *owner* of the prototype-instance.
+
+The same is true for *references to other members*: if a protoype is referenced via the ampersand-syntax, the instance of that prototype will be made a child of the service that references it.
+
+## Service-templates {#service-templates}
+
+A service-template is a recipe for configuring a service without actually registering a concrete service.
+Such a template can then be re-used when further concrete services are registered.
+<br>(For those familiar with Spring-DI: this would be an *"abstract"* bean-definition).
+<br>A Service-template can be registered like this:
+
+    auto restFetcherTemplateRegistration = context -> registerService(serviceTemplate<RestPropFetcher>(), "fetcherBase", make_config({
+        {"connectionTimeout", "${connectionTimeout:5000}
+        {"url", "${baseUrl}?stationIds=${stationId}"}
+    }));
+
+<br>The return-value has the type `ServiceRegistration<RestPropFetcher,ServiceScope::TEMPLATE>`.
+It can be supplied as an additional argument to subsequent registrations:
+
+    context -> registerService(service<RestPropFetcher>(), restFetcherTemplateRegistration, "hamburgWeather", make_config({{".stationId", "10147"}});
+
+If a service-registration utilizes a service-template, the type of the registered service must be implicitly convertible to the service-template's type.
+In particular, it can be the same type (as can be seen in the example above).
+
+
+
+Service-templates have the following capabilities:
+
+-# Uniform configuration. You may configure Q_PROPERTYs in a uniform way for all services that use this template. See the property `connectionTimeout` in the above example,
+which will be set to the same value for every service derived from this template. Even more interesting is the use of the placeholder `${stationId}` in the template's configuration.
+It will be resolved by use of a *private property* at the registration of the concrete service.
+-# Init-Methods. You may specify an *init-method* via the `mcnepp::qtdi::service_traits` of the service-template.
+-# Uniform advertising of service-interfaces. You may once specify the set of interfaces that a service-template advertises. That way, you don't
+need to repeat this for every service that uses the template. (See section [Service-interfaces](#service-interfaces) below).
 
 
 
@@ -241,12 +283,13 @@ The function mcnepp::qtdi::QApplicationContext::registerService() that was shown
 The entire lifecylce of the registered Service will be managed by the QApplicationContext.  
 Sometimes, however, it will be necessary to register an existing QObject with the ApplicationContext and make it available to other components as a dependency.  
 A reason for this may be that the constructor of the class does not merely accept other `QObject`-pointers (as "dependencies"), but also `QString`s or other non-QObject-typed value.  
-A good example would be registering objects of type `QSettings`, which play an important role in *Externalized Configuration* (see below).  
+A good example would be registering objects of type `QSettings`, which play an important role in [Externalized Configuration](#externalized-configuration).  
 
 
-There are some crucial differences between mcnepp::qtdi::QApplicationContext::registerService(), mcnepp::qtdi::QApplicationContext::registerPrototype() and mcnepp::qtdi::QApplicationContext::registerObject(), as the following table shows:
+There are some crucial differences between mcnepp::qtdi::QApplicationContext::registerService(), when invoked with either mcnepp::qtdi::service() or mcnepp::qtdi::prototype().
+Also, there are differences to mcnepp::qtdi::QApplicationContext::registerObject(), as the following table shows:
 
-| |registerService|registerPrototype|registerObject|
+| |registerService(service())|registerService(prototype())|registerObject|
 |---|---|---|---|
 |Instantiation of the object|Upon mcnepp::qtdi::QApplicationContext::publish()|In mcnepp::qtdi::QApplicationContext::publish(),<br>but only if another service requests it|Prior to the registration with the QApplicationContext|
 |When is the signal `objectPublished(QObject*)` emitted?|Upon mcnepp::qtdi::QApplicationContext::publish()|In mcnepp::qtdi::QApplicationContext::publish(),<br>but only if another service requests it|Immediately after the registration|
@@ -254,8 +297,8 @@ There are some crucial differences between mcnepp::qtdi::QApplicationContext::re
 |Handling of Properties|The key/value-pairs supplied at registration will be set as Q_PROPERTYs by QApplicationContext||All properties must be set before registration|
 |Processing by mcnepp::qtdi::QApplicationContextPostProcessor|Every service will be processed by the registered QApplicationContextPostProcessors||Object is not processed|
 |Invocation of *init-method*|If present, will be invoked by QApplicationContext||If present, must have been invoked prior to registration|
-|Parent/Child-relation|If a Service has no parent after its *init-method* has run, the ApplicationContext will become the service's parent.||The parent of the Object will not be touched.|
-|Destruction of the object|Upon destruction of the QApplicationContext||At the discrection of the code that created it|
+|Parent/Child-relation|If a Service has no parent after its *init-method* has run, the ApplicationContext will become the service's parent.|The instance of the prototype will be made a child of the service that required it.|The parent of the Object will not be touched.|
+|Destruction of the object|Upon destruction of the QApplicationContext|Upon destruction of the Service that owns the prototype-instance.|At the discrection of the code that created it|
 
 
 
@@ -367,7 +410,7 @@ Now when we register the `PropFetcherAggregator` with an ApplicationContext, we 
 
     context -> registerService(service<PropFetcherAggregator>(injectAll<RestPropFetcher,propfetcher_set_converter>()));
 
-## Service-interfaces
+## Service-interfaces {#service-interfaces}
 
 In the preceeding example, we have registered our QObject-derived class `RestPropFetcher` directly, using the function template mcnepp::qtdi::service()
 with one type-argument (aka `"service<RestPropFetcher>()"`).<br>
@@ -640,7 +683,7 @@ You may also access a specific service by name:
 
 
 
-## Tweaking services (QApplicationContextPostProcessor)
+## Tweaking services (QApplicationContextPostProcessor) {#tweaking-services}
 
 Whenever a service has been instantiated and all properties have been set, QApplicationContext will apply all registered mcnepp::qtdi::QApplicationContextPostProcessor`s 
 to it. These are user-supplied QObjects that implement the aforementioned interface which comprises a single method:
