@@ -120,7 +120,7 @@ QVariantMap&#160;</td><td class="memItemRight" valign="bottom"><b>registeredProp
 <tr class="memitem:a96d15a61bbd30df0d56c434bec2cccac"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; U, newScope &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a96d15a61bbd30df0d56c434bec2cccac">as</a> () const</td></tr>
 <tr class="memdesc:a96d15a61bbd30df0d56c434bec2cccac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attempts to cast this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a type. <br  />
 This function will yield a valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> only if this is valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> and its underlying registration-handle matches the requested type. This will be the case (at least) if U is either an advertised service-interface or the implementation-type of the service. <br  />
-Additionally, the new ServiceScope must match the property <code>isPrototype</code> of the registration-handle.  <br /></td></tr>
+Additionally, compilation will only succeed if at least one of the following is true:  <br /></td></tr>
 <tr class="separator:a96d15a61bbd30df0d56c434bec2cccac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0bb08458d02fc2893036215ced0456b9"><td class="memItemLeft" align="right" valign="top"><a id="a0bb08458d02fc2893036215ced0456b9" name="a0bb08458d02fc2893036215ced0456b9"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>operator ServiceRegistration&lt; S, ServiceScope::UNKNOWN &gt;</b> () const</td></tr>
@@ -206,10 +206,10 @@ class mcnepp::qtdi::ServiceRegistration&lt; S, SCP &gt;</div><p>A type-safe wrap
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the service-type. </td></tr>
-    <tr><td class="paramname">SCP</td><td>the ServiceScope. If this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> was obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad2d3d01edba9c46b0c75858b22b06dac" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>, it will have ServiceScope::SINGLETON. <br  />
+    <tr><td class="paramname">SCP</td><td>the ServiceScope. If this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> was obtained via QApplicationContext::registerService(service()), it will have ServiceScope::SINGLETON. <br  />
 If this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> was obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8bf49def9048cc92c5aa5d1a9437682f" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a>, it will have ServiceScope::EXTERNAL. <br  />
-If this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> was obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5f0f6b15503ddd9f5bf64e1859bd3575" title="Registers a service-prototype with this ApplicationContext.  In contrast to registerService(const Ser...">QApplicationContext::registerPrototype()</a>, it will have ServiceScope::PROTOTYPE. <br  />
-Otherwise, it will have ServiceScope::UNKNOWN. Instances of this class are being produces by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad2d3d01edba9c46b0c75858b22b06dac" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8bf49def9048cc92c5aa5d1a9437682f" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a>. </td></tr>
+If this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> was obtained via QApplicationContext::registerService(prototype()), it will have ServiceScope::PROTOTYPE. <br  />
+Otherwise, it will have ServiceScope::UNKNOWN. Instances of this class are being produces by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8bf49def9048cc92c5aa5d1a9437682f" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a>. </td></tr>
   </table>
   </dd>
 </dl>
@@ -243,7 +243,12 @@ template&lt;typename U , <a class="el" href="qapplicationcontext_8h.html#a5429ea
 
 <p>Attempts to cast this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a type. <br  />
 This function will yield a valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> only if this is valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> and its underlying registration-handle matches the requested type. This will be the case (at least) if U is either an advertised service-interface or the implementation-type of the service. <br  />
-Additionally, the new ServiceScope must match the property <code>isPrototype</code> of the registration-handle. </p>
+Additionally, compilation will only succeed if at least one of the following is true: </p>
+<ul>
+<li>the current and new scopes are equal</li>
+<li>the current scope is <code>ServiceScope::UNKNOWN</code></li>
+<li>the new scope is <code>ServiceScope::UNKNOWN</code></li>
+</ul>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">U</td><td>the new service-type. </td></tr>
