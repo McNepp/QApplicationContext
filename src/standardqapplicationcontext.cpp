@@ -372,7 +372,7 @@ public:
     }
 
 
-    CreateRegistrationHandleEvent(const type_info &service_type, const QMetaObject* metaObject) :
+    CreateRegistrationHandleEvent(const std::type_info &service_type, const QMetaObject* metaObject) :
         QEvent(eventId()),
         m_service_type(service_type),
         m_metaObject(metaObject),
@@ -389,7 +389,7 @@ public:
     }
 
 private:
-    const type_info &m_service_type;
+    const std::type_info &m_service_type;
     const QMetaObject* m_metaObject;
     QSharedPointer<std::optional<ProxyRegistrationImpl*>> m_result;
 };
@@ -427,7 +427,7 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
     }
 }
 
-detail::Subscription *StandardApplicationContext::ProxyRegistrationImpl::createAutowiring(const type_info &type, detail::q_inject_t injector, Registration *source)
+detail::Subscription *StandardApplicationContext::ProxyRegistrationImpl::createAutowiring(const std::type_info &type, detail::q_inject_t injector, Registration *source)
 {
     if(QThread::currentThread() != this->thread()) {
         qCritical(loggingCategory()).noquote().nospace() << "Cannot create autowiring in different thread";
@@ -490,7 +490,7 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
     return subscribe(subscription);
 }
 
-detail::Subscription *StandardApplicationContext::DescriptorRegistration::createAutowiring(const type_info &type, detail::q_inject_t injector, Registration *source)
+detail::Subscription *StandardApplicationContext::DescriptorRegistration::createAutowiring(const std::type_info &type, detail::q_inject_t injector, Registration *source)
 {
     if(QThread::currentThread() != this->thread()) {
         qCritical(loggingCategory()).noquote().nospace() << "Cannot create autowiring in different thread";
@@ -896,7 +896,7 @@ detail::ServiceRegistration *StandardApplicationContext::getRegistrationHandle(c
 
 
 
-detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(const type_info &service_type, const QMetaObject* metaObject) const
+detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(const std::type_info &service_type, const QMetaObject* metaObject) const
 {
     QMutexLocker<QMutex> locker{&mutex};
 
