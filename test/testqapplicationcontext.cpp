@@ -1566,6 +1566,13 @@ private slots:
         QVERIFY(!context->registerService(service<CardinalityNService>(invalidReg)));
     }
 
+    void testRegisterTemplateAsDependency() {
+        ServiceRegistration<BaseService,ServiceScope::UNKNOWN> templateReg = context->registerServiceTemplate<BaseService>();
+        QVERIFY(templateReg);
+        //Using a TEMPLATE as dependency must fail at runtime:
+        QVERIFY(!context->registerService(service<DependentService>(templateReg)));
+    }
+
 
     void testServiceRegistrationEquality() {
         ServiceRegistration<Interface1> reg = context->registerService(service<Interface1,BaseService>());

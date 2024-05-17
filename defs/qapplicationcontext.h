@@ -131,26 +131,22 @@ namespace detail {
 template<ServiceScope scope> struct service_scope_traits {
     static constexpr bool is_binding_source = false;
     static constexpr bool is_constructable = false;
-    static constexpr bool is_dependency = false;
 };
 
 template<> struct service_scope_traits<ServiceScope::SINGLETON> {
     static constexpr bool is_binding_source = true;
     static constexpr bool is_constructable = true;
-    static constexpr bool is_dependency = true;
 };
 
 
 template<> struct service_scope_traits<ServiceScope::EXTERNAL> {
     static constexpr bool is_binding_source = true;
     static constexpr bool is_constructable = false;
-    static constexpr bool is_dependency = true;
 };
 
 template<> struct service_scope_traits<ServiceScope::PROTOTYPE> {
     static constexpr bool is_binding_source = false;
     static constexpr bool is_constructable = true;
-    static constexpr bool is_dependency = true;
 };
 
 
@@ -1855,10 +1851,11 @@ struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
     using type = S;
 
 
-    static_assert(service_scope_traits<scope>::is_dependency, "ServiceRegistration with this ServiceScope cannot be a dependency");
 
     static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S,scope>& dep) {
-        if(dep) {
+        static_assert(scope != ServiceScope::TEMPLATE, "ServiceRegistration with ServiceScope::TEMPLATE cannot be a dependency");
+        //It could still be ServiceScope::UNKNOWN statically, but ServiceScope::TEMPLATE at runtime:
+        if(dep && dep.unwrap()->scope() != ServiceScope::TEMPLATE) {
             return { dep.unwrap()->descriptor().impl_type, static_cast<int>(Kind::MANDATORY), dep.registeredName() };
         }
         return { typeid(S), INVALID_KIND, dep.registeredName() };
