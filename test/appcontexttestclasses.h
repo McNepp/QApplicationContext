@@ -42,7 +42,7 @@ class BaseService : public QObject, public Interface1, public TimerAware
 
     Q_OBJECT
 public:
-    BaseService();
+    explicit BaseService(QObject* parent = nullptr);
 
 
     Q_PROPERTY(QTimer *timer READ timer WRITE setTimer NOTIFY timerChanged)
@@ -71,6 +71,7 @@ public:
     QTimer *timer() const override;
     void setTimer(QTimer *newTimer);
     CyclicDependency *dependency() const;
+    QObject* const m_InitialParent;
 
 
 
@@ -96,7 +97,7 @@ signals:
 private:
 
 
-    explicit BaseService(CyclicDependency* dependency, QObject *parent = nullptr);
+    BaseService(CyclicDependency* dependency, QObject *parent);
 
     CyclicDependency* m_dependency;
     QApplicationContext* m_appContext;

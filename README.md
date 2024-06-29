@@ -112,6 +112,24 @@ Whenever we want to express a dependency for a Service and we have the correspon
     context -> registerService(service<RestPropFetcher>(QString{"https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"), networkRegistration}, "hamburgWeather"); // 3
 
 
+## Parent-Child relation
+
+In the preceding example, the class `RestPropFetcher` was introduced which had the following constructor:
+
+    RestPropFetcher(const QString& url, QNetworkAccessManager* networkManager, QObject* parent = nullptr);
+
+This is typical for QObject-based services: the first arguments (aka the dependencies) are mandatory, while the last argument is an optional `parent`.
+<br>In the preceding example, the service was registered by supplying the first two arguments explicitly. Thus, no `parent` was supplied.
+<br>QApplicationContext will check for every service after creation whether the service already has a QObject::parent().
+If not, **it will set itself as the service's parent** using QObject::setParent(QObject*).
+<br>However, what would you do if you had a constructor with a *mandatory parent*?
+<br>In that case, mcnepp::qtdi::injectParent() comes to the rescue:
+
+    context->registerService(service<RestPropFetcher>(QString{"https://whatever"}, inject<QNetworkAccessManager>(), injectParent()));
+
+This will cause the ApplicationContext to inject itself into the constructor as the parent.
+
+
 ## Externalized Configuration {#externalized-configuration}
 
 In the above example, we were configuring the Url with a String-literal in the code. This is less than optimal, as we usually want to be able
@@ -167,11 +185,24 @@ takes precedence over one supplied to mqnepp::qtdi::resolve(). This works for bo
 ### Specifying an explicit Group
 
 If you structure your configuration in a hierarchical manner, you may find it useful to put your configuration-values into a `QSettings::group()`.
-Such a group can be specified for your resolvable values by means of the mcnepp::qtdi::make_config() function. In the following example, the configuration-keys "baseUrl", "hamburgStationId" and "connectionTimeout"
+Such a group can be specified for your resolvable values by means of the mcnepp::qtdi::config() function. In the following example, the configuration-keys "baseUrl", "hamburgStationId" and "connectionTimeout"
 are assumed to reside in the group named "mcnepp":
 
     auto decl = service<RestPropFetcher>(resolve("${baseUrl}?stationIds=${hamburgStationId}"), resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>());
-    appContext -> registerService(decl, "hamburgWeather", make_config({}, "mcnepp"));
+    appContext -> registerService(decl, "hamburgWeather", config("mcnepp"));
+
+### Lookup in sub-sections
+
+Every key will be looked up in the section that has been provided via as an argument to mcnepp::qtdi::config(), argument, unless the key itself starts with a forward slash,
+which denotes the root-section.
+
+A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
+Insert `*/` right after the opening sequence of the placeholder.
+
+    context -> registerService(service<QIODevice,QFile>(resolve("${*/filename}")), "file", config("files"));
+
+The key "filename" will first be searched in the section "files". If it cannot be found, it will be searched in the root-section.
+
 
 
 ## Configuring services with Q_PROPERTY {#configuring-services}
@@ -214,10 +245,10 @@ Suppose we modify the declaration of `RestPropFetcher` like this:
 Now, the "url" cannot be injected into the constructor. Rather, it must be set explicitly via the corresponding Q_PROPERTY.
 For this, the yet unused `service_config` argument comes into play: It contains a `QVariantMap` with the names and values of properties to set:
 
-    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()), "hamburgWeather", make_config({{"url", "${baseUrl}?stationIds=${hamburgStationId}"}, {"connectionTimeout", "${connectionTimeout:5000}}));
-    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()), "berlinWeather", make_config({{"url", "${baseUrl}?stationIds=${berlinStationId}"}, {"connectionTimeout", "${connectionTimeout:5000}})); 
+    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()), "hamburgWeather", config({{"url", "${baseUrl}?stationIds=${hamburgStationId}"}, {"connectionTimeout", "${connectionTimeout:5000}}));
+    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()), "berlinWeather", config({{"url", "${baseUrl}?stationIds=${berlinStationId}"}, {"connectionTimeout", "${connectionTimeout:5000}})); 
 
-As you can see, the code has changed quite significantly: instead of supplying the Url as a constructor-argument, you use mcnepp::qtdi::make_config() and pass in the key/value-pairs for configuring
+As you can see, the code has changed quite significantly: instead of supplying the Url as a constructor-argument, you use mcnepp::qtdi::config() and pass in the key/value-pairs for configuring
 the service's url and connectionTimeouts as Q_PROPERTYs.
 
 **Note:** Every property supplied to mcnepp::qtdi::QApplicationContext::registerService() will be considered a potential Q_PROPERTY of the target-service. mcnepp::qtdi::QApplicationContext::publish() will fail if no such property can be
@@ -251,7 +282,7 @@ Such a template can then be re-used when further concrete services are registere
 <br>(For those familiar with Spring-DI: this would be an *"abstract"* bean-definition).
 <br>A Service-template can be registered like this:
 
-    auto restFetcherTemplateRegistration = context -> registerService(serviceTemplate<RestPropFetcher>(), "fetcherBase", make_config({
+    auto restFetcherTemplateRegistration = context -> registerService(serviceTemplate<RestPropFetcher>(), "fetcherBase", config({
         {"connectionTimeout", "${connectionTimeout:5000}
         {"url", "${baseUrl}?stationIds=${stationId}"}
     }));
@@ -259,7 +290,7 @@ Such a template can then be re-used when further concrete services are registere
 <br>The return-value has the type `ServiceRegistration<RestPropFetcher,ServiceScope::TEMPLATE>`.
 It can be supplied as an additional argument to subsequent registrations:
 
-    context -> registerService(service<RestPropFetcher>(), restFetcherTemplateRegistration, "hamburgWeather", make_config({{".stationId", "10147"}});
+    context -> registerService(service<RestPropFetcher>(), restFetcherTemplateRegistration, "hamburgWeather", config({{".stationId", "10147"}});
 
 If a service-registration utilizes a service-template, the type of the registered service must be implicitly convertible to the service-template's type.
 In particular, it can be the same type (as can be seen in the example above).
@@ -275,6 +306,26 @@ It will be resolved by use of a *private property* at the registration of the co
 -# Uniform advertising of service-interfaces. You may once specify the set of interfaces that a service-template advertises. That way, you don't
 need to repeat this for every service that uses the template. (See section [Service-interfaces](#service-interfaces) below).
 
+### Generic (un-validated) properties of Service-templates
+
+Registration of a service-template differs from the registration of a "normal" service in one important aspect:
+
+The properties that you provide via mcnepp::qtdi::config() will not be validated against the Q_PROPERTYs of the service's implementation-type!
+
+The rationale is that the service-template may be used by services of yet unknown type. The validation of a Q_PROPERTY will therefore be postponed until registration of
+the concrete service that derives from this service-template.
+
+This makes it possible to register configured service-templates without assuming any particular service-type at all!
+<br>In order to facilitate this, the type-argument of the function mcnepp::qtdi::serviceTemplate() has a default-type of `QObject`.
+
+Using this knowledge, let's register a service-template for arbitrary services that support a Q_PROPERTY `url`:
+
+
+    auto urlAware = context->registerService(serviceTemplate(), "urlAware", config({{ "url", "http://github.com"}}));
+
+This can be expressed even more concisely using the convenience-function mcnepp::qtdi::QApplicationContext::registerServiceTemplate():
+
+    auto urlAware = context->registerServiceTemplate("urlAware", config({{ "url", "http://github.com"}}));
 
 
 ## Managed Services vs. Un-managed Objects
@@ -490,7 +541,7 @@ Putting it all together, we use the helper-template `Service` for specifying bot
     
     context -> registerService(service<PropFetcherAggregator>(injectAllOf<PropFetcher>()), "propFetcherAggration");
     
-    /*2*/ context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher>(), "hamburgWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
+    /*2*/ context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher>(), "hamburgWeather", config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
     
     context -> publish(); 
 
@@ -524,7 +575,7 @@ Suppose the class `RestPropFetcher` implements an additional interface `QNetwork
 
 In order to advertise a `RestPropFetcher` as both a `PropFetcher` and a `QNetworkManagerAware`, we use:
 
-    auto reg = context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher,QNetworkManagerAware>(), "hamburgWeather", make_config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
+    auto reg = context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher,QNetworkManagerAware>(), "hamburgWeather", config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
 
 **Note:** The return-value `reg` will be of type `ServiceRegistration<RestPropFetcher,ServiceScope::SINGLETON>`.
 
@@ -570,7 +621,7 @@ which makes this a *reference to another member*:
 
     context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator");
     
-    context -> registerService(service<PropFetcher,RestPropFetcher(inject<QNetworkAccessManager>()), "hamburgWeather", make_config({
+    context -> registerService(service<PropFetcher,RestPropFetcher(inject<QNetworkAccessManager>()), "hamburgWeather", config({
       {"url", "${weatherUrl}${hamburgStationId}"},
       {"summary", "&propFetcherAggregator"}
     }));
@@ -585,12 +636,12 @@ This can be achieved by using a property-value with the format `"&ref.prop"`. Th
     
     auto reg1 = context -> registerObject(&timer1, "timer1"); // 1
     
-    auto reg2 = context -> registerService<QTimer>("timer2", make_config({{"interval", "&timer1.interval"}})); // 2
+    auto reg2 = context -> registerService<QTimer>("timer2", config({{"interval", "&timer1.interval"}})); // 2
     
     context -> publish(); 
 
 1. We register a `QTimer` as "timer1".
-2. We register a second `QTimer` as "timer2". We use mcnepp::qtdi::make_config() to initialize the property `interval` of the second timer with the first timer's propery.
+2. We register a second `QTimer` as "timer2". We use mcnepp::qtdi::config() to initialize the property `interval` of the second timer with the first timer's propery.
 
 ## Binding source-properties to target-properties of other members of the ApplicationContext
 
@@ -656,7 +707,7 @@ It offers the method mcnepp::qtdi::ServiceRegistration::subscribe(), which is a 
 In addition to being type-safe, the method mcnepp::qtdi::ServiceRegistration::subscribe() has the advantage that it will automatically inject the service if you subscribe after the service has already been published.  
 This code shows how to utilize it:
 
-    auto registration = context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()), "hamburgWeather", make_config({{"url", "${weatherUrl}${hamburgStationId}"}})); 
+    auto registration = context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()), "hamburgWeather", config({{"url", "${weatherUrl}${hamburgStationId}"}})); 
     
     registration.subscribe(this, [](PropFetcher* fetcher) { qInfo() << "I got the PropFetcher!"; });
     
@@ -692,7 +743,7 @@ to it. These are user-supplied QObjects that implement the aforementioned interf
 
 In this method, you might apply further configuration to your service there, or perform logging or monitoring tasks.<br>
 Any information that you might want to pass to a QApplicationContextPostProcessor can be supplied as
-so-called *private properties* via mcnepp::qtdi::make_config(). Just prefix the property-key with a dot.
+so-called *private properties* via mcnepp::qtdi::config(). Just prefix the property-key with a dot.
 
 
 ## Service-Initializers
@@ -872,12 +923,12 @@ That could be a bit unwieldly. Luckily, this is not necessary.
 
 Given that each module has access to the (global) QApplicationContext, you can simply do this in some initialization-code in module A:
 
-    context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()), "hamburgWeather", make_config({{"url", "${weatherUrl}${hamburgStationId}"}})); 
+    context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()), "hamburgWeather", config({{"url", "${weatherUrl}${hamburgStationId}"}})); 
     context -> publish();
 
 ...and this in module B:
 
-    context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()), "berlinWeather", make_config({{"url", "${weatherUrl}${berlinStationId}"}})); 
+    context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()), "berlinWeather", config({{"url", "${weatherUrl}${berlinStationId}"}})); 
     context -> publish();
 
 At the first `publish()`, an instance of `QNetworkAccessManager` will be instantiated. It will be injected into both `RestPropFetchers`.

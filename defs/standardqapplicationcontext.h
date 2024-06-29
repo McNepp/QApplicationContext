@@ -37,7 +37,7 @@ public:
 
     virtual unsigned pendingPublication() const override;
 
-    virtual QVariant getConfigurationValue(const QString& key) const override;
+    virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections) const override;
 
     using QApplicationContext::registerObject;
 
@@ -263,16 +263,7 @@ private:
 
 
 
-        virtual int unpublish() override {
-            if(theService) {
-                std::unique_ptr<QObject> srv{theService};
-                QObject::disconnect(onDestroyed);
-                theService = nullptr;
-                m_state = STATE_INIT;
-                return 1;
-            }
-            return 0;
-        }
+        virtual int unpublish() override;
 
 
 
@@ -540,7 +531,7 @@ private:
         }
 
         bool add(service_registration_handle_t reg) {
-            if(reg->matches(m_type)) {
+            if(reg->scope() != ServiceScope::TEMPLATE && reg->matches(m_type)) {
                 reg->subscribe(proxySubscription);
                 return true;
             }

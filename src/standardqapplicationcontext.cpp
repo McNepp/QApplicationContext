@@ -113,7 +113,10 @@ bool isBindable(const QMetaProperty& sourceProperty) {
 
 namespace {
 
-const QRegularExpression beanRefPattern{"^&([^.]+)(\\.([^.]+))?"};
+const QRegularExpression& beanRefPattern() {
+    static QRegularExpression regEx{"^&([^.]+)(\\.([^.]+))?"};
+    return regEx;
+}
 
 
 inline bool isPrivateProperty(const QString& key) {
@@ -125,6 +128,30 @@ inline void setParentIfNotSet(QObject* obj, QObject* newParent) {
         obj->setParent(newParent);
     }
 }
+
+inline QString makePath(const QString& section, const QString& path) {
+    if(section.isEmpty() || path.startsWith('/')) {
+        return path;
+    }
+    if(section.endsWith('/')) {
+        return section + path;
+    }
+    return section + '/' + path;
+}
+
+inline bool removeLastPath(QString& s) {
+    int lastSlash = s.lastIndexOf('/');
+    if(lastSlash <= 0) {
+        return false;
+    }
+    int nextSlash = s.lastIndexOf('/', lastSlash - 1);
+    //lastIndexOf will return -1 if not found.
+    //Thus, the following code will remove either the part after the nextSlash or from the beginning of the String:
+    s.remove(nextSlash + 1, lastSlash - nextSlash);
+    return true;
+}
+
+
 
 template<typename T> struct Collector : public detail::Subscription {
 
@@ -423,7 +450,9 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
     TemporarySubscriptionProxy tempProxy{subscription};
     //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
     for(auto reg : registeredServices()) {
-        reg->subscribe(&tempProxy);
+        if(reg->scope() != ServiceScope::TEMPLATE) {
+            reg->subscribe(&tempProxy);
+        }
     }
 }
 
@@ -577,6 +606,21 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
         }
     }
     return theService;
+}
+
+int StandardApplicationContext::ServiceRegistration::unpublish() {
+    if(theService) {
+        std::unique_ptr<QObject> srv{theService};
+        QObject::disconnect(onDestroyed);
+        if(theService->parent() != applicationContext()) {
+            //Do not delete service if it has an external parent!
+            srv.release();
+        }
+        theService = nullptr;
+        m_state = STATE_INIT;
+        return 1;
+    }
+    return 0;
 }
 
 StandardApplicationContext::ServiceTemplateRegistration::ServiceTemplateRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
@@ -839,6 +883,9 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 return resolved;
             }
         }
+
+    case detail::PARENT_PLACEHOLDER_KIND:
+        return {QVariant::fromValue(static_cast<QObject*>(this)), Status::ok};
 
     case static_cast<int>(Kind::MANDATORY):
         if(depRegs.empty()) {
@@ -1341,14 +1388,6 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
                 objName = makeName(*descriptor.service_types.begin());
             }
 
-            if(descriptor.meta_object) {
-                for(auto& key : config.properties.keys()) {
-                    if(!isPrivateProperty(key) && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
-                        qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
-                        return nullptr;
-                    }
-                }
-            }
             if(auto baseRegistration = dynamic_cast<service_registration_handle_t>(baseObj)) {
                 if(baseRegistration->scope() != ServiceScope::TEMPLATE) {
                     qCCritical(loggingCategory()).noquote().nospace() << "Template-Registration " << *baseRegistration << " must have scope TEMPLATE, but has scope " << baseRegistration->scope();
@@ -1367,6 +1406,24 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
                 }
                 base = dynamic_cast<ServiceTemplateRegistration*>(baseRegistration);
             }
+
+            if(descriptor.meta_object && scope != ServiceScope::TEMPLATE) {
+                const QVariantMap* props = &config.properties;
+                for(DescriptorRegistration* handle = base;;handle = handle->base() ){
+                    for(auto keyIter = props->keyBegin(); keyIter != props->keyEnd(); ++keyIter) {
+                        auto& key = *keyIter;
+                        if(!isPrivateProperty(key) && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
+                            qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
+                            return nullptr;
+                        }
+                    }
+                    if(!handle) {
+                        break;
+                    }
+                    props = &handle->config().properties;
+                }
+            }
+
             switch(scope) {
             case ServiceScope::PROTOTYPE:
                 reg = new PrototypeRegistration{base, ++nextIndex, objName, descriptor, config, this};
@@ -1454,7 +1511,7 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
         return {Status::fatal, false};
     }
     QString key = value.toString();
-    auto match = beanRefPattern.match(key);
+    auto match = beanRefPattern().match(key);
     if(match.hasMatch()) {
         key = match.captured(1);
         auto bean = getRegistrationByName(key);
@@ -1510,6 +1567,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
     int lastStateBeforeEscape = STATE_START;
     int state = STATE_START;
+    bool hasWildcard = false;
     for(int pos = 0; pos < key.length(); ++pos) {
         auto ch = key[pos];
         switch(ch.toLatin1()) {
@@ -1568,7 +1626,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             case STATE_FOUND_DEFAULT_VALUE:
             case STATE_FOUND_PLACEHOLDER:
                 if(!token.isEmpty()) {
-                    lastResolvedValue = getConfigurationValue(group.isEmpty() ? token : group + "/" + token);
+                    lastResolvedValue = getConfigurationValue(makePath(group, token), hasWildcard);
                     if(!lastResolvedValue.isValid()) {
                         //If not found in ApplicationContext's configuration, look in the "private properties":
                         lastResolvedValue = config.properties["." + token];
@@ -1604,6 +1662,22 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 continue;
             case STATE_FOUND_PLACEHOLDER:
                 state = STATE_FOUND_DEFAULT_VALUE;
+                continue;
+            }
+
+        case '*':
+            switch(state) {
+            case STATE_FOUND_PLACEHOLDER:
+                //Look-ahead: The only valid wildcard notation starts with '*/'
+                if(pos + 1 >= key.length() || key[pos+1] != '/') {
+                    qCCritical(loggingCategory()).nospace().noquote() << "Invalid placeholder '" << key << "'";
+                    return {QVariant{}, Status::fatal};
+                }
+                hasWildcard = true;
+                ++pos;
+                continue;
+            default:
+                resolvedString += ch;
                 continue;
             }
 
@@ -1797,7 +1871,7 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
 
 
 
-QVariant StandardApplicationContext::getConfigurationValue(const QString& key) const {
+QVariant StandardApplicationContext::getConfigurationValue(const QString& key, bool searchParentSections) const {
     if(auto bytes = QString{key}.replace('/', '.').toLocal8Bit(); qEnvironmentVariableIsSet(bytes)) {
         auto value = qEnvironmentVariable(bytes);
         qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << bytes << " = '" << value << "' from enviroment";
@@ -1808,13 +1882,16 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key) c
     for(auto reg : getRegistrationHandles()) {
         reg->subscribe(&collector);
     }
-    for(QSettings* settings : collector.collected) {
-        auto value = settings->value(key);
-        if(value.isValid()) {
-            qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << key << " = " << value << " from " << settings->fileName();
-            return value;
+    QString searchKey = key;
+    do {
+        for(QSettings* settings : collector.collected) {
+            auto value = settings->value(searchKey);
+            if(value.isValid()) {
+                qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << searchKey << " = " << value << " from " << settings->fileName();
+                return value;
+            }
         }
-    }
+    } while(searchParentSections && removeLastPath(searchKey));
 
     qCDebug(loggingCategory()).noquote().nospace() << "No value found for configuration-entry: " << key;
     return QVariant{};

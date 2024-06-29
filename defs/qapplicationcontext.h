@@ -594,6 +594,15 @@ protected:
 
     QMetaProperty findPropertyBySignal(const QMetaMethod& signalFunction, const QMetaObject* metaObject);
 
+    ///
+    /// \brief The return-type of mcnepp::qtdi::injectParent().
+    /// This is an empty struct. It serves as a 'type-tag' for which there
+    /// is a specialization of the template mcnepp::qtdi::detail::dependency_helper.
+    /// That specialization will create a dependency_info with mcnepp::qtdi::detail::PARENT_PLACEHOLDER_KIND.
+    ///
+    struct ParentPlaceholder {
+    };
+
 
 }
 
@@ -1503,7 +1512,6 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::N> injectAll(con
 }
 
 
-
 ///
 /// \brief A placeholder for a resolvable constructor-argument.
 /// Use the function resolve(const QString&) to pass a resolvable argument to a service
@@ -1518,10 +1526,14 @@ template<typename S> struct Resolvable {
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
 /// Use this function to supply resolvable arguments to the constructor of a Service.
 /// The result of resolving the placeholder must be a String that is convertible via `QVariant::value<T>()` to the desired type.
+///
+/// The result-type of the constructor-argument must be explicitly specified via the type-argument `<S>`, unless it is QString.
+/// This function is a simplified overload of another function. See mcnepp::qtdi::resolve(const QString&,const S&) for more details!
+///
 /// ### Example
 ///
 ///     auto serviceDecl = service<QIODevice,QFile>(resolve("${filename:readme.txt}"));
-///
+/// \tparam S the result-type of the resolved constructor-argument.
 /// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`.
 /// \return a Resolvable instance for the supplied type.
 ///
@@ -1529,16 +1541,41 @@ template<typename S = QString> [[nodiscard]] Resolvable<S> resolve(const QString
     return Resolvable<S>{expression};
 }
 
+
 ///
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
 /// The result of resolving the placeholder must
 /// be a String that is convertible via `QVariant::value<T>()` to the desired type.<br>
+///
+/// ### Placeholders
+/// Values may contain *placeholders*, indicated by the syntax `${placeholder}`. Such a placeholder will be looked
+/// up via `QApplicationContext::getConfigurationValue(const QString&,bool)`.<br>
+/// Example:
+///
+///     auto serviceDecl = service<QIODevice,QFile>(resolve("${filename}", QString{"readme.txt"}));
+/// will inject the value that is configured under the key "filename" into the QFile. If the key cannot be found, the default value "readme.txt" will be used instead.
+/// <br>Should you want to specify a property-value containg the character-sequence "${", you must escape this with the backslash.
+///
 /// **Note:** The expression is allowed to specify embedded default-values using the format `${identifier:defaultValue}`.
 /// However, this does not make much sense, as it would render the parameter `defaultValue` useless,
 /// since the embedded default-value would always take precedence!
-/// ### Example
 ///
-///     auto serviceDecl = service<QIODevice,QFile>(resolve("${filename}", QString{"readme.txt"}));
+/// ### Lookup in sub-sections
+/// Every key will be looked up in the section that has been provided via as an argument to config(), argument, unless the key itself starts with a forward slash,
+/// which denotes the root-section.
+///
+/// A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
+///
+/// Insert */ right after the opening sequence of the placeholder.
+///
+///     //Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
+///     //Thus, in the following example, we put a space between the asterisk and the slash:
+///     context -> registerService(service<QIODevice,QFile>(resolve("${* /filename}")), "file", config("files"));
+///
+/// The key "filename" will first be searched in the section "files". If it cannot be found, it will be searched in the root-section.
+///
+///
+/// \tparam S the result-type of the resolved constructor-argument.
 /// \param expression may contain placeholders in the format `${identifier}`.
 /// \param defaultValue the value to use if the placeholder cannot be resolved.
 /// \return a Resolvable instance for the supplied type.
@@ -1546,6 +1583,24 @@ template<typename S = QString> [[nodiscard]] Resolvable<S> resolve(const QString
 template<typename S> [[nodiscard]] Resolvable<S> resolve(const QString& expression, const S& defaultValue) {
     return Resolvable<S>{expression, QVariant::fromValue(defaultValue)};
 }
+
+
+///
+/// \brief Creates a placeholder for injecting the ApplicationContext into a service as the parent.
+/// <br>Usually, this will not be necessary, as the QApplicationContext will set itself as the service's parent
+/// after creation, using QObject::setParent(QObject*).
+/// <br>However, there can be QObject-derived classes where the `parent` argument is not optional in the constructor,
+/// so it has to be supplied explicitly.
+/// <br>**Note:** Notwithstanding its self-documenting name, this function cannot ensure that the ApplicationContext is actually passed to the constructor
+/// as the `parent` argument. However, in the vast majority of cases it will be the last argument that denotes ths `parent`.
+/// \return an opaque type that will cause the ApplicationContext to inject itself as a service's parent.
+///
+inline detail::ParentPlaceholder injectParent() {
+    return detail::ParentPlaceholder{};
+}
+
+
+
 
 
 ///
@@ -1559,18 +1614,47 @@ struct service_config final {
         return left.properties == right.properties && left.group == right.group && left.autowire == right.autowire;
     }
 
+    service_config withGroup(const QString& newGroup)&& {
+        return service_config{newGroup, autowire, std::move(properties)};
+    }
 
-    QVariantMap properties;
+    service_config withGroup(const QString& newGroup)const& {
+        return service_config{newGroup, autowire, properties};
+    }
+
+    service_config withAutowire()&& {
+        return service_config{std::move(group), true, std::move(properties)};
+    }
+
+    service_config withAutowire()const& {
+        return service_config{group, true, properties};
+    }
+
+
+    ///
+    /// \brief The optional group for the configuration.
+    ///
     QString group;
+
+    ///
+    /// \brief Determines whether all Q_PROPERTYs that refer to other services shall be auto-wired by the ApplicationContext.
+    ///
     bool autowire = false;
+
+    ///
+    /// \brief The keys and corresponding values.
+    ///
+    QVariantMap properties;
 };
 
+
+
 ///
-/// \brief Makes a service_config.
+/// \brief Makes a service_config and populates it with properties.
 /// <br>The service must have a Q_PROPERTY for every key contained in `properties`.<br>
 /// Example:
 ///
-///     `make_config({{"interval", 42}});`
+///     `config({{"interval", 42}});`
 /// will set the Q_PROPERTY `interval` to the value 42.
 /// ### Private Properties
 /// A key that starts with a dot is considered to denote a *private property*, and no attempt will be made to set a corresponding Q_PROPERTY
@@ -1583,48 +1667,56 @@ struct service_config final {
 /// However, one part of the URL will be unique for each Service.
 /// This is how you would do this:
 ///
-///     auto restServiceTemplate = context -> registerService<RestService>(serviceTemplate<RestService>(), "restTemplate", make_config({{"url", "https://myserver/rest/${path}"}}));
+///     auto restServiceTemplate = context -> registerService<RestService>(serviceTemplate<RestService>(), "restTemplate", config({{"url", "https://myserver/rest/${path}"}}));
 ///
 /// Now, whenever you register a concrete RestService, you must supply the `templateReg` as an additional argument.
 /// Also, you must specify the value for `${path}` as a *private property*:
 ///
-///     context -> registerService(service<RestService>(), restServiceTemplate, "temperatureService", make_config({{".path", "temperature"}}));
+///     context -> registerService(service<RestService>(), restServiceTemplate, "temperatureService", config({{".path", "temperature"}}));
 ///
 /// ### Placeholders
 /// Values may contain *placeholders*, indicated by the syntax `${placeholder}`. Such a placeholder will be looked
-/// up via `QApplicationContext::getConfigurationValue(const QString&)`.<br>
+/// up via `QApplicationContext::getConfigurationValue(const QString&,bool)`.<br>
 /// Example:
 ///
-///     `make_config({{"interval", "${timerInterval}"}});`
+///     config({{"interval", "${timerInterval}"}});
 /// will set the Q_PROPERTY `interval` to the value configured with the name `timerInterval`.
 /// <br>Should you want to specify a property-value containg the character-sequence "${", you must escape this with the backslash.
+/// ### Lookup in sub-sections
+/// Every key will be looked up in the provided section, as specified by the `group` argument, unless the key itself starts with a forward slash,
+/// which denotes the root-section.
+///
+/// A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
+///
+/// Insert */ right after the opening sequence of the placeholder.
+///
+///     //Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
+///     //Thus, in the following example, we put a space between the asterisk and the slash:
+///     config({{"interval", "${* /timerInterval}"}}).withGroup("timers");
+///
+/// The key "timerInterval" will first be searched in the section "timers". If it cannot be found, it will be searched in the root-section.
+///
 /// ### Service-references
 /// If a value starts with an ampersand, the property will be resolved with a registered service of that name.
 /// Example:
 ///
-///     `make_config({{"dataProvider", "&dataProviderService"}});`
+///     config({{"dataProvider", "&dataProviderService"}});
 /// will set the Q_PROPERTY `dataProvider` to the service that was registered under the name `dataProviderService`.
 /// <br>Should you want to specify a property-value starting with an ampersand, you must escape this with the backslash.
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
-/// \param group the `QSettings::group()` to be used.
-/// \param autowire if `true`, the QApplicationContext will attempt to initialize all Q_PROPERTYs of `QObject*`-type with the corresponding services.
-/// Those properties that have explicitly been supplied will not be auto-wired.
 /// \return the service_config.
-///
-[[nodiscard]] inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties, const QString& group = "", bool autowire = false) {
-    return service_config{properties, group, autowire};
+[[nodiscard]] inline service_config config(std::initializer_list<std::pair<QString,QVariant>> properties) {
+    return service_config{"", false, properties};
 }
 
 ///
-/// \brief Makes a service_config that will autowire a service.
-/// <br>Equivalent to `make_config({}, group, true)`.
-/// \param group the `QSettings::group()` to be used.
+/// Makes a service_config, with an optional group.
+/// \param group the name of the optional group.
 /// \return the service_config.
-/// \sa mcnepp::qtdi::make_config(std::initializer_list<std::pair<QString,QVariant>>, const QString&, bool)
-///
-[[nodiscard]] inline service_config make_autowire_config(const QString& group = "") {
-    return service_config{{}, group, true};
+[[nodiscard]] inline service_config config(const QString& group = "") {
+    return service_config{group};
 }
+
 
 
 
@@ -1688,6 +1780,7 @@ using constructor_t = std::function<QObject*(const QVariantList&)>;
 
 constexpr int VALUE_KIND = 0x10;
 constexpr int RESOLVABLE_KIND = 0x20;
+constexpr int PARENT_PLACEHOLDER_KIND = 0x40;
 constexpr int INVALID_KIND = 0xff;
 
 
@@ -1724,6 +1817,7 @@ struct dependency_info {
         switch(kind) {
         case VALUE_KIND:
         case RESOLVABLE_KIND:
+        case PARENT_PLACEHOLDER_KIND:
             return false;
         default:
             return !expression.isEmpty();
@@ -1745,6 +1839,8 @@ inline bool operator==(const dependency_info& info1, const dependency_info& info
         return info1.value == info2.value;
     case INVALID_KIND:
         return false;
+    case PARENT_PLACEHOLDER_KIND:
+        return true;
         //In all other cases, we use only the expression. (For RESOLVABLE_KIND, value contains the default-value, which we ignore deliberately)
     default:
         return info1.expression == info2.expression;
@@ -1905,6 +2001,22 @@ struct dependency_helper<Resolvable<S>> {
 
 
 
+template <>
+struct dependency_helper<ParentPlaceholder> {
+
+    using type = ParentPlaceholder;
+
+
+
+    static dependency_info info(const ParentPlaceholder&) {
+        return { typeid(QObject*), PARENT_PLACEHOLDER_KIND};
+    }
+
+    static auto converter(const ParentPlaceholder&) {
+        return &dependency_helper<QObject*>::convert;
+    }
+
+};
 
 
 
@@ -2042,15 +2154,15 @@ template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep
 ///
 /// \brief Describes a service by its interface and implementation.
 /// Compilation will fail if either `Srv` is not a sub-class of QObject, or if `Impl` is not a sub-class of `Srv`.
-/// <br><b>Note:</b> This template has a specialization for the case where the implementation-type is identical
-/// to the service-type. That specialization offers an additional method for advertising a service with
-/// more than one service-interface!<br>
-/// constructor of the actual service when the QApplicationContext is published.
 /// <br>The preferred way of creating Services is the function mcnepp::qtdi::service().
 ///
-/// Example with one argument:
+/// Example with one argument of type `QString`:
 ///
 ///     context->registerService(service<QIODevice,QFile>(QString{"readme.txt"), "file");
+///
+/// Instead of providing one primary service-interface, you may advertise multiple services-interfaces explicitly:
+///
+///     context->registerService(service<QFile>(QString{"readme.txt").advertiseAs<QFileDevice,QIODevice>(), "file");
 ///
 /// \tparam Srv the primary service-interface. The service will be advertised as this type. If you only supply this type-argument,
 /// the primary service-interface will be identical to the service's implementation-type.
@@ -2072,55 +2184,34 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
     }
 
 
-
-    detail::service_descriptor descriptor;
-};
-
-///
-/// \brief Describes a service by its implementation and possibly multiple service-interfaces.
-/// Compilation will fail if `Impl` is not a sub-class of QObject.
-/// <br>The preferred way of creating Services is the function mcnepp::qtdi::service().
-/// <br>You may supply arbitrary arguments to this function. Those arguments will be passed on to the
-/// constructor of the actual service when the QApplicationContext is published.
-/// Example with one argument:
-///
-///     context->registerService(service<QFile>(QString{"readme.txt").advertiseAs<QIODevice,QFileDevice>(), "file");
-///
-/// \tparam Impl the implementation-type of the service. If you do not specify additional service-interfaces,
-/// this will become also the primary service-interface.<br>
-/// \tparam scope the scope of the designated Service.
-///
-template<typename Impl,ServiceScope scope> struct Service<Impl,Impl,scope> {
-    static_assert(std::is_base_of_v<QObject,Impl>, "Implementation-type must be a subclass of QObject");
-
-
-    using service_type = Impl;
-
-    using impl_type = Impl;
-
-
-
-    explicit Service(detail::service_descriptor&& descr) :
-        descriptor{std::move(descr)} {
-    }
-
     /**
      * @brief Specifies service-interfaces.
      *  <br>You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via QApplicationContext::getRegistration().
      *  They will also be used to satisfy dependencies that other services may have to this one.
      *  <br>This function may be invoked only on temporary instances.
+     * <br>Compilation will fail if any of the following is true:
+     * - Any of the interfaces is not a base of `Impl` (unless the `scope` of this Service is ServiceScope::TEMPLATE, in which case this is not verified).
+     * - A type appears more than once in the set of types comprising `Impl` and `IFaces`.
+     * - The service_traits *for more than one* of the interfaces have an `initializer_type` (i.e. one that is not std::nullptr_t).
+     * In order to fix this error, you need to declare a valid `initializer_type` in the service_traits for the Implementation-type.
+     * This will "override" the initializer from the interface.
+     *
      * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
-     * <br>If a type appears more than once in the set of types comprising `Impl` and `IFaces`, compilation will fail with a diagnostic.
-     * <br>Compilation will also fail if the service_traits for more than one of the interfaces have an `initializer_type` that is not the std::nullptr_t.
-     * <br>In order to fix this error, you need to declare a valid `initializer_type` in the service_traits for the implementation-type.
      * @return this Service.
      */
-    template<typename...IFaces> Service<Impl,Impl,scope>&& advertiseAs() && {
+    template<typename...IFaces> Service<Srv,Impl,scope>&& advertiseAs() && {
         static_assert(sizeof...(IFaces) > 0, "At least one service-interface must be advertised.");
-        static_assert((std::is_base_of_v<IFaces,Impl> && ... ), "Implementation-type does not implement all advertised interfaces");
-        static_assert(detail::check_unique_types<Impl,IFaces...>(), "All advertised interfaces must be distinct");
-        if(auto found = descriptor.service_types.find(descriptor.impl_type); found != descriptor.service_types.end()) {
-           descriptor.service_types.erase(found);
+        //Check whether the Impl-type is derived from the service-interfaces (except for service-templates)
+        if constexpr(scope != ServiceScope::TEMPLATE) {
+            static_assert((std::is_base_of_v<IFaces,Impl> && ... ), "Implementation-type does not implement all advertised interfaces");
+        }
+        if constexpr(std::is_same_v<Srv,Impl>) {
+            static_assert(detail::check_unique_types<Impl,IFaces...>(), "All advertised interfaces must be distinct");
+            if(auto found = descriptor.service_types.find(descriptor.impl_type); found != descriptor.service_types.end()) {
+                descriptor.service_types.erase(found);
+            }
+        } else {
+            static_assert(detail::check_unique_types<Impl,Srv,IFaces...>(), "All advertised interfaces must be distinct");
         }
         (descriptor.service_types.insert(typeid(IFaces)), ...);
         if constexpr(!detail::has_initializer<Impl>) {
@@ -2133,17 +2224,24 @@ template<typename Impl,ServiceScope scope> struct Service<Impl,Impl,scope> {
      * @brief Specifies service-interfaces.
      *  <br>You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via QApplicationContext::getRegistration().
      *  They will also be used to satisfy dependencies that other services may have to this one.
-     *  \tparam IFaces the service-interfaces. <b>At least one must be supplied.</b>
+     * <br>Compilation will fail if any of the following is true:
+     * - Any of the interfaces is not a base of `Impl` (unless the `scope` of this Service is ServiceScope::TEMPLATE, in which case this is not verified).
+     * - A type appears more than once in the set of types comprising `Impl` and `IFaces`.
+     * - The service_traits *for more than one* of the interfaces have an `initializer_type` (i.e. one that is not std::nullptr_t).
+     * In order to fix this error, you need to declare a valid `initializer_type` in the service_traits for the Implementation-type.
+     * This will "override" the initializer from the interface.
+     *
+     * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
      * @return a Service with the advertised interfaces.
      */
-    template<typename...IFaces> [[nodiscard]] Service<Impl,Impl,scope> advertiseAs() const& {
-        return Service<Impl,Impl,scope>{*this}.advertiseAs<IFaces...>();
+    template<typename...IFaces> [[nodiscard]] Service<Srv,Impl,scope> advertiseAs() const& {
+        return Service<Srv,Impl,scope>{*this}.advertiseAs<IFaces...>();
     }
-
 
 
     detail::service_descriptor descriptor;
 };
+
 
 ///
 /// \brief Creates a Service with an explicit factory.
@@ -2186,10 +2284,13 @@ template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Imp
 /// \brief Creates a Service-template with no dependencies and no constructor.
 /// <br>The returned Service cannot be instantiated. It just serves as an additional parameter
 /// for registering other services.
-/// \tparam S the implementation-type of the service.
+/// <br>If you leave out the type-argument `Impl`, it will default to `QObject`.
+/// <br>Should you want to ensure that every service derived from this service-template shall be advertised under
+/// a certain interface, use Service::advertiseAs().
+/// \tparam Impl the implementation-type of the service.
 /// \return a Service that cannot be instantiated.
-template<typename S,typename Impl=S>  [[nodiscard]] Service<S,Impl,ServiceScope::TEMPLATE> serviceTemplate() {
-    return Service<S,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<S,Impl,ServiceScope::TEMPLATE>(nullptr)};
+template<typename Impl=QObject>  [[nodiscard]] Service<Impl,Impl,ServiceScope::TEMPLATE> serviceTemplate() {
+    return Service<Impl,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<Impl,Impl,ServiceScope::TEMPLATE>(nullptr)};
 }
 
 
@@ -2339,11 +2440,13 @@ public:
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
+    /// <br>If you leave out the type-argument `S`, it will default to `QObject`.
     /// \param config the Configuration for the service.
+    /// <br>**Note:** Since a service-template may be used by services of types that are yet unknown, the properties supplied here cannot be validated.
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> auto registerServiceTemplate(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
+    template<typename S=QObject> auto registerServiceTemplate(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
         return registerService(serviceTemplate<S>(), objectName, config);
     }
 
@@ -2476,11 +2579,12 @@ public:
     /// Whenever a *placeholder* shall be looked up, the ApplicationContext will search the following sources, until it can resolve the *placeholder*:
     /// -# The environment, for a variable corresponding to the *placeholder*.
     /// -# The instances of `QSettings` that have been registered in the ApplicationContext.
-    /// \sa mcnepp::qtdi::make_config()
+    /// \sa mcnepp::qtdi::config()
     /// \param key the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections.
+    /// \param searchParentSections determines whether the key shall be searched recursively in the parent-sections.
     /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
     ///
-    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key) const = 0;
+    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
 
 signals:
 
