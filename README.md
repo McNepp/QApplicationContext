@@ -275,6 +275,26 @@ It will be resolved by use of a *private property* at the registration of the co
 -# Uniform advertising of service-interfaces. You may once specify the set of interfaces that a service-template advertises. That way, you don't
 need to repeat this for every service that uses the template. (See section [Service-interfaces](#service-interfaces) below).
 
+### Generic (un-validated) properties of Service-templates
+
+Registration of a service-template differs from the registration of a "normal" service in one important aspect:
+
+The properties that you provide via mcnepp::qtdi::make_config() will not be validated against the Q_PROPERTYs of the service's implementation-type!
+
+The rationale is that the service-template may be used by services of yet unknown type. The validation of a Q_PROPERTY will therefore be postponed until registration of
+the concrete service that derives from this service-template.
+
+This makes it possible to register configured service-templates without assuming any particular service-type at all!
+<br>In order to facilitate this, the type-argument of the function mcnepp::qtdi::serviceTemplate() has a default-type of `QObject`.
+
+Using this knowledge, let's register a service-template for arbitrary services that support a Q_PROPERTY `url`:
+
+
+    auto urlAware = context->registerService(serviceTemplate(), "urlAware", make_config({{ "url", "http://github.com"}}));
+
+This can be expressed even more concisely using the convenience-function mcnepp::qtdi::QApplicationContext::registerServiceTemplate():
+
+    auto urlAware = context->registerServiceTemplate("urlAware", make_config({{ "url", "http://github.com"}}));
 
 
 ## Managed Services vs. Un-managed Objects

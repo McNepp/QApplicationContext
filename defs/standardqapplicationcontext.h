@@ -540,7 +540,7 @@ private:
         }
 
         bool add(service_registration_handle_t reg) {
-            if(reg->matches(m_type)) {
+            if(reg->scope() != ServiceScope::TEMPLATE && reg->matches(m_type)) {
                 reg->subscribe(proxySubscription);
                 return true;
             }

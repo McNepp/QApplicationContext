@@ -113,7 +113,10 @@ bool isBindable(const QMetaProperty& sourceProperty) {
 
 namespace {
 
-const QRegularExpression beanRefPattern{"^&([^.]+)(\\.([^.]+))?"};
+const QRegularExpression& beanRefPattern() {
+    static QRegularExpression regEx{"^&([^.]+)(\\.([^.]+))?"};
+    return regEx;
+}
 
 
 inline bool isPrivateProperty(const QString& key) {
@@ -423,7 +426,9 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
     TemporarySubscriptionProxy tempProxy{subscription};
     //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
     for(auto reg : registeredServices()) {
-        reg->subscribe(&tempProxy);
+        if(reg->scope() != ServiceScope::TEMPLATE) {
+            reg->subscribe(&tempProxy);
+        }
     }
 }
 
@@ -1341,14 +1346,6 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
                 objName = makeName(*descriptor.service_types.begin());
             }
 
-            if(descriptor.meta_object) {
-                for(auto& key : config.properties.keys()) {
-                    if(!isPrivateProperty(key) && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
-                        qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
-                        return nullptr;
-                    }
-                }
-            }
             if(auto baseRegistration = dynamic_cast<service_registration_handle_t>(baseObj)) {
                 if(baseRegistration->scope() != ServiceScope::TEMPLATE) {
                     qCCritical(loggingCategory()).noquote().nospace() << "Template-Registration " << *baseRegistration << " must have scope TEMPLATE, but has scope " << baseRegistration->scope();
@@ -1367,6 +1364,24 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
                 }
                 base = dynamic_cast<ServiceTemplateRegistration*>(baseRegistration);
             }
+
+            if(descriptor.meta_object && scope != ServiceScope::TEMPLATE) {
+                const QVariantMap* props = &config.properties;
+                for(DescriptorRegistration* handle = base;;handle = handle->base() ){
+                    for(auto keyIter = props->keyBegin(); keyIter != props->keyEnd(); ++keyIter) {
+                        auto& key = *keyIter;
+                        if(!isPrivateProperty(key) && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
+                            qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
+                            return nullptr;
+                        }
+                    }
+                    if(!handle) {
+                        break;
+                    }
+                    props = &handle->config().properties;
+                }
+            }
+
             switch(scope) {
             case ServiceScope::PROTOTYPE:
                 reg = new PrototypeRegistration{base, ++nextIndex, objName, descriptor, config, this};
@@ -1454,7 +1469,7 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
         return {Status::fatal, false};
     }
     QString key = value.toString();
-    auto match = beanRefPattern.match(key);
+    auto match = beanRefPattern().match(key);
     if(match.hasMatch()) {
         key = match.captured(1);
         auto bean = getRegistrationByName(key);

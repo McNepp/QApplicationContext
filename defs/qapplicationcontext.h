@@ -2109,15 +2109,22 @@ template<typename Impl,ServiceScope scope> struct Service<Impl,Impl,scope> {
      *  <br>You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via QApplicationContext::getRegistration().
      *  They will also be used to satisfy dependencies that other services may have to this one.
      *  <br>This function may be invoked only on temporary instances.
+     * <br>Compilation will fail if any of the following is true:
+     * - Any of the interfaces is not a base of `Impl` (unless the `scope` of this Service is ServiceScope::TEMPLATE, in which case this is not verified).
+     * - A type appears more than once in the set of types comprising `Impl` and `IFaces`.
+     * - The service_traits *for more than one* of the interfaces have an `initializer_type` (i.e. one that is not std::nullptr_t).
+     * In order to fix this error, you need to declare a valid `initializer_type` in the service_traits for the Implementation-type.
+     * This will "override" the initializer from the interface.
+     *
      * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
-     * <br>If a type appears more than once in the set of types comprising `Impl` and `IFaces`, compilation will fail with a diagnostic.
-     * <br>Compilation will also fail if the service_traits for more than one of the interfaces have an `initializer_type` that is not the std::nullptr_t.
-     * <br>In order to fix this error, you need to declare a valid `initializer_type` in the service_traits for the implementation-type.
      * @return this Service.
      */
     template<typename...IFaces> Service<Impl,Impl,scope>&& advertiseAs() && {
         static_assert(sizeof...(IFaces) > 0, "At least one service-interface must be advertised.");
-        static_assert((std::is_base_of_v<IFaces,Impl> && ... ), "Implementation-type does not implement all advertised interfaces");
+        //Check whether the Impl-type is derived from the service-interfaces (except for service-templates)
+        if constexpr(scope != ServiceScope::TEMPLATE) {
+            static_assert((std::is_base_of_v<IFaces,Impl> && ... ), "Implementation-type does not implement all advertised interfaces");
+        }
         static_assert(detail::check_unique_types<Impl,IFaces...>(), "All advertised interfaces must be distinct");
         if(auto found = descriptor.service_types.find(descriptor.impl_type); found != descriptor.service_types.end()) {
            descriptor.service_types.erase(found);
@@ -2133,7 +2140,15 @@ template<typename Impl,ServiceScope scope> struct Service<Impl,Impl,scope> {
      * @brief Specifies service-interfaces.
      *  <br>You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via QApplicationContext::getRegistration().
      *  They will also be used to satisfy dependencies that other services may have to this one.
-     *  \tparam IFaces the service-interfaces. <b>At least one must be supplied.</b>
+     *  <br>This function may be invoked only on temporary instances.
+     * <br>Compilation will fail if any of the following is true:
+     * - Any of the interfaces is not a base of `Impl` (unless the `scope` of this Service is ServiceScope::TEMPLATE, in which case this is not verified).
+     * - A type appears more than once in the set of types comprising `Impl` and `IFaces`.
+     * - The service_traits *for more than one* of the interfaces have an `initializer_type` (i.e. one that is not std::nullptr_t).
+     * In order to fix this error, you need to declare a valid `initializer_type` in the service_traits for the Implementation-type.
+     * This will "override" the initializer from the interface.
+     *
+     * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
      * @return a Service with the advertised interfaces.
      */
     template<typename...IFaces> [[nodiscard]] Service<Impl,Impl,scope> advertiseAs() const& {
@@ -2186,10 +2201,13 @@ template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Imp
 /// \brief Creates a Service-template with no dependencies and no constructor.
 /// <br>The returned Service cannot be instantiated. It just serves as an additional parameter
 /// for registering other services.
-/// \tparam S the implementation-type of the service.
+/// <br>If you leave out the type-argument `Impl`, it will default to `QObject`.
+/// <br>Should you want to ensure that every service derived from this service-template shall be advertised under
+/// a certain interface, use Service::advertiseAs().
+/// \tparam Impl the implementation-type of the service.
 /// \return a Service that cannot be instantiated.
-template<typename S,typename Impl=S>  [[nodiscard]] Service<S,Impl,ServiceScope::TEMPLATE> serviceTemplate() {
-    return Service<S,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<S,Impl,ServiceScope::TEMPLATE>(nullptr)};
+template<typename Impl=QObject>  [[nodiscard]] Service<Impl,Impl,ServiceScope::TEMPLATE> serviceTemplate() {
+    return Service<Impl,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<Impl,Impl,ServiceScope::TEMPLATE>(nullptr)};
 }
 
 
@@ -2339,11 +2357,13 @@ public:
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
+    /// <br>If you leave out the type-argument `S`, it will default to `QObject`.
     /// \param config the Configuration for the service.
+    /// <br>**Note:** Since a service-template may be used by services of types that are yet unknown, the properties supplied here cannot be validated.
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> auto registerServiceTemplate(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
+    template<typename S=QObject> auto registerServiceTemplate(const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
         return registerService(serviceTemplate<S>(), objectName, config);
     }
 

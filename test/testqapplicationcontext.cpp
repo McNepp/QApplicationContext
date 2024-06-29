@@ -606,6 +606,42 @@ private slots:
         QCOMPARE(slot2->foo(), "3141-foo");
     }
 
+
+    void testValidatePropertyOfTemplateUponServiceRegistration() {
+        //Do not validate the existence of the Q_PROPERTY "foo":
+        auto srvTemplate = context->registerServiceTemplate("baseTemplate", make_config({{"foo", "The foo"}}));
+        QVERIFY(srvTemplate);
+        //Validate the existence of the Q_PROPERTY "foo" and report error:
+        auto srvReg = context->registerService(service<QObjectService>(), srvTemplate);
+        QVERIFY(!srvReg);
+    }
+
+    void testConfigurePrivatePropertyAsQObjectInServiceTemplate() {
+        QTimer timer;
+        context->registerObject(&timer, "timer");
+        auto srvTemplate = context->registerServiceTemplate("baseTemplate", make_config({{"foo", "${id}-foo"}}));
+
+        auto timerTemplate = context->registerService(serviceTemplate().advertiseAs<TimerAware>(), srvTemplate, "timerAware", make_config({{"timer", "&timer"}}));
+
+        auto base1 = context->registerService(service<BaseService>(), timerTemplate, "base1", make_config({{".id", 4711}}));
+        auto base2 = context->registerService(service<BaseService>(), timerTemplate, "base2", make_config({{".id", 3141}}));
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> slot1{base1};
+        RegistrationSlot<BaseService> slot2{base2};
+        auto timerReg = context->getRegistration<TimerAware>();
+        QCOMPARE(timerReg.registeredServices().size(), 3);
+        RegistrationSlot<TimerAware> timerSlot{timerReg};
+        QVERIFY(slot1);
+        QVERIFY(slot2);
+
+        QCOMPARE(slot1->foo(), "4711-foo");
+        QCOMPARE(slot1->timer(), &timer);
+        QCOMPARE(slot2->foo(), "3141-foo");
+        QCOMPARE(slot2->timer(), &timer);
+        QCOMPARE(timerSlot.invocationCount(), 2);
+    }
+
     void testBindServiceRegistrationToPropertyOfSelf() {
 
 
@@ -837,7 +873,7 @@ private slots:
 
 
     void testUseInitMethodFromServiceTemplate() {
-        auto abstractReg = context->registerService(serviceTemplate<Interface1,BaseService2>(), "interface1");
+        auto abstractReg = context->registerService(serviceTemplate<BaseService2>().advertiseAs<Interface1>(), "interface1");
 
         auto reg = context->registerService(service<BaseService2>(), abstractReg);
 
@@ -848,7 +884,7 @@ private slots:
 
     void testUseSecondLevelServiceTemplate() {
         BaseService2 base2;
-        auto abstractInterfacReg = context->registerService(serviceTemplate<Interface1,BaseService2>(), "interface1");
+        auto abstractInterfacReg = context->registerService(serviceTemplate<BaseService2>().advertiseAs<Interface1>(), "interface1");
 
         auto abstractBase = context->registerService(serviceTemplate<BaseService2>(), abstractInterfacReg);
 
