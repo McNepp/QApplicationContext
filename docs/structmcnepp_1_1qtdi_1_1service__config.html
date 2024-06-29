@@ -76,6 +76,7 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-types">Public Types</a> &#124;
+<a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="#friends">Friends</a> &#124;
 <a href="structmcnepp_1_1qtdi_1_1service__config-members.html">List of all members</a>  </div>
@@ -94,17 +95,35 @@ Public Types</h2></td></tr>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>entry_type</b> = std::pair&lt; QString, QVariant &gt;</td></tr>
 <tr class="separator:ad2d40ffb9dd1bf0455c62cdf79d4cf33"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:af9d646b306c4ac406ff4fb3f412e6a92"><td class="memItemLeft" align="right" valign="top"><a id="af9d646b306c4ac406ff4fb3f412e6a92" name="af9d646b306c4ac406ff4fb3f412e6a92"></a>
+<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withGroup</b> (const QString &amp;newGroup) &amp;&amp;</td></tr>
+<tr class="separator:af9d646b306c4ac406ff4fb3f412e6a92"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace4e0336ece3812b567437c5098df5fa"><td class="memItemLeft" align="right" valign="top"><a id="ace4e0336ece3812b567437c5098df5fa" name="ace4e0336ece3812b567437c5098df5fa"></a>
+<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withGroup</b> (const QString &amp;newGroup) const &amp;</td></tr>
+<tr class="separator:ace4e0336ece3812b567437c5098df5fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab06b42512399e1a22e92926319367e33"><td class="memItemLeft" align="right" valign="top"><a id="ab06b42512399e1a22e92926319367e33" name="ab06b42512399e1a22e92926319367e33"></a>
+<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withAutowire</b> () &amp;&amp;</td></tr>
+<tr class="separator:ab06b42512399e1a22e92926319367e33"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:accbdea58dc121caef3e091189595241d"><td class="memItemLeft" align="right" valign="top"><a id="accbdea58dc121caef3e091189595241d" name="accbdea58dc121caef3e091189595241d"></a>
+<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withAutowire</b> () const &amp;</td></tr>
+<tr class="separator:accbdea58dc121caef3e091189595241d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:aed4a299e2c16caa17ec5c2ace71f28f0"><td class="memItemLeft" align="right" valign="top"><a id="aed4a299e2c16caa17ec5c2ace71f28f0" name="aed4a299e2c16caa17ec5c2ace71f28f0"></a>
-QVariantMap&#160;</td><td class="memItemRight" valign="bottom"><b>properties</b></td></tr>
-<tr class="separator:aed4a299e2c16caa17ec5c2ace71f28f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a36ee83d47315ef0e1715b788076ff401"><td class="memItemLeft" align="right" valign="top"><a id="a36ee83d47315ef0e1715b788076ff401" name="a36ee83d47315ef0e1715b788076ff401"></a>
 QString&#160;</td><td class="memItemRight" valign="bottom"><b>group</b></td></tr>
+<tr class="memdesc:a36ee83d47315ef0e1715b788076ff401"><td class="mdescLeft">&#160;</td><td class="mdescRight">The optional group for the configuration. <br /></td></tr>
 <tr class="separator:a36ee83d47315ef0e1715b788076ff401"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a46ccc53f5141f5e25a765d5014c7ece5"><td class="memItemLeft" align="right" valign="top"><a id="a46ccc53f5141f5e25a765d5014c7ece5" name="a46ccc53f5141f5e25a765d5014c7ece5"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>autowire</b> = false</td></tr>
+<tr class="memdesc:a46ccc53f5141f5e25a765d5014c7ece5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines whether all Q_PROPERTYs that refer to other services shall be auto-wired by the ApplicationContext. <br /></td></tr>
 <tr class="separator:a46ccc53f5141f5e25a765d5014c7ece5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aed4a299e2c16caa17ec5c2ace71f28f0"><td class="memItemLeft" align="right" valign="top"><a id="aed4a299e2c16caa17ec5c2ace71f28f0" name="aed4a299e2c16caa17ec5c2ace71f28f0"></a>
+QVariantMap&#160;</td><td class="memItemRight" valign="bottom"><b>properties</b></td></tr>
+<tr class="memdesc:aed4a299e2c16caa17ec5c2ace71f28f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">The keys and corresponding values. <br /></td></tr>
+<tr class="separator:aed4a299e2c16caa17ec5c2ace71f28f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
 Friends</h2></td></tr>
