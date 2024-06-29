@@ -191,6 +191,19 @@ are assumed to reside in the group named "mcnepp":
     auto decl = service<RestPropFetcher>(resolve("${baseUrl}?stationIds=${hamburgStationId}"), resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>());
     appContext -> registerService(decl, "hamburgWeather", make_config({}, "mcnepp"));
 
+### Lookup in sub-sections
+
+Every key will be looked up in the section that has been provided via as an argument to mcnepp::qtdi::make_config(), argument, unless the key itself starts with a forward slash,
+which denotes the root-section.
+
+A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
+Insert `*/` right after the opening sequence of the placeholder.
+
+    context -> registerService(service<QIODevice,QFile>(resolve("${*/filename}")), "file", make_config({}, "files"));
+
+The key "filename" will first be searched in the section "files". If it cannot be found, it will be searched in the root-section.
+
+
 
 ## Configuring services with Q_PROPERTY {#configuring-services}
 

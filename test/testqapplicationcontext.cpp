@@ -499,13 +499,38 @@ private slots:
 
 
 
-    void testWithConfiguredPropertyInSubConfig() {
+    void testWithConfiguredPropertyInSection() {
         config->setValue("timers/interval", 4711);
         config->setValue("timers/single", "true");
         context->registerObject(config.get());
         QCOMPARE(4711, context->getConfigurationValue("timers/interval"));
         auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${interval}"},
                                                                           {"singleShot", "${single}"}}, "timers"));
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot{reg};
+        QCOMPARE(slot->interval(), 4711);
+        QVERIFY(slot->isSingleShot());
+    }
+
+    void testWithConfiguredPropertyInSectionWithAbsoluteAndRelativePaths() {
+        config->setValue("timers/interval", 4711);
+        config->setValue("timers/aTimer/single", "true");
+        context->registerObject(config.get());
+        QCOMPARE(4711, context->getConfigurationValue("timers/interval"));
+        auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${/timers/interval}"},
+                                                                          {"singleShot", "${aTimer/single}"}}, "timers"));
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot{reg};
+        QCOMPARE(slot->interval(), 4711);
+        QVERIFY(slot->isSingleShot());
+    }
+
+    void testWithConfiguredPropertyInSectionWithFallback() {
+        config->setValue("timers/interval", 4711);
+        config->setValue("single", "true");
+        context->registerObject(config.get());
+        auto reg = context->registerService<QTimer>("timer", make_config({{"interval", "${*/aTimer/interval}"},
+                                                                          {"singleShot", "${*/single}"}}, "timers"));
         QVERIFY(context->publish());
         RegistrationSlot<QTimer> slot{reg};
         QCOMPARE(slot->interval(), 4711);
@@ -1259,6 +1284,21 @@ private slots:
         QVERIFY(context->publish());
         QCOMPARE(service->m_id, 4711);
         QCOMPARE(service->m_url, QString{"localhost:8080"});
+
+    }
+
+    void testResolveConstructorValuesInSectionWithFallback() {
+        config->setValue("section/url", "https://google.de/search");
+        config->setValue("id", "4711");
+        context->registerObject(config.get());
+        BaseService base;
+        auto reg = context->registerService(service<DependentService>(resolve<int>("${*/id}"), resolve("${*/dep/url}"), &base), "dep", make_config({}, "section"));
+        QVERIFY(reg);
+        RegistrationSlot<DependentService> service{reg};
+
+        QVERIFY(context->publish());
+        QCOMPARE(service->m_id, 4711);
+        QCOMPARE(service->m_url, QString{"https://google.de/search"});
 
     }
 

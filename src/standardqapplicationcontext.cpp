@@ -129,6 +129,30 @@ inline void setParentIfNotSet(QObject* obj, QObject* newParent) {
     }
 }
 
+inline QString makePath(const QString& section, const QString& path) {
+    if(section.isEmpty() || path.startsWith('/')) {
+        return path;
+    }
+    if(section.endsWith('/')) {
+        return section + path;
+    }
+    return section + '/' + path;
+}
+
+inline bool removeLastPath(QString& s) {
+    int lastSlash = s.lastIndexOf('/');
+    if(lastSlash <= 0) {
+        return false;
+    }
+    int nextSlash = s.lastIndexOf('/', lastSlash - 1);
+    //lastIndexOf will return -1 if not found.
+    //Thus, the following code will remove either the part after the nextSlash or from the beginning of the String:
+    s.remove(nextSlash + 1, lastSlash - nextSlash);
+    return true;
+}
+
+
+
 template<typename T> struct Collector : public detail::Subscription {
 
     Collector() {
@@ -1543,6 +1567,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
     int lastStateBeforeEscape = STATE_START;
     int state = STATE_START;
+    bool hasWildcard = false;
     for(int pos = 0; pos < key.length(); ++pos) {
         auto ch = key[pos];
         switch(ch.toLatin1()) {
@@ -1601,7 +1626,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             case STATE_FOUND_DEFAULT_VALUE:
             case STATE_FOUND_PLACEHOLDER:
                 if(!token.isEmpty()) {
-                    lastResolvedValue = getConfigurationValue(group.isEmpty() ? token : group + "/" + token);
+                    lastResolvedValue = getConfigurationValue(makePath(group, token), hasWildcard);
                     if(!lastResolvedValue.isValid()) {
                         //If not found in ApplicationContext's configuration, look in the "private properties":
                         lastResolvedValue = config.properties["." + token];
@@ -1637,6 +1662,22 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 continue;
             case STATE_FOUND_PLACEHOLDER:
                 state = STATE_FOUND_DEFAULT_VALUE;
+                continue;
+            }
+
+        case '*':
+            switch(state) {
+            case STATE_FOUND_PLACEHOLDER:
+                //Look-ahead: The only valid wildcard notation starts with '*/'
+                if(pos + 1 >= key.length() || key[pos+1] != '/') {
+                    qCCritical(loggingCategory()).nospace().noquote() << "Invalid placeholder '" << key << "'";
+                    return {QVariant{}, Status::fatal};
+                }
+                hasWildcard = true;
+                ++pos;
+                continue;
+            default:
+                resolvedString += ch;
                 continue;
             }
 
@@ -1830,7 +1871,7 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
 
 
 
-QVariant StandardApplicationContext::getConfigurationValue(const QString& key) const {
+QVariant StandardApplicationContext::getConfigurationValue(const QString& key, bool searchParentSections) const {
     if(auto bytes = QString{key}.replace('/', '.').toLocal8Bit(); qEnvironmentVariableIsSet(bytes)) {
         auto value = qEnvironmentVariable(bytes);
         qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << bytes << " = '" << value << "' from enviroment";
@@ -1841,13 +1882,16 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key) c
     for(auto reg : getRegistrationHandles()) {
         reg->subscribe(&collector);
     }
-    for(QSettings* settings : collector.collected) {
-        auto value = settings->value(key);
-        if(value.isValid()) {
-            qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << key << " = " << value << " from " << settings->fileName();
-            return value;
+    QString searchKey = key;
+    do {
+        for(QSettings* settings : collector.collected) {
+            auto value = settings->value(searchKey);
+            if(value.isValid()) {
+                qCDebug(loggingCategory()).noquote().nospace() << "Obtained configuration-entry: " << searchKey << " = " << value << " from " << settings->fileName();
+                return value;
+            }
         }
-    }
+    } while(searchParentSections && removeLastPath(searchKey));
 
     qCDebug(loggingCategory()).noquote().nospace() << "No value found for configuration-entry: " << key;
     return QVariant{};

@@ -37,7 +37,7 @@ public:
 
     virtual unsigned pendingPublication() const override;
 
-    virtual QVariant getConfigurationValue(const QString& key) const override;
+    virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections) const override;
 
     using QApplicationContext::registerObject;
 

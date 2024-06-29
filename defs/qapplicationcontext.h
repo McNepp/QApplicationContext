@@ -1526,10 +1526,14 @@ template<typename S> struct Resolvable {
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
 /// Use this function to supply resolvable arguments to the constructor of a Service.
 /// The result of resolving the placeholder must be a String that is convertible via `QVariant::value<T>()` to the desired type.
+///
+/// The result-type of the constructor-argument must be explicitly specified via the type-argument `<S>`, unless it is QString.
+/// This function is a simplified overload of another function. See mcnepp::qtdi::resolve(const QString&,const S&) for more details!
+///
 /// ### Example
 ///
 ///     auto serviceDecl = service<QIODevice,QFile>(resolve("${filename:readme.txt}"));
-///
+/// \tparam S the result-type of the resolved constructor-argument.
 /// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`.
 /// \return a Resolvable instance for the supplied type.
 ///
@@ -1537,16 +1541,41 @@ template<typename S = QString> [[nodiscard]] Resolvable<S> resolve(const QString
     return Resolvable<S>{expression};
 }
 
+
 ///
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
 /// The result of resolving the placeholder must
 /// be a String that is convertible via `QVariant::value<T>()` to the desired type.<br>
+///
+/// ### Placeholders
+/// Values may contain *placeholders*, indicated by the syntax `${placeholder}`. Such a placeholder will be looked
+/// up via `QApplicationContext::getConfigurationValue(const QString&,bool)`.<br>
+/// Example:
+///
+///     auto serviceDecl = service<QIODevice,QFile>(resolve("${filename}", QString{"readme.txt"}));
+/// will inject the value that is configured under the key "filename" into the QFile. If the key cannot be found, the default value "readme.txt" will be used instead.
+/// <br>Should you want to specify a property-value containg the character-sequence "${", you must escape this with the backslash.
+///
 /// **Note:** The expression is allowed to specify embedded default-values using the format `${identifier:defaultValue}`.
 /// However, this does not make much sense, as it would render the parameter `defaultValue` useless,
 /// since the embedded default-value would always take precedence!
-/// ### Example
 ///
-///     auto serviceDecl = service<QIODevice,QFile>(resolve("${filename}", QString{"readme.txt"}));
+/// ### Lookup in sub-sections
+/// Every key will be looked up in the section that has been provided via as an argument to make_config(), argument, unless the key itself starts with a forward slash,
+/// which denotes the root-section.
+///
+/// A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
+///
+/// Insert */ right after the opening sequence of the placeholder.
+///
+///     //Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
+///     //Thus, in the following example, we put a space between the asterisk and the slash:
+///     context -> registerService(service<QIODevice,QFile>(resolve("${* /filename}")), "file", make_config({}, "files"));
+///
+/// The key "filename" will first be searched in the section "files". If it cannot be found, it will be searched in the root-section.
+///
+///
+/// \tparam S the result-type of the resolved constructor-argument.
 /// \param expression may contain placeholders in the format `${identifier}`.
 /// \param defaultValue the value to use if the placeholder cannot be resolved.
 /// \return a Resolvable instance for the supplied type.
@@ -1618,17 +1647,31 @@ struct service_config final {
 ///
 /// ### Placeholders
 /// Values may contain *placeholders*, indicated by the syntax `${placeholder}`. Such a placeholder will be looked
-/// up via `QApplicationContext::getConfigurationValue(const QString&)`.<br>
+/// up via `QApplicationContext::getConfigurationValue(const QString&,bool)`.<br>
 /// Example:
 ///
-///     `make_config({{"interval", "${timerInterval}"}});`
+///     make_config({{"interval", "${timerInterval}"}});
 /// will set the Q_PROPERTY `interval` to the value configured with the name `timerInterval`.
 /// <br>Should you want to specify a property-value containg the character-sequence "${", you must escape this with the backslash.
+/// ### Lookup in sub-sections
+/// Every key will be looked up in the provided section, as specified by the `group` argument, unless the key itself starts with a forward slash,
+/// which denotes the root-section.
+///
+/// A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
+///
+/// Insert */ right after the opening sequence of the placeholder.
+///
+///     //Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
+///     //Thus, in the following example, we put a space between the asterisk and the slash:
+///     make_config({{"interval", "${* /timerInterval}"}}, "timers");
+///
+/// The key "timerInterval" will first be searched in the section "timers". If it cannot be found, it will be searched in the root-section.
+///
 /// ### Service-references
 /// If a value starts with an ampersand, the property will be resolved with a registered service of that name.
 /// Example:
 ///
-///     `make_config({{"dataProvider", "&dataProviderService"}});`
+///     make_config({{"dataProvider", "&dataProviderService"}});
 /// will set the Q_PROPERTY `dataProvider` to the service that was registered under the name `dataProviderService`.
 /// <br>Should you want to specify a property-value starting with an ampersand, you must escape this with the backslash.
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
@@ -2515,9 +2558,10 @@ public:
     /// -# The instances of `QSettings` that have been registered in the ApplicationContext.
     /// \sa mcnepp::qtdi::make_config()
     /// \param key the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections.
+    /// \param searchParentSections determines whether the key shall be searched recursively in the parent-sections.
     /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
     ///
-    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key) const = 0;
+    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
 
 signals:
 
