@@ -1410,7 +1410,9 @@ private slots:
     }
 
     void testAdvertiseAdditionalInterface() {
-        auto reg = context->registerService(service<BaseService>().advertiseAs<Interface1,TimerAware>());
+        auto reg = context->registerService(service<Interface1,BaseService>().advertiseAs<TimerAware>());
+        auto reg2 = context->registerService(service<BaseService>().advertiseAs<Interface1,TimerAware>());
+        QCOMPARE(reg, reg2);
         auto baseReg = context->getRegistration<BaseService>();
         auto ifaceReg = context->getRegistration<Interface1>();
         auto timerReg= context->getRegistration<TimerAware>();

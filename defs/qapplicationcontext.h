@@ -2042,15 +2042,15 @@ template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep
 ///
 /// \brief Describes a service by its interface and implementation.
 /// Compilation will fail if either `Srv` is not a sub-class of QObject, or if `Impl` is not a sub-class of `Srv`.
-/// <br><b>Note:</b> This template has a specialization for the case where the implementation-type is identical
-/// to the service-type. That specialization offers an additional method for advertising a service with
-/// more than one service-interface!<br>
-/// constructor of the actual service when the QApplicationContext is published.
 /// <br>The preferred way of creating Services is the function mcnepp::qtdi::service().
 ///
-/// Example with one argument:
+/// Example with one argument of type `QString`:
 ///
 ///     context->registerService(service<QIODevice,QFile>(QString{"readme.txt"), "file");
+///
+/// Instead of providing one primary service-interface, you may advertise multiple services-interfaces explicitly:
+///
+///     context->registerService(service<QFile>(QString{"readme.txt").advertiseAs<QFileDevice,QIODevice>(), "file");
 ///
 /// \tparam Srv the primary service-interface. The service will be advertised as this type. If you only supply this type-argument,
 /// the primary service-interface will be identical to the service's implementation-type.
@@ -2072,38 +2072,6 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
     }
 
 
-
-    detail::service_descriptor descriptor;
-};
-
-///
-/// \brief Describes a service by its implementation and possibly multiple service-interfaces.
-/// Compilation will fail if `Impl` is not a sub-class of QObject.
-/// <br>The preferred way of creating Services is the function mcnepp::qtdi::service().
-/// <br>You may supply arbitrary arguments to this function. Those arguments will be passed on to the
-/// constructor of the actual service when the QApplicationContext is published.
-/// Example with one argument:
-///
-///     context->registerService(service<QFile>(QString{"readme.txt").advertiseAs<QIODevice,QFileDevice>(), "file");
-///
-/// \tparam Impl the implementation-type of the service. If you do not specify additional service-interfaces,
-/// this will become also the primary service-interface.<br>
-/// \tparam scope the scope of the designated Service.
-///
-template<typename Impl,ServiceScope scope> struct Service<Impl,Impl,scope> {
-    static_assert(std::is_base_of_v<QObject,Impl>, "Implementation-type must be a subclass of QObject");
-
-
-    using service_type = Impl;
-
-    using impl_type = Impl;
-
-
-
-    explicit Service(detail::service_descriptor&& descr) :
-        descriptor{std::move(descr)} {
-    }
-
     /**
      * @brief Specifies service-interfaces.
      *  <br>You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via QApplicationContext::getRegistration().
@@ -2119,15 +2087,19 @@ template<typename Impl,ServiceScope scope> struct Service<Impl,Impl,scope> {
      * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
      * @return this Service.
      */
-    template<typename...IFaces> Service<Impl,Impl,scope>&& advertiseAs() && {
+    template<typename...IFaces> Service<Srv,Impl,scope>&& advertiseAs() && {
         static_assert(sizeof...(IFaces) > 0, "At least one service-interface must be advertised.");
         //Check whether the Impl-type is derived from the service-interfaces (except for service-templates)
         if constexpr(scope != ServiceScope::TEMPLATE) {
             static_assert((std::is_base_of_v<IFaces,Impl> && ... ), "Implementation-type does not implement all advertised interfaces");
         }
-        static_assert(detail::check_unique_types<Impl,IFaces...>(), "All advertised interfaces must be distinct");
-        if(auto found = descriptor.service_types.find(descriptor.impl_type); found != descriptor.service_types.end()) {
-           descriptor.service_types.erase(found);
+        if constexpr(std::is_same_v<Srv,Impl>) {
+            static_assert(detail::check_unique_types<Impl,IFaces...>(), "All advertised interfaces must be distinct");
+            if(auto found = descriptor.service_types.find(descriptor.impl_type); found != descriptor.service_types.end()) {
+                descriptor.service_types.erase(found);
+            }
+        } else {
+            static_assert(detail::check_unique_types<Impl,Srv,IFaces...>(), "All advertised interfaces must be distinct");
         }
         (descriptor.service_types.insert(typeid(IFaces)), ...);
         if constexpr(!detail::has_initializer<Impl>) {
@@ -2140,7 +2112,6 @@ template<typename Impl,ServiceScope scope> struct Service<Impl,Impl,scope> {
      * @brief Specifies service-interfaces.
      *  <br>You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via QApplicationContext::getRegistration().
      *  They will also be used to satisfy dependencies that other services may have to this one.
-     *  <br>This function may be invoked only on temporary instances.
      * <br>Compilation will fail if any of the following is true:
      * - Any of the interfaces is not a base of `Impl` (unless the `scope` of this Service is ServiceScope::TEMPLATE, in which case this is not verified).
      * - A type appears more than once in the set of types comprising `Impl` and `IFaces`.
@@ -2151,14 +2122,14 @@ template<typename Impl,ServiceScope scope> struct Service<Impl,Impl,scope> {
      * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
      * @return a Service with the advertised interfaces.
      */
-    template<typename...IFaces> [[nodiscard]] Service<Impl,Impl,scope> advertiseAs() const& {
-        return Service<Impl,Impl,scope>{*this}.advertiseAs<IFaces...>();
+    template<typename...IFaces> [[nodiscard]] Service<Srv,Impl,scope> advertiseAs() const& {
+        return Service<Srv,Impl,scope>{*this}.advertiseAs<IFaces...>();
     }
-
 
 
     detail::service_descriptor descriptor;
 };
+
 
 ///
 /// \brief Creates a Service with an explicit factory.
