@@ -1561,7 +1561,7 @@ template<typename S = QString> [[nodiscard]] Resolvable<S> resolve(const QString
 /// since the embedded default-value would always take precedence!
 ///
 /// ### Lookup in sub-sections
-/// Every key will be looked up in the section that has been provided via as an argument to make_config(), argument, unless the key itself starts with a forward slash,
+/// Every key will be looked up in the section that has been provided via as an argument to config(), argument, unless the key itself starts with a forward slash,
 /// which denotes the root-section.
 ///
 /// A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
@@ -1570,7 +1570,7 @@ template<typename S = QString> [[nodiscard]] Resolvable<S> resolve(const QString
 ///
 ///     //Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
 ///     //Thus, in the following example, we put a space between the asterisk and the slash:
-///     context -> registerService(service<QIODevice,QFile>(resolve("${* /filename}")), "file", make_config({}, "files"));
+///     context -> registerService(service<QIODevice,QFile>(resolve("${* /filename}")), "file", config("files"));
 ///
 /// The key "filename" will first be searched in the section "files". If it cannot be found, it will be searched in the root-section.
 ///
@@ -1614,18 +1614,47 @@ struct service_config final {
         return left.properties == right.properties && left.group == right.group && left.autowire == right.autowire;
     }
 
+    service_config withGroup(const QString& newGroup)&& {
+        return service_config{newGroup, autowire, std::move(properties)};
+    }
 
-    QVariantMap properties;
+    service_config withGroup(const QString& newGroup)const& {
+        return service_config{newGroup, autowire, properties};
+    }
+
+    service_config withAutowire()&& {
+        return service_config{std::move(group), true, std::move(properties)};
+    }
+
+    service_config withAutowire()const& {
+        return service_config{group, true, properties};
+    }
+
+
+    ///
+    /// \brief The optional group for the configuration.
+    ///
     QString group;
+
+    ///
+    /// \brief Determines whether all Q_PROPERTYs that refer to other services shall be auto-wired by the ApplicationContext.
+    ///
     bool autowire = false;
+
+    ///
+    /// \brief The keys and corresponding values.
+    ///
+    QVariantMap properties;
 };
 
+
+
 ///
-/// \brief Makes a service_config.
+/// \brief Makes a service_config and populates it with properties.
 /// <br>The service must have a Q_PROPERTY for every key contained in `properties`.<br>
 /// Example:
 ///
-///     `make_config({{"interval", 42}});`
+///     `config({{"interval", 42}});`
 /// will set the Q_PROPERTY `interval` to the value 42.
 /// ### Private Properties
 /// A key that starts with a dot is considered to denote a *private property*, and no attempt will be made to set a corresponding Q_PROPERTY
@@ -1638,19 +1667,19 @@ struct service_config final {
 /// However, one part of the URL will be unique for each Service.
 /// This is how you would do this:
 ///
-///     auto restServiceTemplate = context -> registerService<RestService>(serviceTemplate<RestService>(), "restTemplate", make_config({{"url", "https://myserver/rest/${path}"}}));
+///     auto restServiceTemplate = context -> registerService<RestService>(serviceTemplate<RestService>(), "restTemplate", config({{"url", "https://myserver/rest/${path}"}}));
 ///
 /// Now, whenever you register a concrete RestService, you must supply the `templateReg` as an additional argument.
 /// Also, you must specify the value for `${path}` as a *private property*:
 ///
-///     context -> registerService(service<RestService>(), restServiceTemplate, "temperatureService", make_config({{".path", "temperature"}}));
+///     context -> registerService(service<RestService>(), restServiceTemplate, "temperatureService", config({{".path", "temperature"}}));
 ///
 /// ### Placeholders
 /// Values may contain *placeholders*, indicated by the syntax `${placeholder}`. Such a placeholder will be looked
 /// up via `QApplicationContext::getConfigurationValue(const QString&,bool)`.<br>
 /// Example:
 ///
-///     make_config({{"interval", "${timerInterval}"}});
+///     config({{"interval", "${timerInterval}"}});
 /// will set the Q_PROPERTY `interval` to the value configured with the name `timerInterval`.
 /// <br>Should you want to specify a property-value containg the character-sequence "${", you must escape this with the backslash.
 /// ### Lookup in sub-sections
@@ -1663,7 +1692,7 @@ struct service_config final {
 ///
 ///     //Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
 ///     //Thus, in the following example, we put a space between the asterisk and the slash:
-///     make_config({{"interval", "${* /timerInterval}"}}, "timers");
+///     config({{"interval", "${* /timerInterval}"}}).withGroup("timers");
 ///
 /// The key "timerInterval" will first be searched in the section "timers". If it cannot be found, it will be searched in the root-section.
 ///
@@ -1671,29 +1700,22 @@ struct service_config final {
 /// If a value starts with an ampersand, the property will be resolved with a registered service of that name.
 /// Example:
 ///
-///     make_config({{"dataProvider", "&dataProviderService"}});
+///     config({{"dataProvider", "&dataProviderService"}});
 /// will set the Q_PROPERTY `dataProvider` to the service that was registered under the name `dataProviderService`.
 /// <br>Should you want to specify a property-value starting with an ampersand, you must escape this with the backslash.
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
-/// \param group the `QSettings::group()` to be used.
-/// \param autowire if `true`, the QApplicationContext will attempt to initialize all Q_PROPERTYs of `QObject*`-type with the corresponding services.
-/// Those properties that have explicitly been supplied will not be auto-wired.
 /// \return the service_config.
-///
-[[nodiscard]] inline service_config make_config(std::initializer_list<std::pair<QString,QVariant>> properties, const QString& group = "", bool autowire = false) {
-    return service_config{properties, group, autowire};
+[[nodiscard]] inline service_config config(std::initializer_list<std::pair<QString,QVariant>> properties) {
+    return service_config{"", false, properties};
 }
 
 ///
-/// \brief Makes a service_config that will autowire a service.
-/// <br>Equivalent to `make_config({}, group, true)`.
-/// \param group the `QSettings::group()` to be used.
+/// Makes a default service_config.
 /// \return the service_config.
-/// \sa mcnepp::qtdi::make_config(std::initializer_list<std::pair<QString,QVariant>>, const QString&, bool)
-///
-[[nodiscard]] inline service_config make_autowire_config(const QString& group = "") {
-    return service_config{{}, group, true};
+[[nodiscard]] inline service_config config() {
+    return service_config{};
 }
+
 
 
 
@@ -2556,7 +2578,7 @@ public:
     /// Whenever a *placeholder* shall be looked up, the ApplicationContext will search the following sources, until it can resolve the *placeholder*:
     /// -# The environment, for a variable corresponding to the *placeholder*.
     /// -# The instances of `QSettings` that have been registered in the ApplicationContext.
-    /// \sa mcnepp::qtdi::make_config()
+    /// \sa mcnepp::qtdi::config()
     /// \param key the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections.
     /// \param searchParentSections determines whether the key shall be searched recursively in the parent-sections.
     /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
