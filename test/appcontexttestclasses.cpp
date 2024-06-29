@@ -2,8 +2,8 @@
 
 namespace mcnepp::qtditest {
 
-BaseService::BaseService()
-    : BaseService{nullptr, nullptr}
+BaseService::BaseService(QObject* parent)
+    : BaseService{nullptr, parent}
 {
 
 }
@@ -14,7 +14,8 @@ BaseService::BaseService(CyclicDependency* dependency, QObject *parent)
       m_timer(nullptr),
      m_appContext(nullptr),
     initCalled(0),
-    m_foo("BaseService")
+    m_foo("BaseService"),
+    m_InitialParent(parent)
 {
 
 }

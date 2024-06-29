@@ -584,6 +584,21 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
     return theService;
 }
 
+int StandardApplicationContext::ServiceRegistration::unpublish() {
+    if(theService) {
+        std::unique_ptr<QObject> srv{theService};
+        QObject::disconnect(onDestroyed);
+        if(theService->parent() != applicationContext()) {
+            //Do not delete service if it has an external parent!
+            srv.release();
+        }
+        theService = nullptr;
+        m_state = STATE_INIT;
+        return 1;
+    }
+    return 0;
+}
+
 StandardApplicationContext::ServiceTemplateRegistration::ServiceTemplateRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
     DescriptorRegistration{base, index, name, desc, context, parent},
     m_config(config),
@@ -844,6 +859,9 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
                 return resolved;
             }
         }
+
+    case detail::PARENT_PLACEHOLDER_KIND:
+        return {QVariant::fromValue(static_cast<QObject*>(this)), Status::ok};
 
     case static_cast<int>(Kind::MANDATORY):
         if(depRegs.empty()) {

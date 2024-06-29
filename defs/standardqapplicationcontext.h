@@ -263,16 +263,7 @@ private:
 
 
 
-        virtual int unpublish() override {
-            if(theService) {
-                std::unique_ptr<QObject> srv{theService};
-                QObject::disconnect(onDestroyed);
-                theService = nullptr;
-                m_state = STATE_INIT;
-                return 1;
-            }
-            return 0;
-        }
+        virtual int unpublish() override;
 
 
 

@@ -86,6 +86,8 @@ inline QString kindToString(int kind) {
         return "value";
     case RESOLVABLE_KIND:
         return "resolvable";
+    case PARENT_PLACEHOLDER_KIND:
+        return "parent placeholder";
     case INVALID_KIND:
         return "invalid";
     default:

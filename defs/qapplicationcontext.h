@@ -594,6 +594,15 @@ protected:
 
     QMetaProperty findPropertyBySignal(const QMetaMethod& signalFunction, const QMetaObject* metaObject);
 
+    ///
+    /// \brief The return-type of mcnepp::qtdi::injectParent().
+    /// This is an empty struct. It serves as a 'type-tag' for which there
+    /// is a specialization of the template mcnepp::qtdi::detail::dependency_helper.
+    /// That specialization will create a dependency_info with mcnepp::qtdi::detail::PARENT_PLACEHOLDER_KIND.
+    ///
+    struct ParentPlaceholder {
+    };
+
 
 }
 
@@ -1503,7 +1512,6 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::N> injectAll(con
 }
 
 
-
 ///
 /// \brief A placeholder for a resolvable constructor-argument.
 /// Use the function resolve(const QString&) to pass a resolvable argument to a service
@@ -1546,6 +1554,24 @@ template<typename S = QString> [[nodiscard]] Resolvable<S> resolve(const QString
 template<typename S> [[nodiscard]] Resolvable<S> resolve(const QString& expression, const S& defaultValue) {
     return Resolvable<S>{expression, QVariant::fromValue(defaultValue)};
 }
+
+
+///
+/// \brief Creates a placeholder for injecting the ApplicationContext into a service as the parent.
+/// <br>Usually, this will not be necessary, as the QApplicationContext will set itself as the service's parent
+/// after creation, using QObject::setParent(QObject*).
+/// <br>However, there can be QObject-derived classes where the `parent` argument is not optional in the constructor,
+/// so it has to be supplied explicitly.
+/// <br>**Note:** Notwithstanding its self-documenting name, this function cannot ensure that the ApplicationContext is actually passed to the constructor
+/// as the `parent` argument. However, in the vast majority of cases it will be the last argument that denotes ths `parent`.
+/// \return an opaque type that will cause the ApplicationContext to inject itself as a service's parent.
+///
+inline detail::ParentPlaceholder injectParent() {
+    return detail::ParentPlaceholder{};
+}
+
+
+
 
 
 ///
@@ -1688,6 +1714,7 @@ using constructor_t = std::function<QObject*(const QVariantList&)>;
 
 constexpr int VALUE_KIND = 0x10;
 constexpr int RESOLVABLE_KIND = 0x20;
+constexpr int PARENT_PLACEHOLDER_KIND = 0x40;
 constexpr int INVALID_KIND = 0xff;
 
 
@@ -1724,6 +1751,7 @@ struct dependency_info {
         switch(kind) {
         case VALUE_KIND:
         case RESOLVABLE_KIND:
+        case PARENT_PLACEHOLDER_KIND:
             return false;
         default:
             return !expression.isEmpty();
@@ -1745,6 +1773,8 @@ inline bool operator==(const dependency_info& info1, const dependency_info& info
         return info1.value == info2.value;
     case INVALID_KIND:
         return false;
+    case PARENT_PLACEHOLDER_KIND:
+        return true;
         //In all other cases, we use only the expression. (For RESOLVABLE_KIND, value contains the default-value, which we ignore deliberately)
     default:
         return info1.expression == info2.expression;
@@ -1905,6 +1935,22 @@ struct dependency_helper<Resolvable<S>> {
 
 
 
+template <>
+struct dependency_helper<ParentPlaceholder> {
+
+    using type = ParentPlaceholder;
+
+
+
+    static dependency_info info(const ParentPlaceholder&) {
+        return { typeid(QObject*), PARENT_PLACEHOLDER_KIND};
+    }
+
+    static auto converter(const ParentPlaceholder&) {
+        return &dependency_helper<QObject*>::convert;
+    }
+
+};
 
 
 

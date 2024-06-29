@@ -28,11 +28,11 @@ template<> struct service_factory<BaseService> {
         return new BaseService;
     }
 
-    BaseService* operator()(CyclicDependency* dep) const {
+    BaseService* operator()(CyclicDependency* dep, QObject* parent = nullptr) const {
         if(pCalls) {
             ++*pCalls;
         }
-        return new BaseService{dep};
+        return new BaseService{dep, parent};
     }
     int* pCalls;
 };
@@ -252,8 +252,41 @@ private slots:
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> slot{reg};
         QVERIFY(slot);
+        //The parent was not supplied to the constructor:
+        QVERIFY(!slot->m_InitialParent);
+        //The ApplicationContext set itself as parent after creation:
         QCOMPARE(slot->parent(), context.get());
     }
+
+    void testInjectApplicationContextAsParent() {
+        auto baseReg = context->registerService(service<BaseService>(injectIfPresent<CyclicDependency>(), injectParent()));
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> baseSlot{baseReg};
+
+        //The ApplicationContext was supplied as parent to the constructor:
+        QCOMPARE(baseSlot->m_InitialParent, context.get());
+        QCOMPARE(baseSlot->parent(), context.get());
+    }
+
+
+    void testInjectExternalParent() {
+        auto baseReg = context->registerService(service<BaseService>(injectIfPresent<CyclicDependency>(), this));
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> baseSlot{baseReg};
+
+        //this was supplied as parent to the constructor:
+        QCOMPARE(baseSlot->m_InitialParent, this);
+        QCOMPARE(baseSlot->parent(), this);
+        bool destroyed = false;
+        connect(baseSlot.last(), &QObject::destroyed, [&destroyed] {destroyed = true;});
+        context.reset();
+        //BaseService should not have been deleted by ApplicationContext's destructor:
+        QVERIFY(!destroyed);
+        QCOMPARE(baseSlot->parent(), this);
+    }
+
 
     void testQObjectsDependency() {
         QTimer timer;

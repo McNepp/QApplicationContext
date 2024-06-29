@@ -112,6 +112,24 @@ Whenever we want to express a dependency for a Service and we have the correspon
     context -> registerService(service<RestPropFetcher>(QString{"https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"), networkRegistration}, "hamburgWeather"); // 3
 
 
+## Parent-Child relation
+
+In the preceding example, the class `RestPropFetcher` was introduced which had the following constructor:
+
+    RestPropFetcher(const QString& url, QNetworkAccessManager* networkManager, QObject* parent = nullptr);
+
+This is typical for QObject-based services: the first arguments (aka the dependencies) are mandatory, while the last argument is an optional `parent`.
+<br>In the preceding example, the service was registered by supplying the first two arguments explicitly. Thus, no `parent` was supplied.
+<br>QApplicationContext will check for every service after creation whether the service already has a QObject::parent().
+If not, **it will set itself as the service's parent** using QObject::setParent(QObject*).
+<br>However, what would you do if you had a constructor with a *mandatory parent*?
+<br>In that case, mcnepp::qtdi::injectParent() comes to the rescue:
+
+    context->registerService(service<RestPropFetcher>(QString{"https://whatever"}, inject<QNetworkAccessManager>(), injectParent()));
+
+This will cause the ApplicationContext to inject itself into the constructor as the parent.
+
+
 ## Externalized Configuration {#externalized-configuration}
 
 In the above example, we were configuring the Url with a String-literal in the code. This is less than optimal, as we usually want to be able
