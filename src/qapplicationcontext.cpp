@@ -11,7 +11,7 @@ namespace mcnepp::qtdi {
 std::atomic<QApplicationContext*> QApplicationContext::theInstance = nullptr;
 
 
-Q_LOGGING_CATEGORY(loggingCategory, "qtdi")
+Q_LOGGING_CATEGORY(defaultLoggingCategory, "qtdi")
 
 bool QApplicationContext::setInstance(QApplicationContext* context) {
     QApplicationContext* expected = nullptr;
@@ -36,9 +36,10 @@ QApplicationContext* QApplicationContext::instance() {
 
 
 QApplicationContext::~QApplicationContext() {
-    //This is a the last resort: a derived class has forgotten to un-set itsefl while it was still alive. Better late than sorry!
+    //This is a the last resort: a derived class has forgotten to un-set itself while it was still alive. Better late than sorry!
     if(unsetInstance(this)) {
-        qCWarning(loggingCategory()).noquote().nospace() << "Removed destroyed QApplicationContext " << this << " as global instance";
+        //We have to use defaultLoggingCategory() here, as the pure virtual function QApplicationContext::loggingCategory() is not available in the destructor.
+        qCWarning(defaultLoggingCategory()).noquote().nospace() << "Removed destroyed QApplicationContext " << this << " as global instance";
     }
 }
 
@@ -47,10 +48,18 @@ bool QApplicationContext::isGlobalInstance() const
     return theInstance.load() == this;
 }
 
+const QLoggingCategory& loggingCategory(registration_handle_t handle) {
+    if(handle) {
+        return handle->applicationContext()->loggingCategory();
+    }
+    return defaultLoggingCategory();
+}
+
+
 
 namespace detail {
 
-QMetaProperty findPropertyBySignal(const QMetaMethod &signalFunction, const QMetaObject* metaObject)
+QMetaProperty findPropertyBySignal(const QMetaMethod &signalFunction, const QMetaObject* metaObject, const QLoggingCategory& loggingCategory)
 {
     auto owner = signalFunction.enclosingMetaObject();
     if(owner && metaObject && owner == metaObject) {
@@ -62,9 +71,9 @@ QMetaProperty findPropertyBySignal(const QMetaMethod &signalFunction, const QMet
         }
     }
     if(metaObject) {
-        qCritical(loggingCategory()).noquote().nospace() << "Signal " << signalFunction.name() << " does not correspond to a property of " << metaObject->className();
+        qCritical(loggingCategory).noquote().nospace() << "Signal " << signalFunction.name() << " does not correspond to a property of " << metaObject->className();
     } else {
-        qCritical(loggingCategory()).noquote().nospace() << "Signal " << signalFunction.name() << " cannot be validated to correspond to any property";
+        qCritical(loggingCategory).noquote().nospace() << "Signal " << signalFunction.name() << " cannot be validated to correspond to any property";
     }
     return QMetaProperty{};
 }

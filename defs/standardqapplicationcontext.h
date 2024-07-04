@@ -26,8 +26,64 @@ class StandardApplicationContext final : public QApplicationContext
 
     class DescriptorRegistration;
 
+    struct delegate_tag_t {
+
+    };
+
 public:
-    explicit StandardApplicationContext(QObject *parent = nullptr);
+
+
+    ///
+    /// \brief Determines that a StandardApplicationContext is used as a delegate by another ApplicationContext.
+    /// \sa StandardApplicationContext(const QLoggingCategory&, QApplicationContext*, delegate_tag_t);
+    ///
+    static constexpr delegate_tag_t delegate_tag{};
+
+
+    /**
+     * @brief Creates a StandardApplicationContext using an explicit LoggingCategory.
+     * @param loggingCategory a reference to the QLoggingCategory that will be used by this ApplicationContext.
+     * @param parent will become the QObject::parent().
+     */
+    explicit StandardApplicationContext(const QLoggingCategory& loggingCategory, QObject *parent = nullptr):
+        StandardApplicationContext{loggingCategory, this, parent} {
+    }
+
+    /**
+     * @brief Creates a StandardApplicationContext with the default LoggingCategory.
+     * The default LoggingCategory can be obtained via mcnepp::qtdi::defaultLoggingCategory().
+     * @param parent will become the QObject::parent().
+     */
+    explicit StandardApplicationContext(QObject *parent = nullptr) : StandardApplicationContext{defaultLoggingCategory(), this, parent} {
+
+    }
+
+    /**
+     * @brief Creates a StandardApplicationContext using an explicit LoggingCategory and a delegating context.
+     * <br>The delegating context comes into play when another implementor or QApplicationContext wants to use
+     * the class StandardApplicationContext as its *delegate*. When the delegating context invokes StandardApplicationContext::publish(),
+     * itself (and not the *delegate*) must be injected into the *init-methods* of services, as well as into QApplicationContextPostProcessor::process()
+     * methods.
+     * @param loggingCategory a reference to the QLoggingCategory that will be used by this ApplicationContext.
+     * @param delegatingContext the ApplicationContext that delegates its calls to this ApplicationContext. Will also become the QObject::parent().
+     */
+    StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext, delegate_tag_t):
+        StandardApplicationContext{loggingCategory, delegatingContext, delegatingContext} {
+    }
+
+    /**
+     * @brief Creates a StandardApplicationContext using a delegating context.
+     * <br>The delegating context comes into play when another implementor or QApplicationContext wants to use
+     * the class StandardApplicationContext as its *delegate*. When the delegating context invokes StandardApplicationContext::publish(),
+     * itself (and not the *delegate*) must be injected into the *init-methods* of services, as well as into QApplicationContextPostProcessor::process()
+     * methods.
+     * @param delegatingContext the ApplicationContext that delegates its calls to this ApplicationContext. Will also become the QObject::parent().
+     */
+    StandardApplicationContext(QApplicationContext* delegatingContext, delegate_tag_t):
+        StandardApplicationContext{defaultLoggingCategory(), delegatingContext, delegatingContext} {
+    }
+
+
 
     ~StandardApplicationContext();
 
@@ -38,6 +94,8 @@ public:
     virtual unsigned pendingPublication() const override;
 
     virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections) const override;
+
+    virtual const QLoggingCategory& loggingCategory() const override;
 
     using QApplicationContext::registerObject;
 
@@ -58,9 +116,9 @@ protected:
 
 private:
 
+    StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* injectedContext, QObject* parent);
 
     bool registerAlias(service_registration_handle_t reg, const QString& alias);
-
 
 
     using descriptor_set = std::unordered_set<DescriptorRegistration*>;
@@ -88,8 +146,12 @@ private:
         }
 
 
-        virtual StandardApplicationContext* applicationContext() const final override {
-            return m_context;
+        virtual QApplicationContext* applicationContext() const final override {
+            return m_context->m_injectedContext;
+        }
+
+        const QLoggingCategory& loggingCategory() const {
+            return applicationContext()->loggingCategory();
         }
 
 
@@ -124,7 +186,7 @@ private:
         virtual void notifyPublished() = 0;
 
         virtual bool registerAlias(const QString& alias) override {
-            return applicationContext()->registerAlias(this, alias);
+            return m_context->registerAlias(this, alias);
         }
 
         bool matches(const std::type_info& type) const override {
@@ -515,8 +577,8 @@ private:
             return m_type == type || type == typeid(QObject);
         }
 
-        virtual StandardApplicationContext* applicationContext() const final override {
-            return static_cast<StandardApplicationContext*>(parent());
+        virtual QApplicationContext* applicationContext() const final override {
+            return m_context->m_injectedContext;
         }
 
         virtual QList<service_registration_handle_t> registeredServices() const override;
@@ -546,13 +608,16 @@ private:
             out.nospace().noquote() << "Services [" << registeredServices().size() << "] with service-type '" << m_type.name() << "'";
         }
 
-
+        const QLoggingCategory& loggingCategory() const {
+            return applicationContext()->loggingCategory();
+        }
 
 
         const std::type_info& m_type;
         const QMetaObject* m_meta;
         std::unordered_set<std::type_index> autowirings;
         subscription_handle_t proxySubscription;
+        StandardApplicationContext* const m_context;
     };
 
 
@@ -612,6 +677,7 @@ public:
 
 private:
 
+
     descriptor_list registrations;
 
     std::unordered_map<QString,DescriptorRegistration*> registrationsByName;
@@ -623,6 +689,8 @@ private:
     mutable QWaitCondition condition;
     std::unordered_map<registration_handle_t,std::unordered_set<QString>> m_boundProperties;
     std::atomic<unsigned> nextIndex;
+    const QLoggingCategory& m_loggingCategory;
+    QApplicationContext* const m_injectedContext;
 };
 
 

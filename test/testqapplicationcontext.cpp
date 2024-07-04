@@ -138,16 +138,18 @@ public:
     explicit PostProcessor(QObject* parent = nullptr) : QObject(parent) {}
 
     // QApplicationContextServicePostProcessor interface
-    void process(QApplicationContext *, QObject *service, const QVariantMap& additionalInfos) override {
+    void process(QApplicationContext * context, QObject *service, const QVariantMap& additionalInfos) override {
         if(additionalInfos.contains(".store")) {
             auto info = additionalInfos[".store"].value<info_t>();
             if(info.store) {
                 processedObjects.push_back(service);
             }
         }
+        contexts[service] = context;
     }
 
     QObjectList processedObjects;
+    QHash<QObject*,QApplicationContext*> contexts;
 };
 
 template<typename S> class SubscriptionThread : public QThread {
@@ -192,7 +194,7 @@ private slots:
         settingsFile.reset(new QTemporaryFile);
         settingsFile->open();
         configuration.reset(new QSettings{settingsFile->fileName(), QSettings::Format::IniFormat});
-        context.reset(new StandardApplicationContext);
+        context.reset(new StandardApplicationContext{qtditest::testLogging()});
     }
 
     void cleanup() {
@@ -200,7 +202,11 @@ private slots:
         settingsFile.reset();
     }
 
-
+    void testLoggingCategory() {
+        QCOMPARE(&context->loggingCategory(), &qtditest::testLogging());
+        StandardApplicationContext anotherContext;
+        QCOMPARE(&anotherContext.loggingCategory(), &defaultLoggingCategory());
+    }
 
 
     void testGlobalInstance() {
@@ -261,6 +267,22 @@ private slots:
     void testInjectApplicationContextAsParent() {
         auto baseReg = context->registerService(service<BaseService>(injectIfPresent<CyclicDependency>(), injectParent()));
         QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> baseSlot{baseReg};
+
+        //The ApplicationContext was supplied as parent to the constructor:
+        QCOMPARE(baseSlot->m_InitialParent, context.get());
+        QCOMPARE(baseSlot->parent(), context.get());
+    }
+
+    void testInjectDelegatingApplicationContextAsParent() {
+        StandardApplicationContext delegateContext{qtditest::testLogging(), context.get(), StandardApplicationContext::delegate_tag};
+        auto baseReg = delegateContext.registerService(service<BaseService>(injectIfPresent<CyclicDependency>(), injectParent()));
+        QCOMPARE(baseReg.applicationContext(), context.get());
+
+        auto proxyReg = delegateContext.getRegistration<BaseService>();
+        QCOMPARE(proxyReg.applicationContext(), context.get());
+        QVERIFY(delegateContext.publish());
 
         RegistrationSlot<BaseService> baseSlot{baseReg};
 
@@ -1178,6 +1200,33 @@ private slots:
 
     }
 
+    void testInitializerWithDelegatingContext() {
+        StandardApplicationContext delegateContext{qtditest::testLogging(), context.get(), StandardApplicationContext::delegate_tag};
+        auto contextReg = delegateContext.getRegistration("context").as<QApplicationContext>();
+        auto baseReg = delegateContext.registerService<BaseService>("base with init");
+        QCOMPARE(baseReg.applicationContext(), context.get());
+        QVERIFY(delegateContext.publish());
+
+        RegistrationSlot<BaseService> baseSlot{baseReg};
+        RegistrationSlot<QApplicationContext> contextSlog{contextReg};
+        QCOMPARE(contextSlog.last(), context.get());
+        QCOMPARE(baseSlot->context(), context.get());
+
+    }
+
+    void testPostProcessorWithDelegatingContext() {
+        StandardApplicationContext delegateContext{qtditest::testLogging(), context.get(), StandardApplicationContext::delegate_tag};
+        PostProcessor postProcessor;
+        auto postReg = delegateContext.registerObject(&postProcessor);
+        QCOMPARE(postReg.applicationContext(), context.get());
+        auto contextReg = delegateContext.getRegistration("context").as<QApplicationContext>();
+        auto baseReg = delegateContext.registerService<BaseService>("base with init");
+        QVERIFY(delegateContext.publish());
+
+        RegistrationSlot<BaseService> baseSlot{baseReg};
+        QCOMPARE(postProcessor.contexts[baseSlot.last()], context.get());
+    }
+
 
     void testInitializerViaInterface() {
         auto baseReg = context->registerService(service<Interface1,BaseService2>(), "base with init");
@@ -1701,7 +1750,6 @@ private slots:
         ServiceRegistration<Interface1> invalidReg;
         QVERIFY(!invalidReg);
         QCOMPARE(invalidReg.registeredName(), QString{});
-        qCInfo(loggingCategory()) << invalidReg;
 
         ServiceRegistration<Interface1> anotherInvalidReg;
         //Two invalid registrations are never equal:
