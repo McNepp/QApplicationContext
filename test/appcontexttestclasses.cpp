@@ -2,6 +2,8 @@
 
 namespace mcnepp::qtditest {
 
+Q_LOGGING_CATEGORY(testLogging, "qtditest")
+
 BaseService::BaseService(QObject* parent)
     : BaseService{nullptr, parent}
 {
