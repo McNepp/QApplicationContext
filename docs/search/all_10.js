@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['wrap_0',['wrap',['../classmcnepp_1_1qtdi_1_1_service_registration.html#a0f9678445bc2936fb7dd510331f7c302',1,'mcnepp::qtdi::ServiceRegistration::wrap()'],['../classmcnepp_1_1qtdi_1_1_proxy_registration.html#a1bfc50440aeeb7048a8ef1bda4df9e17',1,'mcnepp::qtdi::ProxyRegistration::wrap()']]]
+  ['unwrap_0',['unwrap',['../classmcnepp_1_1qtdi_1_1_subscription.html#a1e0211a625db4163bc719b3de64a199e',1,'mcnepp::qtdi::Subscription::unwrap()'],['../classmcnepp_1_1qtdi_1_1_registration.html#aaac5888c2f09725ca0d8f6fff97852ce',1,'mcnepp::qtdi::Registration::unwrap()']]]
 ];

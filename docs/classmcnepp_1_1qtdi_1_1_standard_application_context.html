@@ -77,6 +77,7 @@ $(function() {
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="classmcnepp_1_1qtdi_1_1_standard_application_context-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">mcnepp::qtdi::StandardApplicationContext Class Reference<span class="mlabels"><span class="mlabel">final</span></span></div></div>
@@ -99,9 +100,20 @@ Inheritance diagram for mcnepp::qtdi::StandardApplicationContext:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:aa8df35a1d1471d7008c6222a342989b8"><td class="memItemLeft" align="right" valign="top"><a id="aa8df35a1d1471d7008c6222a342989b8" name="aa8df35a1d1471d7008c6222a342989b8"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>StandardApplicationContext</b> (QObject *parent=nullptr)</td></tr>
+<tr class="memitem:a15f5158ea3abc098334db47b9fd33f8f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a15f5158ea3abc098334db47b9fd33f8f">StandardApplicationContext</a> (const QLoggingCategory &amp;<a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ac6be9baede995858145cb41adc03ad3c">loggingCategory</a>, QObject *parent=nullptr)</td></tr>
+<tr class="memdesc:a15f5158ea3abc098334db47b9fd33f8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> using an explicit LoggingCategory.  <br /></td></tr>
+<tr class="separator:a15f5158ea3abc098334db47b9fd33f8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8df35a1d1471d7008c6222a342989b8"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#aa8df35a1d1471d7008c6222a342989b8">StandardApplicationContext</a> (QObject *parent=nullptr)</td></tr>
+<tr class="memdesc:aa8df35a1d1471d7008c6222a342989b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> with the default LoggingCategory. The default LoggingCategory can be obtained via mcnepp::qtdi::defaultLoggingCategory().  <br /></td></tr>
 <tr class="separator:aa8df35a1d1471d7008c6222a342989b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aed9c14a6e938eb546451a2b29b1fef96"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#aed9c14a6e938eb546451a2b29b1fef96">StandardApplicationContext</a> (const QLoggingCategory &amp;<a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ac6be9baede995858145cb41adc03ad3c">loggingCategory</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *delegatingContext, delegate_tag_t)</td></tr>
+<tr class="memdesc:aed9c14a6e938eb546451a2b29b1fef96"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> using an explicit LoggingCategory and a delegating context. <br  />
+The delegating context comes into play when another implementor or <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> wants to use the class <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> as its <em>delegate</em>. When the delegating context invokes <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ad58c83a97736500900b331ec30b92690" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">StandardApplicationContext::publish()</a>, itself (and not the <em>delegate</em>) must be injected into the <em>init-methods</em> of services, as well as into <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#ae39124c653d3839b52cad951955131c2" title="Processes each service published by an ApplicationContext.">QApplicationContextPostProcessor::process()</a> methods.  <br /></td></tr>
+<tr class="separator:aed9c14a6e938eb546451a2b29b1fef96"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3f970a356adf57baa22bd43c6369d50d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a3f970a356adf57baa22bd43c6369d50d">StandardApplicationContext</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *delegatingContext, delegate_tag_t)</td></tr>
+<tr class="memdesc:a3f970a356adf57baa22bd43c6369d50d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> using a delegating context. <br  />
+The delegating context comes into play when another implementor or <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> wants to use the class <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> as its <em>delegate</em>. When the delegating context invokes <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ad58c83a97736500900b331ec30b92690" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">StandardApplicationContext::publish()</a>, itself (and not the <em>delegate</em>) must be injected into the <em>init-methods</em> of services, as well as into <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#ae39124c653d3839b52cad951955131c2" title="Processes each service published by an ApplicationContext.">QApplicationContextPostProcessor::process()</a> methods.  <br /></td></tr>
+<tr class="separator:a3f970a356adf57baa22bd43c6369d50d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad58c83a97736500900b331ec30b92690"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ad58c83a97736500900b331ec30b92690">publish</a> (bool allowPartial=false) final override</td></tr>
 <tr class="memdesc:ad58c83a97736500900b331ec30b92690"><td class="mdescLeft">&#160;</td><td class="mdescRight">Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked, it will attempt to instantiate all yet-unpublished services that have been registered with this ApplicationContext. <br  />
 <b>Thread-safety:</b> This function may only be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
@@ -118,6 +130,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a5263ce983be7160d17e50c549af25a62"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a value from the ApplicationContext's configuration. <br  />
 This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>:  <br /></td></tr>
 <tr class="separator:a5263ce983be7160d17e50c549af25a62"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac6be9baede995858145cb41adc03ad3c"><td class="memItemLeft" align="right" valign="top">virtual const QLoggingCategory &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ac6be9baede995858145cb41adc03ad3c">loggingCategory</a> () const override</td></tr>
+<tr class="memdesc:ac6be9baede995858145cb41adc03ad3c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The QLoggingCategory that this ApplicationContext uses.  <br /></td></tr>
+<tr class="separator:ac6be9baede995858145cb41adc03ad3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6473418ee5bae4340a8345acb3950c95"><td class="memItemLeft" align="right" valign="top"><a id="a6473418ee5bae4340a8345acb3950c95" name="a6473418ee5bae4340a8345acb3950c95"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>event</b> (QEvent *event) override</td></tr>
 <tr class="separator:a6473418ee5bae4340a8345acb3950c95"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -220,6 +235,15 @@ The ServiceRegistrations have a type-argument <code>QObject</code>. You may want
 <tr class="memdesc:a7d9800502c77b4f34ac2da27b45d29d5 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a value from the ApplicationContext's configuration. <br  />
 This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>:  <br /></td></tr>
 <tr class="separator:a7d9800502c77b4f34ac2da27b45d29d5 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a03a175639fd8bb3134a721ff5cd5d92a inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">virtual const QLoggingCategory &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a03a175639fd8bb3134a721ff5cd5d92a">loggingCategory</a> () const =0</td></tr>
+<tr class="memdesc:a03a175639fd8bb3134a721ff5cd5d92a inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">The QLoggingCategory that this ApplicationContext uses.  <br /></td></tr>
+<tr class="separator:a03a175639fd8bb3134a721ff5cd5d92a inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
+Static Public Attributes</h2></td></tr>
+<tr class="memitem:a9f1f630cb0d84ce148f8351e9167122b"><td class="memItemLeft" align="right" valign="top">static constexpr delegate_tag_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a9f1f630cb0d84ce148f8351e9167122b">delegate_tag</a></td></tr>
+<tr class="memdesc:a9f1f630cb0d84ce148f8351e9167122b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines that a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> is used as a delegate by another ApplicationContext.  <br /></td></tr>
+<tr class="separator:a9f1f630cb0d84ce148f8351e9167122b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
@@ -315,6 +339,10 @@ If this function is invoked with <code>appContext == nullptr</code>, it will ret
 If you are implementing <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a805b17a76dde6d70f32d2a17d17bfd06" title="Obtains a List of all Services that have been registered.  The element-type of the returned QList is ...">getRegistrationHandles() const </a>and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target. <br  />
 If this function is invoked with <code>appContext == nullptr</code>, it will return an empty QList.  <br /></td></tr>
 <tr class="separator:a3e656b4f8a4d21d82fa107470ae1de5b inherit pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d786fec477e3eaf0959a7ae6ff7188c inherit pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8d786fec477e3eaf0959a7ae6ff7188c">delegateConnectSignals</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *sourceContext, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *targetContext, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
+<tr class="memdesc:a8d786fec477e3eaf0959a7ae6ff7188c inherit pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects the signals of a source-context with the corresponding signals of a target-context. <br  />
+This convenience-function may help with implementing your own implementation of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.  <br /></td></tr>
+<tr class="separator:a8d786fec477e3eaf0959a7ae6ff7188c inherit pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3415083a0ef7012c2608cbdad7a01de0 inherit pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">
 static bool&#160;</td><td class="memItemRight" valign="bottom"><b>setInstance</b> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *)</td></tr>
 <tr class="separator:a3415083a0ef7012c2608cbdad7a01de0 inherit pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -331,7 +359,184 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>unsetInstance<
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A ready-to use implementation of the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. </p>
-</div><h2 class="groupheader">Member Function Documentation</h2>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a15f5158ea3abc098334db47b9fd33f8f" name="a15f5158ea3abc098334db47b9fd33f8f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a15f5158ea3abc098334db47b9fd33f8f">&#9670;&#160;</a></span>StandardApplicationContext() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">mcnepp::qtdi::StandardApplicationContext::StandardApplicationContext </td>
+          <td>(</td>
+          <td class="paramtype">const QLoggingCategory &amp;&#160;</td>
+          <td class="paramname"><em>loggingCategory</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">QObject *&#160;</td>
+          <td class="paramname"><em>parent</em> = <code>nullptr</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">explicit</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> using an explicit LoggingCategory. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">loggingCategory</td><td>a reference to the QLoggingCategory that will be used by this ApplicationContext. </td></tr>
+    <tr><td class="paramname">parent</td><td>will become the QObject::parent(). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="aa8df35a1d1471d7008c6222a342989b8" name="aa8df35a1d1471d7008c6222a342989b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa8df35a1d1471d7008c6222a342989b8">&#9670;&#160;</a></span>StandardApplicationContext() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">mcnepp::qtdi::StandardApplicationContext::StandardApplicationContext </td>
+          <td>(</td>
+          <td class="paramtype">QObject *&#160;</td>
+          <td class="paramname"><em>parent</em> = <code>nullptr</code></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">explicit</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> with the default LoggingCategory. The default LoggingCategory can be obtained via mcnepp::qtdi::defaultLoggingCategory(). </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">parent</td><td>will become the QObject::parent(). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="aed9c14a6e938eb546451a2b29b1fef96" name="aed9c14a6e938eb546451a2b29b1fef96"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aed9c14a6e938eb546451a2b29b1fef96">&#9670;&#160;</a></span>StandardApplicationContext() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">mcnepp::qtdi::StandardApplicationContext::StandardApplicationContext </td>
+          <td>(</td>
+          <td class="paramtype">const QLoggingCategory &amp;&#160;</td>
+          <td class="paramname"><em>loggingCategory</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td>
+          <td class="paramname"><em>delegatingContext</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">delegate_tag_t&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> using an explicit LoggingCategory and a delegating context. <br  />
+The delegating context comes into play when another implementor or <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> wants to use the class <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> as its <em>delegate</em>. When the delegating context invokes <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ad58c83a97736500900b331ec30b92690" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">StandardApplicationContext::publish()</a>, itself (and not the <em>delegate</em>) must be injected into the <em>init-methods</em> of services, as well as into <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#ae39124c653d3839b52cad951955131c2" title="Processes each service published by an ApplicationContext.">QApplicationContextPostProcessor::process()</a> methods. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">loggingCategory</td><td>a reference to the QLoggingCategory that will be used by this ApplicationContext. </td></tr>
+    <tr><td class="paramname">delegatingContext</td><td>the ApplicationContext that delegates its calls to this ApplicationContext. Will also become the QObject::parent(). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a3f970a356adf57baa22bd43c6369d50d" name="a3f970a356adf57baa22bd43c6369d50d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3f970a356adf57baa22bd43c6369d50d">&#9670;&#160;</a></span>StandardApplicationContext() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">mcnepp::qtdi::StandardApplicationContext::StandardApplicationContext </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td>
+          <td class="paramname"><em>delegatingContext</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">delegate_tag_t&#160;</td>
+          <td class="paramname">&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> using a delegating context. <br  />
+The delegating context comes into play when another implementor or <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> wants to use the class <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> as its <em>delegate</em>. When the delegating context invokes <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ad58c83a97736500900b331ec30b92690" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">StandardApplicationContext::publish()</a>, itself (and not the <em>delegate</em>) must be injected into the <em>init-methods</em> of services, as well as into <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#ae39124c653d3839b52cad951955131c2" title="Processes each service published by an ApplicationContext.">QApplicationContextPostProcessor::process()</a> methods. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">delegatingContext</td><td>the ApplicationContext that delegates its calls to this ApplicationContext. Will also become the QObject::parent(). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
 <a id="a5263ce983be7160d17e50c549af25a62" name="a5263ce983be7160d17e50c549af25a62"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5263ce983be7160d17e50c549af25a62">&#9670;&#160;</a></span>getConfigurationValue()</h2>
 
@@ -370,7 +575,7 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>unsetInstance<
 This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>: </p>
 <ol type="1">
 <li>The environment, for a variable corresponding to the <em>placeholder</em>.</li>
-<li>The instances of <code>QSettings</code> that have been registered in the ApplicationContext. <dl class="section see"><dt>See also</dt><dd><a class="el" href="qapplicationcontext_8h.html#ae9134d3bd63dc9885fe60a7c1f918c2b" title="Makes a service_config and populates it with properties.  The service must have a Q_PROPERTY for ever...">mcnepp::qtdi::config()</a> </dd></dl>
+<li>The instances of <code>QSettings</code> that have been registered in the ApplicationContext. <dl class="section see"><dt>See also</dt><dd><a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666">mcnepp::qtdi::config()</a> </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">key</td><td>the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections. </td></tr>
@@ -506,6 +711,37 @@ Additionally, you may wrap the handles in a type-safe manner, using <a class="el
 <dl class="section return"><dt>Returns</dt><dd>a List of all Services that have been registered. </dd></dl>
 
 <p>Implements <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a805b17a76dde6d70f32d2a17d17bfd06">mcnepp::qtdi::QApplicationContext</a>.</p>
+
+</div>
+</div>
+<a id="ac6be9baede995858145cb41adc03ad3c" name="ac6be9baede995858145cb41adc03ad3c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac6be9baede995858145cb41adc03ad3c">&#9670;&#160;</a></span>loggingCategory()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual const QLoggingCategory &amp; mcnepp::qtdi::StandardApplicationContext::loggingCategory </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The QLoggingCategory that this ApplicationContext uses. </p>
+<dl class="section return"><dt>Returns</dt><dd>The QLoggingCategory that this ApplicationContext uses. </dd></dl>
+<dl class="section see"><dt>See also</dt><dd>mcnepp::qtdi::defaultLoggingCategory() </dd></dl>
+
+<p>Implements <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a03a175639fd8bb3134a721ff5cd5d92a">mcnepp::qtdi::QApplicationContext</a>.</p>
 
 </div>
 </div>
@@ -1041,6 +1277,32 @@ template&lt;typename S , typename Impl , typename B , <a class="el" href="qappli
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> if it could not be registered. </dd></dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a id="a9f1f630cb0d84ce148f8351e9167122b" name="a9f1f630cb0d84ce148f8351e9167122b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9f1f630cb0d84ce148f8351e9167122b">&#9670;&#160;</a></span>delegate_tag</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr delegate_tag_t mcnepp::qtdi::StandardApplicationContext::delegate_tag</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Determines that a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a> is used as a delegate by another ApplicationContext. </p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#aed9c14a6e938eb546451a2b29b1fef96" title="Creates a StandardApplicationContext using an explicit LoggingCategory and a delegating context....">StandardApplicationContext(const QLoggingCategory&amp;, QApplicationContext*, delegate_tag_t)</a>; </dd></dl>
 
 </div>
 </div>

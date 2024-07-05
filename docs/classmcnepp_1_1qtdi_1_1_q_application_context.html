@@ -196,6 +196,9 @@ The ServiceRegistrations have a type-argument <code>QObject</code>. You may want
 <tr class="memdesc:a7d9800502c77b4f34ac2da27b45d29d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a value from the ApplicationContext's configuration. <br  />
 This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>:  <br /></td></tr>
 <tr class="separator:a7d9800502c77b4f34ac2da27b45d29d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a03a175639fd8bb3134a721ff5cd5d92a"><td class="memItemLeft" align="right" valign="top">virtual const QLoggingCategory &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a03a175639fd8bb3134a721ff5cd5d92a">loggingCategory</a> () const =0</td></tr>
+<tr class="memdesc:a03a175639fd8bb3134a721ff5cd5d92a"><td class="mdescLeft">&#160;</td><td class="mdescRight">The QLoggingCategory that this ApplicationContext uses.  <br /></td></tr>
+<tr class="separator:a03a175639fd8bb3134a721ff5cd5d92a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -254,6 +257,10 @@ If this function is invoked with <code>appContext == nullptr</code>, it will ret
 If you are implementing <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a805b17a76dde6d70f32d2a17d17bfd06" title="Obtains a List of all Services that have been registered.  The element-type of the returned QList is ...">getRegistrationHandles() const </a>and want to delegate to another implementation, access-rules will not allow you to invoke the function on another target. <br  />
 If this function is invoked with <code>appContext == nullptr</code>, it will return an empty QList.  <br /></td></tr>
 <tr class="separator:a3e656b4f8a4d21d82fa107470ae1de5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d786fec477e3eaf0959a7ae6ff7188c"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8d786fec477e3eaf0959a7ae6ff7188c">delegateConnectSignals</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *sourceContext, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *targetContext, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
+<tr class="memdesc:a8d786fec477e3eaf0959a7ae6ff7188c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects the signals of a source-context with the corresponding signals of a target-context. <br  />
+This convenience-function may help with implementing your own implementation of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.  <br /></td></tr>
+<tr class="separator:a8d786fec477e3eaf0959a7ae6ff7188c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3415083a0ef7012c2608cbdad7a01de0"><td class="memItemLeft" align="right" valign="top"><a id="a3415083a0ef7012c2608cbdad7a01de0" name="a3415083a0ef7012c2608cbdad7a01de0"></a>
 static bool&#160;</td><td class="memItemRight" valign="bottom"><b>setInstance</b> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *)</td></tr>
 <tr class="separator:a3415083a0ef7012c2608cbdad7a01de0"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -315,6 +322,59 @@ template&lt;typename S , <a class="el" href="qapplicationcontext_8h.html#a5429ea
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a8d786fec477e3eaf0959a7ae6ff7188c" name="a8d786fec477e3eaf0959a7ae6ff7188c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8d786fec477e3eaf0959a7ae6ff7188c">&#9670;&#160;</a></span>delegateConnectSignals()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void mcnepp::qtdi::QApplicationContext::delegateConnectSignals </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td>
+          <td class="paramname"><em>sourceContext</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td>
+          <td class="paramname"><em>targetContext</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Qt::ConnectionType&#160;</td>
+          <td class="paramname"><em>connectionType</em> = <code>Qt::AutoConnection</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Connects the signals of a source-context with the corresponding signals of a target-context. <br  />
+This convenience-function may help with implementing your own implementation of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">sourceContext</td><td>the context that emits the signals </td></tr>
+    <tr><td class="paramname">targetContext</td><td>the context that shall propagate the signals </td></tr>
+    <tr><td class="paramname">connectionType</td><td>will be used to make the connections. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <a id="a5b216d957e2595dc74a86553f09e13bb" name="a5b216d957e2595dc74a86553f09e13bb"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5b216d957e2595dc74a86553f09e13bb">&#9670;&#160;</a></span>delegateGetRegistrationHandle() <span class="overload">[1/2]</span></h2>
 
@@ -568,7 +628,7 @@ If this function is invoked with <code>appContext == nullptr</code>, it will ret
 This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>: </p>
 <ol type="1">
 <li>The environment, for a variable corresponding to the <em>placeholder</em>.</li>
-<li>The instances of <code>QSettings</code> that have been registered in the ApplicationContext. <dl class="section see"><dt>See also</dt><dd><a class="el" href="qapplicationcontext_8h.html#ae9134d3bd63dc9885fe60a7c1f918c2b" title="Makes a service_config and populates it with properties.  The service must have a Q_PROPERTY for ever...">mcnepp::qtdi::config()</a> </dd></dl>
+<li>The instances of <code>QSettings</code> that have been registered in the ApplicationContext. <dl class="section see"><dt>See also</dt><dd><a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666">mcnepp::qtdi::config()</a> </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">key</td><td>the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections. </td></tr>
@@ -873,6 +933,37 @@ You may determine whether a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_applic
 
 <p>Is this the global instance? </p>
 <dl class="section return"><dt>Returns</dt><dd><code>true</code> if <code>this</code> has been installed as the global instance. </dd></dl>
+
+</div>
+</div>
+<a id="a03a175639fd8bb3134a721ff5cd5d92a" name="a03a175639fd8bb3134a721ff5cd5d92a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a03a175639fd8bb3134a721ff5cd5d92a">&#9670;&#160;</a></span>loggingCategory()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual const QLoggingCategory &amp; mcnepp::qtdi::QApplicationContext::loggingCategory </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The QLoggingCategory that this ApplicationContext uses. </p>
+<dl class="section return"><dt>Returns</dt><dd>The QLoggingCategory that this ApplicationContext uses. </dd></dl>
+<dl class="section see"><dt>See also</dt><dd>mcnepp::qtdi::defaultLoggingCategory() </dd></dl>
+
+<p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ac6be9baede995858145cb41adc03ad3c">mcnepp::qtdi::StandardApplicationContext</a>.</p>
 
 </div>
 </div>

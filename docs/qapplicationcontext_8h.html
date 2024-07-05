@@ -210,6 +210,9 @@ If the handle actually points to a <a class="el" href="classmcnepp_1_1qtdi_1_1_p
 <tr class="memitem:a4d48e0805aa7f293c0b050534a8c6e9e"><td class="memItemLeft" align="right" valign="top">const QMetaObject *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a4d48e0805aa7f293c0b050534a8c6e9e">mcnepp::qtdi::serviceMetaObject</a> (<a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a> handle)</td></tr>
 <tr class="memdesc:a4d48e0805aa7f293c0b050534a8c6e9e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the QMetaObject from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>.  <br /></td></tr>
 <tr class="separator:a4d48e0805aa7f293c0b050534a8c6e9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad8f2bbaf5d705c9287fa8139b9037f15"><td class="memItemLeft" align="right" valign="top">const QLoggingCategory &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#ad8f2bbaf5d705c9287fa8139b9037f15">mcnepp::qtdi::loggingCategory</a> (<a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a> handle)</td></tr>
+<tr class="memdesc:ad8f2bbaf5d705c9287fa8139b9037f15"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the QLoggingCategory from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>.  <br /></td></tr>
+<tr class="separator:ad8f2bbaf5d705c9287fa8139b9037f15"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a19ce4ad196137c5749cc881631050853"><td class="memItemLeft" align="right" valign="top">QList&lt; <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a19ce4ad196137c5749cc881631050853">mcnepp::qtdi::registeredServices</a> (<a class="el" href="qapplicationcontext_8h.html#adde781831da99ca1afd54b82f9e6d23d">proxy_registration_handle_t</a> handle)</td></tr>
 <tr class="memdesc:a19ce4ad196137c5749cc881631050853"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the registered Services from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>.  <br /></td></tr>
 <tr class="separator:a19ce4ad196137c5749cc881631050853"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -313,8 +316,8 @@ However, there can be QObject-derived classes where the <code>parent</code> argu
 The service must have a Q_PROPERTY for every key contained in <code>properties</code>.<br  />
  Example:  <br /></td></tr>
 <tr class="separator:ae9134d3bd63dc9885fe60a7c1f918c2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a062d6ebc1ef63b11b943209329468fff"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a062d6ebc1ef63b11b943209329468fff">mcnepp::qtdi::config</a> (const QString &amp;group=&quot;&quot;)</td></tr>
-<tr class="separator:a062d6ebc1ef63b11b943209329468fff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5b2c15ddf8bc9c211e489ad7daea3666"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666">mcnepp::qtdi::config</a> ()</td></tr>
+<tr class="separator:a5b2c15ddf8bc9c211e489ad7daea3666"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8ce383afad6131ee291cc692693d1782"><td class="memTemplParams" colspan="2">template&lt;typename F , typename Impl  = typename F::service_type, typename... Dep&gt; </td></tr>
 <tr class="memitem:a8ce383afad6131ee291cc692693d1782"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl, ServiceScope::SINGLETON &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a8ce383afad6131ee291cc692693d1782">mcnepp::qtdi::serviceFactory</a> (F factory, Dep...dependencies)</td></tr>
 <tr class="memdesc:a8ce383afad6131ee291cc692693d1782"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> with an explicit factory.  <br /></td></tr>
@@ -882,8 +885,8 @@ All changes made to the source-property will be propagated to all Services repre
 
 </div>
 </div>
-<a id="a062d6ebc1ef63b11b943209329468fff" name="a062d6ebc1ef63b11b943209329468fff"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a062d6ebc1ef63b11b943209329468fff">&#9670;&#160;</a></span>config() <span class="overload">[1/2]</span></h2>
+<a id="a5b2c15ddf8bc9c211e489ad7daea3666" name="a5b2c15ddf8bc9c211e489ad7daea3666"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5b2c15ddf8bc9c211e489ad7daea3666">&#9670;&#160;</a></span>config() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -894,8 +897,7 @@ All changes made to the source-property will be propagated to all Services repre
         <tr>
           <td class="memname">service_config mcnepp::qtdi::config </td>
           <td>(</td>
-          <td class="paramtype">const QString &amp;&#160;</td>
-          <td class="paramname"><em>group</em> = <code>&quot;&quot;</code></td><td>)</td>
+          <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -905,13 +907,7 @@ All changes made to the source-property will be propagated to all Services repre
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Makes a service_config, with an optional group. </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">group</td><td>the name of the optional group. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>the service_config. </dd></dl>
+<p>Makes a default service_config. </p><dl class="section return"><dt>Returns</dt><dd>the service_config. </dd></dl>
 
 </div>
 </div>
@@ -1303,6 +1299,33 @@ Usually, this will not be necessary, as the QApplicationContext will set itself 
 However, there can be QObject-derived classes where the <code>parent</code> argument is not optional in the constructor, so it has to be supplied explicitly. <br  />
 <b>Note:</b> Notwithstanding its self-documenting name, this function cannot ensure that the ApplicationContext is actually passed to the constructor as the <code>parent</code> argument. However, in the vast majority of cases it will be the last argument that denotes ths <code>parent</code>. </p>
 <dl class="section return"><dt>Returns</dt><dd>an opaque type that will cause the ApplicationContext to inject itself as a service's parent. </dd></dl>
+
+</div>
+</div>
+<a id="ad8f2bbaf5d705c9287fa8139b9037f15" name="ad8f2bbaf5d705c9287fa8139b9037f15"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad8f2bbaf5d705c9287fa8139b9037f15">&#9670;&#160;</a></span>loggingCategory()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const QLoggingCategory &amp; mcnepp::qtdi::loggingCategory </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a>&#160;</td>
+          <td class="paramname"><em>handle</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Obtains the QLoggingCategory from a handle to a Registration. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>the handle to the Registration. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>the QLoggingCategory of the associated QApplicationContext, if the handle is valid. Otherwise, mcnepp:qtdi::defaultLoggingCategory() </dd></dl>
 
 </div>
 </div>
