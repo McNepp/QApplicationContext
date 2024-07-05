@@ -272,7 +272,7 @@ public:
         if(m_sourceProperty.hasNotifySignal()) {
             detail::BindingProxy* proxy = new detail::BindingProxy{m_sourceProperty, m_boundSource, m_setter, target};
             auto connection = QObject::connect(m_boundSource, m_sourceProperty.notifySignal(), proxy, detail::BindingProxy::notifySlot());
-            qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << m_sourceProperty.name() << "' of " << m_boundSource << " to " << m_setter <<" of " << target;
+            qCDebug(m_loggingCategory).nospace().noquote() << "Bound property '" << m_sourceProperty.name() << "' of " << m_boundSource << " to " << m_setter <<" of " << target;
             connections.push_back(std::move(connection));
             return;
         }
@@ -281,11 +281,11 @@ public:
             auto notifier = sourceBindable.addNotifier([this,target]{
                 m_setter.setter(target, m_sourceProperty.read(m_boundSource));
             });
-            qCDebug(loggingCategory()).nospace().noquote() << "Bound property '" << m_sourceProperty.name() << "' of " << m_boundSource << " to " << m_setter << " of " << target;
+            qCDebug(m_loggingCategory).nospace().noquote() << "Bound property '" << m_sourceProperty.name() << "' of " << m_boundSource << " to " << m_setter << " of " << target;
             bindings.push_back(std::move(notifier));
             return;
         }
-        qCWarning(loggingCategory()).nospace().noquote() << "Could not bind property '" << m_sourceProperty.name() << "' of " << m_boundSource << " to " << m_setter << " of " << target;
+        qCWarning(m_loggingCategory).nospace().noquote() << "Could not bind property '" << m_sourceProperty.name() << "' of " << m_boundSource << " to " << m_setter << " of " << target;
 
     }
 
@@ -300,16 +300,18 @@ public:
 
 private:
 
-    PropertyInjector(QObject* boundSource, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter) : detail::CallableSubscription(boundSource),
+    PropertyInjector(QObject* boundSource, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter, const QLoggingCategory& loggingCategory) : detail::CallableSubscription(boundSource),
         m_sourceProperty(sourceProperty),
         m_setter(setter),
-        m_boundSource(boundSource) {
+        m_boundSource(boundSource),
+        m_loggingCategory(loggingCategory)    {
     }
     QMetaProperty m_sourceProperty;
     detail::property_descriptor m_setter;
     QObject* m_boundSource;
     std::vector<QPropertyNotifier> bindings;
     std::vector<QMetaObject::Connection> connections;
+    const QLoggingCategory& m_loggingCategory;
 };
 
 class PropertyBindingSubscription : public detail::CallableSubscription {
@@ -317,7 +319,7 @@ public:
 
 
     void notify(QObject* obj) override {
-        auto subscr = new PropertyInjector{obj, m_sourceProperty, m_setter};
+        auto subscr = new PropertyInjector{obj, m_sourceProperty, m_setter, loggingCategory(m_target)};
         m_target->subscribe(subscr);
         subscriptions.push_back(subscr);
     }
@@ -459,7 +461,7 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
 detail::Subscription *StandardApplicationContext::ProxyRegistrationImpl::createAutowiring(const std::type_info &type, detail::q_inject_t injector, Registration *source)
 {
     if(QThread::currentThread() != this->thread()) {
-        qCritical(loggingCategory()).noquote().nospace() << "Cannot create autowiring in different thread";
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot create autowiring in different thread";
         return nullptr;
     }
     if(!autowirings.insert(type).second) {
@@ -478,7 +480,7 @@ const service_config StandardApplicationContext::ObjectRegistration::defaultConf
 subscription_handle_t StandardApplicationContext::DescriptorRegistration::createBindingTo(const char* sourcePropertyName, detail::Registration *target, const detail::property_descriptor& targetProperty)
 {
     if(QThread::currentThread() != this->thread()) {
-        qCritical(loggingCategory()).noquote().nospace() << "Cannot create binding in different thread";
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot create binding in different thread";
         return nullptr;
     }
 
@@ -522,7 +524,7 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
 detail::Subscription *StandardApplicationContext::DescriptorRegistration::createAutowiring(const std::type_info &type, detail::q_inject_t injector, Registration *source)
 {
     if(QThread::currentThread() != this->thread()) {
-        qCritical(loggingCategory()).noquote().nospace() << "Cannot create autowiring in different thread";
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot create autowiring in different thread";
         return nullptr;
     }
 
@@ -559,12 +561,12 @@ void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
 void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *srv) {
     if(srv == theService) {
         if(auto parentReg = dynamic_cast<service_registration_handle_t>(parent()); parentReg && parentReg -> scope() == ServiceScope::PROTOTYPE) {
-            qInfo(loggingCategory()).noquote().nospace() << "Instance of Prototype " << *this << " has been destroyed";
+            qCInfo(loggingCategory()).noquote().nospace() << "Instance of Prototype " << *this << " has been destroyed";
         } else {
             //Somebody has destroyed a Service that is managed by this ApplicationContext.
             //All we can do is log an error and set theService to nullptr.
             //Yet, it might still be in use somewhere as a dependency.
-            qCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
+            qCCritical(loggingCategory()).noquote().nospace() << *this << " has been destroyed externally";
         }
         theService = nullptr;
         m_state = STATE_INIT;
@@ -642,7 +644,7 @@ QStringList StandardApplicationContext::ServiceTemplateRegistration::getBeanRefs
 
 subscription_handle_t StandardApplicationContext::ServiceTemplateRegistration::createBindingTo(const char*, registration_handle_t, const detail::property_descriptor&)
 {
-    qCritical(loggingCategory()).noquote().nospace() << "Cannot create binding from " << *this;
+    qCCritical(loggingCategory()).noquote().nospace() << "Cannot create binding from " << *this;
     return nullptr;
 }
 
@@ -720,7 +722,7 @@ void StandardApplicationContext::PrototypeRegistration::print(QDebug out) const 
 
 subscription_handle_t StandardApplicationContext::PrototypeRegistration::createBindingTo(const char*, registration_handle_t, const detail::property_descriptor&)
 {
-    qCritical(loggingCategory()).noquote().nospace() << "Cannot create binding from " << *this;
+    qCCritical(loggingCategory()).noquote().nospace() << "Cannot create binding from " << *this;
     return nullptr;
 }
 
@@ -751,26 +753,31 @@ Q_COREAPP_STARTUP_FUNCTION(registerAppInGlobalContext)
 
 
 
-StandardApplicationContext::StandardApplicationContext(QObject* parent) :
-QApplicationContext(parent)
+
+StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* injectedContext, QObject* parent) :
+    QApplicationContext(parent),
+    m_loggingCategory(loggingCategory),
+    m_injectedContext(injectedContext)
 {
     if(auto app = QCoreApplication::instance()) {
         registerObject(app, "application");
     }
 
-    registerObject<QApplicationContext>(this, "context");
+    registerObject<QApplicationContext>(injectedContext, "context");
 
 
     if(setInstance(this)) {
-        qCInfo(loggingCategory()).noquote().nospace() << "Installed QApplicationContext " << this << " as global instance";
+        qCInfo(loggingCategory()).noquote().nospace() << "Installed " << this << " as global instance";
     }
 }
+
+
 
 
 StandardApplicationContext::~StandardApplicationContext() {
     //Before we un-publish, we unset this instance as the global instance:
     if(unsetInstance(this)) {
-        qCInfo(loggingCategory()).noquote().nospace() << "Removed QApplicationContext " << this << " as global instance";
+        qCInfo(loggingCategory()).noquote().nospace() << "Removed " << this << " as global instance";
     }
     unpublish();
 }
@@ -885,15 +892,15 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
         }
 
     case detail::PARENT_PLACEHOLDER_KIND:
-        return {QVariant::fromValue(static_cast<QObject*>(this)), Status::ok};
+        return {QVariant::fromValue(static_cast<QObject*>(m_injectedContext)), Status::ok};
 
     case static_cast<int>(Kind::MANDATORY):
         if(depRegs.empty()) {
             if(allowPartial) {
-                qWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
+                qCWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
                 return {QVariant{}, Status::fixable};
             } else {
-                qCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
+                qCCritical(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
                 return {QVariant{}, Status::fatal};
             }
 
@@ -908,7 +915,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             return {QVariant::fromValue(depRegs[0]->getObject()), Status::ok};
         default:
             //Ambiguity is always a non-fixable error:
-            qCritical(loggingCategory()).noquote().nospace() << d << " is ambiguous";
+            qCCritical(loggingCategory()).noquote().nospace() << d << " is ambiguous";
             return {QVariant{}, Status::fatal};
         }
     case static_cast<int>(Kind::N):
@@ -1128,7 +1135,7 @@ QVariant StandardApplicationContext::resolveDependency(const QVariant &arg, desc
 bool StandardApplicationContext::publish(bool allowPartial)
 {
     if(QThread::currentThread() != this->thread()) {
-        qCritical(loggingCategory()).noquote().nospace() << "Cannot publish ApplicationContext in different thread";
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot publish ApplicationContext in different thread";
         return false;
     }
 
@@ -1285,7 +1292,7 @@ QList<service_registration_handle_t> StandardApplicationContext::getRegistration
 service_registration_handle_t StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj)
 {
     if(QThread::currentThread() != this->thread()) {
-        qCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
         return nullptr;
     }
     DescriptorRegistration* reg;
@@ -1851,20 +1858,20 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
     for(auto processor : postProcessors) {
         if(processor != dynamic_cast<QApplicationContextPostProcessor*>(target)) {
             //Don't process yourself!
-            processor->process(this, target, reg->registeredProperties());
+            processor->process(m_injectedContext, target, reg->registeredProperties());
         }
     }
 
     for(DescriptorRegistration* self = reg; self; self = self->base()) {
         if(self->descriptor().init_method) {
-            self->descriptor().init_method(target, this);
+            self->descriptor().init_method(target, m_injectedContext);
             qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
             break;
        }
     }
-    //If the service has no parent, make it a child of this ApplicationContext:
+    //If the service has no parent, make it a child of this ApplicationContext.
     //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
-    setParentIfNotSet(target, this);
+    setParentIfNotSet(target, m_injectedContext);
     return Status::ok;
 }
 
@@ -1895,6 +1902,11 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key, b
 
     qCDebug(loggingCategory()).noquote().nospace() << "No value found for configuration-entry: " << key;
     return QVariant{};
+}
+
+const QLoggingCategory &StandardApplicationContext::loggingCategory() const
+{
+    return m_loggingCategory;
 }
 
 

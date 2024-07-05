@@ -120,7 +120,7 @@ template<typename S> class Registration;
 template<typename S,ServiceScope> class ServiceRegistration;
 
 
-Q_DECLARE_LOGGING_CATEGORY(loggingCategory)
+Q_DECLARE_LOGGING_CATEGORY(defaultLoggingCategory)
 
 
 
@@ -592,7 +592,7 @@ protected:
 
 };
 
-    QMetaProperty findPropertyBySignal(const QMetaMethod& signalFunction, const QMetaObject* metaObject);
+    QMetaProperty findPropertyBySignal(const QMetaMethod& signalFunction, const QMetaObject* metaObject, const QLoggingCategory& loggingCatgegory);
 
     ///
     /// \brief The return-type of mcnepp::qtdi::injectParent().
@@ -665,6 +665,14 @@ template<typename T> [[nodiscard]] inline bool matches(registration_handle_t han
 [[nodiscard]] inline const QMetaObject* serviceMetaObject(registration_handle_t handle) {
     return handle ? handle->serviceMetaObject() : nullptr;
 }
+
+
+///
+/// \brief Obtains the QLoggingCategory from a handle to a Registration.
+/// \param handle the handle to the Registration.
+/// \return the QLoggingCategory of the associated QApplicationContext, if the handle is valid. Otherwise, mcnepp:qtdi::defaultLoggingCategory()
+///
+[[nodiscard]] const QLoggingCategory& loggingCategory(registration_handle_t handle);
 
 
 ///
@@ -833,7 +841,7 @@ public:
     ///
     template<typename F> Subscription subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
         if(!registrationHolder || !context) {
-            qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
+            qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this;
             return Subscription{};
         }
 
@@ -855,7 +863,7 @@ public:
     template<typename T,typename R> Subscription subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
         static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
         if(!registrationHolder || !setter || !target) {
-            qCCritical(loggingCategory()).noquote().nospace() << "Cannot subscribe to " << *this;
+            qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this;
             return Subscription{};
         }
         auto subscription = new detail::CallableSubscription{target, detail::callable_adapter<S>::adapt(target, setter), connectionType};
@@ -1013,7 +1021,7 @@ public:
     ///
     bool registerAlias(const QString& alias) {
         if(!Registration<S>::isValid()) {
-            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register alias '" << alias << "' for " << *this;
+            qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot register alias '" << alias << "' for " << *this;
             return false;
         }
         return  unwrap()->registerAlias(alias);
@@ -1054,7 +1062,7 @@ private:
         static_assert(detail::service_scope_traits<SCP>::is_binding_source, "The scope of the service does not permit binding");
 
         if(!target || !*this) {
-            qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << *this << " to " << target;
+            qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot bind " << *this << " to " << target;
             return Subscription{};
         }
         auto subscription = unwrap() -> createBindingTo(sourceProperty, target, descriptor);
@@ -1166,7 +1174,7 @@ template<typename S,typename T,ServiceScope scope> inline Subscription bind(cons
 ///
 template<typename S,typename T,typename A,typename R,ServiceScope scope> inline Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A)) {
     if(!setter) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << source << " to null";
+        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
     return source.bind(sourceProperty, target.unwrap(), {"", detail::callable_adapter<T>::adaptSetter(setter)});
@@ -1192,10 +1200,10 @@ template<typename S,typename T,typename A,typename R,ServiceScope scope> inline 
 template<typename S,typename T,typename AS,typename AT,typename R,ServiceScope scope> inline auto bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(AS), Registration<T>& target, R(T::*setter)(AT)) ->
     std::enable_if_t<std::is_convertible_v<AS,AT>,Subscription> {
     if(!setter || !signalFunction || !source || !target) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << source << " to null";
+        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
-    if(auto signalProperty = detail::findPropertyBySignal(QMetaMethod::fromSignal(signalFunction), source.serviceMetaObject()); signalProperty.isValid()) {
+    if(auto signalProperty = detail::findPropertyBySignal(QMetaMethod::fromSignal(signalFunction), source.serviceMetaObject(), loggingCategory(source.unwrap())); signalProperty.isValid()) {
         return bind(source, signalProperty.name(), target, setter);
     }
     return Subscription{};
@@ -1219,10 +1227,10 @@ template<typename S,typename T,typename AS,typename AT,typename R,ServiceScope s
 ///
 template<typename S,typename T,typename A,typename R,ServiceScope scope> inline Subscription bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(), Registration<T>& target, R(T::*setter)(A)) {
     if(!setter || !signalFunction || !source || !target) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind " << source << " to null";
+        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
-    if(auto signalProperty = detail::findPropertyBySignal(QMetaMethod::fromSignal(signalFunction), source.serviceMetaObject()); signalProperty.isValid()) {
+    if(auto signalProperty = detail::findPropertyBySignal(QMetaMethod::fromSignal(signalFunction), source.serviceMetaObject(), loggingCategory(source.unwrap())); signalProperty.isValid()) {
         return bind(source, signalProperty.name(), target, setter);
     }
     return Subscription{};
@@ -1710,11 +1718,10 @@ struct service_config final {
 }
 
 ///
-/// Makes a service_config, with an optional group.
-/// \param group the name of the optional group.
+/// Makes a default service_config.
 /// \return the service_config.
-[[nodiscard]] inline service_config config(const QString& group = "") {
-    return service_config{group};
+[[nodiscard]] inline service_config config() {
+    return service_config{};
 }
 
 
@@ -2586,6 +2593,15 @@ public:
     ///
     [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
 
+    ///
+    /// \brief The QLoggingCategory that this ApplicationContext uses.
+    /// \return The QLoggingCategory that this ApplicationContext uses.
+    /// \sa mcnepp::qtdi::defaultLoggingCategory()
+    ///
+    [[nodiscard]] virtual const QLoggingCategory& loggingCategory() const = 0;
+
+
+
 signals:
 
     ///
@@ -2693,7 +2709,7 @@ protected:
     /// \param metaObject the QMetaObject of the service_type. May be omitted.
     /// \return the result of getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
     ///
-    static proxy_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext* appContext, const std::type_info& service_type, const QMetaObject* metaObject) {
+    [[nodiscard]] static proxy_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext* appContext, const std::type_info& service_type, const QMetaObject* metaObject) {
         if(!appContext) {
             return nullptr;
         }
@@ -2709,7 +2725,7 @@ protected:
     /// \param name the name under which the service is looked up.
     /// \return the result of getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
     ///
-    static service_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext* appContext, const QString& name) {
+    [[nodiscard]] static service_registration_handle_t delegateGetRegistrationHandle(const QApplicationContext* appContext, const QString& name) {
         if(!appContext) {
             return nullptr;
         }
@@ -2734,6 +2750,18 @@ protected:
         return appContext->getRegistrationHandles();
     }
 
+    ///
+    /// \brief Connects the signals of a source-context with the corresponding signals of a target-context.
+    /// <br>This convenience-function may help with implementing your own implementation of QApplicationContext.
+    /// \param sourceContext the context that emits the signals
+    /// \param targetContext the context that shall propagate the signals
+    /// \param connectionType will be used to make the connections.
+    ///
+    static void delegateConnectSignals(QApplicationContext* sourceContext, QApplicationContext* targetContext, Qt::ConnectionType connectionType = Qt::AutoConnection) {
+        connect(sourceContext, &QApplicationContext::pendingPublicationChanged, targetContext, &QApplicationContext::pendingPublicationChanged, connectionType) ;
+        connect(sourceContext, &QApplicationContext::publishedChanged, targetContext, &QApplicationContext::publishedChanged, connectionType);
+    }
+
     static bool setInstance(QApplicationContext*);
 
     static bool unsetInstance(QApplicationContext*);
@@ -2748,7 +2776,7 @@ private:
 template<typename S> template<typename D,typename R> Subscription Registration<S>::autowire(R (S::*injectionSlot)(D*)) {
     static_assert(detail::could_be_qobject<D>::value, "Service-type to be injected must be possibly convertible to QObject");
     if(!registrationHolder || !injectionSlot) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot autowire " << *this;
+        qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot autowire " << *this;
         return Subscription{};
     }
     detail::q_inject_t injector = [injectionSlot](QObject* target,QObject* source) {
@@ -2782,7 +2810,6 @@ public:
 
     virtual ~QApplicationContextPostProcessor() = default;
 };
-
 
 
 

@@ -7,6 +7,7 @@ namespace mcnepp::qtditest {
 
 using namespace qtdi;
 
+Q_DECLARE_LOGGING_CATEGORY(testLogging)
 
 class Interface1 {
 public:

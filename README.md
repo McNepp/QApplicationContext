@@ -189,7 +189,7 @@ Such a group can be specified for your resolvable values by means of the mcnepp:
 are assumed to reside in the group named "mcnepp":
 
     auto decl = service<RestPropFetcher>(resolve("${baseUrl}?stationIds=${hamburgStationId}"), resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>());
-    appContext -> registerService(decl, "hamburgWeather", config("mcnepp"));
+    appContext -> registerService(decl, "hamburgWeather", config().withGroup("mcnepp"));
 
 ### Lookup in sub-sections
 
@@ -199,7 +199,7 @@ which denotes the root-section.
 A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
 Insert `*/` right after the opening sequence of the placeholder.
 
-    context -> registerService(service<QIODevice,QFile>(resolve("${*/filename}")), "file", config("files"));
+    context -> registerService(service<QIODevice,QFile>(resolve("${*/filename}")), "file", config().withGroup("files"));
 
 The key "filename" will first be searched in the section "files". If it cannot be found, it will be searched in the root-section.
 
@@ -1047,6 +1047,68 @@ The following table sums this up:
 |mcnepp::qtdi::bind()|only the ApplicationContext's|Invocation from another thread will log a diagnostic and return an invalid Subscription.|
 |mcnepp::qtdi::QApplicationContext::publish(bool)|only the ApplicationContext's|All published services will live in the ApplicationContext's thread.|
 
+## Extending QApplicationContext
+
+It is not possible to extend the class mcnepp::qtdi::StandardApplicationContext, as it is `final`.
+
+However, it is possible to extend the interface mcnepp::qtdi::QApplicationContext in your own code.
+If you do that, you may want to use an instance of mcnepp::qtdi::StandardApplicationContext as a *delegate* inside your derived class.
+<br>Here are some rules that you should follow:
+
+- You can implement the **public** pure virtual functions simply by invoking them on the *delegate*.
+- The **protected** pure virtual functions can be implemented by using the corresponding static `delegate...()` functions from QApplicationContext. Pass in your *delegate* as the first argument, as shown below.
+- Be aware that the first StandardApplicationContext that you create as a *delegate* will automatically become the global instance. This is probably not what you want.
+Therefore, consider to unset the delegate explicitly, as shown in the code below!
+- Be aware that the *delegate* will be injected into all services as a parent automatically (unless they have an explicit parent). Also, the *init-methods* will receive
+the *delegate* as an argument, as will the QApplicationContextPostProcessor::process() method.<br>
+In order to inject your own implementation instead, use the constructor that accepts a mcnepp::qtdi::StandardApplicationContext::delegate_tag as an additional argument. This is also shown below!
+- Do not forget to connect your instance to the signals emitted by the delegate. You may use the static function mcnepp::qtdi::QApplicationContext::delegateConnectSignals(), as shown below.
+
+Here is an example of a custom implementation of mcnepp::qtdi::QApplicationContext:
+
+    Q_DECLARE_LOGGING_CATEGORY(extendedLoggingCategory)
+
+    class ExtendedApplicationContext : public mcnepp::qtdi::QApplicationContext {
+      Q_OBJECT
+      
+      public:
+
+        explicit ExtendedApplicationContext(QObject *parent) :
+                mcnepp::qtdi::QApplicationContext{parent},
+                m_delegate{new mcnepp::qtdi::StandardApplicationContext{extendedLoggingCategory(), this, mcnepp::qtdi::StandardApplicationContext::delegate_tag}}
+        {
+            unsetInstance(m_delegate); // Remove the delegate as global instance, should it have been set.
+            if(setInstance(this)) { // Attempt to set this as global instance.
+                qCInfo(extendedLoggingCategory()).noquote().nospace() << "Installed " << this << " as global instance";
+            } 
+    // Propagate signals from delegate to this:
+            delegateConnectSignals(m_delegate, this);
+        }
+
+
+        ~ExtendedApplicationContext() {
+            unsetInstance(this);
+        }
+
+        bool publish(bool allowPartial) override {
+        // Implement a public pure virtual method by invoking on delegate:
+            return m_delegate->publish(allowPartial);
+        }
+
+     // More public methods...
+     
+      protected:
+
+        mcnepp::qtdi::service_registration_handle_t registerService(const QString &name, const service_descriptor &descriptor, const service_config& config, ServiceScope scope, QObject* baseObject) override {
+        // Implement a protected pure virtual method by leveraging the corresponding static helper:
+            return delegateRegisterService(m_delegate, name, descriptor, config, scope, baseObject);
+        }
+        
+     // More protected methods...
+
+      private:
+        mcnepp::qtdi::QApplicationContext* const m_m_delegate;
+    };
 
 
 
