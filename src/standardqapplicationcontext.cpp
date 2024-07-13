@@ -427,7 +427,8 @@ private:
 StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent) :
     detail::ProxyRegistration{parent},
     m_type(type),
-    m_meta(metaObject)
+    m_meta(metaObject),
+    m_context(parent)
 {
     proxySubscription = new ProxySubscription{this};
     for(auto reg : parent->registrations) {
@@ -437,7 +438,7 @@ StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const s
 
 QList<service_registration_handle_t> StandardApplicationContext::ProxyRegistrationImpl::registeredServices() const {
     QList<service_registration_handle_t> result;
-    for(auto handle : applicationContext() -> getRegistrationHandles()) {
+    for(auto handle : m_context -> getRegistrationHandles()) {
         if(auto reg = dynamic_cast<DescriptorRegistration*>(handle); reg && reg->matches(m_type)) {
             result.push_back(reg);
         }
@@ -511,7 +512,7 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         }
         setter = detail::propertySetter(targetProp);
     }
-    if(!applicationContext()->registerBoundProperty(target, setter.name)) {
+    if(!m_context->registerBoundProperty(target, setter.name)) {
         qCCritical(loggingCategory()).noquote().nospace() << setter << " has already been bound to " << *target;
         return nullptr;
     }
@@ -628,7 +629,7 @@ int StandardApplicationContext::ServiceRegistration::unpublish() {
 StandardApplicationContext::ServiceTemplateRegistration::ServiceTemplateRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
     DescriptorRegistration{base, index, name, desc, context, parent},
     m_config(config),
-    resolvedProperties{config.properties} {
+    m_resolvedProperties{config.properties} {
     proxySubscription = new ProxySubscription{this};
 }
 
@@ -698,7 +699,7 @@ QObject* StandardApplicationContext::PrototypeRegistration::createService(const 
         return this;
     case STATE_PUBLISHED:
         {
-        std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{base(), ++applicationContext()->nextIndex, registeredName(), descriptor(), config(), applicationContext(), this}};
+        std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{base(), ++m_context->nextIndex, registeredName(), descriptor(), config(), m_context, this}};
             QObject* instance = instanceReg->createService(m_dependencies, created);
             if(!instance) {
                 qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
@@ -1858,7 +1859,7 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
     for(auto processor : postProcessors) {
         if(processor != dynamic_cast<QApplicationContextPostProcessor*>(target)) {
             //Don't process yourself!
-            processor->process(m_injectedContext, target, reg->registeredProperties());
+            processor->process(reg, target, reg->resolvedProperties());
         }
     }
 

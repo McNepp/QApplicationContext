@@ -10,7 +10,7 @@ This, of course, means that some components will need to get references to those
 Following this rule greatly increases testability of your components, thus making your software more robust.
 
 But, sooner or later, you will ask yourself: How do I wire all those inter-dependent components together?  
-How do I create application-wide "singletons" (without resorting to C++ singletions, which are notoriously brittle), and how can I create multiple implmentations of the same interface?
+How do I create application-wide "singletons" (without resorting to C++ singletions, which are notoriously brittle), and how can I create multiple implementations of the same interface?
 
 ## Features
 
@@ -739,7 +739,7 @@ You may also access a specific service by name:
 Whenever a service has been instantiated and all properties have been set, QApplicationContext will apply all registered mcnepp::qtdi::QApplicationContextPostProcessor`s 
 to it. These are user-supplied QObjects that implement the aforementioned interface which comprises a single method:
 
-    QApplicationContextPostProcessor::process(QApplicationContext*, QObject*,const QVariantMap&)
+    QApplicationContextPostProcessor::process(service_registration_handle_t, QObject*,const QVariantMap&)
 
 In this method, you might apply further configuration to your service there, or perform logging or monitoring tasks.<br>
 Any information that you might want to pass to a QApplicationContextPostProcessor can be supplied as
