@@ -81,22 +81,22 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 
-<p>A mix-in interface for classes that may modify services before publication. The method <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#ae39124c653d3839b52cad951955131c2" title="Processes each service published by an ApplicationContext.">process(QApplicationContext*, QObject*,const QVariantMap&amp;)</a> will be invoked for each service after its properties have been set, but before an <em>init-method</em> is invoked.  
+<p>A mix-in interface for classes that may modify services before publication. The method <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#a42272c118a0410fff37c030a8260dec3" title="Processes each service published by an ApplicationContext.">process(service_registration_handle_t, QObject*,const QVariantMap&amp;)</a> will be invoked for each service after its properties have been set, but before an <em>init-method</em> is invoked.  
  <a href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ae39124c653d3839b52cad951955131c2"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#ae39124c653d3839b52cad951955131c2">process</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *appContext, QObject *<a class="el" href="qapplicationcontext_8h.html#a07ae03c57a4c371f2f24659088813670">service</a>, const QVariantMap &amp;resolvedProperties)=0</td></tr>
-<tr class="memdesc:ae39124c653d3839b52cad951955131c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Processes each service published by an ApplicationContext.  <br /></td></tr>
-<tr class="separator:ae39124c653d3839b52cad951955131c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a42272c118a0410fff37c030a8260dec3"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#a42272c118a0410fff37c030a8260dec3">process</a> (<a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> handle, QObject *<a class="el" href="qapplicationcontext_8h.html#a07ae03c57a4c371f2f24659088813670">service</a>, const QVariantMap &amp;resolvedProperties)=0</td></tr>
+<tr class="memdesc:a42272c118a0410fff37c030a8260dec3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Processes each service published by an ApplicationContext.  <br /></td></tr>
+<tr class="separator:a42272c118a0410fff37c030a8260dec3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>A mix-in interface for classes that may modify services before publication. The method <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#ae39124c653d3839b52cad951955131c2" title="Processes each service published by an ApplicationContext.">process(QApplicationContext*, QObject*,const QVariantMap&amp;)</a> will be invoked for each service after its properties have been set, but before an <em>init-method</em> is invoked. </p>
+<div class="textblock"><p>A mix-in interface for classes that may modify services before publication. The method <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#a42272c118a0410fff37c030a8260dec3" title="Processes each service published by an ApplicationContext.">process(service_registration_handle_t, QObject*,const QVariantMap&amp;)</a> will be invoked for each service after its properties have been set, but before an <em>init-method</em> is invoked. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="ae39124c653d3839b52cad951955131c2" name="ae39124c653d3839b52cad951955131c2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae39124c653d3839b52cad951955131c2">&#9670;&#160;</a></span>process()</h2>
+<a id="a42272c118a0410fff37c030a8260dec3" name="a42272c118a0410fff37c030a8260dec3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a42272c118a0410fff37c030a8260dec3">&#9670;&#160;</a></span>process()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -107,8 +107,8 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">virtual void mcnepp::qtdi::QApplicationContextPostProcessor::process </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td>
-          <td class="paramname"><em>appContext</em>, </td>
+          <td class="paramtype"><a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td>
+          <td class="paramname"><em>handle</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -138,9 +138,9 @@ Public Member Functions</h2></td></tr>
 <p>Processes each service published by an ApplicationContext. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">appContext</td><td></td></tr>
-    <tr><td class="paramname">service</td><td></td></tr>
-    <tr><td class="paramname">resolvedProperties</td><td></td></tr>
+    <tr><td class="paramname">handle</td><td>references the service-registration. </td></tr>
+    <tr><td class="paramname">service</td><td>the service-instance </td></tr>
+    <tr><td class="paramname">resolvedProperties</td><td>the resolved properties for this service. </td></tr>
   </table>
   </dd>
 </dl>

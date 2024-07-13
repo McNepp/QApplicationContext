@@ -149,7 +149,7 @@ The preferred way of creating Services is the function <a class="el" href="qappl
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A DI-Container for Qt-based applications.  <a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html">mcnepp::qtdi::QApplicationContextPostProcessor</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A mix-in interface for classes that may modify services before publication. The method <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#ae39124c653d3839b52cad951955131c2" title="Processes each service published by an ApplicationContext.">process(QApplicationContext*, QObject*,const QVariantMap&amp;)</a> will be invoked for each service after its properties have been set, but before an <em>init-method</em> is invoked.  <a href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A mix-in interface for classes that may modify services before publication. The method <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#a42272c118a0410fff37c030a8260dec3" title="Processes each service published by an ApplicationContext.">process(service_registration_handle_t, QObject*,const QVariantMap&amp;)</a> will be invoked for each service after its properties have been set, but before an <em>init-method</em> is invoked.  <a href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structstd_1_1hash_3_01mcnepp_1_1qtdi_1_1_subscription_01_4.html">std::hash&lt; mcnepp::qtdi::Subscription &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -219,9 +219,9 @@ If the handle actually points to a <a class="el" href="classmcnepp_1_1qtdi_1_1_p
 <tr class="memitem:ae09e67c55a69665975a9e2371e3d0a94"><td class="memItemLeft" align="right" valign="top">QString&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#ae09e67c55a69665975a9e2371e3d0a94">mcnepp::qtdi::registeredName</a> (<a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> handle)</td></tr>
 <tr class="memdesc:ae09e67c55a69665975a9e2371e3d0a94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the registeredName from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>.  <br /></td></tr>
 <tr class="separator:ae09e67c55a69665975a9e2371e3d0a94"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afefa36bb5b7dd31e385dcd75747fd594"><td class="memItemLeft" align="right" valign="top">QVariantMap&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#afefa36bb5b7dd31e385dcd75747fd594">mcnepp::qtdi::registeredProperties</a> (<a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> handle)</td></tr>
-<tr class="memdesc:afefa36bb5b7dd31e385dcd75747fd594"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the registeredProperties from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>.  <br /></td></tr>
-<tr class="separator:afefa36bb5b7dd31e385dcd75747fd594"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a01c1421ad2f49f3e219de2db9eec1b35"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a01c1421ad2f49f3e219de2db9eec1b35">mcnepp::qtdi::serviceConfig</a> (<a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a> handle)</td></tr>
+<tr class="memdesc:a01c1421ad2f49f3e219de2db9eec1b35"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the service configuration from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>.  <br /></td></tr>
+<tr class="separator:a01c1421ad2f49f3e219de2db9eec1b35"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7ba9e15cae5f876292acd7b671d56d36"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a7ba9e15cae5f876292acd7b671d56d36">mcnepp::qtdi::operator==</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &amp;sub1, const <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &amp;sub2)</td></tr>
 <tr class="memdesc:a7ba9e15cae5f876292acd7b671d56d36"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests two Subscriptions for equality.  <br /></td></tr>
 <tr class="separator:a7ba9e15cae5f876292acd7b671d56d36"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -386,7 +386,7 @@ Clients should have no need to know any details about this type. The only thing 
       </table>
 </div><div class="memdoc">
 <p>An opaque type that represents the ServiceRegistration on a low level. <br  />
-Clients should have no need to know any details about this type. The only thing you may do directly with a service_registration_handle_t is check for validity using an if-expression. In particular, you should not de-reference a handle, as its API might change without notice! What you can do, however, is use one of the free functions registeredName(service_registration_handle_t handle), registeredProperties(service_registration_handle_t). applicationContext(registration_handle_t handle). </p>
+Clients should have no need to know any details about this type. The only thing you may do directly with a service_registration_handle_t is check for validity using an if-expression. In particular, you should not de-reference a handle, as its API might change without notice! What you can do, however, is use one of the free functions registeredName(service_registration_handle_t handle), serviceConfig(service_registration_handle_t). applicationContext(registration_handle_t handle). </p>
 
 </div>
 </div>
@@ -1569,41 +1569,6 @@ template&lt;typename S , typename Impl  = S, typename... Dep&gt; </div>
 
 </div>
 </div>
-<a id="afefa36bb5b7dd31e385dcd75747fd594" name="afefa36bb5b7dd31e385dcd75747fd594"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afefa36bb5b7dd31e385dcd75747fd594">&#9670;&#160;</a></span>registeredProperties()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">QVariantMap mcnepp::qtdi::registeredProperties </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td>
-          <td class="paramname"><em>handle</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Obtains the registeredProperties from a handle to a ServiceRegistration. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">handle</td><td>the handle to the ServiceRegistration. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>the properties that this ServiceRegistration was registered with, or an empty Map if the handle is not valid. </dd></dl>
-
-</div>
-</div>
 <a id="a19ce4ad196137c5749cc881631050853" name="a19ce4ad196137c5749cc881631050853"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a19ce4ad196137c5749cc881631050853">&#9670;&#160;</a></span>registeredServices()</h2>
 
@@ -1773,6 +1738,33 @@ template&lt;typename S , typename Impl  = S, typename... Dep&gt; </div>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>a Service-declaration </dd></dl>
+
+</div>
+</div>
+<a id="a01c1421ad2f49f3e219de2db9eec1b35" name="a01c1421ad2f49f3e219de2db9eec1b35"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a01c1421ad2f49f3e219de2db9eec1b35">&#9670;&#160;</a></span>serviceConfig()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const service_config &amp; mcnepp::qtdi::serviceConfig </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td>
+          <td class="paramname"><em>handle</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Obtains the service configuration from a handle to a ServiceRegistration. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>the handle to the ServiceRegistration. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>the service configuration from that this ServiceRegistration was registered with, or an empty service_config if the handle is not valid. </dd></dl>
 
 </div>
 </div>
