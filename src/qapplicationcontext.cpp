@@ -56,6 +56,11 @@ const QLoggingCategory& loggingCategory(registration_handle_t handle) {
 }
 
 
+const service_config& serviceConfig(service_registration_handle_t handle) {
+    static service_config defaultConfig;
+    return handle ? handle->config() : defaultConfig;
+}
+
 
 namespace detail {
 

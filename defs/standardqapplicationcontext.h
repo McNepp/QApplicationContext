@@ -178,9 +178,6 @@ private:
         }
 
 
-        virtual const service_config& config() const = 0;
-
-
         virtual QStringList getBeanRefs() const = 0;
 
         virtual void notifyPublished() = 0;
@@ -225,6 +222,8 @@ private:
 
         virtual void resolveProperty(const QString& key, const QVariant& value) = 0;
 
+        virtual const QVariantMap& resolvedProperties() const = 0;
+
         DescriptorRegistration* base() const {
             return m_base;
         }
@@ -249,7 +248,7 @@ private:
             DescriptorRegistration{base, index, name, desc, context, parent},
             theService(nullptr),
             m_config(config),
-            resolvedProperties{config.properties},
+            m_resolvedProperties{config.properties},
             m_state(STATE_INIT)        {
 
         }
@@ -265,7 +264,9 @@ private:
         }
 
 
-
+        virtual const QVariantMap& resolvedProperties() const override {
+            return m_resolvedProperties;
+        }
 
 
         void notifyPublished() override {
@@ -293,12 +294,8 @@ private:
             return m_config;
         }
 
-        QVariantMap registeredProperties() const override {
-            return resolvedProperties;
-        }
-
         virtual void resolveProperty(const QString& key, const QVariant& value) override {
-            resolvedProperties.insert(key, value);
+            m_resolvedProperties.insert(key, value);
         }
 
 
@@ -333,7 +330,7 @@ private:
         QObject* theService;
         service_config m_config;
         QMetaObject::Connection onDestroyed;
-        QVariantMap resolvedProperties;
+        QVariantMap m_resolvedProperties;
         int m_state;
         mutable std::optional<QStringList> beanRefsCache;
     };
@@ -383,14 +380,15 @@ private:
             return m_config;
         }
 
-        QVariantMap registeredProperties() const override {
-            return resolvedProperties;
-        }
 
         virtual void resolveProperty(const QString& key, const QVariant& value) override {
-            resolvedProperties.insert(key, value);
+            m_resolvedProperties.insert(key, value);
         }
 
+
+        virtual const QVariantMap& resolvedProperties() const override {
+            return m_resolvedProperties;
+        }
 
 
         virtual QStringList getBeanRefs() const override;
@@ -414,7 +412,7 @@ private:
 
     private:
         service_config m_config;
-        QVariantMap resolvedProperties;
+        QVariantMap m_resolvedProperties;
         mutable std::optional<QStringList> beanRefsCache;
         subscription_handle_t proxySubscription;
         descriptor_list derivedServices;
@@ -450,11 +448,11 @@ private:
             return m_config;
         }
 
-        QVariantMap registeredProperties() const override {
-            return QVariantMap{};
+        virtual void resolveProperty(const QString&, const QVariant&) override {
         }
 
-        virtual void resolveProperty(const QString&, const QVariant&) override {
+        virtual const QVariantMap& resolvedProperties() const override {
+            return m_config.properties;
         }
 
 
@@ -515,6 +513,10 @@ private:
             return 0;
         }
 
+        virtual const QVariantMap& resolvedProperties() const override {
+            return defaultConfig.properties;
+        }
+
 
 
 
@@ -522,9 +524,6 @@ private:
             return theObj;
         }
 
-        QVariantMap registeredProperties() const override {
-            return QVariantMap{};
-        }
 
         virtual void resolveProperty(const QString&, const QVariant&) override {
         }

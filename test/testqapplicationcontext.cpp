@@ -131,25 +131,16 @@ private:
 
 class PostProcessor : public QObject, public QApplicationContextPostProcessor {
 public:
-    struct info_t {
-        bool store;
-    };
-
     explicit PostProcessor(QObject* parent = nullptr) : QObject(parent) {}
 
     // QApplicationContextServicePostProcessor interface
-    void process(QApplicationContext * context, QObject *service, const QVariantMap& additionalInfos) override {
-        if(additionalInfos.contains(".store")) {
-            auto info = additionalInfos[".store"].value<info_t>();
-            if(info.store) {
-                processedObjects.push_back(service);
-            }
-        }
-        contexts[service] = context;
+    void process(service_registration_handle_t handle, QObject *service, const QVariantMap& resolvedProperties) override {
+        servicesMap[handle] = service;
+        resolvedPropertiesMap[handle] = resolvedProperties;
     }
 
-    QObjectList processedObjects;
-    QHash<QObject*,QApplicationContext*> contexts;
+    QHash<service_registration_handle_t,QObject*> servicesMap;
+    QHash<service_registration_handle_t,QVariantMap> resolvedPropertiesMap;
 };
 
 template<typename S> class SubscriptionThread : public QThread {
@@ -429,15 +420,18 @@ private slots:
 
 
     void testWithPlaceholderProperty() {
+        PostProcessor postProcessor;
         configuration->setValue("timerInterval", 4711);
         context->registerObject(configuration.get());
+        context->registerObject(&postProcessor);
 
         QCOMPARE(4711, context->getConfigurationValue("timerInterval"));
         auto reg = context->registerService<QTimer>("timer", config({{"interval", "${timerInterval}"}}));
-        QCOMPARE(reg.registeredProperties()["interval"], "${timerInterval}");
+        QCOMPARE(reg.config().properties["interval"], "${timerInterval}");
         QVERIFY(context->publish());
-        QCOMPARE(reg.registeredProperties()["interval"], 4711);
         RegistrationSlot<QTimer> slot{reg};
+        QCOMPARE(postProcessor.resolvedPropertiesMap[reg.unwrap()]["interval"], 4711);
+
         QCOMPARE(slot->interval(), 4711);
     }
 
@@ -1214,18 +1208,6 @@ private slots:
 
     }
 
-    void testPostProcessorWithDelegatingContext() {
-        StandardApplicationContext delegateContext{qtditest::testLogging(), context.get(), StandardApplicationContext::delegate_tag};
-        PostProcessor postProcessor;
-        auto postReg = delegateContext.registerObject(&postProcessor);
-        QCOMPARE(postReg.applicationContext(), context.get());
-        auto contextReg = delegateContext.getRegistration("context").as<QApplicationContext>();
-        auto baseReg = delegateContext.registerService<BaseService>("base with init");
-        QVERIFY(delegateContext.publish());
-
-        RegistrationSlot<BaseService> baseSlot{baseReg};
-        QCOMPARE(postProcessor.contexts[baseSlot.last()], context.get());
-    }
 
 
     void testInitializerViaInterface() {
@@ -1692,7 +1674,7 @@ private slots:
         auto reg2 = context->registerService(service<Interface1,BaseService>(), "", config({{"objectName", "tester"}}));
         QCOMPARE_NE(reg2, reg);
         QVariantMap expectedProperties{{"objectName", "tester"}};
-        QCOMPARE(reg2.registeredProperties(), expectedProperties);
+        QCOMPARE(reg2.config().properties, expectedProperties);
     }
 
     void testFailRegisterTwiceSameName() {
@@ -1931,25 +1913,17 @@ private slots:
 
     void testPostProcessor() {
         auto processReg = context->registerService<PostProcessor>();
-        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1", config({{".store", QVariant::fromValue(PostProcessor::info_t{true})}}));
-        auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
-        auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>()), "card", config({{".store", QVariant::fromValue(PostProcessor::info_t{true})}}));
+        configuration->setValue("foo", "Harry");
+        context->registerObject(configuration.get());
+        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1", config({{"foo", "${foo}"}}));
+        auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2", config({{".store", "for later use"}}));
         QVERIFY(context->publish());
-        auto regs = context->getRegistration<Interface1>();
-        RegistrationSlot<Interface1> base1{reg1};
-        RegistrationSlot<Interface1> base2{reg2};
-        RegistrationSlot<CardinalityNService> service{reg};
         RegistrationSlot<PostProcessor> processSlot{processReg};
-        QCOMPARE_NE(base1, base2);
-        QCOMPARE(service->my_bases.size(), 2);
-
-        RegistrationSlot<Interface1> services{regs};
-        QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(processSlot->processedObjects.size(), 2);
-        QVERIFY(processSlot->processedObjects.contains(dynamic_cast<QObject*>(base1.last())));
-        QVERIFY(!processSlot->processedObjects.contains(dynamic_cast<QObject*>(base2.last())));
-        QVERIFY(processSlot->processedObjects.contains(service.last()));
-
+        QCOMPARE(processSlot->servicesMap.size(), 2);
+        QVERIFY(dynamic_cast<BaseService*>(processSlot->servicesMap[reg1.unwrap()]));
+        QVERIFY(dynamic_cast<BaseService2*>(processSlot->servicesMap[reg2.unwrap()]));
+        QCOMPARE(processSlot->resolvedPropertiesMap[reg1.unwrap()]["foo"], "Harry");
+        QCOMPARE(processSlot->resolvedPropertiesMap[reg2.unwrap()][".store"], "for later use");
     }
 
 

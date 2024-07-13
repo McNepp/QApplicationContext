@@ -629,7 +629,7 @@ int StandardApplicationContext::ServiceRegistration::unpublish() {
 StandardApplicationContext::ServiceTemplateRegistration::ServiceTemplateRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
     DescriptorRegistration{base, index, name, desc, context, parent},
     m_config(config),
-    resolvedProperties{config.properties} {
+    m_resolvedProperties{config.properties} {
     proxySubscription = new ProxySubscription{this};
 }
 
@@ -1859,7 +1859,7 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
     for(auto processor : postProcessors) {
         if(processor != dynamic_cast<QApplicationContextPostProcessor*>(target)) {
             //Don't process yourself!
-            processor->process(m_injectedContext, target, reg->registeredProperties());
+            processor->process(reg, target, reg->resolvedProperties());
         }
     }
 

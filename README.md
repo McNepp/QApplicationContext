@@ -739,7 +739,7 @@ You may also access a specific service by name:
 Whenever a service has been instantiated and all properties have been set, QApplicationContext will apply all registered mcnepp::qtdi::QApplicationContextPostProcessor`s 
 to it. These are user-supplied QObjects that implement the aforementioned interface which comprises a single method:
 
-    QApplicationContextPostProcessor::process(QApplicationContext*, QObject*,const QVariantMap&)
+    QApplicationContextPostProcessor::process(service_registration_handle_t, QObject*,const QVariantMap&)
 
 In this method, you might apply further configuration to your service there, or perform logging or monitoring tasks.<br>
 Any information that you might want to pass to a QApplicationContextPostProcessor can be supplied as

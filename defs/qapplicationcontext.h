@@ -24,6 +24,8 @@ namespace detail {
     class Subscription;
 }
 
+struct service_config;
+
 
 ///
 /// An opaque type that represents the Registration on a low level.
@@ -42,7 +44,7 @@ using registration_handle_t = detail::Registration*;
 /// The only thing you may do directly with a service_registration_handle_t is check for validity using an if-expression.
 /// In particular, you should not de-reference a handle, as its API might change without notice!
 /// What you can do, however, is use one of the free functions registeredName(service_registration_handle_t handle),
-/// registeredProperties(service_registration_handle_t).
+/// serviceConfig(service_registration_handle_t).
 /// applicationContext(registration_handle_t handle).
 ///
 using service_registration_handle_t = detail::ServiceRegistration*;
@@ -250,6 +252,7 @@ using q_inject_t = std::function<void(QObject*,QObject*)>;
 using q_init_t = std::function<void(QObject*,QApplicationContext*)>;
 
 struct service_descriptor;
+
 
 
 
@@ -493,8 +496,6 @@ public:
     ///
     Q_PROPERTY(QString registeredName READ registeredName CONSTANT)
 
-    Q_PROPERTY(QVariantMap registeredProperties READ registeredProperties CONSTANT)
-
     Q_PROPERTY(ServiceScope scope READ scope CONSTANT)
 
     ///
@@ -506,10 +507,10 @@ public:
     [[nodiscard]] virtual QString registeredName() const = 0;
 
     /**
-     * @brief The properties that were supplied upon registration.
-     * @return The properties that were supplied upon registration.
+     * @brief The configuration that was supplied upon registration.
+     * @return The configuration that was supplied upon registration.
      */
-    [[nodiscard]] virtual QVariantMap registeredProperties() const = 0;
+    [[nodiscard]] virtual const service_config& config() const = 0;
 
     /**
      * @brief The service_descriptor that was used to register this Service.
@@ -694,13 +695,11 @@ template<typename T> [[nodiscard]] inline bool matches(registration_handle_t han
 }
 
 ///
-/// \brief Obtains the registeredProperties from a handle to a ServiceRegistration.
-/// \param handle the handle to the  ServiceRegistration.
-/// \return the properties that this ServiceRegistration was registered with, or an empty Map if the handle is not valid.
+/// \brief Obtains the service configuration from a handle to a ServiceRegistration.
+/// \param handle the handle to the ServiceRegistration.
+/// \return the service configuration from that this ServiceRegistration was registered with, or an empty service_config if the handle is not valid.
 ///
-[[nodiscard]] inline QVariantMap registeredProperties(service_registration_handle_t handle) {
-    return handle ? handle->registeredProperties() : QVariantMap{};
-}
+[[nodiscard]] const service_config& serviceConfig(service_registration_handle_t handle);
 
 
 
@@ -962,8 +961,8 @@ public:
         return mcnepp::qtdi::registeredName(unwrap());
     }
 
-    [[nodiscard]] QVariantMap registeredProperties() const {
-        return mcnepp::qtdi::registeredProperties(unwrap());
+    [[nodiscard]] const service_config& config() const {
+        return mcnepp::qtdi::serviceConfig(unwrap());
     }
 
     [[nodiscard]] service_registration_handle_t unwrap() const {
@@ -2653,7 +2652,7 @@ protected:
     /// <br>The type of the returned handle is the opaque type service_registration_handle_t.
     /// You should not de-reference it, as its API may changed without notice.
     /// <br>What you can do, though, is use one of the free functions matches(registration_handle_t),
-    /// <br>registeredName(service_registration_handle_t), registeredProperties(service_registration_handle_t).
+    /// <br>registeredName(service_registration_handle_t), serviceConfig(service_registration_handle_t).
     /// <br>Additionally, you may wrap the handles in a type-safe manner, using ServiceRegistration::wrap(service_registration_handle_t).
     ///
     /// \param name the desired name of the service.
@@ -2671,7 +2670,7 @@ protected:
      * You should not de-reference it, as its API may changed without notice.
      * <br>
      * What you can do, though, is use one of the free functions matches(registration_handle_t),
-     * registeredName(service_registration_handle_t), registeredProperties(service_registration_handle_t).
+     * registeredName(service_registration_handle_t), serviceConfig(service_registration_handle_t).
      * <br>Additionally, you may wrap the handles in a type-safe manner, using ServiceRegistration::wrap(service_registration_handle_t).
      * @return a List of all Services that have been registered.
      */
@@ -2795,18 +2794,18 @@ template<typename S> template<typename D,typename R> Subscription Registration<S
 
 ///
 /// \brief A mix-in interface for classes that may modify services before publication.
-/// The method process(QApplicationContext*, QObject*,const QVariantMap&) will be invoked for each service after its properties have been set, but
+/// The method process(service_registration_handle_t, QObject*,const QVariantMap&) will be invoked for each service after its properties have been set, but
 /// before an *init-method* is invoked.
 ///
 class QApplicationContextPostProcessor {
 public:
     ///
     /// \brief Processes each service published by an ApplicationContext.
-    /// \param appContext
-    /// \param service
-    /// \param resolvedProperties
+    /// \param handle references the service-registration.
+    /// \param service the service-instance
+    /// \param resolvedProperties the resolved properties for this service.
     ///
-    virtual void process(QApplicationContext* appContext, QObject* service, const QVariantMap& resolvedProperties) = 0;
+    virtual void process(service_registration_handle_t handle, QObject* service, const QVariantMap& resolvedProperties) = 0;
 
     virtual ~QApplicationContextPostProcessor() = default;
 };
