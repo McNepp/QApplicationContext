@@ -945,7 +945,7 @@ detail::ServiceRegistration *StandardApplicationContext::getRegistrationHandle(c
     if(reg) {
         return reg;
     }
-    qCCritical(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name << "'";
+    qCWarning(loggingCategory()).noquote().nospace() << "Could not find a Registration for name '" << name << "'";
     return nullptr;
 }
 
@@ -1237,7 +1237,8 @@ bool StandardApplicationContext::publish(bool allowPartial)
             std::swap(toBePublished[moved++], toBePublished[pos]);
         }
     }
-    for(auto reg : toBePublished) {
+    while(!toBePublished.empty()) {
+        auto reg = toBePublished.front();
         auto initResult = init(reg, postProcessors);
         switch(initResult) {
         case Status::fatal:
@@ -1249,6 +1250,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
             continue;
 
         case Status::ok:
+            toBePublished.pop_front();
             ++publishedCount;
             reg->notifyPublished();
             qCInfo(loggingCategory()).noquote().nospace() << "Published " << *reg;
