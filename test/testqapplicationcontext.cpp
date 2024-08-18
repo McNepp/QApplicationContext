@@ -359,6 +359,8 @@ private slots:
 
     void testApplicationRegisteredAsObject() {
         auto reg = context->getRegistration<QCoreApplication>();
+        QVERIFY(reg.as<QObject>());
+
         QVERIFY(context->publish());
         RegistrationSlot<QCoreApplication> slot{reg};
         QVERIFY(slot);
@@ -368,6 +370,15 @@ private slots:
         RegistrationSlot<QCoreApplication> slotByName{regByName};
         QCOMPARE(slotByName.last(), QCoreApplication::instance());
     }
+
+    void testAsOnTemporary() {
+        auto reg = context->getRegistration<QCoreApplication>().as<QObject>();
+        auto appReg = context->getRegistration<QCoreApplication>("application").as<QObject>();
+        QVERIFY(reg);
+        QVERIFY(appReg);
+        QCOMPARE(reg.registeredServices()[0], appReg);
+    }
+
 
     void testApplicationContextRegisteredAsObject() {
         auto reg = context->getRegistration<QApplicationContext>();

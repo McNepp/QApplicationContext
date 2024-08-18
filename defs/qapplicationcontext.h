@@ -1005,9 +1005,19 @@ protected:
     {
     }
 
+    explicit Registration(QPointer<detail::Registration>&& reg) : registrationHolder{std::move(reg)}
+    {
+    }
+
+
     ~Registration() {
 
     }
+
+    QPointer<detail::Registration> release() {
+        return std::move(registrationHolder);
+    }
+
 private:
     QPointer<detail::Registration> registrationHolder;
 };
@@ -1033,6 +1043,8 @@ template<typename S,ServiceScope SCP=ServiceScope::UNKNOWN> class ServiceRegistr
     template<typename F,typename T,ServiceScope scope> friend Subscription bind(const ServiceRegistration<F,scope>&, const char*, Registration<T>&, const char*);
 
     template<typename F,typename T,typename A,typename R,ServiceScope scope> friend Subscription bind(const ServiceRegistration<F,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A));
+
+    template<typename T,ServiceScope TSCP> friend class ServiceRegistration;
 
 public:
     using service_type = S;
@@ -1068,7 +1080,7 @@ public:
      * @return a ServiceRegistration of the requested type. May be invalid if this Registration is already invalid, or if
      * the types do not match
      */
-    template<typename U,ServiceScope newScope=SCP> [[nodiscard]] ServiceRegistration<U,newScope> as() const {
+    template<typename U,ServiceScope newScope=SCP> [[nodiscard]] ServiceRegistration<U,newScope> as() const& {
         if constexpr(std::is_same_v<U,S> && newScope == SCP) {
             return *this;
         } else {
@@ -1078,9 +1090,34 @@ public:
     }
 
     /**
+     * @brief Attempts to cast this ServiceRegistration to a type.
+     * <br>This function will yield a valid Registration only if this is valid Registration and its underlying registration-handle
+     * matches the requested type. This will be the case (at least) if U is either an advertised service-interface
+     * or the implementation-type of the service.
+     * <br>Additionally, compilation will only succeed if at least one of the following is true:
+     * - the current and new scopes are equal
+     * - the current scope is `ServiceScope::UNKNOWN`
+     * - the new scope is `ServiceScope::UNKNOWN`
+     *
+     * \tparam U the new service-type.
+     * \tparam newScope the new scope for the ServiceRegistration.
+     * @return a ServiceRegistration of the requested type. May be invalid if this Registration is already invalid, or if
+     * the types do not match
+     */
+    template<typename U,ServiceScope newScope=SCP> [[nodiscard]] ServiceRegistration<U,newScope> as() && {
+        if constexpr(std::is_same_v<U,S> && newScope == SCP) {
+            return std::move(*this);
+        } else {
+            static_assert(SCP == newScope || SCP == ServiceScope::UNKNOWN || newScope == ServiceScope::UNKNOWN, "Either current scope or new scope must be UNKNOWN");
+            return ServiceRegistration<U,newScope>::unsafe_wrap(Registration<S>::release());
+        }
+    }
+
+
+    /**
      * @brief operator Implicit conversion to a ServiceRegistration with ServiceScope::UNKNOWN.
      */
-    operator ServiceRegistration<S,ServiceScope::UNKNOWN>() const {
+    operator ServiceRegistration<S,ServiceScope::UNKNOWN>() const& {
         if constexpr(SCP == ServiceScope::UNKNOWN) {
             return *this;
         } else {
@@ -1088,6 +1125,16 @@ public:
         }
     }
 
+    /**
+     * @brief operator Implicit conversion to a ServiceRegistration with ServiceScope::UNKNOWN.
+     */
+    operator ServiceRegistration<S,ServiceScope::UNKNOWN>()&& {
+        if constexpr(SCP == ServiceScope::UNKNOWN) {
+            return std::move(*this);
+        } else {
+            return ServiceRegistration<S,ServiceScope::UNKNOWN>::unsafe_wrap(Registration<S>::release());
+        }
+    }
 
 
 
@@ -1119,14 +1166,7 @@ public:
     /// \see unwrap().
     ///
     [[nodiscard]] static ServiceRegistration<S,SCP> wrap(service_registration_handle_t handle) {
-        if(mcnepp::qtdi::matches<S>(handle)) {
-            if constexpr(SCP == ServiceScope::UNKNOWN) {
-                return ServiceRegistration<S,SCP>{handle};
-            } else {
-               return ServiceRegistration{handle->scope() == SCP ? handle : nullptr};
-            }
-        }
-        return ServiceRegistration{};
+        return unsafe_wrap(QPointer<detail::Registration>{handle});
     }
 
 
@@ -1137,7 +1177,23 @@ private:
 
     }
 
+    explicit ServiceRegistration(QPointer<detail::Registration>&& reg) : Registration<S>{std::move(reg)} {
 
+    }
+
+    [[nodiscard]] static ServiceRegistration<S,SCP> unsafe_wrap(QPointer<detail::Registration>&& handle) {
+        if(mcnepp::qtdi::matches<S>(handle.get())) {
+            if constexpr(SCP == ServiceScope::UNKNOWN) {
+                return ServiceRegistration<S,SCP>{std::move(handle)};
+            } else {
+                //We assume that the handle is actually a service_registration_handle_t:
+                if(static_cast<service_registration_handle_t>(handle.get())->scope() == SCP) {
+                    return ServiceRegistration{std::move(handle)};
+                }
+            }
+        }
+        return ServiceRegistration{};
+    }
 
 
     Subscription bind(const char* sourceProperty, registration_handle_t target, const detail::property_descriptor& descriptor) const {
@@ -1165,6 +1221,9 @@ private:
  * Instances of this class are produced by QApplicationContext::getRegistration();
  */
 template<typename S> class ProxyRegistration final : public Registration<S> {
+
+    template<typename U> friend class ProxyRegistration;
+
 public:
 
     ProxyRegistration() = default;
@@ -1195,17 +1254,44 @@ public:
     /// \see unwrap().
     ///
     [[nodiscard]] static ProxyRegistration<S> wrap(proxy_registration_handle_t handle) {
-        if(matches<S>(handle)) {
-            return ProxyRegistration<S>{handle};
+        return unsafe_wrap(QPointer<detail::Registration>{handle});
+    }
+
+    template<typename U> [[nodiscard]] ProxyRegistration<U> as() const& {
+        if constexpr(std::is_same_v<U,S>) {
+            return *this;
+        } else {
+            return ProxyRegistration<U>::wrap(unwrap());
         }
-        return ProxyRegistration{};
+    }
+
+    template<typename U> [[nodiscard]] ProxyRegistration<U> as() && {
+        if constexpr(std::is_same_v<U,S>) {
+            return std::move(*this);
+        } else {
+            return ProxyRegistration<U>::unsafe_wrap(Registration<S>::release());
+        }
     }
 
 
 private:
+
+    [[nodiscard]] static ProxyRegistration<S> unsafe_wrap(QPointer<detail::Registration>&& handle) {
+        //This function assumes that the handle is actually a proxy_registration_handle_t
+        if(matches<S>(handle.get())) {
+            return ProxyRegistration<S>{std::move(handle)};
+        }
+        return ProxyRegistration{};
+    }
+
     explicit ProxyRegistration(proxy_registration_handle_t reg) : Registration<S>{reg} {
 
     }
+
+    explicit ProxyRegistration(QPointer<detail::Registration>&& reg) : Registration<S>{std::move(reg)} {
+
+    }
+
 };
 
 
