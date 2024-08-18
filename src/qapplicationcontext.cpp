@@ -154,6 +154,42 @@ QDebug operator << (QDebug out, const service_descriptor& descriptor) {
 
 
 
+void BasicSubscription::cancel() {
+    QObject::disconnect(out_connection);
+    QObject::disconnect(in_connection);
+}
+
+void BasicSubscription::connectTo(registration_handle_t source) {
+    in_connection = detail::connect(source, this);
+}
+
+SourceTargetSubscription::SourceTargetSubscription(registration_handle_t target, QObject* boundSource, QObject * parent) :
+    BasicSubscription{parent},
+    m_target{target},
+    m_boundSource{boundSource} {
+    connectOut(this, &SourceTargetSubscription::onPublished);
+}
+
+
+void SourceTargetSubscription::cancel() {
+    for(auto child : children()) {
+        if(auto subscr = dynamic_cast<SourceTargetSubscription*>(child)) {
+            subscr->cancel();
+        }
+    }
+    BasicSubscription::cancel();
+}
+
+void SourceTargetSubscription::onPublished(QObject* obj) {
+    if(m_boundSource) {
+        notify(m_boundSource, obj);
+    } else {
+        auto subscr = createForSource(obj);
+        m_target->subscribe(subscr);
+    }
+}
+
+
 }
 
 }//mcnepp::qtdi

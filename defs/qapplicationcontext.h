@@ -247,8 +247,6 @@ template<typename S> constexpr const QMetaObject* getMetaObject() {
 
 using q_setter_t = std::function<void(QObject*,QVariant)>;
 
-using q_inject_t = std::function<void(QObject*,QObject*)>;
-
 using q_init_t = std::function<void(QObject*,QApplicationContext*)>;
 
 struct service_descriptor;
@@ -288,28 +286,6 @@ template<typename S> struct callable_adapter {
             } else
             if(S* ptr = dynamic_cast<S*>(obj)) {
                 (ptr->*setter)(arg.value<arg_type>());
-            }
-        };
-    }
-
-    template<typename F> static auto adapt(F callable) {
-        return [callable](QObject* obj) {
-            if constexpr(std::is_same_v<S,QObject>) {
-                callable(obj);
-            } else
-            if(S* ptr = dynamic_cast<S*>(obj)) {
-                callable(ptr);
-            }
-        };
-    }
-
-    template<typename R,typename T> static auto adapt(T* target, R(T::*memFun)(S*)) {
-        return [target,memFun](QObject* obj) {
-            if constexpr(std::is_same_v<S,QObject>) {
-                (target->*memFun)(obj);
-            } else
-               if(S* ptr = dynamic_cast<S*>(obj)) {
-                (target->*memFun)(ptr);
             }
         };
     }
@@ -414,15 +390,6 @@ protected:
      */
     virtual void onSubscription(subscription_handle_t subscription) = 0;
 
-     /**
-     * @brief Creates a Subscription for auto-wiring another Service into this.
-     * <br>Will create a Subscription and also subscribe to it.
-     * @param type the type of service to be injected into this.
-     * @param injector the function to invoke for injecting the other service into this.
-     * @param source the Registration for the source-service.
-     * @return the Subscription, or `nullptr` if it could not be created.
-     */
-    virtual subscription_handle_t createAutowiring(const std::type_info& type, q_inject_t injector, registration_handle_t source) = 0;
 
 };
 
@@ -445,39 +412,157 @@ inline QMetaObject::Connection connect(registration_handle_t source, subscriptio
 ///
 /// \brief A basic implementation of the detail::Subscription.
 ///
-class CallableSubscription : public Subscription {
+class BasicSubscription : public Subscription {
 public:
 
-    explicit CallableSubscription(QObject* parent = nullptr) : Subscription(parent)
-    {
-        out_connection = QObject::connect(this, &Subscription::objectPublished, this, &CallableSubscription::notify);
+    explicit BasicSubscription(QObject* parent = nullptr) : Subscription{parent} {
+
     }
 
-    template<typename T,typename F> CallableSubscription(T* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) : Subscription(context)
+    template<typename S,typename F> void connectOut(S* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection)
     {
-        static_assert(std::is_base_of_v<QObject,T>, "Context must be derived from QObject");
+        static_assert(std::is_base_of_v<QObject,S>, "Context must be derived from QObject");
         out_connection = QObject::connect(this, &Subscription::objectPublished, context, callable, connectionType);
     }
 
 
-    void cancel() override {
-        QObject::disconnect(out_connection);
-        QObject::disconnect(in_connection);
-    }
+    void cancel() override;
 
-    void connectTo(registration_handle_t source) override {
-        in_connection = detail::connect(source, this);
-    }
+    void connectTo(registration_handle_t source) override;
 
-protected:
-
-    virtual void notify(QObject*) {
-
-    }
 
 private:
     QMetaObject::Connection out_connection;
     QMetaObject::Connection in_connection;
+};
+
+///
+/// \brief A subscription that connects a source with a target.
+///
+class SourceTargetSubscription : public BasicSubscription {
+protected:
+    explicit SourceTargetSubscription(registration_handle_t target) :
+        SourceTargetSubscription{target, nullptr, target} {
+
+    }
+
+    explicit SourceTargetSubscription(QObject* boundSource, SourceTargetSubscription * parent) :
+        SourceTargetSubscription{nullptr, boundSource, parent} {
+
+    }
+
+
+
+    void cancel() override;
+
+    virtual subscription_handle_t createForSource(QObject* src) = 0;
+
+    virtual void notify(QObject* src, QObject* target) = 0;
+private:
+
+    SourceTargetSubscription(registration_handle_t target, QObject* boundSource, QObject * parent);
+
+    void onPublished(QObject* obj);
+
+
+
+    registration_handle_t m_target;
+    QObject* m_boundSource;
+
+};
+
+
+
+template<typename S,typename SIG,typename T,typename SLT> class ConnectionSubscription : public SourceTargetSubscription {
+public:
+
+    ConnectionSubscription(registration_handle_t target, SIG theSignal, SLT theSlot, Qt::ConnectionType connectionType) :
+        SourceTargetSubscription{target},
+        m_signal{theSignal},
+        m_slot{theSlot},
+        m_connectionType{connectionType} {
+    }
+
+protected:
+
+    virtual void notify(QObject* src, QObject* target) override {
+        if(S* s = dynamic_cast<S*>(src)) {
+            if(T* t = dynamic_cast<T*>(target)) {
+                connections.push_back(connect(s, m_signal, t, m_slot, m_connectionType));
+            }
+        }
+    }
+
+    virtual subscription_handle_t createForSource(QObject* src) override {
+        return new ConnectionSubscription{src, this};
+    }
+
+    virtual void cancel() override {
+        for(auto& connection : connections) {
+            QObject::disconnect(connection);
+        }
+        SourceTargetSubscription::cancel();
+    }
+
+private:
+
+    ConnectionSubscription(QObject* boundSource, ConnectionSubscription * parent) :
+        SourceTargetSubscription{boundSource, parent},
+        m_signal{parent->m_signal},
+        m_slot{parent->m_slot},
+        m_connectionType{parent->m_connectionType}  {
+
+    }
+
+
+
+    SIG m_signal;
+    SLT m_slot;
+    Qt::ConnectionType m_connectionType;
+    QList<QMetaObject::Connection> connections;
+};
+
+template<typename S,typename T,typename F> class CombiningSubscription : public SourceTargetSubscription {
+public:
+
+    CombiningSubscription(registration_handle_t target, F callable) :
+        SourceTargetSubscription{target},
+        m_callable{callable}{
+    }
+
+protected:
+
+    virtual void notify(QObject* src, QObject* target) override {
+        if(S* s = dynamic_cast<S*>(src)) {
+            if(T* t = dynamic_cast<T*>(target)) {
+                m_callable(s, t);
+            }
+        }
+    }
+
+    virtual subscription_handle_t createForSource(QObject* src) override {
+        return new CombiningSubscription{src, this};
+    }
+
+    virtual void cancel() override {
+        for(auto& connection : connections) {
+            QObject::disconnect(connection);
+        }
+        SourceTargetSubscription::cancel();
+    }
+
+private:
+
+    CombiningSubscription(QObject* boundSource, CombiningSubscription * parent) :
+        SourceTargetSubscription{boundSource, parent},
+        m_callable{parent->m_callable} {
+
+    }
+
+
+
+    F m_callable;
+    QList<QMetaObject::Connection> connections;
 };
 
 
@@ -557,9 +642,6 @@ protected:
     /// \return the Subscription for binding this service to a target-service, or `nullptr` if something went wrong.
     ///
     virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) = 0;
-
-
-
 };
 
 class ProxyRegistration : public Registration {
@@ -844,7 +926,12 @@ public:
             return Subscription{};
         }
 
-        auto subscription = new detail::CallableSubscription{context, detail::callable_adapter<S>::adapt(callable), connectionType};
+        auto subscription = new detail::BasicSubscription{context};
+        subscription->connectOut(context, [callable](QObject* obj) {
+                if(S* srv = dynamic_cast<S*>(obj)) {
+                    callable(srv);
+                }
+        }, connectionType);
         return Subscription{unwrap()->subscribe(subscription)};
       }
 
@@ -861,12 +948,11 @@ public:
     ///
     template<typename T,typename R> Subscription subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
         static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
-        if(!registrationHolder || !setter || !target) {
-            qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this;
+        if(!setter) {
+            qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this << " with null";
             return Subscription{};
         }
-        auto subscription = new detail::CallableSubscription{target, detail::callable_adapter<S>::adapt(target, setter), connectionType};
-        return Subscription{unwrap()->subscribe(subscription)};
+        return subscribe(target, std::bind(std::mem_fn(setter), target, std::placeholders::_1), connectionType);
      }
 
 
@@ -878,6 +964,8 @@ public:
     [[nodiscard]] registration_handle_t unwrap() const {
         return registrationHolder.get();
     }
+
+
 
     ///
     /// \brief Connects a service with another service from the same QApplicationContext.
@@ -891,11 +979,6 @@ public:
     /// for the type `D´, an invalid Subscription will be returned.
     ///
     template<typename D,typename R> Subscription autowire(R (S::*injectionSlot)(D*));
-
-
-
-
-
 
     ///
     /// \brief Does this Registration represent a valid %Registration?
@@ -950,7 +1033,6 @@ template<typename S,ServiceScope SCP=ServiceScope::UNKNOWN> class ServiceRegistr
     template<typename F,typename T,ServiceScope scope> friend Subscription bind(const ServiceRegistration<F,scope>&, const char*, Registration<T>&, const char*);
 
     template<typename F,typename T,typename A,typename R,ServiceScope scope> friend Subscription bind(const ServiceRegistration<F,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A));
-
 
 public:
     using service_type = S;
@@ -1026,6 +1108,8 @@ public:
         return  unwrap()->registerAlias(alias);
     }
 
+
+
     ServiceRegistration() = default;
 
     ///
@@ -1067,6 +1151,7 @@ private:
         auto subscription = unwrap() -> createBindingTo(sourceProperty, target, descriptor);
         return Subscription{subscription};
      }
+
 
 };
 
@@ -1153,7 +1238,7 @@ template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, 
 /// \tparam T the type of the target.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,ServiceScope scope> inline Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, const char* targetProperty) {
+template<typename S,typename T,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, const char* targetProperty) {
     static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
     return source.bind(sourceProperty, target.unwrap(), {targetProperty, nullptr});
 }
@@ -1171,13 +1256,16 @@ template<typename S,typename T,ServiceScope scope> inline Subscription bind(cons
 /// \tparam T the type of the target.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename A,typename R,ServiceScope scope> inline Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A)) {
+template<typename S,typename T,typename A,typename R,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A)) {
     if(!setter) {
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
     return source.bind(sourceProperty, target.unwrap(), {"", detail::callable_adapter<T>::adaptSetter(setter)});
 }
+
+
+
 
 
 ///
@@ -1196,7 +1284,7 @@ template<typename S,typename T,typename A,typename R,ServiceScope scope> inline 
 /// \tparam T the type of the target.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename AS,typename AT,typename R,ServiceScope scope> inline auto bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(AS), Registration<T>& target, R(T::*setter)(AT)) ->
+template<typename S,typename T,typename AS,typename AT,typename R,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(AS), Registration<T>& target, R(T::*setter)(AT)) ->
     std::enable_if_t<std::is_convertible_v<AS,AT>,Subscription> {
     if(!setter || !signalFunction || !source || !target) {
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
@@ -1208,6 +1296,9 @@ template<typename S,typename T,typename AS,typename AT,typename R,ServiceScope s
     return Subscription{};
 }
 
+
+
+
 ///
 /// \brief Binds a property of one ServiceRegistration to a Setter from  another Registration.
 /// <br>This function identifies the source-property by the signal that is emitted when the property changes.
@@ -1224,7 +1315,7 @@ template<typename S,typename T,typename AS,typename AT,typename R,ServiceScope s
 /// \tparam T the type of the target.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename A,typename R,ServiceScope scope> inline Subscription bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(), Registration<T>& target, R(T::*setter)(A)) {
+template<typename S,typename T,typename A,typename R,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(), Registration<T>& target, R(T::*setter)(A)) {
     if(!setter || !signalFunction || !source || !target) {
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
@@ -1234,6 +1325,32 @@ template<typename S,typename T,typename A,typename R,ServiceScope scope> inline 
     }
     return Subscription{};
 }
+
+
+
+
+///
+/// \brief Connects a signal of one Service to a slot of another service.
+/// <br>This function is the ApplicationContext-aware equivalent to QObject::connect().
+/// Instead of supplying the QObjects for source and target, you supply the Registrations instead.
+/// <br>Whenever an instance of the source-service is published, it will subscribe to the publication of the target-service.
+/// Once the target-service is published, the connection of the sourceSignal with the targetSlot will take place.
+/// <br>In case source and target represent the same Registration, the connection will still take place.
+/// \param source the registration of the source-service.
+/// \param sourceSignal
+/// \param target the registration of the source-service.
+/// \param targetSlot
+/// \param connectionType will be applied when the actual connection of the signal with the slot will be made.
+/// \return a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service
+/// and the target-service.
+///
+template<typename S,typename SIG,typename T,typename SLT> Subscription connectServices(Registration<S>& source, SIG sourceSignal, Registration<T>& target, SLT targetSlot, Qt::ConnectionType connectionType = Qt::AutoConnection) {
+    static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
+    auto subscription = new detail::ConnectionSubscription<S,SIG,T,SLT>{target.unwrap(), sourceSignal, targetSlot, connectionType};
+    return Subscription{source.unwrap()->subscribe(subscription)};
+}
+
+
 
 
 
@@ -2773,20 +2890,14 @@ private:
 };
 
 template<typename S> template<typename D,typename R> Subscription Registration<S>::autowire(R (S::*injectionSlot)(D*)) {
-    static_assert(detail::could_be_qobject<D>::value, "Service-type to be injected must be possibly convertible to QObject");
-    if(!registrationHolder || !injectionSlot) {
-        qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot autowire " << *this;
+    if(!injectionSlot) {
+        qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot autowire " << *this << " with null";
         return Subscription{};
     }
-    detail::q_inject_t injector = [injectionSlot](QObject* target,QObject* source) {
-        if(S* targetSrv = dynamic_cast<S*>(target)) {
-            if(D* sourceSrv = dynamic_cast<D*>(source)) {
-                (targetSrv->*injectionSlot)(sourceSrv);
-            }
-        }
-    };
-    auto subscription = unwrap()->createAutowiring(typeid(D), injector, applicationContext()->template getRegistration<D>().unwrap());
-    return Subscription{subscription};
+    auto target = this->applicationContext()->template getRegistration<D>();
+    auto callable = std::mem_fn(injectionSlot);
+    auto subscription = new detail::CombiningSubscription<S,D,decltype(callable)>{target.unwrap(), callable};
+    return Subscription{unwrap()->subscribe(subscription)};
 }
 
 
