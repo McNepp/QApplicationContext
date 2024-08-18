@@ -57,7 +57,7 @@ public:
     void setFoo(const QString& foo) override {
         if(foo != m_foo) {
             this->m_foo = foo;
-            emit fooChanged();
+            emit fooChanged(foo);
         }
     }
 
@@ -91,7 +91,7 @@ signals:
 
     void dependencyChanged();
 
-    void fooChanged();
+    void fooChanged(const QString&);
 
     void signalWithoutProperty();
 
@@ -241,10 +241,11 @@ public:
 class CardinalityNService : public QObject {
     Q_OBJECT
 public:
-    explicit CardinalityNService(const QList<Interface1*>& bases) :
+    explicit CardinalityNService(const QList<Interface1*>& bases = QList<Interface1*>{}) :
             my_bases(bases) {
 
     }
+
     void addBase(Interface1* base) {
         my_bases.push_back(base);
     }

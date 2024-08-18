@@ -138,8 +138,6 @@ private:
         virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
 
 
-        virtual subscription_handle_t createAutowiring(const std::type_info& type, detail::q_inject_t injector, registration_handle_t source) override;
-
 
         QString registeredName() const override {
             return m_name;
@@ -232,7 +230,6 @@ private:
         service_descriptor m_descriptor;
         QString m_name;
         std::vector<QPropertyNotifier> bindings;
-        std::unordered_set<std::type_index> autowirings;
         unsigned const m_index;
         StandardApplicationContext* const m_context;
         DescriptorRegistration* const m_base;
@@ -570,8 +567,6 @@ private:
         ProxyRegistrationImpl(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent);
 
 
-        virtual subscription_handle_t createAutowiring(const std::type_info& type, detail::q_inject_t injector, registration_handle_t source) override;
-
         bool matches(const std::type_info& type) const override {
             return m_type == type || type == typeid(QObject);
         }
@@ -614,7 +609,6 @@ private:
 
         const std::type_info& m_type;
         const QMetaObject* m_meta;
-        std::unordered_set<std::type_index> autowirings;
         subscription_handle_t proxySubscription;
         StandardApplicationContext* const m_context;
     };
