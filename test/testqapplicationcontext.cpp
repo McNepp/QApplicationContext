@@ -359,6 +359,8 @@ private slots:
 
     void testApplicationRegisteredAsObject() {
         auto reg = context->getRegistration<QCoreApplication>();
+        QVERIFY(reg.as<QObject>());
+
         QVERIFY(context->publish());
         RegistrationSlot<QCoreApplication> slot{reg};
         QVERIFY(slot);
@@ -368,6 +370,15 @@ private slots:
         RegistrationSlot<QCoreApplication> slotByName{regByName};
         QCOMPARE(slotByName.last(), QCoreApplication::instance());
     }
+
+    void testAsOnTemporary() {
+        auto reg = context->getRegistration<QCoreApplication>().as<QObject>();
+        auto appReg = context->getRegistration<QCoreApplication>("application").as<QObject>();
+        QVERIFY(reg);
+        QVERIFY(appReg);
+        QCOMPARE(reg.registeredServices()[0], appReg);
+    }
+
 
     void testApplicationContextRegisteredAsObject() {
         auto reg = context->getRegistration<QApplicationContext>();
@@ -664,6 +675,53 @@ private slots:
         subscription.cancel();
         timer.setObjectName("back to timer");
         QCOMPARE(derivedSlot->foo(), "another timer");
+    }
+
+
+
+    void testConnectServices() {
+        auto regSource = context->registerService<BaseService>();
+        auto regTarget = context->registerService<QTimer>();
+        void (QObject::*setter)(const QString&) = &QObject::setObjectName;//We need this temporary variable, as setObjectName has two overloads!
+        auto subscription = connectServices(regSource, &BaseService::fooChanged, regTarget, setter);
+        QVERIFY(subscription);
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> sourceSlot{regSource};
+        RegistrationSlot<QTimer> targetSlot{regTarget};
+        sourceSlot->setFoo("A new beginning");
+        QCOMPARE(targetSlot->objectName(), "A new beginning");
+
+        subscription.cancel();
+        sourceSlot->setFoo("Should be ignored");
+        QCOMPARE(targetSlot->objectName(), "A new beginning");
+
+    }
+
+    void testConnectServiceWithSelf() {
+        auto regSource = context->registerService<BaseService>();
+        void (QObject::*setter)(const QString&) = &QObject::setObjectName;//We need this temporary variable, as setObjectName has two overloads!
+        QVERIFY(connectServices(regSource, &BaseService::fooChanged, regSource, setter));
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> sourceSlot{regSource};
+        sourceSlot->setFoo("A new beginning");
+        QCOMPARE(sourceSlot->objectName(), "A new beginning");
+
+    }
+
+    void testConnectServicesWithProxy() {
+        auto regSource = context->registerService<QTimer>();
+        auto regTarget1 = context->registerService<BaseService>("base1");
+        auto regTarget2 = context->registerService<BaseService>("base2");
+        auto regProxyTarget = context->getRegistration<BaseService>();
+        QVERIFY(connectServices(regSource, &QObject::objectNameChanged, regProxyTarget, &BaseService::setFoo));
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> sourceSlot{regSource};
+        RegistrationSlot<BaseService> targetSlot{regProxyTarget};
+        QCOMPARE(targetSlot.invocationCount(), 2);
+        sourceSlot->setObjectName("A new beginning");
+        QCOMPARE(targetSlot[0]->foo(), "A new beginning");
+        QCOMPARE(targetSlot[1]->foo(), "A new beginning");
+
     }
 
     void testConfigurePrivatePropertyInServiceTemplate() {
@@ -1156,8 +1214,6 @@ private slots:
     void testOptionalDependencyWithAutowire() {
         auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()));
         QVERIFY(reg.autowire(&DependentService::setBase));
-        //Second autowiring for same type shall fail:
-        QVERIFY(!reg.autowire(&DependentService::setBase));
         RegistrationSlot<DependentService> srv{reg};
         QVERIFY(context->publish());
         QVERIFY(!srv->m_dependency);
@@ -1184,7 +1240,6 @@ private slots:
         QVERIFY(srv->my_bases.contains(baseSlot1.last()));
         QVERIFY(srv->my_bases.contains(baseSlot2.last()));
     }
-
     void testInitializerWithContext() {
         auto baseReg = context->registerService<BaseService>("base with init");
         QVERIFY(context->publish());

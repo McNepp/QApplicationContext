@@ -643,6 +643,44 @@ This can be achieved by using a property-value with the format `"&ref.prop"`. Th
 1. We register a `QTimer` as "timer1".
 2. We register a second `QTimer` as "timer2". We use mcnepp::qtdi::config() to initialize the property `interval` of the second timer with the first timer's propery.
 
+## Connecting Signals of Services to Slots
+
+Qt's core concept for creating workflow from one QObject to another is via *signals and slots*.
+<br>For example, QTimer declares the *signal* QTimer::timeout().
+<br>Suppose we have written a class like this:
+
+    class Cleaner : public QObject {
+        public void clean();
+    };
+
+Given pointer `QTimer* timer` and a pointer `Cleaner* cleaner`, we would connect them like this:
+
+    QTimer* timer = new QTimer;
+    QCleaner* cleaner = new QCleaner;
+    
+    QObject::connect(timer, &QTimer::timeout, cleaner, &Cleaner::clean);
+
+Suppose we'd like to do the same thing with services that have been registered in an ApplicationContext: We want to connect a registered `Cleaner` with a registered `timer`.
+<br>However, since the ApplicationContext manages instantiation for us, we do not have immediate access to services. 
+<br>But we do have access to the ServiceRegistrations!
+<br>So, given two `ServiceRegistrations`, the equivalent code would look like this:
+
+    ServiceRegistration<QTimer> timerReg = context->registerService<QTimer>();
+    ServiceRegistration<QCleaner> cleanerReg = context->registerService<Cleaner>();
+    
+    timerReg.subscribe(cleaner, [cleaner](QTimer* timer) {
+      cleaner.subscribe(cleaner, [timer](QCleaner* cleaner) {
+        QObject::connect(timer, &QTimer::timeout, cleaner, &Cleaner::clean);
+      };
+    });
+
+That looks pretty ugly, right?
+<br>Luckily, the function mcnepp::qtdi::connectServices() hides all that ugly boilerplate code from us:
+
+    connectServices(timerReg, &QTimer::timeout, cleanerReg, &Cleaner::clean);
+
+As you will have notices, this looks almost exactly like the original example with the pointers-to-QObjects.
+
 ## Binding source-properties to target-properties of other members of the ApplicationContext
 
 In the preceeding example, we used a reference to another member for the purpose of **initializing** a Q_PROPERTY.
