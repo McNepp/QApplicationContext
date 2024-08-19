@@ -1373,7 +1373,7 @@ template<typename S,typename T,typename A,typename R,ServiceScope scope> Subscri
 template<typename S,typename T,typename AS,typename AT,typename R,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(AS), Registration<T>& target, R(T::*setter)(AT)) ->
     std::enable_if_t<std::is_convertible_v<AS,AT>,Subscription> {
     if(!setter || !signalFunction || !source || !target) {
-        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
+        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to target";
         return Subscription{};
     }
     if(auto signalProperty = detail::findPropertyBySignal(QMetaMethod::fromSignal(signalFunction), source.serviceMetaObject(), loggingCategory(source.unwrap())); signalProperty.isValid()) {
@@ -1403,7 +1403,7 @@ template<typename S,typename T,typename AS,typename AT,typename R,ServiceScope s
 ///
 template<typename S,typename T,typename A,typename R,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(), Registration<T>& target, R(T::*setter)(A)) {
     if(!setter || !signalFunction || !source || !target) {
-        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
+        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to " << target;
         return Subscription{};
     }
     if(auto signalProperty = detail::findPropertyBySignal(QMetaMethod::fromSignal(signalFunction), source.serviceMetaObject(), loggingCategory(source.unwrap())); signalProperty.isValid()) {
@@ -1423,15 +1423,20 @@ template<typename S,typename T,typename A,typename R,ServiceScope scope> Subscri
 /// Once the target-service is published, the connection of the sourceSignal with the targetSlot will take place.
 /// <br>In case source and target represent the same Registration, the connection will still take place.
 /// \param source the registration of the source-service.
-/// \param sourceSignal
+/// \param sourceSignal will be passed as the second argument to QObject::connect().
 /// \param target the registration of the source-service.
-/// \param targetSlot
-/// \param connectionType will be applied when the actual connection of the signal with the slot will be made.
+/// \param targetSlot will be passed as the fourth argument to QObject::connect().
+/// \param connectionType will be passed as the last argument to QObject::connect() when the actual connection of the signal with the slot will be made.
 /// \return a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service
 /// and the target-service.
 ///
 template<typename S,typename SIG,typename T,typename SLT> Subscription connectServices(Registration<S>& source, SIG sourceSignal, Registration<T>& target, SLT targetSlot, Qt::ConnectionType connectionType = Qt::AutoConnection) {
+static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
+    if(!source || !target) {
+        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot connect " << source << " to " << target;
+        return Subscription{};
+    }
     auto subscription = new detail::ConnectionSubscription<S,SIG,T,SLT>{target.unwrap(), sourceSignal, targetSlot, connectionType};
     return Subscription{source.unwrap()->subscribe(subscription)};
 }
@@ -2976,8 +2981,8 @@ private:
 };
 
 template<typename S> template<typename D,typename R> Subscription Registration<S>::autowire(R (S::*injectionSlot)(D*)) {
-    if(!injectionSlot) {
-        qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot autowire " << *this << " with null";
+    if(!injectionSlot || !registrationHolder) {
+        qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot autowire " << *this << " with " << injectionSlot;
         return Subscription{};
     }
     auto target = this->applicationContext()->template getRegistration<D>();
