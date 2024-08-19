@@ -116,16 +116,26 @@ const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_
 <tr class="memitem:ac119ec89eb518318128526f7c1928f16"><td class="memItemLeft" align="right" valign="top"><a id="ac119ec89eb518318128526f7c1928f16" name="ac119ec89eb518318128526f7c1928f16"></a>
 <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><b>unwrap</b> () const</td></tr>
 <tr class="separator:ac119ec89eb518318128526f7c1928f16"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a96d15a61bbd30df0d56c434bec2cccac"><td class="memTemplParams" colspan="2">template&lt;typename U , <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> newScope = SCP&gt; </td></tr>
-<tr class="memitem:a96d15a61bbd30df0d56c434bec2cccac"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; U, newScope &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a96d15a61bbd30df0d56c434bec2cccac">as</a> () const</td></tr>
-<tr class="memdesc:a96d15a61bbd30df0d56c434bec2cccac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attempts to cast this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a type. <br  />
+<tr class="memitem:a591fec32f36073e606f539eba46c8556"><td class="memTemplParams" colspan="2">template&lt;typename U , <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> newScope = SCP&gt; </td></tr>
+<tr class="memitem:a591fec32f36073e606f539eba46c8556"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; U, newScope &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a591fec32f36073e606f539eba46c8556">as</a> () const &amp;</td></tr>
+<tr class="memdesc:a591fec32f36073e606f539eba46c8556"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attempts to cast this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a type. <br  />
 This function will yield a valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> only if this is valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> and its underlying registration-handle matches the requested type. This will be the case (at least) if U is either an advertised service-interface or the implementation-type of the service. <br  />
 Additionally, compilation will only succeed if at least one of the following is true:  <br /></td></tr>
-<tr class="separator:a96d15a61bbd30df0d56c434bec2cccac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0bb08458d02fc2893036215ced0456b9"><td class="memItemLeft" align="right" valign="top"><a id="a0bb08458d02fc2893036215ced0456b9" name="a0bb08458d02fc2893036215ced0456b9"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>operator ServiceRegistration&lt; S, ServiceScope::UNKNOWN &gt;</b> () const</td></tr>
-<tr class="memdesc:a0bb08458d02fc2893036215ced0456b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">operator Implicit conversion to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> with ServiceScope::UNKNOWN. <br /></td></tr>
-<tr class="separator:a0bb08458d02fc2893036215ced0456b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a591fec32f36073e606f539eba46c8556"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d08d1f60afc02d9725e939a3af2a69c"><td class="memTemplParams" colspan="2">template&lt;typename U , <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> newScope = SCP&gt; </td></tr>
+<tr class="memitem:a0d08d1f60afc02d9725e939a3af2a69c"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; U, newScope &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a0d08d1f60afc02d9725e939a3af2a69c">as</a> () &amp;&amp;</td></tr>
+<tr class="memdesc:a0d08d1f60afc02d9725e939a3af2a69c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attempts to cast this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a type. <br  />
+This function will yield a valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> only if this is valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> and its underlying registration-handle matches the requested type. This will be the case (at least) if U is either an advertised service-interface or the implementation-type of the service. <br  />
+Additionally, compilation will only succeed if at least one of the following is true:  <br /></td></tr>
+<tr class="separator:a0d08d1f60afc02d9725e939a3af2a69c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a68e0a2fec58351d04f8bc145ba60c4aa"><td class="memItemLeft" align="right" valign="top"><a id="a68e0a2fec58351d04f8bc145ba60c4aa" name="a68e0a2fec58351d04f8bc145ba60c4aa"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>operator ServiceRegistration&lt; S, ServiceScope::UNKNOWN &gt;</b> () const &amp;</td></tr>
+<tr class="memdesc:a68e0a2fec58351d04f8bc145ba60c4aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">operator Implicit conversion to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> with ServiceScope::UNKNOWN. <br /></td></tr>
+<tr class="separator:a68e0a2fec58351d04f8bc145ba60c4aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a321149eadc4d8766f45a501d76e1b949"><td class="memItemLeft" align="right" valign="top"><a id="a321149eadc4d8766f45a501d76e1b949" name="a321149eadc4d8766f45a501d76e1b949"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>operator ServiceRegistration&lt; S, ServiceScope::UNKNOWN &gt;</b> () &amp;&amp;</td></tr>
+<tr class="memdesc:a321149eadc4d8766f45a501d76e1b949"><td class="mdescLeft">&#160;</td><td class="mdescRight">operator Implicit conversion to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> with ServiceScope::UNKNOWN. <br /></td></tr>
+<tr class="separator:a321149eadc4d8766f45a501d76e1b949"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af740c20f57c2c6a24ec31a5691fc5c40"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#af740c20f57c2c6a24ec31a5691fc5c40">registerAlias</a> (const QString &amp;alias)</td></tr>
 <tr class="memdesc:af740c20f57c2c6a24ec31a5691fc5c40"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers an alias for a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>. <br  />
 If this function is successful, the <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> can be referenced by the new name in addition to the name it was originally registered with. There can be multiple aliases for a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>.<br  />
@@ -199,6 +209,12 @@ Additional Inherited Members</h2></td></tr>
 <tr class="memitem:ae74b67d6b49af8f447ad533f28990068 inherit pro_methods_classmcnepp_1_1qtdi_1_1_registration"><td class="memItemLeft" align="right" valign="top">
 &#160;</td><td class="memItemRight" valign="bottom"><b>Registration</b> (<a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a> reg=nullptr)</td></tr>
 <tr class="separator:ae74b67d6b49af8f447ad533f28990068 inherit pro_methods_classmcnepp_1_1qtdi_1_1_registration"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d908c6ed1eebd64159f69081eb4698d inherit pro_methods_classmcnepp_1_1qtdi_1_1_registration"><td class="memItemLeft" align="right" valign="top">
+&#160;</td><td class="memItemRight" valign="bottom"><b>Registration</b> (QPointer&lt; detail::Registration &gt; &amp;&amp;reg)</td></tr>
+<tr class="separator:a7d908c6ed1eebd64159f69081eb4698d inherit pro_methods_classmcnepp_1_1qtdi_1_1_registration"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ee0f80a813bcffa56931cf8d9fab77f inherit pro_methods_classmcnepp_1_1qtdi_1_1_registration"><td class="memItemLeft" align="right" valign="top">
+QPointer&lt; detail::Registration &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>release</b> ()</td></tr>
+<tr class="separator:a3ee0f80a813bcffa56931cf8d9fab77f inherit pro_methods_classmcnepp_1_1qtdi_1_1_registration"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename S, <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> SCP = ServiceScope::UNKNOWN&gt;<br />
@@ -214,8 +230,8 @@ Otherwise, it will have ServiceScope::UNKNOWN. Instances of this class are being
   </dd>
 </dl>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a96d15a61bbd30df0d56c434bec2cccac" name="a96d15a61bbd30df0d56c434bec2cccac"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a96d15a61bbd30df0d56c434bec2cccac">&#9670;&#160;</a></span>as()</h2>
+<a id="a0d08d1f60afc02d9725e939a3af2a69c" name="a0d08d1f60afc02d9725e939a3af2a69c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0d08d1f60afc02d9725e939a3af2a69c">&#9670;&#160;</a></span>as() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -231,7 +247,53 @@ template&lt;typename U , <a class="el" href="qapplicationcontext_8h.html#a5429ea
           <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; U, newScope &gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S, SCP &gt;::as </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
-          <td> const</td>
+          <td> &amp;&amp;</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Attempts to cast this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a type. <br  />
+This function will yield a valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> only if this is valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> and its underlying registration-handle matches the requested type. This will be the case (at least) if U is either an advertised service-interface or the implementation-type of the service. <br  />
+Additionally, compilation will only succeed if at least one of the following is true: </p>
+<ul>
+<li>the current and new scopes are equal</li>
+<li>the current scope is <code>ServiceScope::UNKNOWN</code></li>
+<li>the new scope is <code>ServiceScope::UNKNOWN</code></li>
+</ul>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">U</td><td>the new service-type. </td></tr>
+    <tr><td class="paramname">newScope</td><td>the new scope for the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> of the requested type. May be invalid if this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> is already invalid, or if the types do not match </dd></dl>
+
+</div>
+</div>
+<a id="a591fec32f36073e606f539eba46c8556" name="a591fec32f36073e606f539eba46c8556"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a591fec32f36073e606f539eba46c8556">&#9670;&#160;</a></span>as() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename S , <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> SCP = ServiceScope::UNKNOWN&gt; </div>
+<div class="memtemplate">
+template&lt;typename U , <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> newScope = SCP&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; U, newScope &gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S, SCP &gt;::as </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const &amp;</td>
         </tr>
       </table>
   </td>

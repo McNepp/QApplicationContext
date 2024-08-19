@@ -262,6 +262,13 @@ This function identifies the source-property by the signal that is emitted when 
 All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="qapplicationcontext_8h.html#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function only may be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
 <tr class="separator:ae708da19293b63d2ff632bcbd2df08e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3af2e9ed942d0a2991ea109e3483c6b5"><td class="memTemplParams" colspan="2">template&lt;typename S , typename SIG , typename T , typename SLT &gt; </td></tr>
+<tr class="memitem:a3af2e9ed942d0a2991ea109e3483c6b5"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a3af2e9ed942d0a2991ea109e3483c6b5">mcnepp::qtdi::connectServices</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;source, SIG sourceSignal, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, SLT targetSlot, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
+<tr class="memdesc:a3af2e9ed942d0a2991ea109e3483c6b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects a signal of one <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> to a slot of another service. <br  />
+This function is the ApplicationContext-aware equivalent to QObject::connect(). Instead of supplying the QObjects for source and target, you supply the Registrations instead. <br  />
+Whenever an instance of the source-service is published, it will subscribe to the publication of the target-service. Once the target-service is published, the connection of the sourceSignal with the targetSlot will take place. <br  />
+In case source and target represent the same <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>, the connection will still take place.  <br /></td></tr>
+<tr class="separator:a3af2e9ed942d0a2991ea109e3483c6b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af3af5d12702a86a3fb75354a6e7e37a8"><td class="memTemplParams" colspan="2">template&lt;typename S1 , typename S2 &gt; </td></tr>
 <tr class="memitem:af3af5d12702a86a3fb75354a6e7e37a8"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#af3af5d12702a86a3fb75354a6e7e37a8">mcnepp::qtdi::operator!=</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;reg1, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S2 &gt; &amp;reg2)</td></tr>
 <tr class="memdesc:af3af5d12702a86a3fb75354a6e7e37a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests two Registrations for difference.  <br /></td></tr>
@@ -606,9 +613,6 @@ If the handle actually points to a ServiceRegistration, this function will cast 
 <div class="memproto">
 <div class="memtemplate">
 template&lt;typename S , typename T , ServiceScope scope&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">Subscription mcnepp::qtdi::bind </td>
@@ -640,11 +644,6 @@ template&lt;typename S , typename T , ServiceScope scope&gt; </div>
           <td></td><td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 <p>Binds a property of one ServiceRegistration to a property from another Registration. <br  />
@@ -677,9 +676,6 @@ All changes made to the source-property will be propagated to the target-propert
 <div class="memproto">
 <div class="memtemplate">
 template&lt;typename S , typename T , typename A , typename R , ServiceScope scope&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">Subscription mcnepp::qtdi::bind </td>
@@ -711,11 +707,6 @@ template&lt;typename S , typename T , typename A , typename R , ServiceScope sco
           <td></td><td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 <p>Binds a property of one ServiceRegistration to a Setter from another Registration. <br  />
@@ -748,9 +739,6 @@ All changes made to the source-property will be propagated to all Services repre
 <div class="memproto">
 <div class="memtemplate">
 template&lt;typename S , typename T , typename A , typename R , ServiceScope scope&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">Subscription mcnepp::qtdi::bind </td>
@@ -782,11 +770,6 @@ template&lt;typename S , typename T , typename A , typename R , ServiceScope sco
           <td></td><td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 <p>Binds a property of one ServiceRegistration to a Setter from another Registration. <br  />
@@ -820,9 +803,6 @@ All changes made to the source-property will be propagated to all Services repre
 <div class="memproto">
 <div class="memtemplate">
 template&lt;typename S , typename T , typename AS , typename AT , typename R , ServiceScope scope&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">auto mcnepp::qtdi::bind </td>
@@ -854,11 +834,6 @@ template&lt;typename S , typename T , typename AS , typename AT , typename R , S
           <td></td><td> -&gt; std::enable_if_t&lt;std::is_convertible_v&lt;AS,AT&gt;,<a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&gt; </td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 <p>Binds a property of one ServiceRegistration to a Setter from another Registration. <br  />
@@ -972,6 +947,70 @@ Should you want to specify a property-value starting with an ampersand, you must
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>the service_config. </dd></dl>
+
+</div>
+</div>
+<a id="a3af2e9ed942d0a2991ea109e3483c6b5" name="a3af2e9ed942d0a2991ea109e3483c6b5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3af2e9ed942d0a2991ea109e3483c6b5">&#9670;&#160;</a></span>connectServices()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename S , typename SIG , typename T , typename SLT &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">Subscription mcnepp::qtdi::connectServices </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;&#160;</td>
+          <td class="paramname"><em>source</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">SIG&#160;</td>
+          <td class="paramname"><em>sourceSignal</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;&#160;</td>
+          <td class="paramname"><em>target</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">SLT&#160;</td>
+          <td class="paramname"><em>targetSlot</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Qt::ConnectionType&#160;</td>
+          <td class="paramname"><em>connectionType</em> = <code>Qt::AutoConnection</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Connects a signal of one Service to a slot of another service. <br  />
+This function is the ApplicationContext-aware equivalent to QObject::connect(). Instead of supplying the QObjects for source and target, you supply the Registrations instead. <br  />
+Whenever an instance of the source-service is published, it will subscribe to the publication of the target-service. Once the target-service is published, the connection of the sourceSignal with the targetSlot will take place. <br  />
+In case source and target represent the same Registration, the connection will still take place. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">source</td><td>the registration of the source-service. </td></tr>
+    <tr><td class="paramname">sourceSignal</td><td>will be passed as the second argument to QObject::connect(). </td></tr>
+    <tr><td class="paramname">target</td><td>the registration of the source-service. </td></tr>
+    <tr><td class="paramname">targetSlot</td><td>will be passed as the fourth argument to QObject::connect(). </td></tr>
+    <tr><td class="paramname">connectionType</td><td>will be passed as the last argument to QObject::connect() when the actual connection of the signal with the slot will be made. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service and the target-service. </dd></dl>
 
 </div>
 </div>
