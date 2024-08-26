@@ -559,6 +559,8 @@ private:
     };
 
 
+    class ProxySubscription;
+
     class ProxyRegistrationImpl : public detail::ProxyRegistration {
 
 
@@ -586,13 +588,9 @@ private:
             return m_type;
         }
 
-        bool add(service_registration_handle_t reg) {
-            if(reg->scope() != ServiceScope::TEMPLATE && reg->matches(m_type)) {
-                reg->subscribe(proxySubscription);
-                return true;
-            }
-            return false;
-        }
+        bool add(service_registration_handle_t reg);
+
+        bool canAdd(service_registration_handle_t reg) const;
 
         virtual void onSubscription(subscription_handle_t subscription) override;
 
@@ -609,7 +607,7 @@ private:
 
         const std::type_info& m_type;
         const QMetaObject* m_meta;
-        subscription_handle_t proxySubscription;
+        ProxySubscription* proxySubscription;
         StandardApplicationContext* const m_context;
     };
 

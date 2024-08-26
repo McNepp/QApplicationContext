@@ -178,6 +178,10 @@ public:
 
     }
 
+    static void initMain() {
+        qputenv("QTEST_FUNCTION_TIMEOUT", "10000");
+    }
+
 private slots:
 
 
@@ -969,8 +973,9 @@ private slots:
 
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> depSlot{reg};
-        RegistrationSlot<DependentService> abstractBaseSlot{abstractReg};
+        RegistrationSlot<DependentService> abstractSlot{abstractReg};
         QCOMPARE(depSlot->m_dependency, &base);
+        QCOMPARE(depSlot.last(), abstractSlot.last());
     }
 
 
@@ -2194,6 +2199,20 @@ private slots:
         QVERIFY(!slot);
         QVERIFY(thread->wait(1000));
         delete thread;
+    }
+
+    void testNoDeadlockInSubscription() {
+        auto baseReg = context->getRegistration<BaseService>();
+        ProxyRegistration<BaseService> proxy;
+
+        baseReg.subscribe(this, [this,&proxy](BaseService*) {
+            proxy = context->getRegistration<BaseService>();
+        });
+
+        BaseService base;
+        context->registerObject(&base);
+        QCOMPARE(baseReg, proxy);
+
     }
 
 

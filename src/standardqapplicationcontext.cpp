@@ -288,28 +288,6 @@ private:
 
 
 
-class ProxySubscription : public detail::Subscription {
-public:
-    explicit ProxySubscription(registration_handle_t target) :
-        detail::Subscription{target} {
-        out_connection = QObject::connect(this, &Subscription::objectPublished, target, &detail::Registration::objectPublished);
-    }
-
-    void connectTo(registration_handle_t source) override {
-        in_connections.push_back(detail::connect(source, this));
-    }
-
-    void cancel() override {
-        QObject::disconnect(out_connection);
-        for(auto& connection : in_connections) {
-            QObject::disconnect(connection);
-        }
-    }
-
-private:
-    QMetaObject::Connection out_connection;
-    QList<QMetaObject::Connection> in_connections;
-};
 
 ///
 /// \brief Passes the signal through, but does not accept connections from a source-Registration.
@@ -364,6 +342,38 @@ private:
     QSharedPointer<std::optional<ProxyRegistrationImpl*>> m_result;
 };
 
+class StandardApplicationContext::ProxySubscription : public detail::Subscription {
+public:
+    explicit ProxySubscription(registration_handle_t target, bool initiallyEnabled) :
+        detail::Subscription{target},
+        m_target{target}    {
+        if(initiallyEnabled) {
+            enableSignal();
+        }
+    }
+
+    void connectTo(registration_handle_t source) override {
+        in_connections.push_back(detail::connect(source, this));
+    }
+
+    void cancel() override {
+        QObject::disconnect(out_connection);
+        for(auto& connection : in_connections) {
+            QObject::disconnect(connection);
+        }
+    }
+
+    void enableSignal() {
+        out_connection = QObject::connect(this, &Subscription::objectPublished, m_target, &detail::Registration::objectPublished);
+    }
+
+private:
+    registration_handle_t const m_target;
+    QMetaObject::Connection out_connection;
+    QList<QMetaObject::Connection> in_connections;
+};
+
+
 
 StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent) :
     detail::ProxyRegistration{parent},
@@ -371,20 +381,35 @@ StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const s
     m_meta(metaObject),
     m_context(parent)
 {
-    proxySubscription = new ProxySubscription{this};
+    proxySubscription = new ProxySubscription{this, false};
     for(auto reg : parent->registrations) {
         add(reg);
     }
+    proxySubscription->enableSignal();
 }
 
 QList<service_registration_handle_t> StandardApplicationContext::ProxyRegistrationImpl::registeredServices() const {
     QList<service_registration_handle_t> result;
-    for(auto handle : m_context -> getRegistrationHandles()) {
-        if(auto reg = dynamic_cast<DescriptorRegistration*>(handle); reg && reg->matches(m_type)) {
+    for(auto reg : m_context -> getRegistrationHandles()) {
+        if(reg->matches(m_type)) {
             result.push_back(reg);
         }
     }
     return result;
+}
+
+bool StandardApplicationContext::ProxyRegistrationImpl::add(
+    service_registration_handle_t reg) {
+    if (canAdd(reg)) {
+        reg->subscribe(proxySubscription);
+        return true;
+    }
+    return false;
+}
+
+bool StandardApplicationContext::ProxyRegistrationImpl::canAdd(
+    service_registration_handle_t reg) const {
+    return reg->scope() != ServiceScope::TEMPLATE && reg->matches(m_type);
 }
 
 
@@ -393,8 +418,8 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
     detail::connect(this, subscription);
     TemporarySubscriptionProxy tempProxy{subscription};
     //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
-    for(auto reg : registeredServices()) {
-        if(reg->scope() != ServiceScope::TEMPLATE) {
+    for(auto reg : m_context -> getRegistrationHandles()) {
+        if(canAdd(reg)) {
             reg->subscribe(&tempProxy);
         }
     }
@@ -544,7 +569,7 @@ StandardApplicationContext::ServiceTemplateRegistration::ServiceTemplateRegistra
     DescriptorRegistration{base, index, name, desc, context, parent},
     m_config(config),
     m_resolvedProperties{config.properties} {
-    proxySubscription = new ProxySubscription{this};
+    proxySubscription = new ProxySubscription{this, true};
 }
 
 
@@ -589,7 +614,7 @@ StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(Descrip
     m_state(STATE_INIT),
     m_config(config)
 {
-    proxySubscription = new ProxySubscription{this};
+    proxySubscription = new ProxySubscription{this, true};
 }
 
 
@@ -1215,6 +1240,7 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
         return nullptr;
     }
+    std::vector<ProxyRegistrationImpl*> matchingProxies;
     DescriptorRegistration* reg;
     {
         QMutexLocker<QMutex> locker{&mutex};
@@ -1379,12 +1405,19 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
         registrationsByName.insert({objName, reg});
         registrations.push_back(reg);
         for(auto& entry : proxyRegistrationCache) {
-            entry.second->add(reg);
+            if(entry.second->canAdd(reg)) {
+                matchingProxies.push_back(entry.second);
+            }
         }
         qCInfo(loggingCategory()).noquote().nospace() << "Registered " << *reg;
     }
 
-    // Emit signal after mutex has been released:
+    // Emit signal(s) after mutex has been released:
+
+    for(auto proxy : matchingProxies) {
+        proxy->add(reg);
+    }
+
     emit pendingPublicationChanged();
     return reg;
 }
@@ -1845,8 +1878,4 @@ bool StandardApplicationContext::event(QEvent *event)
 
 }
 
-
-
-
-
-    }//mcnepp::qtdi
+} // namespace mcnepp::qtdi
