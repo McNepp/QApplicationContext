@@ -482,7 +482,7 @@ private slots:
         context->registerObject(configuration.get());
 
         auto reg = context->registerService<QTimer>("timer", config({{"interval", "${timerInterval"}}));
-        QVERIFY(!context->publish());
+        QVERIFY(!reg);
     }
 
     void testWithDollarInPlaceholderProperty() {
@@ -490,7 +490,7 @@ private slots:
         context->registerObject(configuration.get());
 
         auto reg = context->registerService<QTimer>("timer", config({{"interval", "${$timerInterval}"}}));
-        QVERIFY(!context->publish());
+        QVERIFY(!reg);
     }
 
 
@@ -570,7 +570,7 @@ private slots:
 
     void testWithUnresolvableProperty() {
 
-        context->registerService<QTimer>("timer", config({{"interval", "${interval}"}}));
+        QVERIFY(context->registerService<QTimer>("timer", config({{"interval", "${interval}"}})));
         QVERIFY(!context->publish());
         configuration->setValue("interval", 4711);
         context->registerObject(configuration.get());
@@ -1152,7 +1152,7 @@ private slots:
 
 
     void testWithMissingBeanRef() {
-        context->registerService<BaseService>("base", config({{"timer", "&aTimer"}}));
+        QVERIFY(context->registerService<BaseService>("base", config({{"timer", "&aTimer"}})));
 
         QVERIFY(!context->publish());
     }

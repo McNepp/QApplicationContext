@@ -10,6 +10,7 @@
 #include <QWaitCondition>
 #include <QBindable>
 #include "qapplicationcontext.h"
+#include "placeholderresolver.h"
 
 namespace mcnepp::qtdi {
 
@@ -656,11 +657,13 @@ private:
 
     std::pair<Status,bool> resolveBeanRef(QVariant& value, descriptor_list& toBePublished, bool allowPartial);
 
-    std::pair<QVariant,Status> resolvePlaceholders(const QString& key, const service_config& config);
-
     DescriptorRegistration* findAutowiringCandidate(service_registration_handle_t, const QMetaProperty&);
 
     bool registerBoundProperty(registration_handle_t target, const char* propName);
+
+    bool validateResolvers(const service_config& config);
+
+    detail::PlaceholderResolver* getResolver(const QString&);
 
     // QObject interface
 public:
@@ -682,6 +685,7 @@ private:
     std::atomic<unsigned> nextIndex;
     const QLoggingCategory& m_loggingCategory;
     QApplicationContext* const m_injectedContext;
+    std::unordered_map<QString,QPointer<detail::PlaceholderResolver>> resolverCache;
 };
 
 

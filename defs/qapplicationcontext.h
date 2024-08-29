@@ -2507,12 +2507,41 @@ template<typename Impl=QObject>  [[nodiscard]] Service<Impl,Impl,ServiceScope::T
     return Service<Impl,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<Impl,Impl,ServiceScope::TEMPLATE>(nullptr)};
 }
 
+///
+/// \brief Provides access to the configuration of a QApplicationContext.
+///
+class QConfigurationResolver : public QObject {
+public:
+    ///
+    /// \brief Retrieves a value from the ApplicationContext's configuration.
+    /// <br>This function will be used to resolve placeholders in Service-configurations.
+    /// Whenever a *placeholder* shall be looked up, the ApplicationContext will search the following sources, until it can resolve the *placeholder*:
+    /// -# The environment, for a variable corresponding to the *placeholder*.
+    /// -# The instances of `QSettings` that have been registered in the ApplicationContext.
+    /// \sa mcnepp::qtdi::config()
+    /// \param key the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections.
+    /// \param searchParentSections determines whether the key shall be searched recursively in the parent-sections.
+    /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
+    ///
+    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
+
+    static QString makePath(const QString& section, const QString& path);
+
+    static bool removeLastPath(QString& s);
+
+
+protected:
+    explicit QConfigurationResolver(QObject* parent = 0) : QObject{parent} {
+
+    }
+
+};
 
 
 ///
 /// \brief A DI-Container for Qt-based applications.
 ///
-class QApplicationContext : public QObject
+class QApplicationContext : public QConfigurationResolver
 {
     Q_OBJECT
 
@@ -2786,19 +2815,6 @@ public:
     ///
     bool isGlobalInstance() const;
 
-
-    ///
-    /// \brief Retrieves a value from the ApplicationContext's configuration.
-    /// <br>This function will be used to resolve placeholders in Service-configurations.
-    /// Whenever a *placeholder* shall be looked up, the ApplicationContext will search the following sources, until it can resolve the *placeholder*:
-    /// -# The environment, for a variable corresponding to the *placeholder*.
-    /// -# The instances of `QSettings` that have been registered in the ApplicationContext.
-    /// \sa mcnepp::qtdi::config()
-    /// \param key the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections.
-    /// \param searchParentSections determines whether the key shall be searched recursively in the parent-sections.
-    /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
-    ///
-    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
 
     ///
     /// \brief The QLoggingCategory that this ApplicationContext uses.

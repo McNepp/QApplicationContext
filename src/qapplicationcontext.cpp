@@ -26,7 +26,7 @@ bool QApplicationContext::unsetInstance(QApplicationContext* context) {
 
 
 QApplicationContext::QApplicationContext(QObject* parent) :
-    QObject(parent) {
+    QConfigurationResolver{parent} {
 }
 
 QApplicationContext* QApplicationContext::instance() {
@@ -59,6 +59,29 @@ const QLoggingCategory& loggingCategory(registration_handle_t handle) {
 const service_config& serviceConfig(service_registration_handle_t handle) {
     static service_config defaultConfig;
     return handle ? handle->config() : defaultConfig;
+}
+
+
+QString QConfigurationResolver::makePath(const QString& section, const QString& path) {
+    if(section.isEmpty() || path.startsWith('/')) {
+        return path;
+    }
+    if(section.endsWith('/')) {
+        return section + path;
+    }
+    return section + '/' + path;
+}
+
+bool QConfigurationResolver::removeLastPath(QString& s) {
+    int lastSlash = s.lastIndexOf('/');
+    if(lastSlash <= 0) {
+        return false;
+    }
+    int nextSlash = s.lastIndexOf('/', lastSlash - 1);
+    //lastIndexOf will return -1 if not found.
+    //Thus, the following code will remove either the part after the nextSlash or from the beginning of the String:
+    s.remove(nextSlash + 1, lastSlash - nextSlash);
+    return true;
 }
 
 
@@ -188,6 +211,8 @@ void SourceTargetSubscription::onPublished(QObject* obj) {
         m_target->subscribe(subscr);
     }
 }
+
+
 
 
 }
