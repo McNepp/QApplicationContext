@@ -1,5 +1,4 @@
 #include <QThread>
-#include <QSettings>
 #include <QEvent>
 #include <QMetaMethod>
 #include <QLoggingCategory>
@@ -7,6 +6,7 @@
 #include <QRegularExpression>
 #include <QCoreApplication>
 #include "standardqapplicationcontext.h"
+#include "qsettingswatcher.h"
 
 
 
@@ -154,6 +154,8 @@ template<typename T> struct Collector : public detail::Subscription {
         }
     }
 };
+
+
 
 
 QStringList determineBeanRefs(const QVariantMap& properties) {
@@ -472,7 +474,6 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(Descr
 
 
 
-
 void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
     out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor();
 }
@@ -684,6 +685,9 @@ StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& l
     if(auto app = QCoreApplication::instance()) {
         registerObject(app, "application");
     }
+
+    m_settingsInitializer = getRegistration<QSettings>().subscribe(this, &StandardApplicationContext::onSettingsAdded).unwrap();
+
 
     registerObject<QApplicationContext>(injectedContext, "context");
 
@@ -1357,7 +1361,7 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
                 }
             }
 
-            if(!validateResolvers(config)) {
+            if(!validateResolvers(descriptor, config)) {
                 return nullptr;
             }
             switch(scope) {
@@ -1555,12 +1559,24 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
         descriptor_list createdForThis;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
             QVariant resolvedValue = value;
-            auto result = resolveBeanRef(resolvedValue, createdForThis, allowPartial);
-            if(result.first != Status::ok) {
-                return result.first;
+            auto[status, resolved] = resolveBeanRef(resolvedValue, createdForThis, allowPartial);
+            detail::PlaceholderResolver* resolver = nullptr;
+            if(status != Status::ok) {
+                return status;
             }
-            if(!result.second && value.userType() == QMetaType::QString) {
-                auto resolver = getResolver(value.toString());
+            bool isAutoRefreshProperty = config.autoRefresh; // If config.autoRefresh is false, we might still find a detail::AutoRefreshable below
+            while(!resolved)
+            {
+                if(value.userType() == qMetaTypeId<detail::AutoRefreshable>()) {
+                    resolver = getResolver(value.value<detail::AutoRefreshable>().expression);
+                    // We only need to watch this property if it does contain placeholders:
+                    isAutoRefreshProperty = resolver && resolver->hasPlaceholders();
+                } else
+                if(value.userType() == QMetaType::QString) {
+                    resolver = getResolver(value.toString());
+                } else {
+                    break;
+                }
                 if(!resolver) {
                     return Status::fatal;
                 }
@@ -1568,6 +1584,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 if(!resolvedValue.isValid()) {
                     return Status::fatal;
                 }
+                resolved = true;
             }
             reg->resolveProperty(key, resolvedValue);
             if(!isPrivateProperty(key)) {
@@ -1580,6 +1597,13 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 if(targetProperty.write(target, resolvedValue)) {
                     qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
                     usedProperties.insert(key);
+                    if(isAutoRefreshProperty && resolver) {
+                        if(autoRefreshEnabled()) {
+                            m_SettingsWatcher->addWatched(resolver, targetProperty, target, config);
+                        } else {
+                            qCWarning(loggingCategory()).nospace() << "Cannot watch property '" << targetProperty.name() << "' of " << target << ", as auto-refresh has not been enabled.";
+                        }
+                    }
                 } else {
                     //An error while setting a Q_PROPERTY is always non-fixable:
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not set property '" << key << "' of " << *reg << " to value " << resolvedValue;
@@ -1647,21 +1671,30 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
 }
 
 
-bool StandardApplicationContext::validateResolvers(const service_config& config) {
+bool StandardApplicationContext::validateResolvers(const service_descriptor& descriptor, const service_config& config) {
     for(auto[key,value] : config.properties.asKeyValueRange()) {
-        if(value.userType() == QMetaType::QString) {
-            QString asString = value.toString();
-            if(beanRefPattern().match(asString).hasMatch()) {
-                continue;
-            }
-            auto configResolver = getResolver(asString);
-            if(!configResolver) {
-                return false;
-            }
+        bool isAutoRefreshProperty = config.autoRefresh;
+        QString asString = value.toString();
+        if(value.userType() == qMetaTypeId<detail::AutoRefreshable>()) {
+            asString = value.value<detail::AutoRefreshable>().expression;
+            isAutoRefreshProperty = true;
+        } else
+        if(value.userType() != QMetaType::QString || beanRefPattern().match(asString).hasMatch()) {
+           continue;
+        }
+        detail::PlaceholderResolver* configResolver = getResolver(asString);
+        if(!configResolver) {
+            return false;
+        }
+        if(isAutoRefreshProperty && !configResolver->hasPlaceholders()) {
+            qCInfo(loggingCategory()).noquote().nospace() << "Property '" << key << "' of " << descriptor << "will not be watched, as expression '" << asString << "' contains no placeholders";
         }
     }
     return true;
 }
+
+
+
 
 detail::PlaceholderResolver *StandardApplicationContext::getResolver(const QString& placeholderText)
 {
@@ -1719,4 +1752,44 @@ bool StandardApplicationContext::event(QEvent *event)
 
 }
 
-} // namespace mcnepp::qtdi
+void StandardApplicationContext::onSettingsAdded(QSettings * settings)
+{
+    if(!m_SettingsWatcher) {
+        bool enabled = settings->value("qtdi/enableAutoRefresh").toBool();
+        if(enabled) {
+            m_SettingsWatcher = new detail::QSettingsWatcher{this};
+            connect(m_SettingsWatcher, &detail::QSettingsWatcher::autoRefreshMillisChanged, this, &StandardApplicationContext::autoRefreshMillisChanged);
+            m_SettingsWatcher->setAutoRefreshMillis(settings->value("qtdi/autoRefreshMillis", detail::QSettingsWatcher::DEFAULT_REFRESH_MILLIS).toInt());
+
+            qCInfo(loggingCategory()) << "Auto-refresh has been enabled.";
+            if(m_settingsInitializer) {
+                m_settingsInitializer->cancel();
+            }
+        }
+    }
+}
+
+int StandardApplicationContext::autoRefreshMillis() const
+{
+    return m_SettingsWatcher ? m_SettingsWatcher->autoRefreshMillis() : detail::QSettingsWatcher::DEFAULT_REFRESH_MILLIS;
+}
+
+void StandardApplicationContext::setAutoRefreshMillis(int newRefreshMillis)
+{
+    if(!m_SettingsWatcher) {
+        qCWarning(loggingCategory()) << "Setting autoRefreshMillis has no effect, as auto-refresh has not been enabled!";
+        return;
+    }
+    m_SettingsWatcher->setAutoRefreshMillis(newRefreshMillis);
+}
+
+bool StandardApplicationContext::autoRefreshEnabled() const
+{
+    return m_SettingsWatcher != nullptr;
+}
+
+
+
+
+
+    }//mcnepp::qtdi

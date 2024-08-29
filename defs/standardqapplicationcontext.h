@@ -9,10 +9,15 @@
 #include <QMutex>
 #include <QWaitCondition>
 #include <QBindable>
+#include <QSettings>
 #include "qapplicationcontext.h"
 #include "placeholderresolver.h"
 
 namespace mcnepp::qtdi {
+
+namespace detail {
+    class QSettingsWatcher;
+}
 
 
 ///
@@ -22,6 +27,8 @@ class StandardApplicationContext final : public QApplicationContext
 {
     Q_OBJECT
 
+    Q_PROPERTY(int autoRefreshMillis READ autoRefreshMillis WRITE setAutoRefreshMillis NOTIFY autoRefreshMillisChanged)
+
 //Forward-declarations of nested class:
     class CreateRegistrationHandleEvent;
 
@@ -30,6 +37,10 @@ class StandardApplicationContext final : public QApplicationContext
     struct delegate_tag_t {
 
     };
+
+signals:
+
+    void autoRefreshMillisChanged(int);
 
 public:
 
@@ -97,6 +108,36 @@ public:
     virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections) const override;
 
     virtual const QLoggingCategory& loggingCategory() const override;
+
+    ///
+    /// \brief Determines the maximum delay for 'auto-refreshable' configuration-values.
+    /// <br>This value will influence the behaiour of configuration-values created with mcnepp::qtdi::autoRefresh(const Qstring&).
+    /// \return the current number of milliseconds between refreshes of the configuration.
+    ///
+    int autoRefreshMillis() const;
+
+    ///
+    /// \brief Determines the maximum delay for 'auto-refreshable' configuration-values.
+    /// <br>This value will influence the behaiour of configuration-values created with mcnepp::qtdi::autoRefresh(const Qstring&).
+    /// \param newRefreshMillis the new number of milliseconds between refreshes of the configuration.
+    ///
+    void setAutoRefreshMillis(int newRefreshMillis);
+
+    ///
+    /// \brief Has auto-refresh been enabled?
+    /// <br>If enabled, it is possible to use mcnepp::qtdi::autoRefresh(const QString&) to force automatic updates of service-properties,
+    /// whenever the corresponding configuration-values is modified.
+    /// <br>Auto-refresh can be enabled by putting a configuration-entry into one of the QSettings-objects registered with the context:
+    ///
+    ///     [qtdi]
+    ///     enableAutoRefresh=true
+    ///     ; Optionally, specify the refresh-period:
+    ///     autoRefreshMillis=2000
+    ///
+    /// \return `true` if auto-refresh has been enabled.
+    ///
+    bool autoRefreshEnabled() const override;
+
 
     using QApplicationContext::registerObject;
 
@@ -661,13 +702,16 @@ private:
 
     bool registerBoundProperty(registration_handle_t target, const char* propName);
 
-    bool validateResolvers(const service_config& config);
+    bool validateResolvers(const service_descriptor& descriptor, const service_config& config);
 
     detail::PlaceholderResolver* getResolver(const QString&);
+
+    void onSettingsAdded(QSettings*);
 
     // QObject interface
 public:
     bool event(QEvent *event) override;
+
 
 private:
 
@@ -676,8 +720,6 @@ private:
 
     std::unordered_map<QString,DescriptorRegistration*> registrationsByName;
 
-
-
     mutable std::unordered_map<std::type_index,ProxyRegistrationImpl*> proxyRegistrationCache;
     mutable QMutex mutex;
     mutable QWaitCondition condition;
@@ -685,9 +727,11 @@ private:
     std::atomic<unsigned> nextIndex;
     const QLoggingCategory& m_loggingCategory;
     QApplicationContext* const m_injectedContext;
+
+    detail::QSettingsWatcher* m_SettingsWatcher = nullptr;
+    subscription_handle_t m_settingsInitializer = nullptr;
     std::unordered_map<QString,QPointer<detail::PlaceholderResolver>> resolverCache;
 };
-
 
 namespace detail {
 

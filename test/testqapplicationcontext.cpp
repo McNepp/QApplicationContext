@@ -187,6 +187,7 @@ private slots:
 
     void init() {
         settingsFile.reset(new QTemporaryFile);
+        settingsFile->setAutoRemove(true);
         settingsFile->open();
         configuration.reset(new QSettings{settingsFile->fileName(), QSettings::Format::IniFormat});
         context.reset(new StandardApplicationContext{qtditest::testLogging()});
@@ -514,6 +515,59 @@ private slots:
         RegistrationSlot<BaseService> slot{reg};
         QCOMPARE(slot->objectName(), "I have $one thousand$");
     }
+
+    void testAutoRefreshPlaceholderPropertyWithTimer() {
+        configuration->setValue("timerInterval", 4711);
+        configuration->setValue("qtdi/enableAutoRefresh", true);
+        configuration->setValue("qtdi/autoRefreshMillis", 500);
+
+        QVERIFY(!context.get()->autoRefreshEnabled());
+
+        context->registerObject(configuration.get());
+
+        QVERIFY(context.get()->autoRefreshEnabled());
+        QCOMPARE(static_cast<StandardApplicationContext*>(context.get())->autoRefreshMillis(), 500);
+
+        QCOMPARE(4711, context->getConfigurationValue("timerInterval"));
+        auto reg = context->registerService<QTimer>("timer", config({{"interval", autoRefresh("${timerInterval}")}}));
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot{reg};
+
+        QCOMPARE(slot->interval(), 4711);
+
+        configuration->setValue("timerInterval", 999);
+        QVERIFY(QTest::qWaitFor([&slot] { return slot->interval() == 999;}, 1000));
+    }
+
+    void testAutoRefreshPlaceholderPropertyFileChange() {
+        QFile file{"testapplicationtext.ini"};
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("foo=Hello\n");
+        file.write("suffix=!\n");
+        file.write("[qtdi]\n");
+        file.write("enableAutoRefresh=true\n");
+        file.close();
+        QSettings settings{file.fileName(), QSettings::IniFormat};
+
+        QVERIFY(!context.get()->autoRefreshEnabled());
+        context->registerObject(&settings);
+
+        QVERIFY(context.get()->autoRefreshEnabled());
+        auto reg = context->registerService<BaseService>("base", config({{"foo", "foo-value: ${foo}${suffix}"}}).withAutoRefresh());
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> slot{reg};
+
+        QCOMPARE(slot->foo(), "foo-value: Hello!");
+
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("foo=Hello\n");
+        file.write("suffix=\", world!\"");
+        file.close();
+
+        QVERIFY(QTest::qWaitFor([&slot] { return slot->foo() == "foo-value: Hello, world!";}, 1000));
+        file.remove();
+    }
+
 
 
     void testWithTwoPlaceholders() {
