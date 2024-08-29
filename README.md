@@ -881,6 +881,14 @@ In that case, compilation will fail with a corresponding diganostic.
 <br>In order to fix this error, you should specify an initializer_type in the service_traits of the service's *implementation-type*. 
 
 
+### Specifying initializers per Registration
+
+There is also method that lets you specify an *init-method* without the need for a specialization of mcnepp::qtdi::service_traits.
+<br>This will register only one specific service with the supplied *init-method*:
+
+    context -> registerService(service<PropFetcherAggregator>(injectAll<RestPropFetcher>()).withInit(&PropFetcherAggregator::init));
+
+See mcnepp::qtdi::Service::withInit()
 
 
 ## Resolving ambiguities

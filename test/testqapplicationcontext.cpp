@@ -1344,10 +1344,16 @@ private slots:
 
 
 
+    void testWithInit() {
+        auto reg = context->registerService(service<BaseService2>().withInit(&BaseService2::init));
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService2> baseSlot{reg};
+        QCOMPARE(baseSlot->initCalled, 1);
+    }
 
 
 
-    void testAmbiuousMandatoryDependency() {
+    void testAmbiguousMandatoryDependency() {
         BaseService base;
         context->registerObject<Interface1>(&base, "base");
         BaseService myBase;
@@ -1356,7 +1362,7 @@ private slots:
         QVERIFY(!context->publish());
     }
 
-    void testAmbiuousOptionalDependency() {
+    void testAmbiguousOptionalDependency() {
         BaseService base;
         context->registerObject<Interface1>(&base, "base");
         BaseService myBase;

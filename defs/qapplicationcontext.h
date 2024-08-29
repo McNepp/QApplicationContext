@@ -928,7 +928,7 @@ public:
     /// \param context the target-context.
     /// \param callable the piece of code to execute.
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
-    /// \return the Subscription.
+    /// \return the Subscription if `this->isValid()`
     ///
     template<typename F> Subscription subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
         if(!registrationHolder || !context) {
@@ -954,11 +954,11 @@ public:
     /// \param target the object on which the setter will be invoked.
     /// \param setter the method that will be invoked.
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
-    /// \return the Subscription.
+    /// \return  the Subscription if `this->isValid() && target != nullptr && setter != nullptr`
     ///
     template<typename T,typename R> Subscription subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
         static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
-        if(!setter) {
+        if(!setter || !target) {
             qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this << " with null";
             return Subscription{};
         }
@@ -2507,6 +2507,45 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
      */
     template<typename...IFaces> [[nodiscard]] Service<Srv,Impl,scope> advertiseAs() const& {
         return Service<Srv,Impl,scope>{*this}.advertiseAs<IFaces...>();
+    }
+
+    /**
+     * @brief Specifies an *init-method* for this service.
+     * <br>This overrides the init-method that is deduced from the `initializer_type` of the service's service_traits.
+     * The init-method will be used for this service-instance only.
+     * <br>The initializer must one of:
+     *
+     * - a callable object with one argument of a pointer to the service's implementation-type
+     * - a callable object with two arguments, the first being a pointer to the service's implementation type, and the second being a pointer to QApplicationContext.
+     * - a member-function of the service's implementation-type with no arguments.
+     * - a member-function of the service's implementation-type with one argument of pointer to QApplicationContext.
+     *
+     * @tparam I the type of the initializer.
+     * @param initializer Will be invoked after all properties have been set and before the signal for the publication is emitted.
+     * @return this instance
+     */
+    template<typename I> Service<Srv,Impl,scope>&& withInit(I initializer) && {
+        descriptor.init_method = detail::adaptInitializer<Impl>(initializer);
+        return std::move(*this);
+    }
+
+    /**
+     * @brief Specifies an *init-method* for this service.
+     * <br>This overrides the init-method that is deduced from the `initializer_type` of the service's service_traits.
+     * The init-method will be used for this service-instance only.
+     * <br>The initializer must one of:
+     *
+     * - a callable object with one argument of a pointer to the service's implementation-type
+     * - a callable object with two arguments, the first being a pointer to the service's implementation type, and the second being a pointer to QApplicationContext.
+     * - a member-function of the service's implementation-type with no arguments.
+     * - a member-function of the service's implementation-type with one argument of pointer to QApplicationContext.
+     *
+     * @tparam I the type of the initializer.
+     * @param initializer Will be invoked after all properties have been set and before the signal for the publication is emitted.
+     * @return a service with the supplied initializer.
+     */
+    template<typename I> Service<Srv,Impl,scope> withInit(I initializer) const& {
+        return Service<Srv,Impl,scope>{*this}.withInit(initializer);
     }
 
 
