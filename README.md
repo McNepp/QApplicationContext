@@ -256,8 +256,37 @@ found.
 However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
 Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPostProcessor (see section [Tweaking services](#tweaking-services) below).
 
-Alsol, *priavte properties* can be very useful in conjunction with [Service-templates](#service-templates).
+Also, *private properties* can be very useful in conjunction with [Service-templates](#service-templates).
 
+### Auto-refreshable configuration-values
+
+If you configure a Q_PROPERTY using mcnepp::qtdi::config(std::initializer_list<std::pair<QString,QVariant>>), the property of the Service-Object will be set 
+exactly once, immediately after creation, right before any [service-initializers](#service-initializers) may be invoked. After that, the service will be published.
+<br>There may be times, however, when you want a property to be refreshed automatically every time the value in the corresponding QSettings-object changeds.
+<br>This can be achieved by using mcnepp::qtdi::autoRefresh(const QString&).
+<br>The following line will configure a QTimer's `interval` using an auto-refreshable configuration-value:
+
+    context->registerService<QTimer>("timer", config({{"interval", autoRefresh("${timerInterval}") }}));
+
+In case the configured QSettings-object uses a file as its persistent storage, any change to that file will be immediately detected. It will lead to a re-evaluation
+of the property. In case the configured QSettings-object uses a different persistent storage (such as the Windows Registry), the changes will be polled periodically.
+<br>Auto-refresh will also work with more complex expressions for the property. In the following example, the property `objectName` will be automatically refreshed when either one of the configuration-values
+`prefix` or `suffix` is modified:
+
+    context->registerService<QTimer>("timer", config({{"objectName", autoRefresh("timer-${prefix}${suffix}") }}));
+
+In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
+
+     context->registerService<QTimer>("timer", config({{"objectName", "theTimer"}, {"interval", "${timerInterval}"}}).withAutoRefresh());
+
+
+**Note:** Auto-refresh will be disabled by default in mcnepp::qtdi::StandardApplicationContext.
+<br>It must be explicitly enabled by putting the following configuration-entry into one of the QSettings-objects registered with the context:
+
+    [qtdi]
+    enableAutoRefresh=true
+    ; Optionally, specify the refresh-period:
+    autoRefreshMillis=2000
 
 
 ## Service-prototypes
@@ -784,7 +813,7 @@ Any information that you might want to pass to a QApplicationContextPostProcesso
 so-called *private properties* via mcnepp::qtdi::config(). Just prefix the property-key with a dot.
 
 
-## Service-Initializers
+## Service-Initializers {#service-initializers}
 
 The last step done in mcnepp::qtdi::QApplicationContext::publish() for each service is the invocation of an *init-method*, should one have been 
 specified.
@@ -852,6 +881,14 @@ In that case, compilation will fail with a corresponding diganostic.
 <br>In order to fix this error, you should specify an initializer_type in the service_traits of the service's *implementation-type*. 
 
 
+### Specifying initializers per Registration
+
+There is also method that lets you specify an *init-method* without the need for a specialization of mcnepp::qtdi::service_traits.
+<br>This will register only one specific service with the supplied *init-method*:
+
+    context -> registerService(service<PropFetcherAggregator>(injectAll<RestPropFetcher>()).withInit(&PropFetcherAggregator::init));
+
+See mcnepp::qtdi::Service::withInit()
 
 
 ## Resolving ambiguities

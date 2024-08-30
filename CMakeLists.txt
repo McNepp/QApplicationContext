@@ -30,15 +30,22 @@ target_link_libraries(${PROJECT_NAME} Qt6::Core)
 
 
 
-qt_add_executable(testqapplicationcontext ${CMAKE_CURRENT_LIST_DIR}/test/testqapplicationcontext.cpp ${CMAKE_CURRENT_LIST_DIR}/test/appcontexttestclasses.cpp)
-
+qt_add_executable(testapplicationcontext  ${CMAKE_CURRENT_LIST_DIR}/test/testqapplicationcontext.cpp ${CMAKE_CURRENT_LIST_DIR}/test/appcontexttestclasses.cpp ${CMAKE_CURRENT_LIST_DIR}/test/appcontexttestclasses.h)
+target_link_libraries(testapplicationcontext PRIVATE QApplicationContext Qt::Core Qt::Test)
 if(MSVC)
-  target_compile_options(testqapplicationcontext PRIVATE /W4 /w45262 /w44062)
+  target_compile_options(testapplicationcontext PRIVATE /W4 /w45262 /w44062)
 endif()
 
-target_link_libraries(testqapplicationcontext PRIVATE QApplicationContext Qt::Core Qt::Test)
-add_Test(testqapplicationcontext testqapplicationcontext)
- 
+add_test(testapplicationcontext testapplicationcontext)
+
+qt_add_executable(testplaceholderresolver  ${CMAKE_CURRENT_LIST_DIR}/test/testplaceholderresolver.cpp)
+target_link_libraries(testplaceholderresolver PRIVATE QApplicationContext Qt::Core Qt::Test)
+if(MSVC)
+  target_compile_options(testplaceholderresolver PRIVATE /W4 /w45262 /w44062)
+endif()
+
+add_test(testplaceholderresolver testplaceholderresolver)
+
 
 
 

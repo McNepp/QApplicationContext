@@ -686,9 +686,19 @@ protected:
     struct ParentPlaceholder {
     };
 
+    struct AutoRefreshable{
+        QString expression;
+    };
 
-}
 
+
+}// end namespace detail
+
+}//end namespace mcnepp::qtdi
+
+Q_DECLARE_METATYPE(mcnepp::qtdi::detail::AutoRefreshable)
+
+namespace mcnepp::qtdi {
 
 
 
@@ -918,7 +928,7 @@ public:
     /// \param context the target-context.
     /// \param callable the piece of code to execute.
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
-    /// \return the Subscription.
+    /// \return the Subscription if `this->isValid()`
     ///
     template<typename F> Subscription subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
         if(!registrationHolder || !context) {
@@ -944,11 +954,11 @@ public:
     /// \param target the object on which the setter will be invoked.
     /// \param setter the method that will be invoked.
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
-    /// \return the Subscription.
+    /// \return  the Subscription if `this->isValid() && target != nullptr && setter != nullptr`
     ///
     template<typename T,typename R> Subscription subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
         static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
-        if(!setter) {
+        if(!setter || !target) {
             qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this << " with null";
             return Subscription{};
         }
@@ -1830,21 +1840,28 @@ struct service_config final {
     }
 
     service_config withGroup(const QString& newGroup)&& {
-        return service_config{newGroup, autowire, std::move(properties)};
+        return service_config{newGroup, autowire, autoRefresh, std::move(properties)};
     }
 
     service_config withGroup(const QString& newGroup)const& {
-        return service_config{newGroup, autowire, properties};
+        return service_config{newGroup, autowire, autoRefresh, properties};
     }
 
     service_config withAutowire()&& {
-        return service_config{std::move(group), true, std::move(properties)};
+        return service_config{std::move(group), true, autoRefresh, std::move(properties)};
     }
 
     service_config withAutowire()const& {
-        return service_config{group, true, properties};
+        return service_config{group, true, autoRefresh, properties};
     }
 
+    service_config withAutoRefresh()&& {
+        return service_config{std::move(group), autowire, true, std::move(properties)};
+    }
+
+    service_config withAutoRefresh()const& {
+        return service_config{group, autowire, true, properties};
+    }
 
     ///
     /// \brief The optional group for the configuration.
@@ -1856,6 +1873,11 @@ struct service_config final {
     ///
     bool autowire = false;
 
+
+    ///
+    /// \brief Shall all properties be automatically refreshed?
+    ///
+    bool autoRefresh = false;
     ///
     /// \brief The keys and corresponding values.
     ///
@@ -1921,7 +1943,7 @@ struct service_config final {
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
 /// \return the service_config.
 [[nodiscard]] inline service_config config(std::initializer_list<std::pair<QString,QVariant>> properties) {
-    return service_config{"", false, properties};
+    return service_config{"", false, false, properties};
 }
 
 ///
@@ -1931,6 +1953,41 @@ struct service_config final {
     return service_config{};
 }
 
+
+///
+/// \brief Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime.
+/// <br>This function can be used in conjunction with mcnepp::qtdi::config(std::initializer_list<std::pair<QString,QVariant>>).
+/// <br>In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:
+///
+///     context->registerService<QTimer>("timer", config({{"interval", "${timerInterval}"}}));
+///
+/// The Q_PROPERTY QTimer::interval will be initialized from the value of the configuration-key `"timerInterval"` as it
+/// is in the moment the timer is instantiated.
+///
+/// <br>Now, contrast this with:
+///
+///     context->registerService<QTimer>("timer", config({{"interval", autoRefresh("${timerInterval}"}})));
+///
+/// Whenever the value for the configuration-key `"timerInterval"` changes in the underlying QSettings-Object, the
+/// expression "${timerInterval}"`` will be re-evaluated and the Q_PROPERTY of the timer will be updated accordingly.
+/// <br>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
+///
+///     context->registerService<QTimer>("timer", config({{"objectName", "theTimer"}, {"interval", "${timerInterval}"}}).withAutoRefresh());
+///
+/// **Note:** Auto-refreshing an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
+/// by putting a configuration-entry into one of the QSettings-objects registered with the context:
+///
+///     [qtdi]
+///     enableAutoRefresh=true
+///     ; Optionally, specify the refresh-period:
+///     autoRefreshMillis=2000
+///
+/// \param expression a String, possibly containing one or more placeholders.
+/// \return a QVariant that will ensure that the expression will be re-evaluated when the underlying QSettings changes.
+///
+inline QVariant autoRefresh(const QString& expression) {
+    return QVariant::fromValue(detail::AutoRefreshable{expression});
+}
 
 
 
@@ -2452,6 +2509,45 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
         return Service<Srv,Impl,scope>{*this}.advertiseAs<IFaces...>();
     }
 
+    /**
+     * @brief Specifies an *init-method* for this service.
+     * <br>This overrides the init-method that is deduced from the `initializer_type` of the service's service_traits.
+     * The init-method will be used for this service-instance only.
+     * <br>The initializer must one of:
+     *
+     * - a callable object with one argument of a pointer to the service's implementation-type
+     * - a callable object with two arguments, the first being a pointer to the service's implementation type, and the second being a pointer to QApplicationContext.
+     * - a member-function of the service's implementation-type with no arguments.
+     * - a member-function of the service's implementation-type with one argument of pointer to QApplicationContext.
+     *
+     * @tparam I the type of the initializer.
+     * @param initializer Will be invoked after all properties have been set and before the signal for the publication is emitted.
+     * @return this instance
+     */
+    template<typename I> Service<Srv,Impl,scope>&& withInit(I initializer) && {
+        descriptor.init_method = detail::adaptInitializer<Impl>(initializer);
+        return std::move(*this);
+    }
+
+    /**
+     * @brief Specifies an *init-method* for this service.
+     * <br>This overrides the init-method that is deduced from the `initializer_type` of the service's service_traits.
+     * The init-method will be used for this service-instance only.
+     * <br>The initializer must one of:
+     *
+     * - a callable object with one argument of a pointer to the service's implementation-type
+     * - a callable object with two arguments, the first being a pointer to the service's implementation type, and the second being a pointer to QApplicationContext.
+     * - a member-function of the service's implementation-type with no arguments.
+     * - a member-function of the service's implementation-type with one argument of pointer to QApplicationContext.
+     *
+     * @tparam I the type of the initializer.
+     * @param initializer Will be invoked after all properties have been set and before the signal for the publication is emitted.
+     * @return a service with the supplied initializer.
+     */
+    template<typename I> Service<Srv,Impl,scope> withInit(I initializer) const& {
+        return Service<Srv,Impl,scope>{*this}.withInit(initializer);
+    }
+
 
     detail::service_descriptor descriptor;
 };
@@ -2507,12 +2603,41 @@ template<typename Impl=QObject>  [[nodiscard]] Service<Impl,Impl,ServiceScope::T
     return Service<Impl,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<Impl,Impl,ServiceScope::TEMPLATE>(nullptr)};
 }
 
+///
+/// \brief Provides access to the configuration of a QApplicationContext.
+///
+class QConfigurationResolver : public QObject {
+public:
+    ///
+    /// \brief Retrieves a value from the ApplicationContext's configuration.
+    /// <br>This function will be used to resolve placeholders in Service-configurations.
+    /// Whenever a *placeholder* shall be looked up, the ApplicationContext will search the following sources, until it can resolve the *placeholder*:
+    /// -# The environment, for a variable corresponding to the *placeholder*.
+    /// -# The instances of `QSettings` that have been registered in the ApplicationContext.
+    /// \sa mcnepp::qtdi::config()
+    /// \param key the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections.
+    /// \param searchParentSections determines whether the key shall be searched recursively in the parent-sections.
+    /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
+    ///
+    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
+
+    static QString makePath(const QString& section, const QString& path);
+
+    static bool removeLastPath(QString& s);
+
+
+protected:
+    explicit QConfigurationResolver(QObject* parent = 0) : QObject{parent} {
+
+    }
+
+};
 
 
 ///
 /// \brief A DI-Container for Qt-based applications.
 ///
-class QApplicationContext : public QObject
+class QApplicationContext : public QConfigurationResolver
 {
     Q_OBJECT
 
@@ -2788,25 +2913,26 @@ public:
 
 
     ///
-    /// \brief Retrieves a value from the ApplicationContext's configuration.
-    /// <br>This function will be used to resolve placeholders in Service-configurations.
-    /// Whenever a *placeholder* shall be looked up, the ApplicationContext will search the following sources, until it can resolve the *placeholder*:
-    /// -# The environment, for a variable corresponding to the *placeholder*.
-    /// -# The instances of `QSettings` that have been registered in the ApplicationContext.
-    /// \sa mcnepp::qtdi::config()
-    /// \param key the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections.
-    /// \param searchParentSections determines whether the key shall be searched recursively in the parent-sections.
-    /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
-    ///
-    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
-
-    ///
     /// \brief The QLoggingCategory that this ApplicationContext uses.
     /// \return The QLoggingCategory that this ApplicationContext uses.
     /// \sa mcnepp::qtdi::defaultLoggingCategory()
     ///
     [[nodiscard]] virtual const QLoggingCategory& loggingCategory() const = 0;
 
+    ///
+    /// \brief Has auto-refresh been enabled?
+    /// <br>If enabled, it is possible to use mcnepp::qtdi::autoRefresh(const QString&) to force automatic updates of service-properties,
+    /// whenever the corresponding configuration-values is modified.
+    /// <br>When using a StandardApplicationContext, auto-refresh can be enabled by putting a configuration-entry into one of the QSettings-objects registered with the context:
+    ///
+    ///     [qtdi]
+    ///     enableAutoRefresh=true
+    ///     ; Optionally, specify the refresh-period:
+    ///     autoRefreshMillis=2000
+    ///
+    /// \return `true` if auto-refresh has been enabled.
+    ///
+    [[nodiscard]] virtual bool autoRefreshEnabled() const = 0;
 
 
 signals:
@@ -3015,6 +3141,7 @@ public:
 
 
 }
+
 
 namespace std {
     template<> struct hash<mcnepp::qtdi::Subscription> {

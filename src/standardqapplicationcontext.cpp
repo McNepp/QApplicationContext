@@ -1,5 +1,4 @@
 #include <QThread>
-#include <QSettings>
 #include <QEvent>
 #include <QMetaMethod>
 #include <QLoggingCategory>
@@ -7,6 +6,7 @@
 #include <QRegularExpression>
 #include <QCoreApplication>
 #include "standardqapplicationcontext.h"
+#include "qsettingswatcher.h"
 
 
 
@@ -108,7 +108,6 @@ bool isBindable(const QMetaProperty& sourceProperty) {
 
 
 
-
 }
 
 namespace {
@@ -129,27 +128,7 @@ inline void setParentIfNotSet(QObject* obj, QObject* newParent) {
     }
 }
 
-inline QString makePath(const QString& section, const QString& path) {
-    if(section.isEmpty() || path.startsWith('/')) {
-        return path;
-    }
-    if(section.endsWith('/')) {
-        return section + path;
-    }
-    return section + '/' + path;
-}
 
-inline bool removeLastPath(QString& s) {
-    int lastSlash = s.lastIndexOf('/');
-    if(lastSlash <= 0) {
-        return false;
-    }
-    int nextSlash = s.lastIndexOf('/', lastSlash - 1);
-    //lastIndexOf will return -1 if not found.
-    //Thus, the following code will remove either the part after the nextSlash or from the beginning of the String:
-    s.remove(nextSlash + 1, lastSlash - nextSlash);
-    return true;
-}
 
 
 
@@ -175,6 +154,8 @@ template<typename T> struct Collector : public detail::Subscription {
         }
     }
 };
+
+
 
 
 QStringList determineBeanRefs(const QVariantMap& properties) {
@@ -288,28 +269,6 @@ private:
 
 
 
-class ProxySubscription : public detail::Subscription {
-public:
-    explicit ProxySubscription(registration_handle_t target) :
-        detail::Subscription{target} {
-        out_connection = QObject::connect(this, &Subscription::objectPublished, target, &detail::Registration::objectPublished);
-    }
-
-    void connectTo(registration_handle_t source) override {
-        in_connections.push_back(detail::connect(source, this));
-    }
-
-    void cancel() override {
-        QObject::disconnect(out_connection);
-        for(auto& connection : in_connections) {
-            QObject::disconnect(connection);
-        }
-    }
-
-private:
-    QMetaObject::Connection out_connection;
-    QList<QMetaObject::Connection> in_connections;
-};
 
 ///
 /// \brief Passes the signal through, but does not accept connections from a source-Registration.
@@ -364,6 +323,38 @@ private:
     QSharedPointer<std::optional<ProxyRegistrationImpl*>> m_result;
 };
 
+class StandardApplicationContext::ProxySubscription : public detail::Subscription {
+public:
+    explicit ProxySubscription(registration_handle_t target, bool initiallyEnabled) :
+        detail::Subscription{target},
+        m_target{target}    {
+        if(initiallyEnabled) {
+            enableSignal();
+        }
+    }
+
+    void connectTo(registration_handle_t source) override {
+        in_connections.push_back(detail::connect(source, this));
+    }
+
+    void cancel() override {
+        QObject::disconnect(out_connection);
+        for(auto& connection : in_connections) {
+            QObject::disconnect(connection);
+        }
+    }
+
+    void enableSignal() {
+        out_connection = QObject::connect(this, &Subscription::objectPublished, m_target, &detail::Registration::objectPublished);
+    }
+
+private:
+    registration_handle_t const m_target;
+    QMetaObject::Connection out_connection;
+    QList<QMetaObject::Connection> in_connections;
+};
+
+
 
 StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const std::type_info& type, const QMetaObject* metaObject, StandardApplicationContext* parent) :
     detail::ProxyRegistration{parent},
@@ -371,20 +362,35 @@ StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const s
     m_meta(metaObject),
     m_context(parent)
 {
-    proxySubscription = new ProxySubscription{this};
+    proxySubscription = new ProxySubscription{this, false};
     for(auto reg : parent->registrations) {
         add(reg);
     }
+    proxySubscription->enableSignal();
 }
 
 QList<service_registration_handle_t> StandardApplicationContext::ProxyRegistrationImpl::registeredServices() const {
     QList<service_registration_handle_t> result;
-    for(auto handle : m_context -> getRegistrationHandles()) {
-        if(auto reg = dynamic_cast<DescriptorRegistration*>(handle); reg && reg->matches(m_type)) {
+    for(auto reg : m_context -> getRegistrationHandles()) {
+        if(reg->matches(m_type)) {
             result.push_back(reg);
         }
     }
     return result;
+}
+
+bool StandardApplicationContext::ProxyRegistrationImpl::add(
+    service_registration_handle_t reg) {
+    if (canAdd(reg)) {
+        reg->subscribe(proxySubscription);
+        return true;
+    }
+    return false;
+}
+
+bool StandardApplicationContext::ProxyRegistrationImpl::canAdd(
+    service_registration_handle_t reg) const {
+    return reg->scope() != ServiceScope::TEMPLATE && reg->matches(m_type);
 }
 
 
@@ -393,8 +399,8 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
     detail::connect(this, subscription);
     TemporarySubscriptionProxy tempProxy{subscription};
     //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
-    for(auto reg : registeredServices()) {
-        if(reg->scope() != ServiceScope::TEMPLATE) {
+    for(auto reg : m_context -> getRegistrationHandles()) {
+        if(canAdd(reg)) {
             reg->subscribe(&tempProxy);
         }
     }
@@ -463,7 +469,6 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(Descr
     m_base(base)
 {
 }
-
 
 
 
@@ -544,7 +549,7 @@ StandardApplicationContext::ServiceTemplateRegistration::ServiceTemplateRegistra
     DescriptorRegistration{base, index, name, desc, context, parent},
     m_config(config),
     m_resolvedProperties{config.properties} {
-    proxySubscription = new ProxySubscription{this};
+    proxySubscription = new ProxySubscription{this, true};
 }
 
 
@@ -589,7 +594,7 @@ StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(Descrip
     m_state(STATE_INIT),
     m_config(config)
 {
-    proxySubscription = new ProxySubscription{this};
+    proxySubscription = new ProxySubscription{this, true};
 }
 
 
@@ -680,6 +685,9 @@ StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& l
     if(auto app = QCoreApplication::instance()) {
         registerObject(app, "application");
     }
+
+    m_settingsInitializer = getRegistration<QSettings>().subscribe(this, &StandardApplicationContext::onSettingsAdded).unwrap();
+
 
     registerObject<QApplicationContext>(injectedContext, "context");
 
@@ -794,19 +802,20 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
     case detail::RESOLVABLE_KIND:
         {
-            auto resolved = resolvePlaceholders(d.expression, reg->config());
-            switch(resolved.second) {
-            case Status::ok:
-                qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << resolved.first;
-                return resolved;
-            case Status::fixable:
-                if(d.value.isValid()) {
-                    return {d.value, Status::ok};
-                }
-                [[fallthrough]];
-            default:
-                return resolved;
+            auto resolver = getResolver(d.expression);
+            QVariant resolved;
+            if(!resolver) {
+                return {resolved, Status::fatal};
             }
+            resolved = resolver->resolve(m_injectedContext, reg->config());
+            if(resolved.isValid()) {
+                qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << resolved;
+                return {resolved, Status::ok};
+            }
+            if(d.value.isValid()) {
+                return {d.value, Status::ok};
+            }
+            return {resolved, Status::fatal};
         }
 
     case detail::PARENT_PLACEHOLDER_KIND:
@@ -1215,6 +1224,7 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
         return nullptr;
     }
+    std::vector<ProxyRegistrationImpl*> matchingProxies;
     DescriptorRegistration* reg;
     {
         QMutexLocker<QMutex> locker{&mutex};
@@ -1351,6 +1361,9 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
                 }
             }
 
+            if(!validateResolvers(descriptor, config)) {
+                return nullptr;
+            }
             switch(scope) {
             case ServiceScope::PROTOTYPE:
                 reg = new PrototypeRegistration{base, ++nextIndex, objName, descriptor, config, this};
@@ -1379,12 +1392,19 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
         registrationsByName.insert({objName, reg});
         registrations.push_back(reg);
         for(auto& entry : proxyRegistrationCache) {
-            entry.second->add(reg);
+            if(entry.second->canAdd(reg)) {
+                matchingProxies.push_back(entry.second);
+            }
         }
         qCInfo(loggingCategory()).noquote().nospace() << "Registered " << *reg;
     }
 
-    // Emit signal after mutex has been released:
+    // Emit signal(s) after mutex has been released:
+
+    for(auto proxy : matchingProxies) {
+        proxy->add(reg);
+    }
+
     emit pendingPublicationChanged();
     return reg;
 }
@@ -1479,174 +1499,6 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
 }
 
 
-std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContext::resolvePlaceholders(const QString& key, const service_config& config)
-{
-    constexpr int STATE_START = 0;
-    constexpr int STATE_FOUND_DOLLAR = 1;
-    constexpr int STATE_FOUND_PLACEHOLDER = 2;
-    constexpr int STATE_FOUND_DEFAULT_VALUE = 3;
-    constexpr int STATE_ESCAPED = 4;
-    QVariant lastResolvedValue;
-    QString resolvedString;
-    QString token;
-    QString defaultValueToken;
-    const QString& group = config.group;
-
-    int lastStateBeforeEscape = STATE_START;
-    int state = STATE_START;
-    bool hasWildcard = false;
-    for(int pos = 0; pos < key.length(); ++pos) {
-        auto ch = key[pos];
-        switch(ch.toLatin1()) {
-
-        case '\\':
-            switch(state) {
-            case STATE_ESCAPED:
-                resolvedString += '\\';
-                state = lastStateBeforeEscape;
-                continue;
-            default:
-                lastStateBeforeEscape = state;
-                state = STATE_ESCAPED;
-                continue;
-            }
-
-        case '$':
-            switch(state) {
-            case STATE_ESCAPED:
-                resolvedString += '$';
-                state = lastStateBeforeEscape;
-                continue;
-            case STATE_FOUND_DOLLAR:
-                resolvedString += '$';
-                [[fallthrough]];
-            case STATE_START:
-                state = STATE_FOUND_DOLLAR;
-                continue;
-            default:
-                qCCritical(loggingCategory()).nospace().noquote() << "Invalid placeholder '" << key << "'";
-                return {QVariant{}, Status::fatal};
-            }
-
-
-        case '{':
-            switch(state) {
-            case STATE_ESCAPED:
-                resolvedString += '{';
-                state = lastStateBeforeEscape;
-                continue;
-            case STATE_FOUND_DOLLAR:
-                state = STATE_FOUND_PLACEHOLDER;
-                continue;
-            default:
-                state = STATE_START;
-                resolvedString += ch;
-                continue;
-            }
-
-        case '}':
-            switch(state) {
-            case STATE_ESCAPED:
-                resolvedString += '}';
-                state = lastStateBeforeEscape;
-                continue;
-            case STATE_FOUND_DEFAULT_VALUE:
-            case STATE_FOUND_PLACEHOLDER:
-                if(!token.isEmpty()) {
-                    lastResolvedValue = getConfigurationValue(makePath(group, token), hasWildcard);
-                    if(!lastResolvedValue.isValid()) {
-                        //If not found in ApplicationContext's configuration, look in the "private properties":
-                        lastResolvedValue = config.properties["." + token];
-                        if(!lastResolvedValue.isValid()) {
-                            if(state == STATE_FOUND_DEFAULT_VALUE) {
-                                lastResolvedValue = defaultValueToken;
-                            } else {
-                                if(!lastResolvedValue.isValid()) {
-                                    qCInfo(loggingCategory()).nospace().noquote() << "Could not resolve configuration-key '" << token << "'";
-                                    return {QVariant{}, Status::fixable};
-                                }
-                            }
-                        }
-                    }
-                    if(resolvedString.isEmpty() && pos + 1 == key.length()) {
-                        return {lastResolvedValue, Status::ok};
-                    }
-                    resolvedString += lastResolvedValue.toString();
-                    token.clear();
-                    defaultValueToken.clear();
-                }
-                state = STATE_START;
-                continue;
-            default:
-                resolvedString += ch;
-                continue;
-            }
-        case ':':
-            switch(state) {
-            case STATE_ESCAPED:
-                resolvedString += ':';
-                state = lastStateBeforeEscape;
-                continue;
-            case STATE_FOUND_PLACEHOLDER:
-                state = STATE_FOUND_DEFAULT_VALUE;
-                continue;
-            }
-
-        case '*':
-            switch(state) {
-            case STATE_FOUND_PLACEHOLDER:
-                //Look-ahead: The only valid wildcard notation starts with '*/'
-                if(pos + 1 >= key.length() || key[pos+1] != '/') {
-                    qCCritical(loggingCategory()).nospace().noquote() << "Invalid placeholder '" << key << "'";
-                    return {QVariant{}, Status::fatal};
-                }
-                hasWildcard = true;
-                ++pos;
-                continue;
-            default:
-                resolvedString += ch;
-                continue;
-            }
-
-        default:
-            switch(state) {
-            case STATE_FOUND_DOLLAR:
-                resolvedString += '$';
-                state = STATE_START;
-                [[fallthrough]];
-            case STATE_START:
-                resolvedString += ch;
-                continue;
-            case STATE_FOUND_PLACEHOLDER:
-                token += ch;
-                continue;
-            case STATE_FOUND_DEFAULT_VALUE:
-                defaultValueToken += ch;
-                continue;
-            case STATE_ESCAPED:
-                resolvedString += ch;
-                state = lastStateBeforeEscape;
-                continue;
-            default:
-                token += ch;
-                continue;
-            }
-        }
-    }
-    switch(state) {
-    case STATE_FOUND_DOLLAR:
-        resolvedString += '$';
-        [[fallthrough]];
-    case STATE_START:
-        return {resolvedString, Status::ok};
-    case STATE_ESCAPED:
-        resolvedString += '\\';
-        return {resolvedString, Status::ok};
-    default:
-        qCCritical(loggingCategory()).nospace().noquote() << "Unbalanced placeholder '" << key << "'";
-        return {QVariant{}, Status::fatal};
-    }
-}
 
 StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::findAutowiringCandidate(service_registration_handle_t target, const QMetaProperty& prop) {
     auto propMetaType = prop.metaType().metaObject();
@@ -1707,16 +1559,32 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
         descriptor_list createdForThis;
         for(auto[key,value] : config.properties.asKeyValueRange()) {
             QVariant resolvedValue = value;
-            auto result = resolveBeanRef(resolvedValue, createdForThis, allowPartial);
-            if(result.first != Status::ok) {
-                return result.first;
+            auto[status, resolved] = resolveBeanRef(resolvedValue, createdForThis, allowPartial);
+            detail::PlaceholderResolver* resolver = nullptr;
+            if(status != Status::ok) {
+                return status;
             }
-            if(!result.second && value.userType() == QMetaType::QString) {
-                auto propertyResult = resolvePlaceholders(value.toString(), config);
-                if(propertyResult.second != Status::ok) {
-                    return propertyResult.second;
+            bool isAutoRefreshProperty = config.autoRefresh; // If config.autoRefresh is false, we might still find a detail::AutoRefreshable below
+            while(!resolved)
+            {
+                if(value.userType() == qMetaTypeId<detail::AutoRefreshable>()) {
+                    resolver = getResolver(value.value<detail::AutoRefreshable>().expression);
+                    // We only need to watch this property if it does contain placeholders:
+                    isAutoRefreshProperty = resolver && resolver->hasPlaceholders();
+                } else
+                if(value.userType() == QMetaType::QString) {
+                    resolver = getResolver(value.toString());
+                } else {
+                    break;
                 }
-                resolvedValue = propertyResult.first;
+                if(!resolver) {
+                    return Status::fatal;
+                }
+                resolvedValue = resolver->resolve(m_injectedContext, config);
+                if(!resolvedValue.isValid()) {
+                    return Status::fatal;
+                }
+                resolved = true;
             }
             reg->resolveProperty(key, resolvedValue);
             if(!isPrivateProperty(key)) {
@@ -1729,6 +1597,13 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 if(targetProperty.write(target, resolvedValue)) {
                     qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
                     usedProperties.insert(key);
+                    if(isAutoRefreshProperty && resolver) {
+                        if(autoRefreshEnabled()) {
+                            m_SettingsWatcher->addWatched(resolver, targetProperty, target, config);
+                        } else {
+                            qCWarning(loggingCategory()).nospace() << "Cannot watch property '" << targetProperty.name() << "' of " << target << ", as auto-refresh has not been enabled.";
+                        }
+                    }
                 } else {
                     //An error while setting a Q_PROPERTY is always non-fixable:
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not set property '" << key << "' of " << *reg << " to value " << resolvedValue;
@@ -1796,7 +1671,39 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
 }
 
 
+bool StandardApplicationContext::validateResolvers(const service_descriptor& descriptor, const service_config& config) {
+    for(auto[key,value] : config.properties.asKeyValueRange()) {
+        bool isAutoRefreshProperty = config.autoRefresh;
+        QString asString = value.toString();
+        if(value.userType() == qMetaTypeId<detail::AutoRefreshable>()) {
+            asString = value.value<detail::AutoRefreshable>().expression;
+            isAutoRefreshProperty = true;
+        } else
+        if(value.userType() != QMetaType::QString || beanRefPattern().match(asString).hasMatch()) {
+           continue;
+        }
+        detail::PlaceholderResolver* configResolver = getResolver(asString);
+        if(!configResolver) {
+            return false;
+        }
+        if(isAutoRefreshProperty && !configResolver->hasPlaceholders()) {
+            qCInfo(loggingCategory()).noquote().nospace() << "Property '" << key << "' of " << descriptor << "will not be watched, as expression '" << asString << "' contains no placeholders";
+        }
+    }
+    return true;
+}
 
+
+
+
+detail::PlaceholderResolver *StandardApplicationContext::getResolver(const QString& placeholderText)
+{
+    auto& configResolver = resolverCache[placeholderText];
+    if(!configResolver) {
+        configResolver = detail::PlaceholderResolver::parse(placeholderText, this, loggingCategory());
+    }
+    return configResolver.get();
+}
 
 QVariant StandardApplicationContext::getConfigurationValue(const QString& key, bool searchParentSections) const {
     if(auto bytes = QString{key}.replace('/', '.').toLocal8Bit(); qEnvironmentVariableIsSet(bytes)) {
@@ -1843,6 +1750,42 @@ bool StandardApplicationContext::event(QEvent *event)
     }
     return QObject::event(event);
 
+}
+
+void StandardApplicationContext::onSettingsAdded(QSettings * settings)
+{
+    if(!m_SettingsWatcher) {
+        bool enabled = settings->value("qtdi/enableAutoRefresh").toBool();
+        if(enabled) {
+            m_SettingsWatcher = new detail::QSettingsWatcher{this};
+            connect(m_SettingsWatcher, &detail::QSettingsWatcher::autoRefreshMillisChanged, this, &StandardApplicationContext::autoRefreshMillisChanged);
+            m_SettingsWatcher->setAutoRefreshMillis(settings->value("qtdi/autoRefreshMillis", detail::QSettingsWatcher::DEFAULT_REFRESH_MILLIS).toInt());
+
+            qCInfo(loggingCategory()) << "Auto-refresh has been enabled.";
+            if(m_settingsInitializer) {
+                m_settingsInitializer->cancel();
+            }
+        }
+    }
+}
+
+int StandardApplicationContext::autoRefreshMillis() const
+{
+    return m_SettingsWatcher ? m_SettingsWatcher->autoRefreshMillis() : detail::QSettingsWatcher::DEFAULT_REFRESH_MILLIS;
+}
+
+void StandardApplicationContext::setAutoRefreshMillis(int newRefreshMillis)
+{
+    if(!m_SettingsWatcher) {
+        qCWarning(loggingCategory()) << "Setting autoRefreshMillis has no effect, as auto-refresh has not been enabled!";
+        return;
+    }
+    m_SettingsWatcher->setAutoRefreshMillis(newRefreshMillis);
+}
+
+bool StandardApplicationContext::autoRefreshEnabled() const
+{
+    return m_SettingsWatcher != nullptr;
 }
 
 
