@@ -76,9 +76,11 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#signals">Signals</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="#pro-methods">Protected Member Functions</a> &#124;
+<a href="#properties">Properties</a> &#124;
 <a href="classmcnepp_1_1qtdi_1_1_standard_application_context-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">mcnepp::qtdi::StandardApplicationContext Class Reference<span class="mlabels"><span class="mlabel">final</span></span></div></div>
 </div><!--header-->
@@ -94,10 +96,26 @@ Inheritance diagram for mcnepp::qtdi::StandardApplicationContext:</div>
  <div class="center">
   <img src="classmcnepp_1_1qtdi_1_1_standard_application_context.png" usemap="#mcnepp::qtdi::StandardApplicationContext_map" alt=""/>
   <map id="mcnepp::qtdi::StandardApplicationContext_map" name="mcnepp::qtdi::StandardApplicationContext_map">
-<area href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications." alt="mcnepp::qtdi::QApplicationContext" shape="rect" coords="0,56,243,80"/>
+<area href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications." alt="mcnepp::qtdi::QApplicationContext" shape="rect" coords="0,112,243,136"/>
+<area href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html" title="Provides access to the configuration of a QApplicationContext." alt="mcnepp::qtdi::QConfigurationResolver" shape="rect" coords="0,56,243,80"/>
   </map>
 </div></div>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="signals" name="signals"></a>
+Signals</h2></td></tr>
+<tr class="memitem:a61f32f28ebc21f907220ea219577b798"><td class="memItemLeft" align="right" valign="top"><a id="a61f32f28ebc21f907220ea219577b798" name="a61f32f28ebc21f907220ea219577b798"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>autoRefreshMillisChanged</b> (int)</td></tr>
+<tr class="separator:a61f32f28ebc21f907220ea219577b798"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td colspan="2" onclick="javascript:toggleInherit('signals_classmcnepp_1_1qtdi_1_1_q_application_context')"><img src="closed.png" alt="-"/>&#160;Signals inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
+<tr class="memitem:a75153d41f99f713cdf05079870f8b3e8 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">
+void&#160;</td><td class="memItemRight" valign="bottom"><b>publishedChanged</b> ()</td></tr>
+<tr class="memdesc:a75153d41f99f713cdf05079870f8b3e8 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Signals that the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ab9bee920351076344b92a8143b05da81" title="How many services have been published? This property will initially yield false, until publish(bool) ...">published()</a> property has changed. May be emitted upon <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a>. <b>Note:</b> the signal will not be emitted on destruction of this ApplicationContext! <br /></td></tr>
+<tr class="separator:a75153d41f99f713cdf05079870f8b3e8 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6a963715f0a4e7c0a3eea27acab23e13 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">
+void&#160;</td><td class="memItemRight" valign="bottom"><b>pendingPublicationChanged</b> ()</td></tr>
+<tr class="memdesc:a6a963715f0a4e7c0a3eea27acab23e13 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Signals that the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5514133528db14cb3308410984b2b2c1" title="How many services have been registered and not yet published? This property will initially yield 0....">pendingPublication()</a> property has changed. May be emitted upon <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService()</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8bf49def9048cc92c5aa5d1a9437682f" title="Registers an object with this ApplicationContext. The object will immediately be published....">registerObject()</a> or <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a>. <b>Note:</b> the signal will not be emitted on destruction of this ApplicationContext! <br /></td></tr>
+<tr class="separator:a6a963715f0a4e7c0a3eea27acab23e13 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a15f5158ea3abc098334db47b9fd33f8f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a15f5158ea3abc098334db47b9fd33f8f">StandardApplicationContext</a> (const QLoggingCategory &amp;<a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ac6be9baede995858145cb41adc03ad3c">loggingCategory</a>, QObject *parent=nullptr)</td></tr>
@@ -133,6 +151,19 @@ This function will be used to resolve placeholders in Service-configurations. Wh
 <tr class="memitem:ac6be9baede995858145cb41adc03ad3c"><td class="memItemLeft" align="right" valign="top">virtual const QLoggingCategory &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ac6be9baede995858145cb41adc03ad3c">loggingCategory</a> () const override</td></tr>
 <tr class="memdesc:ac6be9baede995858145cb41adc03ad3c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The QLoggingCategory that this ApplicationContext uses.  <br /></td></tr>
 <tr class="separator:ac6be9baede995858145cb41adc03ad3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d466c23761ba036087d63c652825dac"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a9d466c23761ba036087d63c652825dac">autoRefreshMillis</a> () const</td></tr>
+<tr class="memdesc:a9d466c23761ba036087d63c652825dac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines the maximum delay for 'auto-refreshable' configuration-values. <br  />
+This value will influence the behaiour of configuration-values created with mcnepp::qtdi::autoRefresh(const Qstring&amp;).  <br /></td></tr>
+<tr class="separator:a9d466c23761ba036087d63c652825dac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acb931f97e5e363a648e5314902908770"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#acb931f97e5e363a648e5314902908770">setAutoRefreshMillis</a> (int newRefreshMillis)</td></tr>
+<tr class="memdesc:acb931f97e5e363a648e5314902908770"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines the maximum delay for 'auto-refreshable' configuration-values. <br  />
+This value will influence the behaiour of configuration-values created with mcnepp::qtdi::autoRefresh(const Qstring&amp;).  <br /></td></tr>
+<tr class="separator:acb931f97e5e363a648e5314902908770"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae4b6887de6d62b6fe942efad8df1dce3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ae4b6887de6d62b6fe942efad8df1dce3">autoRefreshEnabled</a> () const override</td></tr>
+<tr class="memdesc:ae4b6887de6d62b6fe942efad8df1dce3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Has auto-refresh been enabled? <br  />
+If enabled, it is possible to use <a class="el" href="qapplicationcontext_8h.html#adc0a588ebd0400b677cb8c0698c0cbbf" title="Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime....">mcnepp::qtdi::autoRefresh(const QString&amp;)</a> to force automatic updates of service-properties, whenever the corresponding configuration-values is modified. <br  />
+Auto-refresh can be enabled by putting a configuration-entry into one of the QSettings-objects registered with the context:  <br /></td></tr>
+<tr class="separator:ae4b6887de6d62b6fe942efad8df1dce3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6473418ee5bae4340a8345acb3950c95"><td class="memItemLeft" align="right" valign="top"><a id="a6473418ee5bae4340a8345acb3950c95" name="a6473418ee5bae4340a8345acb3950c95"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>event</b> (QEvent *event) override</td></tr>
 <tr class="separator:a6473418ee5bae4340a8345acb3950c95"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -231,13 +262,18 @@ The ServiceRegistrations have a type-argument <code>QObject</code>. You may want
 <tr class="memitem:aefb81ffc9c91512a6ae0ec84453f39fa inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aefb81ffc9c91512a6ae0ec84453f39fa">isGlobalInstance</a> () const</td></tr>
 <tr class="memdesc:aefb81ffc9c91512a6ae0ec84453f39fa inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Is this the global instance?  <br /></td></tr>
 <tr class="separator:aefb81ffc9c91512a6ae0ec84453f39fa inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7d9800502c77b4f34ac2da27b45d29d5 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">virtual QVariant&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a7d9800502c77b4f34ac2da27b45d29d5">getConfigurationValue</a> (const QString &amp;key, bool searchParentSections=false) const =0</td></tr>
-<tr class="memdesc:a7d9800502c77b4f34ac2da27b45d29d5 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a value from the ApplicationContext's configuration. <br  />
-This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>:  <br /></td></tr>
-<tr class="separator:a7d9800502c77b4f34ac2da27b45d29d5 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a03a175639fd8bb3134a721ff5cd5d92a inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">virtual const QLoggingCategory &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a03a175639fd8bb3134a721ff5cd5d92a">loggingCategory</a> () const =0</td></tr>
 <tr class="memdesc:a03a175639fd8bb3134a721ff5cd5d92a inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">The QLoggingCategory that this ApplicationContext uses.  <br /></td></tr>
 <tr class="separator:a03a175639fd8bb3134a721ff5cd5d92a inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a499d2dc7da8a5fad3796bff55e8ec0c4 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a499d2dc7da8a5fad3796bff55e8ec0c4">autoRefreshEnabled</a> () const =0</td></tr>
+<tr class="memdesc:a499d2dc7da8a5fad3796bff55e8ec0c4 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Has auto-refresh been enabled? <br  />
+If enabled, it is possible to use <a class="el" href="qapplicationcontext_8h.html#adc0a588ebd0400b677cb8c0698c0cbbf" title="Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime....">mcnepp::qtdi::autoRefresh(const QString&amp;)</a> to force automatic updates of service-properties, whenever the corresponding configuration-values is modified. <br  />
+When using a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a>, auto-refresh can be enabled by putting a configuration-entry into one of the QSettings-objects registered with the context:  <br /></td></tr>
+<tr class="separator:a499d2dc7da8a5fad3796bff55e8ec0c4 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afb12543b6569d2683b2d3aed23f84b98"><td class="memItemLeft" align="right" valign="top">virtual QVariant&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#afb12543b6569d2683b2d3aed23f84b98">getConfigurationValue</a> (const QString &amp;key, bool searchParentSections=false) const =0</td></tr>
+<tr class="memdesc:afb12543b6569d2683b2d3aed23f84b98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a value from the ApplicationContext's configuration. <br  />
+This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>:  <br /></td></tr>
+<tr class="separator:afb12543b6569d2683b2d3aed23f84b98"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
@@ -289,6 +325,23 @@ The element-type of the returned QList is the opaque type service_registration_h
  What you can do, though, is use one of the free functions <a class="el" href="qapplicationcontext_8h.html#ad99aa9332aee20a47057f62ed4e8f285" title="Determines whether a handle to a Registration matches a type.">matches(registration_handle_t)</a>, <a class="el" href="qapplicationcontext_8h.html#ae09e67c55a69665975a9e2371e3d0a94" title="Obtains the registeredName from a handle to a ServiceRegistration.">registeredName(service_registration_handle_t)</a>, <a class="el" href="qapplicationcontext_8h.html#a01c1421ad2f49f3e219de2db9eec1b35" title="Obtains the service configuration from a handle to a ServiceRegistration.">serviceConfig(service_registration_handle_t)</a>. <br  />
 Additionally, you may wrap the handles in a type-safe manner, using <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a0f9678445bc2936fb7dd510331f7c302" title="Wraps a handle to a ServiceRegistration into a typesafe high-level ServiceRegistration.">ServiceRegistration::wrap(service_registration_handle_t)</a>.  <br /></td></tr>
 <tr class="separator:a805b17a76dde6d70f32d2a17d17bfd06 inherit pro_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_methods_classmcnepp_1_1qtdi_1_1_q_configuration_resolver"><td colspan="2" onclick="javascript:toggleInherit('pro_methods_classmcnepp_1_1qtdi_1_1_q_configuration_resolver')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html">mcnepp::qtdi::QConfigurationResolver</a></td></tr>
+<tr class="memitem:a1db32385dfc2f29695af2ca74fc7274d inherit pro_methods_classmcnepp_1_1qtdi_1_1_q_configuration_resolver"><td class="memItemLeft" align="right" valign="top">
+&#160;</td><td class="memItemRight" valign="bottom"><b>QConfigurationResolver</b> (QObject *parent=0)</td></tr>
+<tr class="separator:a1db32385dfc2f29695af2ca74fc7274d inherit pro_methods_classmcnepp_1_1qtdi_1_1_q_configuration_resolver"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="properties" name="properties"></a>
+Properties</h2></td></tr>
+<tr class="memitem:a78415578f0a9874528ababd6728e9c07"><td class="memItemLeft" align="right" valign="top"><a id="a78415578f0a9874528ababd6728e9c07" name="a78415578f0a9874528ababd6728e9c07"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>autoRefreshMillis</b></td></tr>
+<tr class="separator:a78415578f0a9874528ababd6728e9c07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td colspan="2" onclick="javascript:toggleInherit('properties_classmcnepp_1_1qtdi_1_1_q_application_context')"><img src="closed.png" alt="-"/>&#160;Properties inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
+<tr class="memitem:ab9bee920351076344b92a8143b05da81 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">unsigned&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ab9bee920351076344b92a8143b05da81">published</a></td></tr>
+<tr class="memdesc:ab9bee920351076344b92a8143b05da81 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">How many services have been published? This property will initially yield <code>false</code>, until <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a> is invoked. <b>Note:</b> This property will <b>not</b> transition back to <code>0</code> upon destruction of this ApplicationContext!  <br /></td></tr>
+<tr class="separator:ab9bee920351076344b92a8143b05da81 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5514133528db14cb3308410984b2b2c1 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">unsigned&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5514133528db14cb3308410984b2b2c1">pendingPublication</a></td></tr>
+<tr class="memdesc:a5514133528db14cb3308410984b2b2c1 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">How many services have been registered and not yet published? This property will initially yield <code>0</code>. Then, it will increase with every successfull <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService()</a> invocation. If <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a> is invoked successfully, the property will again yield <code>0</code>. <b>Note:</b> This property will <b>not</b> transition back to <code>0</code> upon destruction of this ApplicationContext!  <br /></td></tr>
+<tr class="separator:a5514133528db14cb3308410984b2b2c1 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
@@ -301,15 +354,6 @@ using&#160;</td><td class="memItemRight" valign="bottom"><b>service_descriptor</
 using&#160;</td><td class="memItemRight" valign="bottom"><b>dependency_info</b> = detail::dependency_info</td></tr>
 <tr class="memdesc:a41a9694c1b68949bdd33dc2394591372 inherit pub_types_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">describes a service-dependency. <br /></td></tr>
 <tr class="separator:a41a9694c1b68949bdd33dc2394591372 inherit pub_types_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td colspan="2" onclick="javascript:toggleInherit('signals_classmcnepp_1_1qtdi_1_1_q_application_context')"><img src="closed.png" alt="-"/>&#160;Signals inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
-<tr class="memitem:a75153d41f99f713cdf05079870f8b3e8 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">
-void&#160;</td><td class="memItemRight" valign="bottom"><b>publishedChanged</b> ()</td></tr>
-<tr class="memdesc:a75153d41f99f713cdf05079870f8b3e8 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Signals that the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ab9bee920351076344b92a8143b05da81" title="How many services have been published? This property will initially yield false, until publish(bool) ...">published()</a> property has changed. May be emitted upon <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a>. <b>Note:</b> the signal will not be emitted on destruction of this ApplicationContext! <br /></td></tr>
-<tr class="separator:a75153d41f99f713cdf05079870f8b3e8 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6a963715f0a4e7c0a3eea27acab23e13 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">
-void&#160;</td><td class="memItemRight" valign="bottom"><b>pendingPublicationChanged</b> ()</td></tr>
-<tr class="memdesc:a6a963715f0a4e7c0a3eea27acab23e13 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Signals that the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5514133528db14cb3308410984b2b2c1" title="How many services have been registered and not yet published? This property will initially yield 0....">pendingPublication()</a> property has changed. May be emitted upon <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService()</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8bf49def9048cc92c5aa5d1a9437682f" title="Registers an object with this ApplicationContext. The object will immediately be published....">registerObject()</a> or <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a>. <b>Note:</b> the signal will not be emitted on destruction of this ApplicationContext! <br /></td></tr>
-<tr class="separator:a6a963715f0a4e7c0a3eea27acab23e13 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td colspan="2" onclick="javascript:toggleInherit('pub_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context')"><img src="closed.png" alt="-"/>&#160;Static Public Member Functions inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
 <tr class="memitem:abc1d419de6d4d3af4c38a8c5791edc4d inherit pub_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abc1d419de6d4d3af4c38a8c5791edc4d">instance</a> ()</td></tr>
 <tr class="memdesc:abc1d419de6d4d3af4c38a8c5791edc4d inherit pub_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the global instance. <br  />
@@ -318,6 +362,13 @@ QQpplicationContext's destructor will clear the global instance, if it currently
 You may determine whether a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> is the global instance using <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aefb81ffc9c91512a6ae0ec84453f39fa" title="Is this the global instance?">QApplicationContext::isGlobalInstance()</a>. <br  />
 <b>Note:</b> the global instance will not be deleted automatically! It is the responsibilty of the user to delete it.  <br /></td></tr>
 <tr class="separator:abc1d419de6d4d3af4c38a8c5791edc4d inherit pub_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_static_methods_classmcnepp_1_1qtdi_1_1_q_configuration_resolver"><td colspan="2" onclick="javascript:toggleInherit('pub_static_methods_classmcnepp_1_1qtdi_1_1_q_configuration_resolver')"><img src="closed.png" alt="-"/>&#160;Static Public Member Functions inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html">mcnepp::qtdi::QConfigurationResolver</a></td></tr>
+<tr class="memitem:a0b2cf2c244d41ba1d79bb114f4539041 inherit pub_static_methods_classmcnepp_1_1qtdi_1_1_q_configuration_resolver"><td class="memItemLeft" align="right" valign="top">
+static QString&#160;</td><td class="memItemRight" valign="bottom"><b>makePath</b> (const QString &amp;section, const QString &amp;path)</td></tr>
+<tr class="separator:a0b2cf2c244d41ba1d79bb114f4539041 inherit pub_static_methods_classmcnepp_1_1qtdi_1_1_q_configuration_resolver"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a2efd385d9b68e8ae7620b71f14365d inherit pub_static_methods_classmcnepp_1_1qtdi_1_1_q_configuration_resolver"><td class="memItemLeft" align="right" valign="top">
+static bool&#160;</td><td class="memItemRight" valign="bottom"><b>removeLastPath</b> (QString &amp;s)</td></tr>
+<tr class="separator:a8a2efd385d9b68e8ae7620b71f14365d inherit pub_static_methods_classmcnepp_1_1qtdi_1_1_q_configuration_resolver"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td colspan="2" onclick="javascript:toggleInherit('pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context')"><img src="closed.png" alt="-"/>&#160;Static Protected Member Functions inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
 <tr class="memitem:a5cfdf599c5b7cea4b216018e8186a4fb inherit pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="qapplicationcontext_8h.html#a4db8ccaad83e16ecef8cf25908b5d712">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5cfdf599c5b7cea4b216018e8186a4fb">delegateRegisterService</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *appContext, const QString &amp;name, const <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">service_descriptor</a> &amp;descriptor, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#ae9134d3bd63dc9885fe60a7c1f918c2b">config</a>, <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope, QObject *baseObj)</td></tr>
 <tr class="memdesc:a5cfdf599c5b7cea4b216018e8186a4fb inherit pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allows you to invoke a protected virtual function on another target. <br  />
@@ -349,13 +400,6 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>setInstance</b
 <tr class="memitem:a6d98d850c236913c3b138a63660ac8ad inherit pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">
 static bool&#160;</td><td class="memItemRight" valign="bottom"><b>unsetInstance</b> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *)</td></tr>
 <tr class="separator:a6d98d850c236913c3b138a63660ac8ad inherit pro_static_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td colspan="2" onclick="javascript:toggleInherit('properties_classmcnepp_1_1qtdi_1_1_q_application_context')"><img src="closed.png" alt="-"/>&#160;Properties inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
-<tr class="memitem:ab9bee920351076344b92a8143b05da81 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">unsigned&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ab9bee920351076344b92a8143b05da81">published</a></td></tr>
-<tr class="memdesc:ab9bee920351076344b92a8143b05da81 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">How many services have been published? This property will initially yield <code>false</code>, until <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a> is invoked. <b>Note:</b> This property will <b>not</b> transition back to <code>0</code> upon destruction of this ApplicationContext!  <br /></td></tr>
-<tr class="separator:ab9bee920351076344b92a8143b05da81 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5514133528db14cb3308410984b2b2c1 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memItemLeft" align="right" valign="top">unsigned&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5514133528db14cb3308410984b2b2c1">pendingPublication</a></td></tr>
-<tr class="memdesc:a5514133528db14cb3308410984b2b2c1 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">How many services have been registered and not yet published? This property will initially yield <code>0</code>. Then, it will increase with every successfull <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService()</a> invocation. If <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a> is invoked successfully, the property will again yield <code>0</code>. <b>Note:</b> This property will <b>not</b> transition back to <code>0</code> upon destruction of this ApplicationContext!  <br /></td></tr>
-<tr class="separator:a5514133528db14cb3308410984b2b2c1 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A ready-to use implementation of the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. </p>
@@ -537,6 +581,63 @@ The delegating context comes into play when another implementor or <a class="el"
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="ae4b6887de6d62b6fe942efad8df1dce3" name="ae4b6887de6d62b6fe942efad8df1dce3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae4b6887de6d62b6fe942efad8df1dce3">&#9670;&#160;</a></span>autoRefreshEnabled()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool mcnepp::qtdi::StandardApplicationContext::autoRefreshEnabled </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Has auto-refresh been enabled? <br  />
+If enabled, it is possible to use <a class="el" href="qapplicationcontext_8h.html#adc0a588ebd0400b677cb8c0698c0cbbf" title="Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime....">mcnepp::qtdi::autoRefresh(const QString&amp;)</a> to force automatic updates of service-properties, whenever the corresponding configuration-values is modified. <br  />
+Auto-refresh can be enabled by putting a configuration-entry into one of the QSettings-objects registered with the context: </p>
+<pre class="fragment">[qtdi]
+enableAutoRefresh=true
+; Optionally, specify the refresh-period:
+autoRefreshMillis=2000
+</pre> <dl class="section return"><dt>Returns</dt><dd><code>true</code> if auto-refresh has been enabled. </dd></dl>
+
+<p>Implements <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a499d2dc7da8a5fad3796bff55e8ec0c4">mcnepp::qtdi::QApplicationContext</a>.</p>
+
+</div>
+</div>
+<a id="a9d466c23761ba036087d63c652825dac" name="a9d466c23761ba036087d63c652825dac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9d466c23761ba036087d63c652825dac">&#9670;&#160;</a></span>autoRefreshMillis()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int mcnepp::qtdi::StandardApplicationContext::autoRefreshMillis </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Determines the maximum delay for 'auto-refreshable' configuration-values. <br  />
+This value will influence the behaiour of configuration-values created with mcnepp::qtdi::autoRefresh(const Qstring&amp;). </p>
+<dl class="section return"><dt>Returns</dt><dd>the current number of milliseconds between refreshes of the configuration. </dd></dl>
+
+</div>
+</div>
 <a id="a5263ce983be7160d17e50c549af25a62" name="a5263ce983be7160d17e50c549af25a62"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5263ce983be7160d17e50c549af25a62">&#9670;&#160;</a></span>getConfigurationValue()</h2>
 
@@ -587,7 +688,7 @@ This function will be used to resolve placeholders in Service-configurations. Wh
 </li>
 </ol>
 
-<p>Implements <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a7d9800502c77b4f34ac2da27b45d29d5">mcnepp::qtdi::QApplicationContext</a>.</p>
+<p>Implements <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#afb12543b6569d2683b2d3aed23f84b98">mcnepp::qtdi::QConfigurationResolver</a>.</p>
 
 </div>
 </div>
@@ -1277,6 +1378,33 @@ template&lt;typename S , typename Impl , typename B , <a class="el" href="qappli
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> if it could not be registered. </dd></dl>
+
+</div>
+</div>
+<a id="acb931f97e5e363a648e5314902908770" name="acb931f97e5e363a648e5314902908770"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acb931f97e5e363a648e5314902908770">&#9670;&#160;</a></span>setAutoRefreshMillis()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void mcnepp::qtdi::StandardApplicationContext::setAutoRefreshMillis </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>newRefreshMillis</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Determines the maximum delay for 'auto-refreshable' configuration-values. <br  />
+This value will influence the behaiour of configuration-values created with mcnepp::qtdi::autoRefresh(const Qstring&amp;). </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">newRefreshMillis</td><td>the new number of milliseconds between refreshes of the configuration. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>

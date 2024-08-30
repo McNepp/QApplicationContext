@@ -145,6 +145,9 @@ Can by used as a type-argument for <a class="el" href="classmcnepp_1_1qtdi_1_1_q
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Describes a service by its interface and implementation. Compilation will fail if either <code>Srv</code> is not a sub-class of QObject, or if <code>Impl</code> is not a sub-class of <code>Srv</code>. <br  />
 The preferred way of creating Services is the function <a class="el" href="qapplicationcontext_8h.html#a07ae03c57a4c371f2f24659088813670" title="Creates a Service with the default service-factory.">mcnepp::qtdi::service()</a>.  <a href="structmcnepp_1_1qtdi_1_1_service.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html">mcnepp::qtdi::QConfigurationResolver</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Provides access to the configuration of a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.  <a href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A DI-Container for Qt-based applications.  <a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -325,6 +328,11 @@ The service must have a Q_PROPERTY for every key contained in <code>properties</
 <tr class="separator:ae9134d3bd63dc9885fe60a7c1f918c2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5b2c15ddf8bc9c211e489ad7daea3666"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666">mcnepp::qtdi::config</a> ()</td></tr>
 <tr class="separator:a5b2c15ddf8bc9c211e489ad7daea3666"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adc0a588ebd0400b677cb8c0698c0cbbf"><td class="memItemLeft" align="right" valign="top">QVariant&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#adc0a588ebd0400b677cb8c0698c0cbbf">mcnepp::qtdi::autoRefresh</a> (const QString &amp;expression)</td></tr>
+<tr class="memdesc:adc0a588ebd0400b677cb8c0698c0cbbf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime. <br  />
+This function can be used in conjunction with <a class="el" href="qapplicationcontext_8h.html#ae9134d3bd63dc9885fe60a7c1f918c2b" title="Makes a service_config and populates it with properties.  The service must have a Q_PROPERTY for ever...">mcnepp::qtdi::config(std::initializer_list&lt;std::pair&lt;QString,QVariant&gt;&gt;)</a>. <br  />
+In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:  <br /></td></tr>
+<tr class="separator:adc0a588ebd0400b677cb8c0698c0cbbf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8ce383afad6131ee291cc692693d1782"><td class="memTemplParams" colspan="2">template&lt;typename F , typename Impl  = typename F::service_type, typename... Dep&gt; </td></tr>
 <tr class="memitem:a8ce383afad6131ee291cc692693d1782"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl, ServiceScope::SINGLETON &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qapplicationcontext_8h.html#a8ce383afad6131ee291cc692693d1782">mcnepp::qtdi::serviceFactory</a> (F factory, Dep...dependencies)</td></tr>
 <tr class="memdesc:a8ce383afad6131ee291cc692693d1782"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> with an explicit factory.  <br /></td></tr>
@@ -603,6 +611,53 @@ If the handle actually points to a ServiceRegistration, this function will cast 
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>a handle to the ServiceRegistration that the original handle was pointing to, or an invalid handle if the original handle was not pointing to a ServiceRegistration. </dd></dl>
+
+</div>
+</div>
+<a id="adc0a588ebd0400b677cb8c0698c0cbbf" name="adc0a588ebd0400b677cb8c0698c0cbbf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adc0a588ebd0400b677cb8c0698c0cbbf">&#9670;&#160;</a></span>autoRefresh()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">QVariant mcnepp::qtdi::autoRefresh </td>
+          <td>(</td>
+          <td class="paramtype">const QString &amp;&#160;</td>
+          <td class="paramname"><em>expression</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime. <br  />
+This function can be used in conjunction with <a class="el" href="qapplicationcontext_8h.html#ae9134d3bd63dc9885fe60a7c1f918c2b" title="Makes a service_config and populates it with properties.  The service must have a Q_PROPERTY for ever...">mcnepp::qtdi::config(std::initializer_list&lt;std::pair&lt;QString,QVariant&gt;&gt;)</a>. <br  />
+In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer: </p>
+<pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config({{"interval", "${timerInterval}"}}));
+</pre><p> The Q_PROPERTY QTimer::interval will be initialized from the value of the configuration-key <code>"timerInterval"</code> as it is in the moment the timer is instantiated.</p>
+<p><br  />
+Now, contrast this with: </p><pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config({{"interval", autoRefresh("${timerInterval}"}})));
+</pre><p> Whenever the value for the configuration-key <code>"timerInterval"</code> changes in the underlying QSettings-Object, the expression "${timerInterval}"`` will be re-evaluated and the Q_PROPERTY of the timer will be updated accordingly. <br  />
+In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it: </p><pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config({{"objectName", "theTimer"}, {"interval", "${timerInterval}"}}).withAutoRefresh());
+</pre><p> <b>Note:</b> Auto-refreshing an optional feature that needs to be explicitly enabled for <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">mcnepp::qtdi::StandardApplicationContext</a> by putting a configuration-entry into one of the QSettings-objects registered with the context: </p><pre class="fragment">[qtdi]
+enableAutoRefresh=true
+; Optionally, specify the refresh-period:
+autoRefreshMillis=2000
+</pre> <dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">expression</td><td>a String, possibly containing one or more placeholders. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a QVariant that will ensure that the expression will be re-evaluated when the underlying QSettings changes. </dd></dl>
 
 </div>
 </div>
