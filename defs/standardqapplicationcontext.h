@@ -138,6 +138,8 @@ public:
     ///
     bool autoRefreshEnabled() const override;
 
+    virtual QConfigurationWatcher* watchConfigValue(const QString& expression) override;
+
 
     using QApplicationContext::registerObject;
 

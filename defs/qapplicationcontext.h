@@ -2643,6 +2643,34 @@ template<typename Impl=QObject>  [[nodiscard]] Service<Impl,Impl,ServiceScope::T
 }
 
 ///
+/// \brief Watches a configuration-value.
+/// <br>Instances will be returned from QConfigurationResolver::watchConfigValue(const QString&).
+/// <br>The current value can be obtained through the Q_PROPERTY currentValue().
+/// <br>Should the underlying configuration be modified, the signal currentValueChanged(const QVariant&) will be emitted.
+///
+class QConfigurationWatcher : public QObject {
+    Q_OBJECT
+public:
+    Q_PROPERTY(QVariant currentValue READ currentValue NOTIFY currentValueChanged)
+
+    ///
+    /// \brief Obtains the current configuration-value.
+    /// \return the current configuration-value.
+    ///
+    virtual QVariant currentValue() const = 0;
+
+signals:
+    ///
+    /// \brief the underlying configuration has changed.
+    ///
+    void currentValueChanged(const QVariant&);
+protected:
+    explicit QConfigurationWatcher(QObject* parent = nullptr) : QObject{parent} {
+
+    }
+};
+
+///
 /// \brief Provides access to the configuration of a QApplicationContext.
 ///
 class QConfigurationResolver : public QObject {
@@ -2659,6 +2687,45 @@ public:
     /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
     ///
     [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
+
+    ///
+    /// \brief Obtains a QConfigurationWatcher for an expression.
+    /// <br>If autoRefreshEnabled() and the `expression` can be successfully parsed, this function returns an instance of QConfigurationWatcher.
+    /// <br>Using the Q_PROPERTY QConfigurationWatcher::currentValue(), you can then track the current configuration.
+    /// \param expression will be parsed in order to determine the QConfigurationWatcher::currentValue().
+    /// <br>The expression shall contain one or more *placeholders* which will be resolved using the underlying configuration.
+    /// A *placeholder* is enclosed in curly brackets with a preceding dollar-sign.<br>
+    /// `"${name}"` will be resolved with the configuration-entry `"name"`.<br>
+    /// `"${network/name}"` will be resolved with the configuration-entry `"name"` from the section `"network"`.<br>
+    /// `"${host}://${url}"` will be resolved with the result of the concatenation of the configuration-entry `"host"`,
+    /// a colon and two slashes and the configuration-entry `"url"`.<br>
+    /// The special character-sequence asterisk-slash indicates that a value shall be resolved in a section and all its parent-sections:<br>
+    /// `"* /network/hosts/${host}"` will be resolved with the configuration-entry `"name"` from the section `"network/hosts"`, or
+    /// its parent sections.
+    /// \return QConfigurationWatcher that watches the expression, or `nullptr` if the expression could not be parsed, or
+    /// if auto-refresh has not been enabled.
+    /// \sa autoRefreshEnabled()
+    ///
+    [[nodiscard]] virtual QConfigurationWatcher* watchConfigValue(const QString& expression) = 0;
+
+    ///
+    /// \brief Has auto-refresh been enabled?
+    /// <br>If enabled, you may use watchConfigValue(const QString&) in order to watch configuration-values.
+    /// <br>Also, it is possible to use mcnepp::qtdi::autoRefresh(const QString&) to force automatic updates of service-properties,
+    /// whenever the corresponding configuration-values is modified.
+    /// <br>When using a StandardApplicationContext, auto-refresh can be enabled by putting a configuration-entry into one of the QSettings-objects registered with the context:
+    ///
+    ///     [qtdi]
+    ///     enableAutoRefresh=true
+    ///     ; Optionally, specify the refresh-period:
+    ///     autoRefreshMillis=2000
+    ///
+    /// \return `true` if auto-refresh has been enabled.
+    ///
+    [[nodiscard]] virtual bool autoRefreshEnabled() const = 0;
+
+
+
 
     static QString makePath(const QString& section, const QString& path);
 
@@ -2958,20 +3025,6 @@ public:
     ///
     [[nodiscard]] virtual const QLoggingCategory& loggingCategory() const = 0;
 
-    ///
-    /// \brief Has auto-refresh been enabled?
-    /// <br>If enabled, it is possible to use mcnepp::qtdi::autoRefresh(const QString&) to force automatic updates of service-properties,
-    /// whenever the corresponding configuration-values is modified.
-    /// <br>When using a StandardApplicationContext, auto-refresh can be enabled by putting a configuration-entry into one of the QSettings-objects registered with the context:
-    ///
-    ///     [qtdi]
-    ///     enableAutoRefresh=true
-    ///     ; Optionally, specify the refresh-period:
-    ///     autoRefreshMillis=2000
-    ///
-    /// \return `true` if auto-refresh has been enabled.
-    ///
-    [[nodiscard]] virtual bool autoRefreshEnabled() const = 0;
 
 
 signals:

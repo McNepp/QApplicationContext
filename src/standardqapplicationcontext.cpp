@@ -1597,7 +1597,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                     usedProperties.insert(key);
                     if(isAutoRefreshProperty && resolver) {
                         if(autoRefreshEnabled()) {
-                            m_SettingsWatcher->addWatched(resolver, targetProperty, target, config);
+                            m_SettingsWatcher->addWatchedProperty(resolver, targetProperty, target, config);
                         } else {
                             qCWarning(loggingCategory()).nospace() << "Cannot watch property '" << targetProperty.name() << "' of " << target << ", as auto-refresh has not been enabled.";
                         }
@@ -1784,6 +1784,16 @@ void StandardApplicationContext::setAutoRefreshMillis(int newRefreshMillis)
 bool StandardApplicationContext::autoRefreshEnabled() const
 {
     return m_SettingsWatcher != nullptr;
+}
+
+QConfigurationWatcher *StandardApplicationContext::watchConfigValue(const QString &expression)
+{
+    if(!autoRefreshEnabled()) {
+        qCWarning(loggingCategory()).nospace().noquote() << "Expression '" << expression << "' will not be watched, as auto-refresh has not been enabled";
+        return nullptr;
+    }
+    qCInfo(loggingCategory()).noquote().nospace() << "Expression '" << expression << "' will not be watched, as it contains no placeholders";
+    return m_SettingsWatcher->watchConfigValue(getResolver(expression));
 }
 
 

@@ -23,7 +23,9 @@ public:
     explicit QSettingsWatcher(QApplicationContext* parent);
 
 
-    void addWatched(PlaceholderResolver* resolver, const QMetaProperty& property, QObject* target, const service_config& config);
+    void addWatchedProperty(PlaceholderResolver* resolver, const QMetaProperty& property, QObject* target, const service_config& config);
+
+    QConfigurationWatcher* watchConfigValue(PlaceholderResolver* resolver);
 
     int autoRefreshMillis() const;
 
@@ -34,20 +36,14 @@ private:
 
     void refreshFromSettings(QSettings* settings);
 
-
-    struct watched_t {
-        QPointer<PlaceholderResolver> resolver;
-        QMetaProperty property;
-        QPointer<QObject> target;
-        service_config config;
-        QVariant lastValue;
-    };
+    void setPropertyValue(const QMetaProperty &property, QObject *target, const QVariant& value);
 
     QApplicationContext* const m_context;
     std::deque<QPointer<QSettings>> m_Settings;
     QTimer* const m_SettingsWatchTimer;
     QFileSystemWatcher* const m_SettingsFileWatcher;
-    std::deque<watched_t> m_watched;
+    std::deque<QPointer<QConfigurationWatcher>> m_watched;
+    std::unordered_map<QString,QPointer<QConfigurationWatcher>> m_watchedConfigValues;
 };
 
 

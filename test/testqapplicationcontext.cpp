@@ -540,6 +540,36 @@ private slots:
         QVERIFY(QTest::qWaitFor([&slot] { return slot->interval() == 999;}, 1000));
     }
 
+    void testWatchConfigurationFileChange() {
+        QFile file{"testapplicationtext.ini"};
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("name=readme\n");
+        file.write("suffix=doc\n");
+        file.write("[qtdi]\n");
+        file.write("enableAutoRefresh=true\n");
+        file.close();
+        QSettings settings{file.fileName(), QSettings::IniFormat};
+        QVERIFY(!context.get()->autoRefreshEnabled());
+        QConfigurationWatcher* watcher = context->watchConfigValue("${name}.${suffix:doc}");
+        QVERIFY(!watcher);
+        context->registerObject(&settings);
+
+        QVERIFY(context.get()->autoRefreshEnabled());
+
+        watcher = context->watchConfigValue("${name}.${suffix:txt}");
+        QVERIFY(watcher);
+        QCOMPARE(watcher->currentValue(), "readme.doc");
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("name=hello\n");
+        file.close();
+        QVariant watchedValue;
+        connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [&watchedValue](const QVariant& currentValue) {watchedValue=currentValue;});
+
+        QVERIFY(QTest::qWaitFor([&watchedValue] { return watchedValue == "hello.txt";}, 1000));
+        file.remove();
+
+    }
+
     void testAutoRefreshPlaceholderPropertyFileChange() {
         QFile file{"testapplicationtext.ini"};
         QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));

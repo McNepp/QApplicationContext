@@ -18,6 +18,10 @@ public:
 
     static PlaceholderResolver* parse(const QString& placeholderString, QObject* parent, const QLoggingCategory& loggingCategory = defaultLoggingCategory());
 
+    const QString& expression() const {
+        return m_placeholderText;
+    }
+
 
 private:
 
