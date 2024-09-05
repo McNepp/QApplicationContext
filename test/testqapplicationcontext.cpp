@@ -182,6 +182,7 @@ public:
         qputenv("QTEST_FUNCTION_TIMEOUT", "10000");
     }
 
+
 private slots:
 
 
@@ -753,6 +754,19 @@ private slots:
         sourceSlot->setFoo("Should be ignored");
         QCOMPARE(targetSlot->objectName(), "A new beginning");
 
+    }
+
+    void testSubscribeToServices() {
+        auto regSource = context->registerService(service<Interface1,BaseService>(), "base", config({{"foo", "A new beginning"}}));
+        auto regTarget = context->registerService<QTimer>();
+        auto subscription = subscribeToServices(regSource, regTarget, this, [](Interface1* src, QTimer* timer) {
+            timer->setObjectName(src->foo());
+        });
+
+        QVERIFY(subscription);
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> targetSlot{regTarget};
+        QCOMPARE(targetSlot->objectName(), "A new beginning");
     }
 
     void testConnectServiceWithSelf() {

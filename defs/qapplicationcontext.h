@@ -440,35 +440,35 @@ private:
 /// \brief A subscription that connects a source with a target.
 ///
 class SourceTargetSubscription : public BasicSubscription {
+    Q_OBJECT
+public:
+signals:
+    void objectsPublished(QObject*, QObject*);
+
 protected:
-    explicit SourceTargetSubscription(registration_handle_t target) :
-        SourceTargetSubscription{target, nullptr, target} {
+    explicit SourceTargetSubscription(registration_handle_t target, QObject* boundSource, QObject* parent);
 
+    template<typename S,typename F> void connectObjectsPublished(S* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection)
+    {
+        static_assert(std::is_base_of_v<QObject,S>, "Context must be derived from QObject");
+        m_objectsPublishedConnection = QObject::connect(this, &SourceTargetSubscription::objectsPublished, context, callable, connectionType);
     }
-
-    explicit SourceTargetSubscription(QObject* boundSource, SourceTargetSubscription * parent) :
-        SourceTargetSubscription{nullptr, boundSource, parent} {
-
-    }
-
-
 
     void cancel() override;
 
     virtual subscription_handle_t createForSource(QObject* src) = 0;
 
-    virtual void notify(QObject* src, QObject* target) = 0;
 private:
 
-    SourceTargetSubscription(registration_handle_t target, QObject* boundSource, QObject * parent);
+    void onPublishedSource(QObject* obj);
 
-    void onPublished(QObject* obj);
+    void onPublishedTarget(QObject* obj);
 
 
-
-    registration_handle_t m_target;
-    QObject* m_boundSource;
-
+    registration_handle_t const m_target;
+    QObject* const m_boundSource;
+    QList<QPointer<Subscription>> m_children;
+    QMetaObject::Connection m_objectsPublishedConnection;
 };
 
 
@@ -476,25 +476,20 @@ private:
 template<typename S,typename SIG,typename T,typename SLT> class ConnectionSubscription : public SourceTargetSubscription {
 public:
 
-    ConnectionSubscription(registration_handle_t target, SIG theSignal, SLT theSlot, Qt::ConnectionType connectionType) :
-        SourceTargetSubscription{target},
+    ConnectionSubscription(registration_handle_t target, QObject* boundSource, SIG theSignal, SLT theSlot, Qt::ConnectionType connectionType) :
+        SourceTargetSubscription{target, boundSource, target},
         m_signal{theSignal},
         m_slot{theSlot},
         m_connectionType{connectionType} {
+        if(boundSource) {
+            connectObjectsPublished(this, &ConnectionSubscription::notify);
+        }
     }
 
 protected:
 
-    virtual void notify(QObject* src, QObject* target) override {
-        if(S* s = dynamic_cast<S*>(src)) {
-            if(T* t = dynamic_cast<T*>(target)) {
-                connections.push_back(connect(s, m_signal, t, m_slot, m_connectionType));
-            }
-        }
-    }
-
     virtual subscription_handle_t createForSource(QObject* src) override {
-        return new ConnectionSubscription{src, this};
+        return new ConnectionSubscription{nullptr, src, m_signal, m_slot, m_connectionType};
     }
 
     virtual void cancel() override {
@@ -505,13 +500,12 @@ protected:
     }
 
 private:
-
-    ConnectionSubscription(QObject* boundSource, ConnectionSubscription * parent) :
-        SourceTargetSubscription{boundSource, parent},
-        m_signal{parent->m_signal},
-        m_slot{parent->m_slot},
-        m_connectionType{parent->m_connectionType}  {
-
+    void notify(QObject* src, QObject* target) {
+        if(S* s = dynamic_cast<S*>(src)) {
+            if(T* t = dynamic_cast<T*>(target)) {
+                connections.push_back(connect(s, m_signal, t, m_slot, m_connectionType));
+            }
+        }
     }
 
 
@@ -525,44 +519,33 @@ private:
 template<typename S,typename T,typename F> class CombiningSubscription : public SourceTargetSubscription {
 public:
 
-    CombiningSubscription(registration_handle_t target, F callable) :
-        SourceTargetSubscription{target},
-        m_callable{callable}{
+    CombiningSubscription(registration_handle_t target, QObject* boundSource, QObject* context, F callable, Qt::ConnectionType connectionType) :
+        SourceTargetSubscription{target, boundSource, context},
+        m_callable{callable},
+        m_connectionType{connectionType} {
+        if(boundSource) {
+            connectObjectsPublished(context,
+                [callable](QObject* src, QObject* target) {
+                    if(S* s = dynamic_cast<S*>(src)) {
+                        if(T* t = dynamic_cast<T*>(target)) {
+                            callable(s, t);
+                        }
+                    }
+                }, connectionType);
+        }
     }
 
 protected:
 
-    virtual void notify(QObject* src, QObject* target) override {
-        if(S* s = dynamic_cast<S*>(src)) {
-            if(T* t = dynamic_cast<T*>(target)) {
-                m_callable(s, t);
-            }
-        }
-    }
-
     virtual subscription_handle_t createForSource(QObject* src) override {
-        return new CombiningSubscription{src, this};
+        return new CombiningSubscription{nullptr, src, parent(), m_callable, m_connectionType};
     }
 
-    virtual void cancel() override {
-        for(auto& connection : connections) {
-            QObject::disconnect(connection);
-        }
-        SourceTargetSubscription::cancel();
-    }
 
 private:
 
-    CombiningSubscription(QObject* boundSource, CombiningSubscription * parent) :
-        SourceTargetSubscription{boundSource, parent},
-        m_callable{parent->m_callable} {
-
-    }
-
-
-
     F m_callable;
-    QList<QMetaObject::Connection> connections;
+    Qt::ConnectionType m_connectionType;
 };
 
 
@@ -956,8 +939,7 @@ public:
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
     /// \return  the Subscription if `this->isValid() && target != nullptr && setter != nullptr`
     ///
-    template<typename T,typename R> Subscription subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
-        static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
+      template<typename T,typename R> std::enable_if_t<std::is_base_of_v<QObject,T>,Subscription> subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
         if(!setter || !target) {
             qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this << " with null";
             return Subscription{};
@@ -1447,10 +1429,67 @@ static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot connect " << source << " to " << target;
         return Subscription{};
     }
-    auto subscription = new detail::ConnectionSubscription<S,SIG,T,SLT>{target.unwrap(), sourceSignal, targetSlot, connectionType};
+    auto subscription = new detail::ConnectionSubscription<S,SIG,T,SLT>{target.unwrap(), nullptr, sourceSignal, targetSlot, connectionType};
     return Subscription{source.unwrap()->subscribe(subscription)};
 }
 
+
+///
+/// \brief Subscribes to the publication of two services.
+/// <br>This is a convenience-function equivalent to the following code:
+///
+///     firstService.subscribe(context, [&secondService,callable,connectionType](S1* source) {
+///          secondService.subscribe(context, [source,callable](S2* target) { callable(source, target); }, connectionType);
+///     }, connectionType);
+///
+/// <br>In case first and second represent the same Registration, the connection will still take place.
+/// \param firstService the first registration.
+/// \param secondService the second registration.
+/// \param context the context for the subscription
+/// \param callable will be invoked with two services.
+/// \param connectionType
+/// \tparam S1 the type of the first service.
+/// \tparam S2 the type of the second service.
+/// \tparam F must be a callable type, as if it had the signature `F(S* source, T* target)`.
+/// \return a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service
+/// and the target-service.
+///
+template<typename S1,typename S2,typename F> Subscription subscribeToServices(Registration<S1>& firstService, Registration<S2>& secondService, QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
+    if(!firstService || !secondService || !context) {
+        qCCritical(loggingCategory(firstService.unwrap())).noquote().nospace() << "Cannot subscribe to " << firstService << " and " << secondService << " with context " << context;
+        return Subscription{};
+    }
+    auto subscription = new detail::CombiningSubscription<S1,S2,F>{secondService.unwrap(), nullptr, context, callable, connectionType};
+    return Subscription{firstService.unwrap()->subscribe(subscription)};
+}
+
+///
+/// \brief Subscribes to the publication of two services.
+/// <br>This is a convenience-function equivalent to the following code:
+///
+///     firstService.subscribe(target, [&secondService,target,func,connectionType](S1* source) {
+///          secondService.subscribe(target, [source,target,func](S2* target) { (target->func)(source, target); }, connectionType);
+///     }, connectionType);
+///
+/// <br>In case first and second represent the same Registration, the connection will still take place.
+/// \param firstService the first registration.
+/// \param secondService the second registration.
+/// \param target the target for the subscription
+/// \param func will be invoked with two services.
+/// \param connectionType
+/// \tparam S1 the type of the first service.
+/// \tparam S2 the type of the second service.
+/// \tparam T the type of the target
+/// \return a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service
+/// and the target-service.
+///
+template<typename S1,typename S2,typename T,typename R> std::enable_if_t<std::is_base_of_v<QObject,T>,Subscription> subscribeToServices(Registration<S1>& firstService, Registration<S2>& secondService, T* target, R(T::*func)(S1*,S2*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
+    if(!func) {
+        qCCritical(loggingCategory(firstService.unwrap())).noquote().nospace() << "Cannot subscribe to " << firstService << " and " << secondService << " with null";
+        return Subscription{};
+    }
+    return subscribeToServices(firstService, secondService, target, std::bind(std::mem_fn(func), target, std::placeholders::_1, std::placeholders::_2), connectionType);
+}
 
 
 
@@ -3113,7 +3152,7 @@ template<typename S> template<typename D,typename R> Subscription Registration<S
     }
     auto target = this->applicationContext()->template getRegistration<D>();
     auto callable = std::mem_fn(injectionSlot);
-    auto subscription = new detail::CombiningSubscription<S,D,decltype(callable)>{target.unwrap(), callable};
+    auto subscription = new detail::CombiningSubscription<S,D,decltype(callable)>{target.unwrap(), nullptr, target.unwrap(), callable, Qt::AutoConnection};
     return Subscription{unwrap()->subscribe(subscription)};
 }
 

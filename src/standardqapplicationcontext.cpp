@@ -210,7 +210,7 @@ class PropertyInjector : public detail::SourceTargetSubscription {
 public:
 
 
-    void notify(QObject* source, QObject* target) override {
+    void notify(QObject* source, QObject* target) {
         m_setter.setter(target, m_sourceProperty.read(source));
         if(m_sourceProperty.hasNotifySignal()) {
             detail::BindingProxy* proxy = new detail::BindingProxy{m_sourceProperty, source, m_setter, target};
@@ -232,8 +232,8 @@ public:
 
     }
 
-    subscription_handle_t createForSource(QObject* source) override {
-        return new PropertyInjector{source, this};
+    subscription_handle_t createForSource(QObject* src) override {
+        return new PropertyInjector{nullptr, src, m_sourceProperty, m_setter, m_loggingCategory};
     }
 
     void cancel() override {
@@ -245,18 +245,16 @@ public:
         SourceTargetSubscription::cancel();
     }
 
-    PropertyInjector(registration_handle_t target, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter, const QLoggingCategory& loggingCategory) : SourceTargetSubscription(target),
+    PropertyInjector(registration_handle_t target, QObject* boundSource, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter, const QLoggingCategory& loggingCategory) :
+        SourceTargetSubscription(target, boundSource, target),
         m_sourceProperty(sourceProperty),
         m_setter(setter),
         m_loggingCategory(loggingCategory)    {
+        if(boundSource) {
+            connectObjectsPublished(this, &PropertyInjector::notify);
+        }
     }
 
-    PropertyInjector(QObject* source, PropertyInjector* parent) :
-        SourceTargetSubscription(source, parent),
-        m_sourceProperty(parent->m_sourceProperty),
-        m_setter(parent->m_setter),
-        m_loggingCategory(parent->m_loggingCategory)    {
-    }
 private:
 
     QMetaProperty m_sourceProperty;
@@ -450,7 +448,7 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         return nullptr;
     }
 
-    auto subscription = new PropertyInjector{target, sourceProperty, setter, loggingCategory()};
+    auto subscription = new PropertyInjector{target, nullptr, sourceProperty, setter, loggingCategory()};
     qCInfo(loggingCategory()).noquote().nospace() << "Created Subscription for binding property '" << sourceProperty.name() << "' of " << *this << " to " << setter << " of " << *target;
     return subscribe(subscription);
 }
