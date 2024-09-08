@@ -104,6 +104,17 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:afb12543b6569d2683b2d3aed23f84b98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a value from the ApplicationContext's configuration. <br  />
 This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>:  <br /></td></tr>
 <tr class="separator:afb12543b6569d2683b2d3aed23f84b98"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9aa51d4feefdfe18f1686ed97a94ebcb"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html">QConfigurationWatcher</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#a9aa51d4feefdfe18f1686ed97a94ebcb">watchConfigValue</a> (const QString &amp;expression)=0</td></tr>
+<tr class="memdesc:a9aa51d4feefdfe18f1686ed97a94ebcb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html" title="Watches a configuration-value.  Instances will be returned from QConfigurationResolver::watchConfigVa...">QConfigurationWatcher</a> for an expression. <br  />
+If <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#ab0d9ca384bb57720101e594c8c9528d5" title="Has auto-refresh been enabled?  If enabled, you may use watchConfigValue(const QString&amp;) in order to ...">autoRefreshEnabled()</a> and the <code>expression</code> can be successfully parsed, this function returns an instance of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html" title="Watches a configuration-value.  Instances will be returned from QConfigurationResolver::watchConfigVa...">QConfigurationWatcher</a>. <br  />
+Using the Q_PROPERTY QConfigurationWatcher::currentValue(), you can then track the current configuration.  <br /></td></tr>
+<tr class="separator:a9aa51d4feefdfe18f1686ed97a94ebcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab0d9ca384bb57720101e594c8c9528d5"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#ab0d9ca384bb57720101e594c8c9528d5">autoRefreshEnabled</a> () const =0</td></tr>
+<tr class="memdesc:ab0d9ca384bb57720101e594c8c9528d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Has auto-refresh been enabled? <br  />
+If enabled, you may use <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#a9aa51d4feefdfe18f1686ed97a94ebcb" title="Obtains a QConfigurationWatcher for an expression.  If autoRefreshEnabled() and the expression can be...">watchConfigValue(const QString&amp;)</a> in order to watch configuration-values. <br  />
+Also, it is possible to use mcnepp::qtdi::autoRefresh(const QString&amp;) to force automatic updates of service-properties, whenever the corresponding configuration-values is modified. <br  />
+When using a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a>, auto-refresh can be enabled by putting a configuration-entry into one of the QSettings-objects registered with the context:  <br /></td></tr>
+<tr class="separator:ab0d9ca384bb57720101e594c8c9528d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -123,6 +134,43 @@ Protected Member Functions</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Provides access to the configuration of a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="ab0d9ca384bb57720101e594c8c9528d5" name="ab0d9ca384bb57720101e594c8c9528d5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab0d9ca384bb57720101e594c8c9528d5">&#9670;&#160;</a></span>autoRefreshEnabled()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual bool mcnepp::qtdi::QConfigurationResolver::autoRefreshEnabled </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Has auto-refresh been enabled? <br  />
+If enabled, you may use <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#a9aa51d4feefdfe18f1686ed97a94ebcb" title="Obtains a QConfigurationWatcher for an expression.  If autoRefreshEnabled() and the expression can be...">watchConfigValue(const QString&amp;)</a> in order to watch configuration-values. <br  />
+Also, it is possible to use mcnepp::qtdi::autoRefresh(const QString&amp;) to force automatic updates of service-properties, whenever the corresponding configuration-values is modified. <br  />
+When using a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">StandardApplicationContext</a>, auto-refresh can be enabled by putting a configuration-entry into one of the QSettings-objects registered with the context: </p>
+<pre class="fragment">[qtdi]
+enableAutoRefresh=true
+; Optionally, specify the refresh-period:
+autoRefreshMillis=2000
+</pre> <dl class="section return"><dt>Returns</dt><dd><code>true</code> if auto-refresh has been enabled. </dd></dl>
+
+<p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ae4b6887de6d62b6fe942efad8df1dce3">mcnepp::qtdi::StandardApplicationContext</a>.</p>
+
+</div>
+</div>
 <a id="afb12543b6569d2683b2d3aed23f84b98" name="afb12543b6569d2683b2d3aed23f84b98"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#afb12543b6569d2683b2d3aed23f84b98">&#9670;&#160;</a></span>getConfigurationValue()</h2>
 
@@ -174,6 +222,52 @@ This function will be used to resolve placeholders in Service-configurations. Wh
 </ol>
 
 <p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a5263ce983be7160d17e50c549af25a62">mcnepp::qtdi::StandardApplicationContext</a>.</p>
+
+</div>
+</div>
+<a id="a9aa51d4feefdfe18f1686ed97a94ebcb" name="a9aa51d4feefdfe18f1686ed97a94ebcb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9aa51d4feefdfe18f1686ed97a94ebcb">&#9670;&#160;</a></span>watchConfigValue()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html">QConfigurationWatcher</a> * mcnepp::qtdi::QConfigurationResolver::watchConfigValue </td>
+          <td>(</td>
+          <td class="paramtype">const QString &amp;&#160;</td>
+          <td class="paramname"><em>expression</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html" title="Watches a configuration-value.  Instances will be returned from QConfigurationResolver::watchConfigVa...">QConfigurationWatcher</a> for an expression. <br  />
+If <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#ab0d9ca384bb57720101e594c8c9528d5" title="Has auto-refresh been enabled?  If enabled, you may use watchConfigValue(const QString&amp;) in order to ...">autoRefreshEnabled()</a> and the <code>expression</code> can be successfully parsed, this function returns an instance of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html" title="Watches a configuration-value.  Instances will be returned from QConfigurationResolver::watchConfigVa...">QConfigurationWatcher</a>. <br  />
+Using the Q_PROPERTY QConfigurationWatcher::currentValue(), you can then track the current configuration. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">expression</td><td>will be parsed in order to determine the QConfigurationWatcher::currentValue(). <br  />
+The expression shall contain one or more <em>placeholders</em> which will be resolved using the underlying configuration. A <em>placeholder</em> is enclosed in curly brackets with a preceding dollar-sign.<br  />
+ <code>"${name}"</code> will be resolved with the configuration-entry <code>"name"</code>.<br  />
+ <code>"${network/name}"</code> will be resolved with the configuration-entry <code>"name"</code> from the section <code>"network"</code>.<br  />
+ <code>"${host}://${url}"</code> will be resolved with the result of the concatenation of the configuration-entry <code>"host"</code>, a colon and two slashes and the configuration-entry <code>"url"</code>.<br  />
+ The special character-sequence asterisk-slash indicates that a value shall be resolved in a section and all its parent-sections:<br  />
+ <code>"* /network/hosts/${host}"</code> will be resolved with the configuration-entry <code>"name"</code> from the section <code>"network/hosts"</code>, or its parent sections. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html" title="Watches a configuration-value.  Instances will be returned from QConfigurationResolver::watchConfigVa...">QConfigurationWatcher</a> that watches the expression, or <code>nullptr</code> if the expression could not be parsed, or if auto-refresh has not been enabled. </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#ab0d9ca384bb57720101e594c8c9528d5" title="Has auto-refresh been enabled?  If enabled, you may use watchConfigValue(const QString&amp;) in order to ...">autoRefreshEnabled()</a> </dd></dl>
+
+<p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a76a208d4d6884856fd62c6db9b3f3f9b">mcnepp::qtdi::StandardApplicationContext</a>.</p>
 
 </div>
 </div>

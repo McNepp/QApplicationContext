@@ -119,11 +119,11 @@ This function will yield <code>true</code> if this is valid <a class="el" href="
 <tr class="memdesc:aa70f34088d747d139cf12f9e7e02df8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the callable immediately with the current publishedObjects(). <br  />
 <b>Thread-safety:</b> This function may be safely called from any thread.  <br /></td></tr>
 <tr class="separator:aa70f34088d747d139cf12f9e7e02df8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a19a7323c8bad9818df4583f5268c0ebf"><td class="memTemplParams" colspan="2">template&lt;typename T , typename R &gt; </td></tr>
-<tr class="memitem:a19a7323c8bad9818df4583f5268c0ebf"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a19a7323c8bad9818df4583f5268c0ebf">subscribe</a> (T *target, R(T::*setter)(S *), Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
-<tr class="memdesc:a19a7323c8bad9818df4583f5268c0ebf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>objectPublished</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the setter immediately with the current publishedObjects(). <br  />
+<tr class="memitem:ac4d3614e1778644d0f748fc595f71cd4"><td class="memTemplParams" colspan="2">template&lt;typename T , typename R &gt; </td></tr>
+<tr class="memitem:ac4d3614e1778644d0f748fc595f71cd4"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt; std::is_base_of_v&lt; QObject, T &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#ac4d3614e1778644d0f748fc595f71cd4">subscribe</a> (T *target, R(T::*setter)(S *), Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
+<tr class="memdesc:ac4d3614e1778644d0f748fc595f71cd4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>objectPublished</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the setter immediately with the current publishedObjects(). <br  />
 <b>Thread-safety:</b> This function may be safely called from any thread.  <br /></td></tr>
-<tr class="separator:a19a7323c8bad9818df4583f5268c0ebf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:ac4d3614e1778644d0f748fc595f71cd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaac5888c2f09725ca0d8f6fff97852ce"><td class="memItemLeft" align="right" valign="top"><a class="el" href="qapplicationcontext_8h.html#aeebe8a54c25ea74d5e076c1ab27ed257">registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#aaac5888c2f09725ca0d8f6fff97852ce">unwrap</a> () const</td></tr>
 <tr class="memdesc:aaac5888c2f09725ca0d8f6fff97852ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yields the wrapped handle to the <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>.  <br /></td></tr>
 <tr class="separator:aaac5888c2f09725ca0d8f6fff97852ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -392,8 +392,8 @@ template&lt;typename F &gt; </div>
 
 </div>
 </div>
-<a id="a19a7323c8bad9818df4583f5268c0ebf" name="a19a7323c8bad9818df4583f5268c0ebf"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a19a7323c8bad9818df4583f5268c0ebf">&#9670;&#160;</a></span>subscribe() <span class="overload">[2/2]</span></h2>
+<a id="ac4d3614e1778644d0f748fc595f71cd4" name="ac4d3614e1778644d0f748fc595f71cd4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac4d3614e1778644d0f748fc595f71cd4">&#9670;&#160;</a></span>subscribe() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -406,7 +406,7 @@ template&lt;typename T , typename R &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">mcnepp::qtdi::Registration</a>&lt; S &gt;::subscribe </td>
+          <td class="memname">std::enable_if_t&lt; std::is_base_of_v&lt; QObject, T &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">mcnepp::qtdi::Registration</a>&lt; S &gt;::subscribe </td>
           <td>(</td>
           <td class="paramtype">T *&#160;</td>
           <td class="paramname"><em>target</em>, </td>
