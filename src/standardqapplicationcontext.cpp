@@ -122,6 +122,7 @@ inline bool isPrivateProperty(const QString& key) {
     return key.startsWith('.');
 }
 
+
 inline void setParentIfNotSet(QObject* obj, QObject* newParent) {
     if(!obj->parent()) {
         obj->setParent(newParent);
@@ -807,6 +808,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             }
             resolved = resolver->resolve(m_injectedContext, reg->config());
             if(resolved.isValid()) {
+                detail::convertVariant(resolved, d.variantConverter);
                 qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << resolved;
                 return {resolved, Status::ok};
             }
@@ -1455,7 +1457,12 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
     if(!value.isValid()) {
         return {Status::fatal, false};
     }
-    QString key = value.toString();
+    QString key;
+    if(value.userType() == qMetaTypeId<detail::ConfigValue>()) {
+        key = value.value<detail::ConfigValue>().expression.toString();
+    } else {
+        key = value.toString();
+    }
     auto match = beanRefPattern().match(key);
     if(match.hasMatch()) {
         key = match.captured(1);
@@ -1558,56 +1565,81 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
         for(auto[key,value] : config.properties.asKeyValueRange()) {
             QVariant resolvedValue = value;
             auto[status, resolved] = resolveBeanRef(resolvedValue, createdForThis, allowPartial);
-            detail::PlaceholderResolver* resolver = nullptr;
             if(status != Status::ok) {
                 return status;
             }
-            bool isAutoRefreshProperty = config.autoRefresh; // If config.autoRefresh is false, we might still find a detail::AutoRefreshable below
+            detail::ConfigValue cv;
+            if(value.userType() == qMetaTypeId<detail::ConfigValue>()) {
+                cv = value.value<detail::ConfigValue>();
+            }
+            detail::PlaceholderResolver* resolver = nullptr;
+            bool isAutoRefreshProperty = config.autoRefresh; // If config.autoRefresh is false, we might still find a detail::ConfigValue below
             while(!resolved)
             {
-                if(value.userType() == qMetaTypeId<detail::AutoRefreshable>()) {
-                    resolver = getResolver(value.value<detail::AutoRefreshable>().expression);
-                    // We only need to watch this property if it does contain placeholders:
-                    isAutoRefreshProperty = resolver && resolver->hasPlaceholders();
+                if(value.userType() == qMetaTypeId<detail::ConfigValue>()) {
+                    if(cv.expression.userType() == QMetaType::QString) {
+                        resolver = getResolver(cv.expression.toString());
+                        if(!resolver) {
+                            return Status::fatal;
+                        }
+                        // We only need to watch this property if it does contain placeholders:
+                        isAutoRefreshProperty = cv.autoRefresh && resolver && resolver->hasPlaceholders();
+                        resolvedValue = resolver->resolve(m_injectedContext, config);
+                        if(resolvedValue.isValid()) {
+                            detail::convertVariant(resolvedValue, cv.variantConverter);
+                        }
+                    } else {
+                        resolvedValue = cv.expression;
+                    }
                 } else
                 if(value.userType() == QMetaType::QString) {
                     resolver = getResolver(value.toString());
+                    if(!resolver) {
+                        return Status::fatal;
+                    }
+                    resolvedValue = resolver->resolve(m_injectedContext, config);
                 } else {
                     break;
                 }
-                if(!resolver) {
-                    return Status::fatal;
-                }
-                resolvedValue = resolver->resolve(m_injectedContext, config);
                 if(!resolvedValue.isValid()) {
                     return Status::fatal;
                 }
                 resolved = true;
             }
             reg->resolveProperty(key, resolvedValue);
-            if(!isPrivateProperty(key)) {
+            detail::property_descriptor propertyDescriptor;
+            if(isPrivateProperty(key)) {
+                if(!cv.propertySetter) {
+                    continue;
+                }
+                cv.propertySetter(target, resolvedValue);
+                propertyDescriptor.setter = cv.propertySetter;
+                propertyDescriptor.name = key.toLatin1();
+            } else {
                 auto targetProperty = metaObject->property(metaObject->indexOfProperty(key.toLatin1()));
                 if(!targetProperty.isValid() || !targetProperty.isWritable()) {
                     //Refering to a non-existing Q_PROPERTY by name is always non-fixable:
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not find writable property " << key << " of '" << metaObject->className() << "'";
                     return Status::fatal;
                 }
-                if(targetProperty.write(target, resolvedValue)) {
-                    qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
-                    usedProperties.insert(key);
-                    if(isAutoRefreshProperty && resolver) {
-                        if(autoRefreshEnabled()) {
-                            m_SettingsWatcher->addWatchedProperty(resolver, targetProperty, target, config);
-                        } else {
-                            qCWarning(loggingCategory()).nospace() << "Cannot watch property '" << targetProperty.name() << "' of " << target << ", as auto-refresh has not been enabled.";
-                        }
-                    }
-                } else {
+                if(!targetProperty.write(target, resolvedValue)) {
                     //An error while setting a Q_PROPERTY is always non-fixable:
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not set property '" << key << "' of " << *reg << " to value " << resolvedValue;
                     return Status::fatal;
                 }
+                propertyDescriptor = detail::propertySetter(targetProperty);
             }
+            qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
+            usedProperties.insert(key);
+
+            if(isAutoRefreshProperty && resolver) {
+                if(autoRefreshEnabled()) {
+                    m_SettingsWatcher->addWatchedProperty(resolver, cv.variantConverter, propertyDescriptor, target, config);
+                } else {
+                    qCWarning(loggingCategory()).nospace() << "Cannot watch property '" << key << "' of " << target << ", as auto-refresh has not been enabled.";
+                }
+            }
+
         }
         //If any instances of prototypes have been created while configuring the properties, make them children of the target:
         for(auto child : createdForThis) {
@@ -1673,9 +1705,13 @@ bool StandardApplicationContext::validateResolvers(const service_descriptor& des
     for(auto[key,value] : config.properties.asKeyValueRange()) {
         bool isAutoRefreshProperty = config.autoRefresh;
         QString asString = value.toString();
-        if(value.userType() == qMetaTypeId<detail::AutoRefreshable>()) {
-            asString = value.value<detail::AutoRefreshable>().expression;
-            isAutoRefreshProperty = true;
+        if(value.userType() == qMetaTypeId<detail::ConfigValue>()) {
+            detail::ConfigValue cv = value.value<detail::ConfigValue>();
+            if(cv.expression.userType() != QMetaType::QString) {
+                continue;
+            }
+            asString = value.value<detail::ConfigValue>().expression.toString();
+            isAutoRefreshProperty = cv.autoRefresh;
         } else
         if(value.userType() != QMetaType::QString || beanRefPattern().match(asString).hasMatch()) {
            continue;

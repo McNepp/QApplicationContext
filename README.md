@@ -258,22 +258,39 @@ Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPo
 
 Also, *private properties* can be very useful in conjunction with [Service-templates](#service-templates).
 
+### Configuring services with 'setters'
+
+In the previous paragraph, you could see how Q_PROPERTYs of the services were initialized using the property-names.
+<br>Now, we will show arbitrary service-properties can be configured, even if no Q_PROPERTY has been declared.
+<br>Instead of using the property-name, we'll reference the member-function that sets the value.
+<br>Here is an example setting the `transferTimeout` of a QNetworkAccessManager. This property is not declared with the Q_PROEPRTY macro,
+thus, it cannot be set using the QMetaType-system:
+
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", config({entry(".transferTimeout", &QNetworkAccessManager::setTransferTimeout, 5000)})); 
+
+**Note:** you cannot use "transferTimeout" for the name of the property, as that would imply a Q_PROPERTY with that name.
+By preceding the name with a dot, we make it a **private property**, which is not subjected to such a restriction.
+<br>Using *setters* can be combined with resolving configuration-values:
+
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", config({entry(".transferTimeout", &QNetworkAccessManager::setTransferTimeout, "${transferTimeout}")})); 
+
+
 ### Auto-refreshable configuration-values
 
 If you configure a Q_PROPERTY using mcnepp::qtdi::config(std::initializer_list<std::pair<QString,QVariant>>), the property of the Service-Object will be set 
 exactly once, immediately after creation, right before any [service-initializers](#service-initializers) may be invoked. After that, the service will be published.
 <br>There may be times, however, when you want a property to be refreshed automatically every time the value in the corresponding QSettings-object changeds.
-<br>This can be achieved by using mcnepp::qtdi::autoRefresh(const QString&).
+<br>This can be achieved by using mcnepp::qtdi::autoRefresh(const QString&,const QString&).
 <br>The following line will configure a QTimer's `interval` using an auto-refreshable configuration-value:
 
-    context->registerService<QTimer>("timer", config({{"interval", autoRefresh("${timerInterval}") }}));
+    context->registerService<QTimer>("timer", config({autoRefresh("interval", "${timerInterval}")}));
 
 In case the configured QSettings-object uses a file as its persistent storage, any change to that file will be immediately detected. It will lead to a re-evaluation
 of the property. In case the configured QSettings-object uses a different persistent storage (such as the Windows Registry), the changes will be polled periodically.
 <br>Auto-refresh will also work with more complex expressions for the property. In the following example, the property `objectName` will be automatically refreshed when either one of the configuration-values
 `prefix` or `suffix` is modified:
 
-    context->registerService<QTimer>("timer", config({{"objectName", autoRefresh("timer-${prefix}${suffix}") }}));
+    context->registerService<QTimer>("timer", config({autoRefresh("objectName", "timer-${prefix}${suffix}")}));
 
 In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
 
@@ -288,6 +305,10 @@ In case all properties for one service shall be auto-refreshed, there is a more 
     ; Optionally, specify the refresh-period:
     autoRefreshMillis=2000
 
+Auto-refreshable properties can also be specified using *setters*:
+
+    context->registerService<QTimer>("timer", config({autoRefresh(".interval", &QTimer::setInterval, "${timerInterval}")}));
+    
 
 ## Service-prototypes
 

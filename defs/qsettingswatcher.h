@@ -23,7 +23,7 @@ public:
     explicit QSettingsWatcher(QApplicationContext* parent);
 
 
-    void addWatchedProperty(PlaceholderResolver* resolver, const QMetaProperty& property, QObject* target, const service_config& config);
+    void addWatchedProperty(PlaceholderResolver* resolver, q_variant_converter_t variantConverter, const property_descriptor& propertyDescriptor, QObject* target, const service_config& config);
 
     QConfigurationWatcher* watchConfigValue(PlaceholderResolver* resolver);
 
@@ -36,7 +36,7 @@ private:
 
     void refreshFromSettings(QSettings* settings);
 
-    void setPropertyValue(const QMetaProperty &property, QObject *target, const QVariant& value);
+    void setPropertyValue(const property_descriptor &property, QObject *target, const QVariant& value);
 
     QApplicationContext* const m_context;
     std::deque<QPointer<QSettings>> m_Settings;

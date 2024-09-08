@@ -151,7 +151,11 @@ template<> struct service_scope_traits<ServiceScope::PROTOTYPE> {
     static constexpr bool is_constructable = true;
 };
 
-
+#ifdef __cpp_lib_remove_cvref
+template<typename T> using remove_cvref_t = std::remove_cvref_t<T>;
+#else
+template<typename T> using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+#endif
 
 template<typename S,typename V=QObject*> struct could_be_qobject : std::false_type {};
 
@@ -249,10 +253,58 @@ using q_setter_t = std::function<void(QObject*,QVariant)>;
 
 using q_init_t = std::function<void(QObject*,QApplicationContext*)>;
 
+using q_variant_converter_t = std::function<QVariant(const QString&)>;
+
 struct service_descriptor;
 
 
 
+template<typename T> auto hasQVariantSupport(T* ptr) -> decltype(QVariant{*ptr});
+
+void hasQVariantSupport(void*);
+
+
+template<typename T> constexpr bool has_qvariant_support = std::is_same_v<decltype(hasQVariantSupport(static_cast<T*>(nullptr))),QVariant>;
+
+inline void convertVariant(QVariant& var, q_variant_converter_t converter) {
+    if(converter) {
+        var = converter(var.toString());
+    }
+}
+
+
+
+template<typename T> struct default_string_converter {
+    T operator()(const QString& str) const {
+        return T{str};
+    }
+};
+
+
+
+template<typename T,bool=has_qvariant_support<T> || std::is_convertible_v<T,QObject*>> struct variant_converter_traits;
+
+
+template<typename T> struct variant_converter_traits<T,true> {
+    using type = std::nullptr_t;
+
+    static constexpr std::nullptr_t makeConverter(std::nullptr_t = nullptr) {
+        return nullptr;
+    }
+
+
+};
+
+template<typename T> struct variant_converter_traits<T,false> {
+    using type = default_string_converter<T>;
+
+
+    template<typename C=type> static q_variant_converter_t makeConverter(C converter = C{}) {
+        static_assert(std::is_convertible_v<std::invoke_result_t<C,QString>,T>, "return-type of converter does not match");
+        return [converter](const QString& str) { return QVariant::fromValue(converter(str));};
+    }
+
+};
 
 
 
@@ -279,7 +331,7 @@ template<typename S> struct callable_adapter {
         if(!setter) {
             return nullptr;
         }
-        using arg_type = std::remove_cv_t<std::remove_reference_t<A>>;
+        using arg_type = detail::remove_cvref_t<A>;
         return [setter](QObject* obj,QVariant arg) {
             if constexpr(std::is_same_v<S,QObject>) {
                 (obj->*setter)(arg.value<arg_type>());
@@ -669,8 +721,21 @@ protected:
     struct ParentPlaceholder {
     };
 
-    struct AutoRefreshable{
-        QString expression;
+    struct ConfigValue {
+        QVariant expression;
+        bool autoRefresh = false;
+        q_variant_converter_t variantConverter;
+        q_setter_t propertySetter;
+    };
+
+
+    ///
+    /// \brief A type-safe configuration-entry.
+    /// <br>This is an intermediate type that will be used solely to populate a ServiceConfig.
+    ///
+    template<typename T> struct config_entry_t {
+        QString name;
+        QVariant value;
     };
 
 
@@ -679,7 +744,7 @@ protected:
 
 }//end namespace mcnepp::qtdi
 
-Q_DECLARE_METATYPE(mcnepp::qtdi::detail::AutoRefreshable)
+Q_DECLARE_METATYPE(mcnepp::qtdi::detail::ConfigValue)
 
 namespace mcnepp::qtdi {
 
@@ -1784,6 +1849,7 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::N> injectAll(con
 template<typename S> struct Resolvable {
     QString expression;
     QVariant defaultValue;
+    detail::q_variant_converter_t variantConverter;
 };
 
 ///
@@ -1792,7 +1858,7 @@ template<typename S> struct Resolvable {
 /// The result of resolving the placeholder must be a String that is convertible via `QVariant::value<T>()` to the desired type.
 ///
 /// The result-type of the constructor-argument must be explicitly specified via the type-argument `<S>`, unless it is QString.
-/// This function is a simplified overload of another function. See mcnepp::qtdi::resolve(const QString&,const S&) for more details!
+/// This function is a simplified overload of another function. See mcnepp::qtdi::resolve(const QString&,const S&,C) for more details!
 ///
 /// ### Example
 ///
@@ -1801,9 +1867,12 @@ template<typename S> struct Resolvable {
 /// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S = QString> [[nodiscard]] Resolvable<S> resolve(const QString& expression) {
-    return Resolvable<S>{expression};
+template<typename S=QString> [[nodiscard]] Resolvable<S> resolve(const QString& expression) {
+    return Resolvable<S>{expression, QVariant{}, detail::variant_converter_traits<S>::makeConverter()};
 }
+
+
+
 
 
 ///
@@ -1840,13 +1909,38 @@ template<typename S = QString> [[nodiscard]] Resolvable<S> resolve(const QString
 ///
 ///
 /// \tparam S the result-type of the resolved constructor-argument.
+/// \tparam C the type of the converter. Must be a callable that accepts a QString and returns a value of type `T`. The default will invoke the constructor
+/// `T{const QString&}` if it exists.
 /// \param expression may contain placeholders in the format `${identifier}`.
 /// \param defaultValue the value to use if the placeholder cannot be resolved.
+/// \param expression a String, possibly containing one or more placeholders.
+/// \param converter Will be used to convert the resolved expression into a value.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S> [[nodiscard]] Resolvable<S> resolve(const QString& expression, const S& defaultValue) {
-    return Resolvable<S>{expression, QVariant::fromValue(defaultValue)};
+template<typename S,typename C,typename=std::invoke_result_t<C,QString>> [[nodiscard]] Resolvable<S>  resolve(const QString& expression, const S& defaultValue, C converter) {
+    return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::variant_converter_traits<S>::makeConverter(converter)};
 }
+
+
+
+
+///
+/// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
+/// <br>This is an overload of mcnepp::qtdi::resolve(const QString&,const S&,C) without the default-value.
+///
+template<typename S,typename C,typename=std::invoke_result_t<C,QString>> [[nodiscard]] Resolvable<S>  resolve(const QString& expression, C converter) {
+    return Resolvable<S>{expression, QVariant{}, detail::variant_converter_traits<S>::makeConverter(converter)};
+}
+
+
+///
+/// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
+/// <br>This is an overload of mcnepp::qtdi::resolve(const QString&,const S&,C) without the explicit converter.
+///
+template<typename S> [[nodiscard]] Resolvable<S>  resolve(const QString& expression, const S& defaultValue) {
+    return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::variant_converter_traits<S>::makeConverter()};
+}
+
 
 
 ///
@@ -1981,7 +2075,7 @@ struct service_config final {
 /// <br>Should you want to specify a property-value starting with an ampersand, you must escape this with the backslash.
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
 /// \return the service_config.
-[[nodiscard]] inline service_config config(std::initializer_list<std::pair<QString,QVariant>> properties) {
+[[nodiscard]] inline service_config config(std::initializer_list<service_config::entry_type> properties) {
     return service_config{"", false, false, properties};
 }
 
@@ -1990,6 +2084,139 @@ struct service_config final {
 /// \return the service_config.
 [[nodiscard]] inline service_config config() {
     return service_config{};
+}
+
+
+
+///
+/// \brief A type-safe service-configuration.
+/// <br>This class is the type-safe equivalent to the service_config.
+/// <br>In contrast to service_config, configuration-values are specified using method-pointers, not property-names.
+/// <br>Also, there does not have to be a Q_PROPERTY declared for each configuration-value. You may use the syntax for *private properties*,
+/// i.e. a name preceded by a dot to indicate that.
+///
+template<typename S> class ServiceConfig {
+    friend class QApplicationContext;
+public:
+
+
+    ServiceConfig<S>&& withGroup(const QString& group)&& {
+        data.group = group;
+        return std::move(*this);
+    }
+
+    ServiceConfig<S> withGroup(const QString& group)const & {
+        return ServiceConfig<S>{*this}.withGroup(group);
+    }
+
+    ServiceConfig<S>&& withAutoRefresh()&& {
+        data.autoRefresh = true;
+        return std::move(*this);
+    }
+
+    ServiceConfig<S> withAutoRefresh()const & {
+        return ServiceConfig<S>{*this}.withAutoRefresh();
+    }
+
+    explicit ServiceConfig(service_config&& descriptor) :
+        data{std::move(descriptor)} {
+
+    }
+
+
+private:
+    service_config data;
+};
+
+
+///
+/// An opaque type representing a type-safe entry for a service-configuration.
+///
+template<typename T> using service_config_entry = detail::config_entry_t<T>;
+
+///
+/// \brief Creates a type-safe configuration-entry for a service.
+/// <br>The resulting service_config_entry can then be used to initialize mcnepp::qtqi::config(std::initializer_list<service_config_entry<S>>);
+/// \tparam S the service-type.
+/// \param name the name of the property to be configured. **Note:** this name does not need to refer to a Q_PROPERTY of the service-type!
+/// In fact, it can be an arbitrary name, as long as it starts with a dot. If it does not start with a dot, a corresponding Q_PROPERTY must exist.
+/// \param expression will be resolved when the service is being configured. May contain *placeholders*.
+/// \param converter (optional) specifies a converter that constructs an argument of type `A` from a QString.
+/// \return a type-safe configuration for a service.
+///
+template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> entry(const QString& name, R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
+    return {name, QVariant::fromValue(detail::ConfigValue{expression, false, detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter), detail::callable_adapter<S>::adaptSetter(propertySetter)})};
+}
+
+///
+/// \brief Creates a type-safe configuration-entry for a service.
+/// <br>The resulting service_config_entry can then be used to initialize mcnepp::qtqi::config(std::initializer_list<service_config_entry<S>>);
+/// \tparam S the service-type.
+/// \param name the name of the property to be configured. **Note:** this name does not need to refer to a Q_PROPERTY of the service-type!
+/// In fact, it can be an arbitrary name, as long as it starts with a dot. If it does not start with a dot, a corresponding Q_PROPERTY must exist.
+/// \param value will be set when the service is being configured.
+/// \param converter (optional) specifies a converter that constructs an argument of type `A` from a QString.
+/// \return a type-safe configuration for a service.
+///
+template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> entry(const QString& name, R(S::*propertySetter)(A), A value) {
+    return {name, QVariant::fromValue(detail::ConfigValue{value, false, nullptr, detail::callable_adapter<S>::adaptSetter(propertySetter)})};
+}
+
+
+///
+/// \brief Creates a type-safe, auto-refreshing configuration-entry for a service.
+/// <br>The resulting service_config_entry can then be used to initialize mcnepp::qtdi::config(std::initializer_list<service_config_entry<S>>);
+/// <br>In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:
+///
+///     context->registerService<QTimer>("timer", config({entry("interval", &QTimer::setInterval, "${timerInterval}")}));
+///
+/// The member-function will be initialized from the value of the configuration-key `"timerInterval"` as it
+/// is in the moment the timer is instantiated.
+///
+/// <br>Now, contrast this with:
+///
+///     context->registerService<QTimer>("timer", config({autoRefresh("interval", &QTimer::setInterval, "${timerInterval}")}));
+///
+/// Whenever the value for the configuration-key `"timerInterval"` changes in the underlying QSettings-Object, the
+/// expression `"${timerInterval}"` will be re-evaluated and the member-function of the timer will be updated accordingly.
+/// <br>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
+///
+///     context->registerService<QTimer>("timer", config(entry("objectName", &QObject::setObjectName, "theTimer"), entry("interval", &QTimer::setInterval, "${timerInterval}")}).withAutoRefresh());
+///
+/// **Note:** Auto-refreshing an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
+/// by putting a configuration-entry into one of the QSettings-objects registered with the context:
+///
+///     [qtdi]
+///     enableAutoRefresh=true
+///     ; Optionally, specify the refresh-period:
+///     autoRefreshMillis=2000
+///
+/// \tparam S the service-type.
+/// \param name the name of the property to be configured. **Note:** this name does not need to refer to a Q_PROPERTY of the service-type!
+/// In fact, it can be an arbitrary name, as long as it starts with a dot. If it does not start with a dot, a corresponding Q_PROPERTY must exist.
+/// \param expression will be resolved when the service is being configured. May contain *placeholders*.
+/// \param converter (optional) specifies a converter that constructs an argument of type `A` from a QString.
+/// \return a type-safe configuration for a service.
+///
+template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> autoRefresh(const QString& name, R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
+    return {name, QVariant::fromValue(detail::ConfigValue{expression, true, detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter), detail::callable_adapter<S>::adaptSetter(propertySetter)})};
+}
+
+
+
+
+
+///
+/// \brief Creates a configuration-entry for a service.
+/// <br>The resulting service_config_entry can then be used to initialize a mcnepp::qtdi::config(std::initializer_list<std::pair<QString,QVariant>>);
+/// \param name the name of the property to be configured. **Note:** this name must refer to a Q_PROPERTY of the service-type!
+/// The only exception is a *private property*, i.e. a configuration-entry that shall not be resolved automatically.
+/// In that case, the name must start with a dot.
+/// \param expression will be resolved when the service is being configured. May contain *placeholders*.
+/// \return a configuration for a service.
+///
+[[nodiscard]] inline service_config::entry_type entry(const QString& name, const QVariant& value) {
+    return {name, value};
 }
 
 
@@ -2005,10 +2232,10 @@ struct service_config final {
 ///
 /// <br>Now, contrast this with:
 ///
-///     context->registerService<QTimer>("timer", config({{"interval", autoRefresh("${timerInterval}"}})));
+///     context->registerService<QTimer>("timer", config({autoRefresh("interval", "${timerInterval}")}));
 ///
 /// Whenever the value for the configuration-key `"timerInterval"` changes in the underlying QSettings-Object, the
-/// expression "${timerInterval}"`` will be re-evaluated and the Q_PROPERTY of the timer will be updated accordingly.
+/// expression `"${timerInterval}"` will be re-evaluated and the Q_PROPERTY of the timer will be updated accordingly.
 /// <br>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
 ///
 ///     context->registerService<QTimer>("timer", config({{"objectName", "theTimer"}, {"interval", "${timerInterval}"}}).withAutoRefresh());
@@ -2021,18 +2248,34 @@ struct service_config final {
 ///     ; Optionally, specify the refresh-period:
 ///     autoRefreshMillis=2000
 ///
+/// \param the name of the configuration-entry.
 /// \param expression a String, possibly containing one or more placeholders.
-/// \return a QVariant that will ensure that the expression will be re-evaluated when the underlying QSettings changes.
-///
-inline QVariant autoRefresh(const QString& expression) {
-    return QVariant::fromValue(detail::AutoRefreshable{expression});
+/// \return an  entry that will ensure that the expression will be re-evaluated when the underlying QSettings changes.
+[[nodiscard]] inline service_config::entry_type autoRefresh(const QString& name, const QString& expression) {
+    return {name, QVariant::fromValue(detail::ConfigValue{expression, true, nullptr, nullptr})};
 }
 
 
 
 
-namespace detail {
+///
+/// \brief Create a type-safe service-configuration.
+/// \param entries
+/// \return a type-safe service-configuration.
+///
+template<typename S> [[nodiscard]] ServiceConfig<S> config(std::initializer_list<service_config_entry<S>> entries) {
+    service_config config;
+    for(auto& entry : entries) {
+        config.properties.insert(entry.name, entry.value);
+    }
+    return ServiceConfig<S>{std::move(config)};
+}
 
+
+
+
+
+namespace detail {
 
 
 
@@ -2118,6 +2361,7 @@ struct dependency_info {
     int kind;
     QString expression; //RESOLVABLE_KIND: The resolvable expression. VALUE_KIND: empty. Otherwise: the required name of the dependency.
     QVariant value; //VALUE_KIND: The injected value. RESOLVABLE_KIND: the default-value.
+    q_variant_converter_t variantConverter; //Only valid for kind == RESOLVABLE_KIND
 
     bool isValid() const {
         return kind != INVALID_KIND;
@@ -2301,7 +2545,7 @@ struct dependency_helper<Resolvable<S>> {
 
 
     static dependency_info info(const Resolvable<S>& dep) {
-        return { typeid(S), RESOLVABLE_KIND, dep.expression, dep.defaultValue };
+        return { typeid(S), RESOLVABLE_KIND, dep.expression, dep.defaultValue, dep.variantConverter };
     }
 
     static auto converter(const Resolvable<S>&) {
@@ -2814,6 +3058,25 @@ public:
         return ServiceRegistration<S,scope>::wrap(registerService(objectName, serviceDeclaration.descriptor, config, scope, nullptr));
     }
 
+    ///
+    /// \brief Registers a service with this ApplicationContext.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
+    /// \param serviceDeclaration comprises the services's primary advertised interface, its implementation-type and its dependencies to be injected
+    /// via its constructor.
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param config the Configuration for the service.
+    /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
+    /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
+    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
+    ///
+    template<typename S,typename Impl,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName, const ServiceConfig<Impl>& config) -> ServiceRegistration<S,scope> {
+        return registerService(serviceDeclaration, objectName, config.data);
+    }
+
+
+
 
     ///
     /// \brief Registers a service with this ApplicationContext.
@@ -2839,6 +3102,23 @@ public:
     }
 
 
+    ///
+    /// \brief Registers a service with this ApplicationContext.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
+    /// \param serviceDeclaration comprises the services's primary advertised interface, its implementation-type and its dependencies to be injected
+    /// via its constructor.
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param config the Configuration for the service.
+    /// \param templateRegistration the registration of the service-template that this service shall inherit from. Must be valid!
+    /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
+    /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
+    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
+    ///
+    template<typename S,typename Impl,typename B,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName, const ServiceConfig<Impl>& config) -> ServiceRegistration<S,scope> {
+        return registerService(serviceDeclaration, templateRegistration, objectName, config.data);
+    }
 
 
 

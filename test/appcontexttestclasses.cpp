@@ -67,5 +67,17 @@ BaseService2* BaseService2::reference() const {
     return m_reference;
 }
 
+Address DependentService::address() const
+{
+    return m_address;
+}
+
+void DependentService::setAddress(const Address &newAddress)
+{
+    if (m_address == newAddress)
+        return;
+    m_address = newAddress;
+}
+
 
 }
