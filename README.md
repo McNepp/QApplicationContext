@@ -266,13 +266,11 @@ In the previous paragraph, you could see how Q_PROPERTYs of the services were in
 <br>Here is an example setting the `transferTimeout` of a QNetworkAccessManager. This property is not declared with the Q_PROEPRTY macro,
 thus, it cannot be set using the QMetaType-system:
 
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", config({entry(".transferTimeout", &QNetworkAccessManager::setTransferTimeout, 5000)})); 
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", config({entry(&QNetworkAccessManager::setTransferTimeout, 5000)})); 
 
-**Note:** you cannot use "transferTimeout" for the name of the property, as that would imply a Q_PROPERTY with that name.
-By preceding the name with a dot, we make it a **private property**, which is not subjected to such a restriction.
-<br>Using *setters* can be combined with resolving configuration-values:
+<br>Using *setters* can, of course, be combined with resolving configuration-values:
 
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", config({entry(".transferTimeout", &QNetworkAccessManager::setTransferTimeout, "${transferTimeout}")})); 
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", config({entry(&QNetworkAccessManager::setTransferTimeout, "${transferTimeout}")})); 
 
 
 ### Auto-refreshable configuration-values
@@ -307,7 +305,7 @@ In case all properties for one service shall be auto-refreshed, there is a more 
 
 Auto-refreshable properties can also be specified using *setters*:
 
-    context->registerService<QTimer>("timer", config({autoRefresh(".interval", &QTimer::setInterval, "${timerInterval}")}));
+    context->registerService<QTimer>("timer", config({autoRefresh(&QTimer::setInterval, "${timerInterval}")}));
     
 
 ## Service-prototypes

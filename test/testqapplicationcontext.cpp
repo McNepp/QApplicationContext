@@ -1331,7 +1331,7 @@ private slots:
         configuration->setValue("host", "localhost");
         context->registerObject(configuration.get());
         // Use default-converter:
-        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()), "dep", config({entry(".address", &DependentService::setAddress, "${host}")}));
+        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()), "dep", config({entry(&DependentService::setAddress, "${host}")}));
         RegistrationSlot<DependentService> srv{reg};
         QVERIFY(context->publish());
         QCOMPARE(srv->address(), Address{"localhost"});
@@ -1342,7 +1342,7 @@ private slots:
         configuration->setValue("host", "localhost");
         context->registerObject(configuration.get());
         // Use custom-converter:
-        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()), "dep", config({entry(".address", &DependentService::setAddress, "${host}", addressConverter)}));
+        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()), "dep", config({entry(&DependentService::setAddress, "${host}", addressConverter)}));
         RegistrationSlot<DependentService> srv{reg};
         QVERIFY(context->publish());
         QCOMPARE(srv->address(), Address{"127.0.0.1"});
@@ -1358,7 +1358,7 @@ private slots:
         QSettings settings{file.fileName(), QSettings::IniFormat};
         context->registerObject(&settings);
         // Use custom-converter:
-        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()), "dep", config({autoRefresh(".address", &DependentService::setAddress, "${host}", addressConverter)}));
+        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()), "dep", config({autoRefresh(&DependentService::setAddress, "${host}", addressConverter)}));
         RegistrationSlot<DependentService> srv{reg};
         QVERIFY(context->publish());
         QCOMPARE(srv->address(), Address{"192.168.1.1"});
@@ -1609,9 +1609,15 @@ private slots:
 
     void testStronglyTypedServiceConfiguration() {
         void (QTimer::*timerFunc)(int) = &QTimer::setInterval; //We need this intermediate variable because setTimer() has multiple overloads.
-        auto timerReg = context->registerService(service<QTimer>(), "timer", config({entry(".interval", timerFunc, 4711)}));
-        auto baseReg = context->registerService(service<BaseService>(), "base", config({entry(".foo", &BaseService::setFoo, "${foo}"),
-                                                                                        entry(".timer", &BaseService::setTimer, "&timer")}));
+        auto timerReg = context->registerService(service<QTimer>(), "timer", config({entry(timerFunc, 4711)}));
+        auto timerReg2 = context->registerService(service<QTimer>(), "timer", config({entry(timerFunc, 4711)}));
+        QCOMPARE(timerReg, timerReg2);
+        auto baseReg = context->registerService(service<BaseService>(), "base", config({entry(&BaseService::setFoo, "${foo}"),
+                                                                                        entry(&BaseService::setTimer, "&timer")}));
+        auto baseReg2 = context->registerService(service<BaseService>(), "base", config({entry(&BaseService::setFoo, "${foo}"),
+                                                                                        entry(&BaseService::setTimer, "&timer")}));
+        QCOMPARE(baseReg, baseReg2);
+
         configuration->setValue("foo", "Hello, world");
         context->registerObject(configuration.get());
 
