@@ -13,6 +13,13 @@ namespace mcnepp::qtdi {
 
 using namespace qtditest;
 
+Address addressConverter(const QString& str) {
+    if(str == "localhost") {
+        return Address{"127.0.0.1"};
+    }
+    return Address{str};
+};
+
 
 template<> struct service_factory<BaseService> {
     using service_type = BaseService;
@@ -181,6 +188,7 @@ public:
     static void initMain() {
         qputenv("QTEST_FUNCTION_TIMEOUT", "10000");
     }
+
 
 private slots:
 
@@ -529,7 +537,7 @@ private slots:
         QCOMPARE(static_cast<StandardApplicationContext*>(context.get())->autoRefreshMillis(), 500);
 
         QCOMPARE(4711, context->getConfigurationValue("timerInterval"));
-        auto reg = context->registerService<QTimer>("timer", config({{"interval", autoRefresh("${timerInterval}")}}));
+        auto reg = context->registerService<QTimer>("timer", config({autoRefresh("interval", "${timerInterval}")}));
         QVERIFY(context->publish());
         RegistrationSlot<QTimer> slot{reg};
 
@@ -537,6 +545,36 @@ private slots:
 
         configuration->setValue("timerInterval", 999);
         QVERIFY(QTest::qWaitFor([&slot] { return slot->interval() == 999;}, 1000));
+    }
+
+    void testWatchConfigurationFileChange() {
+        QFile file{"testapplicationtext.ini"};
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("name=readme\n");
+        file.write("suffix=doc\n");
+        file.write("[qtdi]\n");
+        file.write("enableAutoRefresh=true\n");
+        file.close();
+        QSettings settings{file.fileName(), QSettings::IniFormat};
+        QVERIFY(!context.get()->autoRefreshEnabled());
+        QConfigurationWatcher* watcher = context->watchConfigValue("${name}.${suffix:doc}");
+        QVERIFY(!watcher);
+        context->registerObject(&settings);
+
+        QVERIFY(context.get()->autoRefreshEnabled());
+
+        watcher = context->watchConfigValue("${name}.${suffix:txt}");
+        QVERIFY(watcher);
+        QCOMPARE(watcher->currentValue(), "readme.doc");
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("name=hello\n");
+        file.close();
+        QVariant watchedValue;
+        connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [&watchedValue](const QVariant& currentValue) {watchedValue=currentValue;});
+
+        QVERIFY(QTest::qWaitFor([&watchedValue] { return watchedValue == "hello.txt";}, 1000));
+        file.remove();
+
     }
 
     void testAutoRefreshPlaceholderPropertyFileChange() {
@@ -552,12 +590,16 @@ private slots:
         QVERIFY(!context.get()->autoRefreshEnabled());
         context->registerObject(&settings);
 
+        QTimer timer;
+        auto timerReg = context->registerObject(&timer);
         QVERIFY(context.get()->autoRefreshEnabled());
         auto reg = context->registerService<BaseService>("base", config({{"foo", "foo-value: ${foo}${suffix}"}}).withAutoRefresh());
+        bind(reg, "foo", timerReg, "objectName");
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> slot{reg};
 
         QCOMPARE(slot->foo(), "foo-value: Hello!");
+        QCOMPARE(timer.objectName(), "foo-value: Hello!");
 
         QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
         file.write("foo=Hello\n");
@@ -565,6 +607,7 @@ private slots:
         file.close();
 
         QVERIFY(QTest::qWaitFor([&slot] { return slot->foo() == "foo-value: Hello, world!";}, 1000));
+        QCOMPARE(timer.objectName(), "foo-value: Hello, world!");
         file.remove();
     }
 
@@ -753,6 +796,19 @@ private slots:
         sourceSlot->setFoo("Should be ignored");
         QCOMPARE(targetSlot->objectName(), "A new beginning");
 
+    }
+
+    void testSubscribeToServices() {
+        auto regSource = context->registerService(service<Interface1,BaseService>(), "base", config({{"foo", "A new beginning"}}));
+        auto regTarget = context->registerService<QTimer>();
+        auto subscription = subscribeToServices(regSource, regTarget, this, [](Interface1* src, QTimer* timer) {
+            timer->setObjectName(src->foo());
+        });
+
+        QVERIFY(subscription);
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> targetSlot{regTarget};
+        QCOMPARE(targetSlot->objectName(), "A new beginning");
     }
 
     void testConnectServiceWithSelf() {
@@ -1270,6 +1326,51 @@ private slots:
         QVERIFY(!service->m_dependency);
     }
 
+    void testPropertyOfNonStandardType() {
+        // There is no in-built conversion between mcnepp::qtditest::Address and QVariant!
+        configuration->setValue("host", "localhost");
+        context->registerObject(configuration.get());
+        // Use default-converter:
+        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()), "dep", config({entry(".address", &DependentService::setAddress, "${host}")}));
+        RegistrationSlot<DependentService> srv{reg};
+        QVERIFY(context->publish());
+        QCOMPARE(srv->address(), Address{"localhost"});
+    }
+
+    void testPropertyOfNonStandardTypeWithCustomConverter() {
+        // There is no in-built conversion between mcnepp::qtditest::Address and QVariant!
+        configuration->setValue("host", "localhost");
+        context->registerObject(configuration.get());
+        // Use custom-converter:
+        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()), "dep", config({entry(".address", &DependentService::setAddress, "${host}", addressConverter)}));
+        RegistrationSlot<DependentService> srv{reg};
+        QVERIFY(context->publish());
+        QCOMPARE(srv->address(), Address{"127.0.0.1"});
+    }
+
+    void testAutoRefreshPropertyOfNonStandardTypeWithCustomConverter() {
+        QFile file{"testapplicationtext.ini"};
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("host=192.168.1.1\n");
+        file.write("[qtdi]\n");
+        file.write("enableAutoRefresh=true\n");
+        file.close();
+        QSettings settings{file.fileName(), QSettings::IniFormat};
+        context->registerObject(&settings);
+        // Use custom-converter:
+        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()), "dep", config({autoRefresh(".address", &DependentService::setAddress, "${host}", addressConverter)}));
+        RegistrationSlot<DependentService> srv{reg};
+        QVERIFY(context->publish());
+        QCOMPARE(srv->address(), Address{"192.168.1.1"});
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("host=localhost\n");
+        file.close();
+
+        QVERIFY(QTest::qWaitFor([&srv]{ return srv->address() == Address{"127.0.0.1"};}, 1000));
+
+        file.remove();
+    }
+
     void testOptionalDependencyWithAutowire() {
         auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()));
         QVERIFY(reg.autowire(&DependentService::setBase));
@@ -1395,72 +1496,87 @@ private slots:
 
     void testConstructorValues() {
         BaseService base;
-        auto reg = context->registerService(service<DependentService>(4711, QString{"https://web.de"}, &base), "dep");
+        auto reg = context->registerService(service<DependentService>(Address{"localhost"}, QString{"https://web.de"}, &base), "dep");
         QVERIFY(reg);
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> service{reg};
         QCOMPARE(service->m_dependency, &base);
-        QCOMPARE(service->m_id, 4711);
+        QCOMPARE(service->m_address, Address{"localhost"});
         QCOMPARE(service->m_url, QString{"https://web.de"});
     }
 
     void testResolveConstructorValues() {
         configuration->setValue("section/url", "https://google.de/search");
         configuration->setValue("section/term", "something");
-        configuration->setValue("section/id", "4711");
+        configuration->setValue("section/host", "localhost");
         context->registerObject(configuration.get());
         BaseService base;
-        auto reg = context->registerService(service<DependentService>(resolve<int>("${id}"), resolve("${url}?q=${term}"), &base), "dep", config().withGroup("section"));
+        auto reg = context->registerService(service<DependentService>(resolve<Address>("${host}"), resolve("${url}?q=${term}"), &base), "dep", config().withGroup("section"));
         QVERIFY(reg);
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> service{reg};
         QCOMPARE(service->m_dependency, &base);
-        QCOMPARE(service->m_id, 4711);
+        QCOMPARE(service->m_address, Address{"localhost"});
+        QCOMPARE(service->m_url, QString{"https://google.de/search?q=something"});
+    }
+
+    void testResolveNonStandardConstructorValues() {
+        configuration->setValue("section/url", "https://google.de/search");
+        configuration->setValue("section/term", "something");
+        configuration->setValue("section/host", "localhost");
+        context->registerObject(configuration.get());
+        BaseService base;
+        auto reg = context->registerService(service<DependentService>(resolve<Address>("${host}", addressConverter), resolve("${url}?q=${term}"), &base), "dep", config().withGroup("section"));
+        QVERIFY(reg);
+        QVERIFY(context->publish());
+        RegistrationSlot<DependentService> service{reg};
+        QCOMPARE(service->m_dependency, &base);
+        QCOMPARE(service->m_address, Address{"127.0.0.1"});
         QCOMPARE(service->m_url, QString{"https://google.de/search?q=something"});
     }
 
     void testFailResolveConstructorValues() {
         BaseService base;
-        auto reg = context->registerService(service<DependentService>(4711, resolve("${url}"), &base), "dep");
+        auto reg = context->registerService(service<DependentService>(Address{"localhost"}, resolve("${url}"), &base), "dep");
         QVERIFY(reg);
         QVERIFY(!context->publish());
     }
 
     void testResolveConstructorValuesWithDefault() {
         BaseService base;
-        auto reg = context->registerService(service<DependentService>(resolve("${id}", 4711), resolve("${url}", QString{"localhost:8080"}), &base), "dep");
+        auto reg = context->registerService(service<DependentService>(resolve("${host}", Address{"localhost"}), resolve("${url}", QString{"localhost:8080"}), &base), "dep");
         QVERIFY(reg);
         RegistrationSlot<DependentService> service{reg};
 
         QVERIFY(context->publish());
-        QCOMPARE(service->m_id, 4711);
+        QCOMPARE(service->m_address, Address{"localhost"});
         QCOMPARE(service->m_url, QString{"localhost:8080"});
 
     }
 
     void testResolveConstructorValuesInSectionWithFallback() {
         configuration->setValue("section/url", "https://google.de/search");
-        configuration->setValue("id", "4711");
+        configuration->setValue("host", "192.168.1.1");
         context->registerObject(configuration.get());
         BaseService base;
-        auto reg = context->registerService(service<DependentService>(resolve<int>("${*/id}"), resolve("${*/dep/url}"), &base), "dep", config().withGroup("section"));
+        auto reg = context->registerService(service<DependentService>(resolve<Address>("${*/host}"), resolve("${*/dep/url}"), &base), "dep", config().withGroup("section"));
         QVERIFY(reg);
         RegistrationSlot<DependentService> service{reg};
 
         QVERIFY(context->publish());
-        QCOMPARE(service->m_id, 4711);
+        QCOMPARE(service->m_address, Address{"192.168.1.1"});
         QCOMPARE(service->m_url, QString{"https://google.de/search"});
 
     }
 
     void testResolveConstructorValuesPrecedence() {
         BaseService base;
-        auto reg = context->registerService(service<DependentService>(resolve("${id:42}", 4711), resolve("${url:n/a}", QString{"localhost:8080"}), &base), "dep");
+        auto reg = context->registerService(service<DependentService>(resolve<Address>("${host}", Address{"192.168.1.1"}), resolve("${url:n/a}", QString{"localhost:8080"}), &base), "dep");
         QVERIFY(reg);
         RegistrationSlot<DependentService> service{reg};
 
         QVERIFY(context->publish());
-        QCOMPARE(service->m_id, 42);
+        QCOMPARE(service->m_address, Address{"192.168.1.1"});
         QCOMPARE(service->m_url, QString{"n/a"});
 
     }
@@ -1469,12 +1585,12 @@ private slots:
     void testMixConstructorValuesWithDependency() {
         BaseService base;
         context->registerObject<Interface1>(&base, "base");
-        auto reg = context->registerService(service<DependentService>(4711, QString{"https://web.de"}, inject<Interface1>()), "dep");
+        auto reg = context->registerService(service<DependentService>(Address{"localhost"}, QString{"https://web.de"}, inject<Interface1>()), "dep");
         QVERIFY(reg);
         QVERIFY(context->publish());
         RegistrationSlot<DependentService> service{reg};
         QCOMPARE(service->m_dependency, &base);
-        QCOMPARE(service->m_id, 4711);
+        QCOMPARE(service->m_address, Address{"localhost"});
         QCOMPARE(service->m_url, QString{"https://web.de"});
     }
     void testNamedOptionalDependency() {
@@ -1489,6 +1605,22 @@ private slots:
         RegistrationSlot<DependentService> depSlot2{depReg2};
         QCOMPARE(depSlot2->m_dependency, &base);
 
+    }
+
+    void testStronglyTypedServiceConfiguration() {
+        void (QTimer::*timerFunc)(int) = &QTimer::setInterval; //We need this intermediate variable because setTimer() has multiple overloads.
+        auto timerReg = context->registerService(service<QTimer>(), "timer", config({entry(".interval", timerFunc, 4711)}));
+        auto baseReg = context->registerService(service<BaseService>(), "base", config({entry(".foo", &BaseService::setFoo, "${foo}"),
+                                                                                        entry(".timer", &BaseService::setTimer, "&timer")}));
+        configuration->setValue("foo", "Hello, world");
+        context->registerObject(configuration.get());
+
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> baseSlot{baseReg};
+        RegistrationSlot<QTimer> timerSlot{timerReg};
+        QVERIFY(baseSlot.last());
+        QCOMPARE(baseSlot->foo(), "Hello, world");
+        QCOMPARE(baseSlot->timer(), timerSlot.last());
     }
 
 

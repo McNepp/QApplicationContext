@@ -29,6 +29,14 @@ public:
         }
         return result;
     }
+    QConfigurationWatcher *watchConfigValue(const QString &) override
+    {
+        return nullptr;
+    }
+    bool autoRefreshEnabled() const override
+    {
+        return false;
+    }
 
     mutable QStringList lookupKeys;
 };
@@ -81,11 +89,11 @@ private slots:
 
 
     void testResolvePlaceholderInSectionRecursive() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("${*/sayit}", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("${*/tests/test/sayit}", this);
         QVERIFY(resolver);
         settings->setValue("sayit", "Hello, world!");
-        QCOMPARE(resolver->resolve(configResolver.get(), config().withGroup("test")), "Hello, world!");
-        QStringList expected{"test/sayit", "sayit"};
+        QCOMPARE(resolver->resolve(configResolver.get(), config()), "Hello, world!");
+        QStringList expected{"tests/test/sayit", "tests/sayit", "sayit"};
         QCOMPARE(configResolver->lookupKeys, expected);
     }
 

@@ -7,6 +7,19 @@ namespace mcnepp::qtditest {
 
 using namespace qtdi;
 
+///
+/// \brief A type for testing properties with types that have no built-in support for QVariant.
+///
+struct Address {
+
+    QString value;
+};
+
+
+inline bool operator==(const Address& a1,const Address& a2) {
+    return a1.value == a2.value;
+}
+
 Q_DECLARE_LOGGING_CATEGORY(testLogging)
 
 class Interface1 {
@@ -216,14 +229,14 @@ public:
 class DependentService : public QObject {
 public:
     explicit DependentService(Interface1* dependency) :
-        DependentService(0, "", dependency)
+        DependentService(Address{""}, "", dependency)
     {
 
     }
 
-    DependentService(int id, const QString& url, Interface1* dependency) :
+    DependentService(const Address& address, const QString& url, Interface1* dependency) :
         m_dependency(dependency),
-        m_id(id),
+        m_address(address),
         m_url(url) {
 
     }
@@ -232,10 +245,12 @@ public:
     }
 
     Interface1* m_dependency;
-    const int m_id;
+    Address m_address;
     const QString m_url;
 
 
+    Address address() const;
+    void setAddress(const Address &newAddress);
 };
 
 class CardinalityNService : public QObject {
@@ -303,3 +318,4 @@ public:
 
 }
 
+Q_DECLARE_METATYPE(mcnepp::qtditest::Address)

@@ -1,4 +1,5 @@
 #include "qsettingswatcher.h"
+#include "qconfigurationwatcherimpl.h"
 
 namespace mcnepp::qtdi::detail {
 
@@ -28,16 +29,8 @@ void QSettingsWatcher::refreshFromSettings(QSettings *settings)
 
 
     for(auto& watched : m_watched) {
-        if(watched.target && watched.resolver) {
-            QVariant currentValue = watched.resolver->resolve(m_context, watched.config);
-            if(currentValue != watched.lastValue) {
-                if(watched.property.write(watched.target, currentValue)) {
-                    qCInfo(m_context->loggingCategory()).nospace() << "Refreshed property '" << watched.property.name() << "' of " << watched.target << " with value " << currentValue;
-                } else {
-                   qCCritical(m_context->loggingCategory()).nospace() << "Could not refresh property " << watched.property.name() << " of " << watched.target << " with value " << currentValue;
-                }
-                watched.lastValue = currentValue;
-            }
+        if(auto watcher = dynamic_cast<QConfigurationWatcherImpl*>(watched.get())) {
+            watcher->checkChange();
         }
     }
 }
@@ -64,11 +57,43 @@ void QSettingsWatcher::add(QSettings *settings) {
     }
 }
 
-void QSettingsWatcher::addWatched(PlaceholderResolver* resolver, const QMetaProperty &property, QObject *target, const service_config& config)
+void QSettingsWatcher::setPropertyValue(const property_descriptor &propertyDescriptor, QObject *target, const QVariant& value) {
+    propertyDescriptor.setter(target, value);
+    qCInfo(m_context->loggingCategory()).nospace() << "Refreshed property '" << propertyDescriptor.name << "' of " << target << " with value " << value;
+}
+
+void QSettingsWatcher::addWatchedProperty(PlaceholderResolver* resolver, q_variant_converter_t variantConverter, const property_descriptor& propertyDescriptor, QObject *target, const service_config& config)
 {
-    m_watched.push_back(watched_t{resolver, property, target, config, resolver->resolve(m_context, config)});
-    qCInfo(m_context->loggingCategory()).nospace().noquote() << "Watching property '" << property.name() << "' of " << target;
+    QConfigurationWatcher* watcher = new QConfigurationWatcherImpl{resolver, config, m_context};
+
+    if(variantConverter) {
+        connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [this,propertyDescriptor,target,variantConverter](const QVariant& currentValue) {
+            setPropertyValue(propertyDescriptor, target, variantConverter(currentValue.toString()));
+        });
+
+    } else {
+        connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [this,propertyDescriptor,target](const QVariant& currentValue) {
+            setPropertyValue(propertyDescriptor, target, currentValue);
+        });
+    }
+    m_watched.push_back(watcher);
+    qCInfo(m_context->loggingCategory()).nospace().noquote() << "Watching property '" << propertyDescriptor.name << "' of " << target;
     m_SettingsWatchTimer->start();
+}
+
+
+QConfigurationWatcher *QSettingsWatcher::watchConfigValue(PlaceholderResolver *resolver)
+{
+    if(!resolver) {
+        return nullptr;
+    }
+    auto& watcher = m_watchedConfigValues[resolver->expression()];
+    if(!watcher) {
+        watcher = new QConfigurationWatcherImpl{resolver, service_config{}, m_context};
+        m_watched.push_back(watcher);
+        qCInfo(m_context->loggingCategory()).noquote().nospace() << "Watching expression '" << resolver->expression() << "'";
+    }
+    return watcher;
 }
 
 int QSettingsWatcher::autoRefreshMillis() const

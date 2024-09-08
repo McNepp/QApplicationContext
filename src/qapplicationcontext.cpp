@@ -190,28 +190,39 @@ SourceTargetSubscription::SourceTargetSubscription(registration_handle_t target,
     BasicSubscription{parent},
     m_target{target},
     m_boundSource{boundSource} {
-    connectOut(this, &SourceTargetSubscription::onPublished);
+    if((boundSource != nullptr) == (target != nullptr)) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Invalid source " << boundSource << " and target " << target << " supplied";
+        return;
+    }
+    if(boundSource) {
+        connectOut(this, &SourceTargetSubscription::onPublishedTarget);
+    } else if(target) {
+       connectOut(this, &SourceTargetSubscription::onPublishedSource);
+    }
 }
 
 
 void SourceTargetSubscription::cancel() {
-    for(auto child : children()) {
-        if(auto subscr = dynamic_cast<SourceTargetSubscription*>(child)) {
+    for(auto subscr : m_children) {
+        if(subscr) {
             subscr->cancel();
         }
     }
+    QObject::disconnect(m_objectsPublishedConnection);
     BasicSubscription::cancel();
 }
 
-void SourceTargetSubscription::onPublished(QObject* obj) {
-    if(m_boundSource) {
-        notify(m_boundSource, obj);
-    } else {
-        auto subscr = createForSource(obj);
+void SourceTargetSubscription::onPublishedSource(QObject* obj) {
+    auto subscr = createForSource(obj);
+    if(subscr) {
+        m_children.push_back(subscr);
         m_target->subscribe(subscr);
     }
 }
 
+void SourceTargetSubscription::onPublishedTarget(QObject* obj) {
+   emit objectsPublished(m_boundSource, obj);
+}
 
 
 
