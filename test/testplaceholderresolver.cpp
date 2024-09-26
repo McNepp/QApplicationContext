@@ -29,14 +29,6 @@ public:
         }
         return result;
     }
-    QConfigurationWatcher *watchConfigValue(const QString &) override
-    {
-        return nullptr;
-    }
-    bool autoRefreshEnabled() const override
-    {
-        return false;
-    }
 
     mutable QStringList lookupKeys;
 };

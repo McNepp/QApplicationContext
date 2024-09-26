@@ -675,21 +675,6 @@ which makes this a *reference to another member*:
     }));
 
 
-In the preceeding example, we used a reference to another member to initialize a.
-
-We can take this one step further and use *a reference to a property of another member*.
-This can be achieved by using a property-value with the format `"&ref.prop"`. The following example shows this:
-
-    QTimer timer1;
-    
-    auto reg1 = context -> registerObject(&timer1, "timer1"); // 1
-    
-    auto reg2 = context -> registerService<QTimer>("timer2", config({{"interval", "&timer1.interval"}})); // 2
-    
-    context -> publish(); 
-
-1. We register a `QTimer` as "timer1".
-2. We register a second `QTimer` as "timer2". We use mcnepp::qtdi::config() to initialize the property `interval` of the second timer with the first timer's propery.
 
 ## Connecting Signals of Services to Slots
 

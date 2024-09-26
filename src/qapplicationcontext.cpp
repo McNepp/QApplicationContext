@@ -27,7 +27,7 @@ bool QApplicationContext::unsetInstance(QApplicationContext* context) {
 
 
 QApplicationContext::QApplicationContext(QObject* parent) :
-    QConfigurationResolver{parent} {
+    QObject{parent} {
 }
 
 QApplicationContext* QApplicationContext::instance() {

@@ -113,7 +113,7 @@ bool isBindable(const QMetaProperty& sourceProperty) {
 namespace {
 
 const QRegularExpression& beanRefPattern() {
-    static QRegularExpression regEx{"^&([^.]+)(\\.([^.]+))?"};
+    static QRegularExpression regEx{"^&([^.]+)"};
     return regEx;
 }
 
@@ -164,11 +164,7 @@ QStringList determineBeanRefs(const QVariantMap& properties) {
     for(auto entry : properties.asKeyValueRange()) {
         auto key = entry.second.toString();
         if(key.length() > 1 && key.startsWith('&')) {
-            int dot = key.indexOf('.');
-            if(dot < 0) {
-                dot = key.size();
-            }
-            result.push_back(key.mid(1, dot-1));
+            result.push_back(key.right(key.length()-1));
         }
     }
     return result;
@@ -471,7 +467,15 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(Descr
 
 
 
-
+StandardApplicationContext::ServiceRegistration::ServiceRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
+    DescriptorRegistration{base, index, name, desc, context, parent},
+    theService(nullptr),
+    m_config(config),
+    m_resolvedProperties{config.properties},
+    m_state(STATE_INIT)
+{
+    beanRefsCache = determineBeanRefs(config.properties);
+}
 
 void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
     out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor();
@@ -501,11 +505,7 @@ void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
 
 QStringList StandardApplicationContext::ServiceRegistration::getBeanRefs() const
 {
-    if(!beanRefsCache.has_value()) {
-        beanRefsCache = determineBeanRefs(config().properties);
-    }
-    return beanRefsCache.value();
-
+    return beanRefsCache;
 }
 
 QObject* StandardApplicationContext::ServiceRegistration::createService(const QVariantList &dependencies, descriptor_list &created)
@@ -549,15 +549,13 @@ StandardApplicationContext::ServiceTemplateRegistration::ServiceTemplateRegistra
     m_config(config),
     m_resolvedProperties{config.properties} {
     proxySubscription = new ProxySubscription{this, true};
+    beanRefsCache = determineBeanRefs(config.properties);
 }
 
 
 QStringList StandardApplicationContext::ServiceTemplateRegistration::getBeanRefs() const
 {
-    if(!beanRefsCache.has_value()) {
-        beanRefsCache = determineBeanRefs(config().properties);
-    }
-    return beanRefsCache.value();
+    return beanRefsCache;
 
 }
 
@@ -594,6 +592,7 @@ StandardApplicationContext::PrototypeRegistration::PrototypeRegistration(Descrip
     m_config(config)
 {
     proxySubscription = new ProxySubscription{this, true};
+    beanRefsCache = determineBeanRefs(config.properties);
 }
 
 
@@ -604,10 +603,7 @@ int StandardApplicationContext::PrototypeRegistration::unpublish()
 
 QStringList StandardApplicationContext::PrototypeRegistration::getBeanRefs() const
 {
-    if(!beanRefsCache.has_value()) {
-        beanRefsCache = determineBeanRefs(config().properties);
-    }
-    return beanRefsCache.value();
+    return beanRefsCache;
 }
 
 QObject* StandardApplicationContext::PrototypeRegistration::createService(const QVariantList& dependencies, descriptor_list& created) {
@@ -1476,25 +1472,6 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
             return {Status::fatal, false};
         }
         QVariant resultValue = resolveDependency(QVariant::fromValue(bean->getObject()), toBePublished);
-        if(match.hasCaptured(3)) {
-            QString propName = match.captured(3);
-            if(!resultValue.isValid()) {
-                if(allowPartial) {
-                    qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
-                    return { Status::fixable, false};
-                }
-                qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
-                return {Status::fatal, false};
-            }
-            QMetaProperty sourceProp = getProperty(bean, propName.toLatin1());
-            if(!sourceProp.isValid()) {
-                //Refering to a non-existing Q_PROPERTY is always non-fixable:
-                qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << propName << "' of " << resultValue;
-                return {Status::fatal, false};
-            }
-            resultValue = sourceProp.read(resultValue.value<QObject*>());
-        }
-
         qCInfo(loggingCategory()).nospace().noquote() << "Resolved reference '" << key << "' to " << resultValue;
         value = resultValue;
         return {Status::ok, true};

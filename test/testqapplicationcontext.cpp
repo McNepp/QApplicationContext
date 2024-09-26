@@ -709,26 +709,7 @@ private slots:
     }
 
 
-    void testInitializeWithBeanProperty() {
-        QTimer timer1;
-        BaseService base1;
-        base1.setTimer(&timer1);
-        context->registerObject(&base1, "base1");
-        auto reg2 = context->registerService<BaseService>("base2", config({{"timer", "&base1.timer"}}));
-        QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot2{reg2};
-        QCOMPARE(baseSlot2->timer(), &timer1);
-    }
 
-    void testInitializeWithBeanProperty2() {
-        QTimer timer1;
-        timer1.setInterval(4711);
-        context->registerObject(&timer1, "timer1");
-        auto reg2 = context->registerService<QTimer>("timer2", config({{"interval", "&timer1.interval"}}));
-        QVERIFY(context->publish());
-        RegistrationSlot<QTimer> timerSlot2{reg2};
-        QCOMPARE(timerSlot2->interval(), 4711);
-    }
 
     void testBindServiceRegistrationToProperty() {
 
