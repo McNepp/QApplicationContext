@@ -1,4 +1,5 @@
 #include <QMetaProperty>
+#include <QUuid>
 #include <QCoreApplication>
 #include "qapplicationcontext.h"
 
@@ -26,7 +27,7 @@ bool QApplicationContext::unsetInstance(QApplicationContext* context) {
 
 
 QApplicationContext::QApplicationContext(QObject* parent) :
-    QConfigurationResolver{parent} {
+    QObject{parent} {
 }
 
 QApplicationContext* QApplicationContext::instance() {
@@ -222,6 +223,15 @@ void SourceTargetSubscription::onPublishedSource(QObject* obj) {
 
 void SourceTargetSubscription::onPublishedTarget(QObject* obj) {
    emit objectsPublished(m_boundSource, obj);
+}
+
+QString uniquePropertyName(const void* data, std::size_t size)
+{
+    QString str{"."}; // property starts with a dot -> "private property"
+    for(const unsigned char* iter = static_cast<const unsigned char*>(data), *end = iter + size; iter < end; ++iter) {
+        str.append(QString::number(*iter, 16));
+    }
+    return str;
 }
 
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <unordered_set>
 #include <unordered_map>
 #include <deque>
@@ -285,14 +284,7 @@ private:
 
         friend class StandardApplicationContext;
 
-        ServiceRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
-            DescriptorRegistration{base, index, name, desc, context, parent},
-            theService(nullptr),
-            m_config(config),
-            m_resolvedProperties{config.properties},
-            m_state(STATE_INIT)        {
-
-        }
+        ServiceRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent);
 
         ServiceRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
         ServiceRegistration{base, index, name, desc, config, parent, parent} {
@@ -373,7 +365,7 @@ private:
         QMetaObject::Connection onDestroyed;
         QVariantMap m_resolvedProperties;
         int m_state;
-        mutable std::optional<QStringList> beanRefsCache;
+        QStringList beanRefsCache;
     };
 
     class ServiceTemplateRegistration : public DescriptorRegistration {
@@ -454,7 +446,7 @@ private:
     private:
         service_config m_config;
         QVariantMap m_resolvedProperties;
-        mutable std::optional<QStringList> beanRefsCache;
+        QStringList beanRefsCache;
         subscription_handle_t proxySubscription;
         descriptor_list derivedServices;
     };
@@ -521,7 +513,7 @@ private:
     private:
         int m_state;
         service_config m_config;
-        mutable std::optional<QStringList> beanRefsCache;
+        QStringList beanRefsCache;
         subscription_handle_t proxySubscription;
     };
 

@@ -7,6 +7,10 @@ enable_testing()
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL  "GNU")
+    add_compile_options(-Wa,-mbig-obj)
+endif()
+
 
 find_package(Qt6 REQUIRED COMPONENTS Core OPTIONAL_COMPONENTS Test)
 
