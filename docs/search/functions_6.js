@@ -6,5 +6,5 @@ var searchData=
   ['injectparent_3',['injectParent',['../qapplicationcontext_8h.html#a2b4cd088db70b5b3179022c6e0b00fe2',1,'mcnepp::qtdi']]],
   ['instance_4',['instance',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#abc1d419de6d4d3af4c38a8c5791edc4d',1,'mcnepp::qtdi::QApplicationContext']]],
   ['isglobalinstance_5',['isGlobalInstance',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#aefb81ffc9c91512a6ae0ec84453f39fa',1,'mcnepp::qtdi::QApplicationContext']]],
-  ['isvalid_6',['isValid',['../classmcnepp_1_1qtdi_1_1_subscription.html#acceba2ac73751d2bfe14a4113a28050d',1,'mcnepp::qtdi::Subscription::isValid()'],['../classmcnepp_1_1qtdi_1_1_registration.html#a98e7db034be679d63391761aac500b8d',1,'mcnepp::qtdi::Registration::isValid()']]]
+  ['isvalid_6',['isValid',['../classmcnepp_1_1qtdi_1_1_subscription.html#acceba2ac73751d2bfe14a4113a28050d',1,'mcnepp::qtdi::Subscription']]]
 ];
