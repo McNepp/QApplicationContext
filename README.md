@@ -258,7 +258,7 @@ Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPo
 
 Also, *private properties* can be very useful in conjunction with [Service-templates](#service-templates).
 
-### Configuring services with 'setters'
+### Configuring services with type-safe 'setters'
 
 In the previous paragraph, you could see how Q_PROPERTYs of the services were initialized using the property-names.
 <br>Now, we will show arbitrary service-properties can be configured, even if no Q_PROPERTY has been declared.

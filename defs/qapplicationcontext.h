@@ -741,7 +741,7 @@ protected:
     ///
     template<typename T> struct config_entry_t {
         QString name;
-        ConfigValue value;
+        QVariant value;
     };
 
     inline bool operator==(const ConfigValue& left, const ConfigValue& right) {
@@ -2109,6 +2109,7 @@ template<typename S> class ServiceConfig {
     friend class QApplicationContext;
 public:
 
+    using entry_type = detail::config_entry_t<S>;
 
     ServiceConfig<S>&& withGroup(const QString& group)&& {
         data.group = group;
@@ -2128,9 +2129,11 @@ public:
         return ServiceConfig<S>{*this}.withAutoRefresh();
     }
 
-    explicit ServiceConfig(service_config&& descriptor) :
-        data{std::move(descriptor)} {
-
+    explicit ServiceConfig(std::initializer_list<entry_type> entries)
+    {
+        for(auto& entry: entries) {
+            data.properties.insert(entry.name, entry.value);
+        }
     }
 
 
@@ -2154,7 +2157,7 @@ template<typename T> using service_config_entry = detail::config_entry_t<T>;
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> entry(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, false, detail::callable_adapter<S>::adaptSetter(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), QVariant::fromValue(detail::ConfigValue{expression, false, detail::callable_adapter<S>::adaptSetter(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)})};
 }
 
 ///
@@ -2165,7 +2168,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> entry(R(S::*propertySetter)(A), A value) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{value, false, detail::callable_adapter<S>::adaptSetter(propertySetter), nullptr}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), QVariant::fromValue(detail::ConfigValue{value, false, detail::callable_adapter<S>::adaptSetter(propertySetter), nullptr})};
 }
 
 
@@ -2205,7 +2208,7 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, true, detail::callable_adapter<S>::adaptSetter(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), QVariant::fromValue(detail::ConfigValue{expression, true, detail::callable_adapter<S>::adaptSetter(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)})};
 }
 
 
@@ -2266,15 +2269,24 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 
 ///
 /// \brief Create a type-safe service-configuration.
-/// \param entries
+/// <br>A type-safe entry can be created by invoking mcnepp::qtdi::entry() with a member-function as its first argument.
+/// For example:
+///
+///     context->registerService<QQTimer>("timer", config({entry(&QTimer::setInterval, 1000), entry(&QTimer::singleShot, "true")}));
+///
+/// Note that is possible to mix type-safe configuration-entries with Q_PROPERTY-based configuration-entries:
+///
+///     context->registerService<QQTimer>("timer", config({entry(&QTimer::setInterval, 1000), {"singleShot", "true"}}));
+///
+/// However, there is a caveat: Even though the above service-registrations are *logically equivalent*, they are *technically different*.
+/// Thus, executing the second registration after the first one will not be considered *idempotent*.
+/// This means that the second registration will fail (i.e. return an invalid ServiceRegistration).
+///
+/// \param entries the list of key/value-pairs that will be used to configure a Service of type `<S>`.
 /// \return a type-safe service-configuration.
 ///
 template<typename S> [[nodiscard]] ServiceConfig<S> config(std::initializer_list<service_config_entry<S>> entries) {
-    service_config config;
-    for(auto& entry : entries) {
-        config.properties.insert(entry.name, QVariant::fromValue(entry.value));
-    }
-    return ServiceConfig<S>{std::move(config)};
+    return ServiceConfig<S>{entries};
 }
 
 
@@ -3091,6 +3103,21 @@ public:
 
 
 
+
+    ///
+    /// \brief Registers a service with no dependencies with this ApplicationContext.
+    /// This is a convenience-function equivalent to `registerService(service<S>(), objectName, config)`.
+    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
+    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
+    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
+    /// its constructor.
+    /// \param config the type-safe Configuration for the service.
+    /// \tparam S the service-type.
+    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
+    ///
+    template<typename S> auto registerService(const QString& objectName, const ServiceConfig<S>& config) -> ServiceRegistration<S,ServiceScope::SINGLETON> {
+        return registerService(service<S>(), objectName, config.data);
+    }
 
     ///
     /// \brief Registers a service with no dependencies with this ApplicationContext.

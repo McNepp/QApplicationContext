@@ -1590,12 +1590,12 @@ private slots:
 
     void testStronglyTypedServiceConfiguration() {
         void (QTimer::*timerFunc)(int) = &QTimer::setInterval; //We need this intermediate variable because setTimer() has multiple overloads.
-        auto timerReg = context->registerService(service<QTimer>(), "timer", config({entry(timerFunc, 4711)}));
-        auto timerReg2 = context->registerService(service<QTimer>(), "timer", config({entry(timerFunc, 4711)}));
+        auto timerReg = context->registerService<QTimer>("timer", config({entry(timerFunc, 4711)}));
+        auto timerReg2 = context->registerService<QTimer>("timer", config({entry(timerFunc, 4711)}));
         QCOMPARE(timerReg, timerReg2);
-        auto baseReg = context->registerService(service<BaseService>(), "base", config({entry(&BaseService::setFoo, "${foo}"),
+        auto baseReg = context->registerService<BaseService>("base", config({entry(&BaseService::setFoo, "${foo}"),
                                                                                         entry(&BaseService::setTimer, "&timer")}));
-        auto baseReg2 = context->registerService(service<BaseService>(), "base", config({entry(&BaseService::setFoo, "${foo}"),
+        auto baseReg2 = context->registerService<BaseService>("base", config({entry(&BaseService::setFoo, "${foo}"),
                                                                                         entry(&BaseService::setTimer, "&timer")}));
         QCOMPARE(baseReg, baseReg2);
 
@@ -1609,6 +1609,28 @@ private slots:
         QCOMPARE(baseSlot->foo(), "Hello, world");
         QCOMPARE(baseSlot->timer(), timerSlot.last());
     }
+
+    void testMixedServiceConfiguration() {
+        QTimer timer;
+        context->registerObject(&timer, "timer");
+        //Mix a type-safe entry with a Q_PROPERTY-based entry:
+        auto baseReg = context->registerService<BaseService>("base", config({entry(&BaseService::setFoo, "${foo}"),
+                                                                                        {"timer", "&timer"}}));
+        //Even though the configuration is logically equivalent, it is technically different. Thus, the second registration will fail:
+        auto baseReg2 = context->registerService<BaseService>("base", config({entry(&BaseService::setFoo, "${foo}"),
+                                                                                        entry(&BaseService::setTimer, "&timer")}));
+        QVERIFY(!baseReg2);
+
+        configuration->setValue("foo", "Hello, world");
+        context->registerObject(configuration.get());
+
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> baseSlot{baseReg};
+        QVERIFY(baseSlot.last());
+        QCOMPARE(baseSlot->foo(), "Hello, world");
+        QCOMPARE(baseSlot->timer(), &timer);
+    }
+
 
 
 
