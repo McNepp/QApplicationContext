@@ -192,7 +192,7 @@ template<typename C> auto pop_front(C& container) -> typename C::value_type {
 
 
 QString makeName(const std::type_index& type) {
-    QString typeName{type.name()};
+    QString typeName{detail::type_name(type)};
     typeName.replace(' ', '-');
     return typeName+"-"+QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
@@ -573,7 +573,7 @@ QObject* StandardApplicationContext::ServiceTemplateRegistration::createService(
 }
 
 void StandardApplicationContext::ServiceTemplateRegistration::print(QDebug out) const {
-    out.nospace().noquote() << "Service-template '" << registeredName() << "' of type " << descriptor().impl_type.name();
+    out.nospace().noquote() << "Service-template '" << registeredName() << "' of type " << detail::type_name(descriptor().impl_type);
 }
 
 void StandardApplicationContext::ServiceTemplateRegistration::onSubscription(subscription_handle_t subscription) {

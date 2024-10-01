@@ -633,7 +633,7 @@ private:
 
 
         virtual void print(QDebug out) const final override {
-            out.nospace().noquote() << "Services [" << registeredServices().size() << "] with service-type '" << m_type.name() << "'";
+            out.nospace().noquote() << "Services [" << registeredServices().size() << "] with service-type '" << detail::type_name(m_type) << "'";
         }
 
         const QLoggingCategory& loggingCategory() const {

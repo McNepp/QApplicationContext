@@ -718,6 +718,7 @@ protected:
 ///
     QString uniquePropertyName(const void*, std::size_t);
 
+
     ///
     /// \brief The return-type of mcnepp::qtdi::injectParent().
     /// This is an empty struct. It serves as a 'type-tag' for which there
@@ -749,10 +750,33 @@ protected:
         return left.expression == right.expression;
     }
 
+#ifdef __GNUG__
+    QString demangle(const char*);
+
+    inline QString type_name(const std::type_info& info) {
+        return demangle(info.name());
+    }
+
+    inline QString type_name(const std::type_index& info) {
+        return demangle(info.name());
+    }
+#else
+    inline const char* type_name(const std::type_info& info) {
+        return info.name();
+    }
+
+    inline const char* type_name(const std::type_index& info) {
+        return info.name();
+    }
+#endif
+
+
 
 }// end namespace detail
 
 }//end namespace mcnepp::qtdi
+
+
 
 Q_DECLARE_METATYPE(mcnepp::qtdi::detail::ConfigValue)
 
@@ -1586,7 +1610,7 @@ template<typename S> QDebug operator<<(QDebug out, const Registration<S>& reg) {
     if(reg) {
         out <<  *reg.unwrap();
     } else {
-        out.noquote().nospace() << "Registration for service-type '" << typeid(S).name() << "' [invalid]";
+        out.noquote().nospace() << "Registration for service-type '" << detail::type_name(typeid(S)) << "' [invalid]";
     }
     return out;
 }
@@ -3194,7 +3218,7 @@ public:
             static_assert(detail::check_unique_types<S,IFaces...>(), "All advertised interfaces must be distinct");
             auto check = detail::check_dynamic_types<S,IFaces...>(obj);
             if(!check.first)            {
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << qObject << " as '" << objName << "'. Object does not implement " << check.second.name();
+                qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << qObject << " as '" << objName << "'. Object does not implement " << detail::type_name(check.second);
                 return ServiceRegistration<S,ServiceScope::EXTERNAL>{};
             }
         }
@@ -3550,7 +3574,7 @@ namespace std {
             return hasher(sub.unwrap());
         }
 
-        std::hash<mcnepp::qtdi::subscription_handle_t> hasher;
+        hash<mcnepp::qtdi::subscription_handle_t> hasher;
     };
 
     template<typename S,mcnepp::qtdi::ServiceScope scope> struct hash<mcnepp::qtdi::ServiceRegistration<S,scope>> {
@@ -3558,7 +3582,7 @@ namespace std {
             return hasher(sub.unwrap());
         }
 
-        std::hash<mcnepp::qtdi::service_registration_handle_t> hasher;
+        hash<mcnepp::qtdi::service_registration_handle_t> hasher;
     };
 
 
@@ -3567,16 +3591,20 @@ namespace std {
             return hasher(sub.unwrap());
         }
 
-        std::hash<mcnepp::qtdi::proxy_registration_handle_t> hasher;
+        hash<mcnepp::qtdi::proxy_registration_handle_t> hasher;
     };
 
     template<> struct hash<mcnepp::qtdi::detail::dependency_info> {
         std::size_t operator()(const mcnepp::qtdi::detail::dependency_info& info) const {
             return typeHasher(info.type) ^ info.kind;
         }
-        hash<std::type_index> typeHasher;
+        hash<type_index> typeHasher;
     };
 
 
 
 }
+
+
+
+
