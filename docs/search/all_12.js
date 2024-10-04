@@ -13,6 +13,7 @@ var searchData=
   ['true_3a_10',['allowPartial = true:',['../index.html#autotoc_md44',1,'']]],
   ['tweaking_20services_20qapplicationcontextpostprocessor_11',['Tweaking services (QApplicationContextPostProcessor)',['../index.html#tweaking-services',1,'']]],
   ['type_20safe_20bindings_12',['Type-safe bindings',['../index.html#autotoc_md31',1,'']]],
-  ['types_13',['Configuring values of non-String types',['../index.html#autotoc_md13',1,'']]],
-  ['types_20of_20dependency_20relations_14',['Types of dependency-relations',['../index.html#autotoc_md22',1,'']]]
+  ['type_20safe_20setters_13',['Configuring services with type-safe &apos;setters&apos;',['../index.html#autotoc_md17',1,'']]],
+  ['types_14',['Configuring values of non-String types',['../index.html#autotoc_md13',1,'']]],
+  ['types_20of_20dependency_20relations_15',['Types of dependency-relations',['../index.html#autotoc_md22',1,'']]]
 ];

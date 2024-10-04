@@ -389,7 +389,7 @@ The resulting service_config_entry can then be used to initialize mcnepp::qtqi::
 <tr class="memitem:aed65b8ca4bbc94a979cb56b3ce27a0bd" id="r_aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename C  = typename detail::variant_converter_traits&lt;detail::remove_cvref_t&lt;A&gt;&gt;::type&gt; </td></tr>
 <tr class="memitem:aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#ab1ac4e711002c975d3f2d8e8b1421d44">service_config_entry</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aed65b8ca4bbc94a979cb56b3ce27a0bd">mcnepp::qtdi::autoRefresh</a> (R(S::*propertySetter)(A), const QString &amp;expression, C converter=C{})</td></tr>
 <tr class="memdesc:aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe, auto-refreshing configuration-entry for a service. <br  />
-The resulting service_config_entry can then be used to initialize <a class="el" href="#a0f2f39eaaca1ca14c10e912cf8849c05" title="Create a type-safe service-configuration.">mcnepp::qtdi::config(std::initializer_list&lt;service_config_entry&lt;S&gt;&gt;)</a>; <br  />
+The resulting service_config_entry can then be used to initialize <a class="el" href="#a0f2f39eaaca1ca14c10e912cf8849c05" title="Create a type-safe service-configuration.  A type-safe entry can be created by invoking mcnepp::qtdi:...">mcnepp::qtdi::config(std::initializer_list&lt;service_config_entry&lt;S&gt;&gt;)</a>; <br  />
 In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:  <br /></td></tr>
 <tr class="separator:aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9a1a4752ea78443c03584131f67c205a" id="r_a9a1a4752ea78443c03584131f67c205a"><td class="memItemLeft" align="right" valign="top">service_config::entry_type&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9a1a4752ea78443c03584131f67c205a">mcnepp::qtdi::entry</a> (const QString &amp;name, const QVariant &amp;value)</td></tr>
@@ -403,7 +403,8 @@ In order to demonstrate the purpose, consider this example of a normal, non-upda
 <tr class="separator:aac83aafd952e2c2c71032645773646c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0f2f39eaaca1ca14c10e912cf8849c05" id="r_a0f2f39eaaca1ca14c10e912cf8849c05"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
 <tr class="memitem:a0f2f39eaaca1ca14c10e912cf8849c05"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a0f2f39eaaca1ca14c10e912cf8849c05">mcnepp::qtdi::config</a> (std::initializer_list&lt; <a class="el" href="#ab1ac4e711002c975d3f2d8e8b1421d44">service_config_entry</a>&lt; S &gt; &gt; entries)</td></tr>
-<tr class="memdesc:a0f2f39eaaca1ca14c10e912cf8849c05"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a type-safe service-configuration.  <br /></td></tr>
+<tr class="memdesc:a0f2f39eaaca1ca14c10e912cf8849c05"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a type-safe service-configuration. <br  />
+A type-safe entry can be created by invoking <a class="el" href="#a9d4f50592427143dffe1904aca6b520e" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::entry()</a> with a member-function as its first argument. For example:  <br /></td></tr>
 <tr class="separator:a0f2f39eaaca1ca14c10e912cf8849c05"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8ce383afad6131ee291cc692693d1782" id="r_a8ce383afad6131ee291cc692693d1782"><td class="memTemplParams" colspan="2">template&lt;typename F , typename Impl  = typename F::service_type, typename... Dep&gt; </td></tr>
 <tr class="memitem:a8ce383afad6131ee291cc692693d1782"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl, ServiceScope::SINGLETON &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a8ce383afad6131ee291cc692693d1782">mcnepp::qtdi::serviceFactory</a> (F factory, Dep...dependencies)</td></tr>
@@ -1132,10 +1133,14 @@ template&lt;typename S &gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Create a type-safe service-configuration. </p>
+<p>Create a type-safe service-configuration. <br  />
+A type-safe entry can be created by invoking <a class="el" href="#a9d4f50592427143dffe1904aca6b520e" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::entry()</a> with a member-function as its first argument. For example: </p>
+<pre class="fragment">context-&gt;registerService&lt;QQTimer&gt;("timer", config({entry(&amp;QTimer::setInterval, 1000), entry(&amp;QTimer::singleShot, "true")}));
+</pre><p>Note that is possible to mix type-safe configuration-entries with Q_PROPERTY-based configuration-entries: </p><pre class="fragment">context-&gt;registerService&lt;QQTimer&gt;("timer", config({entry(&amp;QTimer::setInterval, 1000), {"singleShot", "true"}}));
+</pre><p>However, there is a caveat: Even though the above service-registrations are <em>logically equivalent</em>, they are <em>technically different</em>. Thus, executing the second registration after the first one will not be considered <em>idempotent</em>. This means that the second registration will fail (i.e. return an invalid ServiceRegistration).</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">entries</td><td></td></tr>
+    <tr><td class="paramname">entries</td><td>the list of key/value-pairs that will be used to configure a Service of type <code>&lt;S&gt;</code>. </td></tr>
   </table>
   </dd>
 </dl>

@@ -211,6 +211,11 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>event</b> (QEvent *ev
 <tr class="memdesc:a0e100e99add91ba50eee97f52805a488"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with this ApplicationContext. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
 <tr class="separator:a0e100e99add91ba50eee97f52805a488"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24bf1f25483017fe0e6e5b8bcfb3b99a" id="r_a24bf1f25483017fe0e6e5b8bcfb3b99a"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
+<tr class="memitem:a24bf1f25483017fe0e6e5b8bcfb3b99a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a24bf1f25483017fe0e6e5b8bcfb3b99a">registerService</a> (const QString &amp;objectName, const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt; &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>) -&gt; ServiceRegistration&lt; S, ServiceScope::SINGLETON &gt;</td></tr>
+<tr class="memdesc:a24bf1f25483017fe0e6e5b8bcfb3b99a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with no dependencies with this ApplicationContext. This is a convenience-function equivalent to <code>registerService(service&lt;S&gt;(), objectName, config)</code>. <br  />
+<b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
+<tr class="separator:a24bf1f25483017fe0e6e5b8bcfb3b99a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9590050c6f2e1abb5983ae3eb10aa1bd" id="r_a9590050c6f2e1abb5983ae3eb10aa1bd"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
 <tr class="memitem:a9590050c6f2e1abb5983ae3eb10aa1bd"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9590050c6f2e1abb5983ae3eb10aa1bd">registerService</a> (const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; ServiceRegistration&lt; S, ServiceScope::SINGLETON &gt;</td></tr>
 <tr class="memdesc:a9590050c6f2e1abb5983ae3eb10aa1bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with no dependencies with this ApplicationContext. This is a convenience-function equivalent to <code>registerService(service&lt;S&gt;(), objectName, config)</code>. <br  />
@@ -242,6 +247,11 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>event</b> (QEvent *ev
 <tr class="memdesc:a0e100e99add91ba50eee97f52805a488 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with this ApplicationContext. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
 <tr class="separator:a0e100e99add91ba50eee97f52805a488 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24bf1f25483017fe0e6e5b8bcfb3b99a inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context" id="r_a24bf1f25483017fe0e6e5b8bcfb3b99a"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
+<tr class="memitem:a24bf1f25483017fe0e6e5b8bcfb3b99a inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a24bf1f25483017fe0e6e5b8bcfb3b99a">registerService</a> (const QString &amp;objectName, const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt; &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, ServiceScope::SINGLETON &gt;</td></tr>
+<tr class="memdesc:a24bf1f25483017fe0e6e5b8bcfb3b99a inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with no dependencies with this ApplicationContext. This is a convenience-function equivalent to <code>registerService(service&lt;S&gt;(), objectName, config)</code>. <br  />
+<b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
+<tr class="separator:a24bf1f25483017fe0e6e5b8bcfb3b99a inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9590050c6f2e1abb5983ae3eb10aa1bd inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context" id="r_a9590050c6f2e1abb5983ae3eb10aa1bd"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
 <tr class="memitem:a9590050c6f2e1abb5983ae3eb10aa1bd inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9590050c6f2e1abb5983ae3eb10aa1bd">registerService</a> (const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, ServiceScope::SINGLETON &gt;</td></tr>
 <tr class="memdesc:a9590050c6f2e1abb5983ae3eb10aa1bd inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with no dependencies with this ApplicationContext. This is a convenience-function equivalent to <code>registerService(service&lt;S&gt;(), objectName, config)</code>. <br  />
@@ -996,7 +1006,7 @@ template&lt;typename S &gt; </div>
 </div>
 </div>
 <a id="ac2cccc0d3ac93fdfcd157584c5b8e553" name="ac2cccc0d3ac93fdfcd157584c5b8e553"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac2cccc0d3ac93fdfcd157584c5b8e553">&#9670;&#160;</a></span>registerService() <span class="overload">[1/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ac2cccc0d3ac93fdfcd157584c5b8e553">&#9670;&#160;</a></span>registerService() <span class="overload">[1/7]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1053,8 +1063,56 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
+<a id="a24bf1f25483017fe0e6e5b8bcfb3b99a" name="a24bf1f25483017fe0e6e5b8bcfb3b99a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24bf1f25483017fe0e6e5b8bcfb3b99a">&#9670;&#160;</a></span>registerService() <span class="overload">[2/7]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename S &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">auto mcnepp::qtdi::QApplicationContext::registerService </td>
+          <td>(</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>objectName</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span>&#160;) -&gt; ServiceRegistration&lt;S,ServiceScope::SINGLETON&gt; </td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Registers a service with no dependencies with this ApplicationContext. This is a convenience-function equivalent to <code>registerService(service&lt;S&gt;(), objectName, config)</code>. <br  />
+<b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">objectName</td><td>the name that the service shall have. If empty, a name will be auto-generated. The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in its constructor. </td></tr>
+    <tr><td class="paramname">config</td><td>the type-safe Configuration for the service. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> if it could not be registered. </dd></dl>
+
+</div>
+</div>
 <a id="a9590050c6f2e1abb5983ae3eb10aa1bd" name="a9590050c6f2e1abb5983ae3eb10aa1bd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9590050c6f2e1abb5983ae3eb10aa1bd">&#9670;&#160;</a></span>registerService() <span class="overload">[2/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a9590050c6f2e1abb5983ae3eb10aa1bd">&#9670;&#160;</a></span>registerService() <span class="overload">[3/7]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1102,7 +1160,7 @@ template&lt;typename S &gt; </div>
 </div>
 </div>
 <a id="a17df51ef3d960a862967b84e074a2b91" name="a17df51ef3d960a862967b84e074a2b91"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a17df51ef3d960a862967b84e074a2b91">&#9670;&#160;</a></span>registerService() <span class="overload">[3/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a17df51ef3d960a862967b84e074a2b91">&#9670;&#160;</a></span>registerService() <span class="overload">[4/7]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1157,7 +1215,7 @@ template&lt;typename S , typename Impl , <a class="el" href="qapplicationcontext
 </div>
 </div>
 <a id="a5e297b11ba712085577543de42f07c91" name="a5e297b11ba712085577543de42f07c91"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5e297b11ba712085577543de42f07c91">&#9670;&#160;</a></span>registerService() <span class="overload">[4/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e297b11ba712085577543de42f07c91">&#9670;&#160;</a></span>registerService() <span class="overload">[5/7]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1212,7 +1270,7 @@ template&lt;typename S , typename Impl , <a class="el" href="qapplicationcontext
 </div>
 </div>
 <a id="a0e100e99add91ba50eee97f52805a488" name="a0e100e99add91ba50eee97f52805a488"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0e100e99add91ba50eee97f52805a488">&#9670;&#160;</a></span>registerService() <span class="overload">[5/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a0e100e99add91ba50eee97f52805a488">&#9670;&#160;</a></span>registerService() <span class="overload">[6/7]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1273,7 +1331,7 @@ template&lt;typename S , typename Impl , typename B , <a class="el" href="qappli
 </div>
 </div>
 <a id="a7e506407333b2bcb45727a1cd1397f13" name="a7e506407333b2bcb45727a1cd1397f13"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7e506407333b2bcb45727a1cd1397f13">&#9670;&#160;</a></span>registerService() <span class="overload">[6/6]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a7e506407333b2bcb45727a1cd1397f13">&#9670;&#160;</a></span>registerService() <span class="overload">[7/7]</span></h2>
 
 <div class="memitem">
 <div class="memproto">

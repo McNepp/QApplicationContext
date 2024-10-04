@@ -6,7 +6,7 @@ var searchData=
   ['configuration_3',['Externalized Configuration',['../index.html#externalized-configuration',1,'']]],
   ['configuration_20values_4',['Auto-refreshable configuration-values',['../index.html#autotoc_md18',1,'']]],
   ['configuring_20services_20with_20q_5fproperty_5',['Configuring services with Q_PROPERTY',['../index.html#configuring-services',1,'']]],
-  ['configuring_20services_20with_20setters_6',['Configuring services with &apos;setters&apos;',['../index.html#autotoc_md17',1,'']]],
+  ['configuring_20services_20with_20type_20safe_20setters_6',['Configuring services with type-safe &apos;setters&apos;',['../index.html#autotoc_md17',1,'']]],
   ['configuring_20values_20of_20non_20string_20types_7',['Configuring values of non-String types',['../index.html#autotoc_md13',1,'']]],
   ['connecting_20signals_20of_20services_20to_20slots_8',['Connecting Signals of Services to Slots',['../index.html#autotoc_md29',1,'']]],
   ['connectservices_9',['connectServices',['../qapplicationcontext_8h.html#a3af2e9ed942d0a2991ea109e3483c6b5',1,'mcnepp::qtdi']]],
