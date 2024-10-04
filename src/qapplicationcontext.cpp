@@ -2,7 +2,9 @@
 #include <QUuid>
 #include <QCoreApplication>
 #include "qapplicationcontext.h"
-
+#ifdef __GNUG__
+#include <cxxabi.h>
+#endif
 
 namespace mcnepp::qtdi {
 
@@ -137,7 +139,7 @@ inline QString kindToString(int kind) {
 
 QDebug operator<<(QDebug out, const dependency_info& info) {
     QDebugStateSaver state{out};
-    out.noquote().nospace() << "Dependency<" << info.type.name() << "> [" << kindToString(info.kind) << ']';
+    out.noquote().nospace() << "Dependency<" << detail::type_name(info.type) << "> [" << kindToString(info.kind) << ']';
     switch(info.kind) {
     case detail::VALUE_KIND:
         out << " with value " << info.value;
@@ -161,7 +163,7 @@ QDebug operator << (QDebug out, const service_descriptor& descriptor) {
     out.nospace().noquote() << "Descriptor [service-types=";
     const char* del = "";
     for(auto& t : descriptor.service_types) {
-        out << del << t.name();
+        out << del << detail::type_name(t);
         del = ", ";
     }
     out << "]";
@@ -235,6 +237,15 @@ QString uniquePropertyName(const void* data, std::size_t size)
 }
 
 
+
+#ifdef __GNUG__
+
+QString demangle(const char* name) {
+    int status = 0;
+    std::unique_ptr<char,decltype(&std::free)> demangledName{abi::__cxa_demangle(name, nullptr, nullptr, &status), std::free};
+    return status == 0 ? demangledName.get() : name;
+}
+#endif
 
 }
 
