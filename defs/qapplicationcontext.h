@@ -1438,7 +1438,7 @@ template<typename S,typename T,typename A,typename R,ServiceScope scope> Subscri
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
-    return source.bind(sourceProperty, target.unwrap(), {"", detail::callable_adapter<T>::adaptSetter(setter)});
+    return source.bind(sourceProperty, target.unwrap(), {detail::uniquePropertyName(&setter, sizeof setter).toLatin1(), detail::callable_adapter<T>::adaptSetter(setter)});
 }
 
 

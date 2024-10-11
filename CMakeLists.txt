@@ -7,7 +7,7 @@ enable_testing()
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL  "GNU")
+if(MINGW)
     add_compile_options(-Wa,-mbig-obj)
 endif()
 
