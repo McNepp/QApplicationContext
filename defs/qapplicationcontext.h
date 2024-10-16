@@ -1945,7 +1945,6 @@ template<typename S=QString> [[nodiscard]] Resolvable<S> resolve(const QString& 
 /// \tparam S the result-type of the resolved constructor-argument.
 /// \tparam C the type of the converter. Must be a callable that accepts a QString and returns a value of type `T`. The default will invoke the constructor
 /// `T{const QString&}` if it exists.
-/// \param expression may contain placeholders in the format `${identifier}`.
 /// \param defaultValue the value to use if the placeholder cannot be resolved.
 /// \param expression a String, possibly containing one or more placeholders.
 /// \param converter Will be used to convert the resolved expression into a value.
@@ -2173,9 +2172,10 @@ template<typename T> using service_config_entry = detail::config_entry_t<T>;
 
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
-/// <br>The resulting service_config_entry can then be used to initialize mcnepp::qtqi::config(std::initializer_list<service_config_entry<S>>);
+/// <br>The resulting service_config_entry can then be used to initialize mcnepp::qtdi::config(std::initializer_list<service_config_entry<S>>);
 ///
 /// \tparam S the service-type.
+/// \param propertySetter the member-function that will be invoked with the property-value.
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
 /// \param converter (optional) specifies a converter that constructs an argument of type `A` from a QString.
 /// \return a type-safe configuration for a service.
@@ -2186,8 +2186,9 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
-/// <br>The resulting service_config_entry can then be used to initialize mcnepp::qtqi::config(std::initializer_list<service_config_entry<S>>);
+/// <br>The resulting service_config_entry can then be used to initialize mcnepp::qtdi::config(std::initializer_list<service_config_entry<S>>);
 /// \tparam S the service-type.
+/// \param propertySetter the member-function that will be invoked with the property-value.
 /// \param value will be set when the service is being configured.
 /// \return a type-safe configuration for a service.
 ///
@@ -2227,6 +2228,7 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
 ///     autoRefreshMillis=2000
 ///
 /// \tparam S the service-type.
+/// \param propertySetter the member-function that will be invoked with the property-value.
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
 /// \param converter (optional) specifies a converter that constructs an argument of type `A` from a QString.
 /// \return a type-safe configuration for a service.
@@ -2281,7 +2283,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 ///     ; Optionally, specify the refresh-period:
 ///     autoRefreshMillis=2000
 ///
-/// \param the name of the configuration-entry.
+/// \param name the name of the configuration-entry.
 /// \param expression a String, possibly containing one or more placeholders.
 /// \return an  entry that will ensure that the expression will be re-evaluated when the underlying QSettings changes.
 [[nodiscard]] inline service_config::entry_type autoRefresh(const QString& name, const QString& expression) {
@@ -3392,6 +3394,7 @@ protected:
     /// \param name the name of the service.
     /// \param descriptor the descriptor of the service.
     /// \param config the configuration of the service.
+    /// \param scope determines the service's lifeycle
     /// \param baseObject in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template.
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
@@ -3442,10 +3445,11 @@ protected:
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
     /// <br>If this function is invoked with `appContext == nullptr`, it will return `nullptr`.
     /// \param appContext the target on which to invoke registerService(const QString&, service_descriptor*).
-    /// \param name
-    /// \param descriptor
-    /// \param config
-    /// \param baseObj
+    /// \param name the name of the registered service.
+    /// \param descriptor describes the service.
+    /// \param config configuration of the service.
+    /// \param scope detemines the service's lifecyle.
+    /// \param baseObj in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template.
     /// \return the result of registerService(const QString&, service_descriptor*,const service_config&,ServiceScope,QObject*).
     ///
     static service_registration_handle_t delegateRegisterService(QApplicationContext* appContext, const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj) {
