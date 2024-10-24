@@ -187,42 +187,42 @@ Using the Q_PROPERTY QConfigurationWatcher::currentValue(), you can then track t
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>event</b> (QEvent *event) override</td></tr>
 <tr class="separator:a6473418ee5bae4340a8345acb3950c95"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8bf49def9048cc92c5aa5d1a9437682f" id="r_a8bf49def9048cc92c5aa5d1a9437682f"><td class="memTemplParams" colspan="2">template&lt;typename S , typename... IFaces&gt; </td></tr>
-<tr class="memitem:a8bf49def9048cc92c5aa5d1a9437682f"><td class="memTemplItemLeft" align="right" valign="top">ServiceRegistration&lt; S, ServiceScope::EXTERNAL &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a8bf49def9048cc92c5aa5d1a9437682f">registerObject</a> (S *obj, const QString &amp;objName=&quot;&quot;)</td></tr>
+<tr class="memitem:a8bf49def9048cc92c5aa5d1a9437682f"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, ServiceScope::EXTERNAL &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a8bf49def9048cc92c5aa5d1a9437682f">registerObject</a> (S *obj, const QString &amp;objName=&quot;&quot;)</td></tr>
 <tr class="memdesc:a8bf49def9048cc92c5aa5d1a9437682f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers an object with this ApplicationContext. The object will immediately be published. You can either let the compiler's template-argument deduction figure out the servicetype <code>&lt;S&gt;</code> for you, or you can supply it explicitly, if it differs from the static type of the object. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
 <tr class="separator:a8bf49def9048cc92c5aa5d1a9437682f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5e297b11ba712085577543de42f07c91" id="r_a5e297b11ba712085577543de42f07c91"><td class="memTemplParams" colspan="2">template&lt;typename S , typename Impl , <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:a5e297b11ba712085577543de42f07c91"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a5e297b11ba712085577543de42f07c91">registerService</a> (const <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; S, Impl, scope &gt; &amp;serviceDeclaration, const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; ServiceRegistration&lt; S, scope &gt;</td></tr>
+<tr class="memitem:a5e297b11ba712085577543de42f07c91"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a5e297b11ba712085577543de42f07c91">registerService</a> (const <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; S, Impl, scope &gt; &amp;serviceDeclaration, const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt;</td></tr>
 <tr class="memdesc:a5e297b11ba712085577543de42f07c91"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with this ApplicationContext. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
 <tr class="separator:a5e297b11ba712085577543de42f07c91"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a17df51ef3d960a862967b84e074a2b91" id="r_a17df51ef3d960a862967b84e074a2b91"><td class="memTemplParams" colspan="2">template&lt;typename S , typename Impl , <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:a17df51ef3d960a862967b84e074a2b91"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a17df51ef3d960a862967b84e074a2b91">registerService</a> (const <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; S, Impl, scope &gt; &amp;serviceDeclaration, const QString &amp;objectName, const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; Impl &gt; &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>) -&gt; ServiceRegistration&lt; S, scope &gt;</td></tr>
+<tr class="memitem:a17df51ef3d960a862967b84e074a2b91"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a17df51ef3d960a862967b84e074a2b91">registerService</a> (const <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; S, Impl, scope &gt; &amp;serviceDeclaration, const QString &amp;objectName, const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; Impl &gt; &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt;</td></tr>
 <tr class="memdesc:a17df51ef3d960a862967b84e074a2b91"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with this ApplicationContext. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
 <tr class="separator:a17df51ef3d960a862967b84e074a2b91"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7e506407333b2bcb45727a1cd1397f13" id="r_a7e506407333b2bcb45727a1cd1397f13"><td class="memTemplParams" colspan="2">template&lt;typename S , typename Impl , typename B , <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:a7e506407333b2bcb45727a1cd1397f13"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a7e506407333b2bcb45727a1cd1397f13">registerService</a> (const <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; S, Impl, scope &gt; &amp;serviceDeclaration, const ServiceRegistration&lt; B, ServiceScope::TEMPLATE &gt; &amp;templateRegistration, const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; ServiceRegistration&lt; S, scope &gt;</td></tr>
+<tr class="memitem:a7e506407333b2bcb45727a1cd1397f13"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a7e506407333b2bcb45727a1cd1397f13">registerService</a> (const <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; S, Impl, scope &gt; &amp;serviceDeclaration, const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; B, ServiceScope::TEMPLATE &gt; &amp;templateRegistration, const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt;</td></tr>
 <tr class="memdesc:a7e506407333b2bcb45727a1cd1397f13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with this ApplicationContext. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
 <tr class="separator:a7e506407333b2bcb45727a1cd1397f13"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0e100e99add91ba50eee97f52805a488" id="r_a0e100e99add91ba50eee97f52805a488"><td class="memTemplParams" colspan="2">template&lt;typename S , typename Impl , typename B , <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:a0e100e99add91ba50eee97f52805a488"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a0e100e99add91ba50eee97f52805a488">registerService</a> (const <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; S, Impl, scope &gt; &amp;serviceDeclaration, const ServiceRegistration&lt; B, ServiceScope::TEMPLATE &gt; &amp;templateRegistration, const QString &amp;objectName, const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; Impl &gt; &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>) -&gt; ServiceRegistration&lt; S, scope &gt;</td></tr>
+<tr class="memitem:a0e100e99add91ba50eee97f52805a488"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a0e100e99add91ba50eee97f52805a488">registerService</a> (const <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; S, Impl, scope &gt; &amp;serviceDeclaration, const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; B, ServiceScope::TEMPLATE &gt; &amp;templateRegistration, const QString &amp;objectName, const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; Impl &gt; &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt;</td></tr>
 <tr class="memdesc:a0e100e99add91ba50eee97f52805a488"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with this ApplicationContext. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
 <tr class="separator:a0e100e99add91ba50eee97f52805a488"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a24bf1f25483017fe0e6e5b8bcfb3b99a" id="r_a24bf1f25483017fe0e6e5b8bcfb3b99a"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:a24bf1f25483017fe0e6e5b8bcfb3b99a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a24bf1f25483017fe0e6e5b8bcfb3b99a">registerService</a> (const QString &amp;objectName, const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt; &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>) -&gt; ServiceRegistration&lt; S, ServiceScope::SINGLETON &gt;</td></tr>
+<tr class="memitem:a24bf1f25483017fe0e6e5b8bcfb3b99a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a24bf1f25483017fe0e6e5b8bcfb3b99a">registerService</a> (const QString &amp;objectName, const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt; &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, ServiceScope::SINGLETON &gt;</td></tr>
 <tr class="memdesc:a24bf1f25483017fe0e6e5b8bcfb3b99a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with no dependencies with this ApplicationContext. This is a convenience-function equivalent to <code>registerService(service&lt;S&gt;(), objectName, config)</code>. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
 <tr class="separator:a24bf1f25483017fe0e6e5b8bcfb3b99a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9590050c6f2e1abb5983ae3eb10aa1bd" id="r_a9590050c6f2e1abb5983ae3eb10aa1bd"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:a9590050c6f2e1abb5983ae3eb10aa1bd"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9590050c6f2e1abb5983ae3eb10aa1bd">registerService</a> (const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; ServiceRegistration&lt; S, ServiceScope::SINGLETON &gt;</td></tr>
+<tr class="memitem:a9590050c6f2e1abb5983ae3eb10aa1bd"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9590050c6f2e1abb5983ae3eb10aa1bd">registerService</a> (const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, ServiceScope::SINGLETON &gt;</td></tr>
 <tr class="memdesc:a9590050c6f2e1abb5983ae3eb10aa1bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service with no dependencies with this ApplicationContext. This is a convenience-function equivalent to <code>registerService(service&lt;S&gt;(), objectName, config)</code>. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
 <tr class="separator:a9590050c6f2e1abb5983ae3eb10aa1bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acddb5f66a334ea8af1c67e47b3530536" id="r_acddb5f66a334ea8af1c67e47b3530536"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:acddb5f66a334ea8af1c67e47b3530536"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#acddb5f66a334ea8af1c67e47b3530536">registerPrototype</a> (const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; ServiceRegistration&lt; S, ServiceScope::PROTOTYPE &gt;</td></tr>
+<tr class="memitem:acddb5f66a334ea8af1c67e47b3530536"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#acddb5f66a334ea8af1c67e47b3530536">registerPrototype</a> (const QString &amp;objectName=&quot;&quot;, const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;<a class="el" href="qapplicationcontext_8h.html#aa544638063514d7963127e17f0a84793">config</a>=<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, ServiceScope::PROTOTYPE &gt;</td></tr>
 <tr class="memdesc:acddb5f66a334ea8af1c67e47b3530536"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a service-prototype with no dependencies with this ApplicationContext. This is a convenience-function equivalent to <code>registerService(prototype&lt;S&gt;(), objectName, config)</code>. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
 <tr class="separator:acddb5f66a334ea8af1c67e47b3530536"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -920,7 +920,7 @@ template&lt;typename S , typename... IFaces&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">ServiceRegistration&lt; S, ServiceScope::EXTERNAL &gt; mcnepp::qtdi::QApplicationContext::registerObject </td>
+          <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, ServiceScope::EXTERNAL &gt; mcnepp::qtdi::QApplicationContext::registerObject </td>
           <td>(</td>
           <td class="paramtype">S *</td>          <td class="paramname"><span class="paramname"><em>obj</em></span>, </td>
         </tr>
@@ -976,7 +976,7 @@ template&lt;typename S &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}</span>&#160;) -&gt; ServiceRegistration&lt;S,ServiceScope::PROTOTYPE&gt; </td>
+          <td class="paramtype">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}</span>&#160;) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt;S,ServiceScope::PROTOTYPE&gt; </td>
         </tr>
       </table>
   </td>
@@ -1053,6 +1053,7 @@ template&lt;typename S &gt; </div>
     <tr><td class="paramname">name</td><td>the name of the service. </td></tr>
     <tr><td class="paramname">descriptor</td><td>the descriptor of the service. </td></tr>
     <tr><td class="paramname">config</td><td>the configuration of the service. </td></tr>
+    <tr><td class="paramname">scope</td><td>determines the service's lifeycle </td></tr>
     <tr><td class="paramname">baseObject</td><td>in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template. </td></tr>
   </table>
   </dd>
@@ -1082,7 +1083,7 @@ template&lt;typename S &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span>&#160;) -&gt; ServiceRegistration&lt;S,ServiceScope::SINGLETON&gt; </td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span>&#160;) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt;S,ServiceScope::SINGLETON&gt; </td>
         </tr>
       </table>
   </td>
@@ -1130,7 +1131,7 @@ template&lt;typename S &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}</span>&#160;) -&gt; ServiceRegistration&lt;S,ServiceScope::SINGLETON&gt; </td>
+          <td class="paramtype">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}</span>&#160;) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt;S,ServiceScope::SINGLETON&gt; </td>
         </tr>
       </table>
   </td>
@@ -1183,7 +1184,7 @@ template&lt;typename S , typename Impl , <a class="el" href="qapplicationcontext
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; Impl &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span>&#160;) -&gt; ServiceRegistration&lt;S,scope&gt; </td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; Impl &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span>&#160;) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt;S,scope&gt; </td>
         </tr>
       </table>
   </td>
@@ -1238,7 +1239,7 @@ template&lt;typename S , typename Impl , <a class="el" href="qapplicationcontext
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}</span>&#160;) -&gt; ServiceRegistration&lt;S,scope&gt; </td>
+          <td class="paramtype">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}</span>&#160;) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt;S,scope&gt; </td>
         </tr>
       </table>
   </td>
@@ -1288,7 +1289,7 @@ template&lt;typename S , typename Impl , typename B , <a class="el" href="qappli
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const ServiceRegistration&lt; B, ServiceScope::TEMPLATE &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>templateRegistration</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; B, ServiceScope::TEMPLATE &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>templateRegistration</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1298,7 +1299,7 @@ template&lt;typename S , typename Impl , typename B , <a class="el" href="qappli
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; Impl &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span>&#160;) -&gt; ServiceRegistration&lt;S,scope&gt; </td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; Impl &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span>&#160;) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt;S,scope&gt; </td>
         </tr>
       </table>
   </td>
@@ -1349,7 +1350,7 @@ template&lt;typename S , typename Impl , typename B , <a class="el" href="qappli
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const ServiceRegistration&lt; B, ServiceScope::TEMPLATE &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>templateRegistration</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; B, ServiceScope::TEMPLATE &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>templateRegistration</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1359,7 +1360,7 @@ template&lt;typename S , typename Impl , typename B , <a class="el" href="qappli
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}</span>&#160;) -&gt; ServiceRegistration&lt;S,scope&gt; </td>
+          <td class="paramtype">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>config</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>{}</span>&#160;) -&gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt;S,scope&gt; </td>
         </tr>
       </table>
   </td>

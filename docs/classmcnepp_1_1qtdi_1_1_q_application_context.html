@@ -595,10 +595,11 @@ If this function is invoked with <code>appContext == nullptr</code>, it will ret
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">appContext</td><td>the target on which to invoke registerService(const QString&amp;, service_descriptor*). </td></tr>
-    <tr><td class="paramname">name</td><td></td></tr>
-    <tr><td class="paramname">descriptor</td><td></td></tr>
-    <tr><td class="paramname">config</td><td></td></tr>
-    <tr><td class="paramname">baseObj</td><td></td></tr>
+    <tr><td class="paramname">name</td><td>the name of the registered service. </td></tr>
+    <tr><td class="paramname">descriptor</td><td>describes the service. </td></tr>
+    <tr><td class="paramname">config</td><td>configuration of the service. </td></tr>
+    <tr><td class="paramname">scope</td><td>detemines the service's lifecyle. </td></tr>
+    <tr><td class="paramname">baseObj</td><td>in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template. </td></tr>
   </table>
   </dd>
 </dl>
@@ -1164,6 +1165,7 @@ template&lt;typename S &gt; </div>
     <tr><td class="paramname">name</td><td>the name of the service. </td></tr>
     <tr><td class="paramname">descriptor</td><td>the descriptor of the service. </td></tr>
     <tr><td class="paramname">config</td><td>the configuration of the service. </td></tr>
+    <tr><td class="paramname">scope</td><td>determines the service's lifeycle </td></tr>
     <tr><td class="paramname">baseObject</td><td>in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template. </td></tr>
   </table>
   </dd>

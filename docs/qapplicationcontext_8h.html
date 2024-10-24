@@ -379,12 +379,12 @@ The service must have a Q_PROPERTY for every key contained in <code>properties</
 <tr class="memitem:a9d4f50592427143dffe1904aca6b520e" id="r_a9d4f50592427143dffe1904aca6b520e"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename C  = typename detail::variant_converter_traits&lt;detail::remove_cvref_t&lt;A&gt;&gt;::type&gt; </td></tr>
 <tr class="memitem:a9d4f50592427143dffe1904aca6b520e"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#ab1ac4e711002c975d3f2d8e8b1421d44">service_config_entry</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9d4f50592427143dffe1904aca6b520e">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(A), const QString &amp;expression, C converter=C{})</td></tr>
 <tr class="memdesc:a9d4f50592427143dffe1904aca6b520e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be used to initialize mcnepp::qtqi::config(std::initializer_list&lt;service_config_entry&lt;S&gt;&gt;);.  <br /></td></tr>
+The resulting service_config_entry can then be used to initialize <a class="el" href="#a0f2f39eaaca1ca14c10e912cf8849c05" title="Create a type-safe service-configuration.  A type-safe entry can be created by invoking mcnepp::qtdi:...">mcnepp::qtdi::config(std::initializer_list&lt;service_config_entry&lt;S&gt;&gt;)</a>;.  <br /></td></tr>
 <tr class="separator:a9d4f50592427143dffe1904aca6b520e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4429ca7824353834eb387179a8b7ea1b" id="r_a4429ca7824353834eb387179a8b7ea1b"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A &gt; </td></tr>
 <tr class="memitem:a4429ca7824353834eb387179a8b7ea1b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#ab1ac4e711002c975d3f2d8e8b1421d44">service_config_entry</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a4429ca7824353834eb387179a8b7ea1b">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(A), A value)</td></tr>
 <tr class="memdesc:a4429ca7824353834eb387179a8b7ea1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be used to initialize mcnepp::qtqi::config(std::initializer_list&lt;service_config_entry&lt;S&gt;&gt;);.  <br /></td></tr>
+The resulting service_config_entry can then be used to initialize <a class="el" href="#a0f2f39eaaca1ca14c10e912cf8849c05" title="Create a type-safe service-configuration.  A type-safe entry can be created by invoking mcnepp::qtdi:...">mcnepp::qtdi::config(std::initializer_list&lt;service_config_entry&lt;S&gt;&gt;)</a>;.  <br /></td></tr>
 <tr class="separator:a4429ca7824353834eb387179a8b7ea1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aed65b8ca4bbc94a979cb56b3ce27a0bd" id="r_aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename C  = typename detail::variant_converter_traits&lt;detail::remove_cvref_t&lt;A&gt;&gt;::type&gt; </td></tr>
 <tr class="memitem:aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#ab1ac4e711002c975d3f2d8e8b1421d44">service_config_entry</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aed65b8ca4bbc94a979cb56b3ce27a0bd">mcnepp::qtdi::autoRefresh</a> (R(S::*propertySetter)(A), const QString &amp;expression, C converter=C{})</td></tr>
@@ -726,7 +726,7 @@ enableAutoRefresh=true
 autoRefreshMillis=2000
 </pre><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">the</td><td>name of the configuration-entry. </td></tr>
+    <tr><td class="paramname">name</td><td>the name of the configuration-entry. </td></tr>
     <tr><td class="paramname">expression</td><td>a String, possibly containing one or more placeholders. </td></tr>
   </table>
   </dd>
@@ -790,6 +790,7 @@ autoRefreshMillis=2000
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with the property-value. </td></tr>
     <tr><td class="paramname">expression</td><td>will be resolved when the service is being configured. May contain <em>placeholders</em>. </td></tr>
     <tr><td class="paramname">converter</td><td>(optional) specifies a converter that constructs an argument of type <code>A</code> from a QString. </td></tr>
   </table>
@@ -1272,7 +1273,7 @@ template&lt;typename S , typename R , typename A &gt; </div>
 </div><div class="memdoc">
 
 <p>Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be used to initialize mcnepp::qtqi::config(std::initializer_list&lt;service_config_entry&lt;S&gt;&gt;);. </p>
+The resulting service_config_entry can then be used to initialize mcnepp::qtdi::config(std::initializer_list&lt;service_config_entry&lt;S&gt;&gt;);. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the service-type. </td></tr>
@@ -1281,6 +1282,7 @@ The resulting service_config_entry can then be used to initialize mcnepp::qtqi::
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with the property-value. </td></tr>
     <tr><td class="paramname">value</td><td>will be set when the service is being configured. </td></tr>
   </table>
   </dd>
@@ -1324,7 +1326,7 @@ template&lt;typename S , typename R , typename A , typename C  = typename detail
 </div><div class="memdoc">
 
 <p>Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be used to initialize mcnepp::qtqi::config(std::initializer_list&lt;service_config_entry&lt;S&gt;&gt;);. </p>
+The resulting service_config_entry can then be used to initialize mcnepp::qtdi::config(std::initializer_list&lt;service_config_entry&lt;S&gt;&gt;);. </p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the service-type. </td></tr>
@@ -1333,6 +1335,7 @@ The resulting service_config_entry can then be used to initialize mcnepp::qtqi::
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with the property-value. </td></tr>
     <tr><td class="paramname">expression</td><td>will be resolved when the service is being configured. May contain <em>placeholders</em>. </td></tr>
     <tr><td class="paramname">converter</td><td>(optional) specifies a converter that constructs an argument of type <code>A</code> from a QString. </td></tr>
   </table>
@@ -2043,7 +2046,6 @@ context -&gt; registerService(service&lt;QIODevice,QFile&gt;(resolve("${* /filen
 </dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">expression</td><td>may contain placeholders in the format <code>${identifier}</code>. </td></tr>
     <tr><td class="paramname">defaultValue</td><td>the value to use if the placeholder cannot be resolved. </td></tr>
     <tr><td class="paramname">expression</td><td>a String, possibly containing one or more placeholders. </td></tr>
     <tr><td class="paramname">converter</td><td>Will be used to convert the resolved expression into a value. </td></tr>
