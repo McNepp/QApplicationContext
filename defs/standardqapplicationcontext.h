@@ -280,14 +280,14 @@ private:
 
 
 
-    class ServiceRegistration : public DescriptorRegistration {
+    class ServiceRegistrationImpl : public DescriptorRegistration {
 
         friend class StandardApplicationContext;
 
-        ServiceRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent);
+        ServiceRegistrationImpl(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent);
 
-        ServiceRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
-        ServiceRegistration{base, index, name, desc, config, parent, parent} {
+        ServiceRegistrationImpl(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
+        ServiceRegistrationImpl{base, index, name, desc, config, parent, parent} {
 
         }
 

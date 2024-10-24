@@ -467,7 +467,7 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(Descr
 
 
 
-StandardApplicationContext::ServiceRegistration::ServiceRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
+StandardApplicationContext::ServiceRegistrationImpl::ServiceRegistrationImpl(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
     DescriptorRegistration{base, index, name, desc, context, parent},
     theService(nullptr),
     m_config(config),
@@ -477,11 +477,11 @@ StandardApplicationContext::ServiceRegistration::ServiceRegistration(DescriptorR
     beanRefsCache = determineBeanRefs(config.properties);
 }
 
-void StandardApplicationContext::ServiceRegistration::print(QDebug out) const {
+void StandardApplicationContext::ServiceRegistrationImpl::print(QDebug out) const {
     out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor();
 }
 
-void StandardApplicationContext::ServiceRegistration::serviceDestroyed(QObject *srv) {
+void StandardApplicationContext::ServiceRegistrationImpl::serviceDestroyed(QObject *srv) {
     if(srv == theService) {
         if(auto parentReg = dynamic_cast<service_registration_handle_t>(parent()); parentReg && parentReg -> scope() == ServiceScope::PROTOTYPE) {
             qCInfo(loggingCategory()).noquote().nospace() << "Instance of Prototype " << *this << " has been destroyed";
@@ -503,12 +503,12 @@ void StandardApplicationContext::ObjectRegistration::print(QDebug out) const {
 
 
 
-QStringList StandardApplicationContext::ServiceRegistration::getBeanRefs() const
+QStringList StandardApplicationContext::ServiceRegistrationImpl::getBeanRefs() const
 {
     return beanRefsCache;
 }
 
-QObject* StandardApplicationContext::ServiceRegistration::createService(const QVariantList &dependencies, descriptor_list &created)
+QObject* StandardApplicationContext::ServiceRegistrationImpl::createService(const QVariantList &dependencies, descriptor_list &created)
 {
     switch(state()) {
         case STATE_INIT:
@@ -521,7 +521,7 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
                 }
                 created.insert(created.end(), createdForThis.begin(), createdForThis.end());
             if(theService) {
-                onDestroyed = connect(theService, &QObject::destroyed, this, &ServiceRegistration::serviceDestroyed);
+                onDestroyed = connect(theService, &QObject::destroyed, this, &ServiceRegistrationImpl::serviceDestroyed);
                 m_state = STATE_CREATED;
             }
         }
@@ -529,7 +529,7 @@ QObject* StandardApplicationContext::ServiceRegistration::createService(const QV
     return theService;
 }
 
-int StandardApplicationContext::ServiceRegistration::unpublish() {
+int StandardApplicationContext::ServiceRegistrationImpl::unpublish() {
     if(theService) {
         std::unique_ptr<QObject> srv{theService};
         QObject::disconnect(onDestroyed);
@@ -615,7 +615,7 @@ QObject* StandardApplicationContext::PrototypeRegistration::createService(const 
         return this;
     case STATE_PUBLISHED:
         {
-        std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistration{base(), ++m_context->nextIndex, registeredName(), descriptor(), config(), m_context, this}};
+        std::unique_ptr<DescriptorRegistration> instanceReg{ new StandardApplicationContext::ServiceRegistrationImpl{base(), ++m_context->nextIndex, registeredName(), descriptor(), config(), m_context, this}};
             QObject* instance = instanceReg->createService(m_dependencies, created);
             if(!instance) {
                 qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
@@ -1365,7 +1365,7 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
                 reg = new PrototypeRegistration{base, ++nextIndex, objName, descriptor, config, this};
                 break;
             case ServiceScope::SINGLETON:
-                reg = new ServiceRegistration{base, ++nextIndex, objName, descriptor, config, this};
+                reg = new ServiceRegistrationImpl{base, ++nextIndex, objName, descriptor, config, this};
                 break;
             case ServiceScope::TEMPLATE:
                 reg = new ServiceTemplateRegistration{base, ++nextIndex, objName, descriptor, config, this};

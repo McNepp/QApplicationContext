@@ -961,6 +961,21 @@ private slots:
         QCOMPARE(base.foo(), "another timer");
     }
 
+    void testBindToDifferentSettersOfSameService() {
+        void (BaseService::*objectNameSetter)(const QString&) = &BaseService::setObjectName;//We need this temporary variable, as setObjectName has two overloads!
+        BaseService base1;
+        BaseService base2;
+        auto regBase1 = context->registerObject<BaseService>(&base1);
+        auto regBase2 = context->registerObject<BaseService>(&base2);
+        QVERIFY(bind(regBase1, "foo", regBase2, &BaseService::setFoo));
+        QVERIFY(bind(regBase1, "objectName", regBase2, objectNameSetter));
+        QVERIFY(context->publish());
+        base1.setFoo("bla");
+        base1.setObjectName("blub");
+        QCOMPARE(base2.foo(), "bla");
+        QCOMPARE(base2.objectName(), "blub");
+    }
+
     void testBindServiceRegistrationToObjectSetter() {
 
         QTimer timer;
@@ -1593,10 +1608,12 @@ private slots:
         auto timerReg = context->registerService<QTimer>("timer", config({entry(timerFunc, 4711)}));
         auto timerReg2 = context->registerService<QTimer>("timer", config({entry(timerFunc, 4711)}));
         QCOMPARE(timerReg, timerReg2);
-        auto baseReg = context->registerService<BaseService>("base", config({entry(&BaseService::setFoo, "${foo}"),
-                                                                                        entry(&BaseService::setTimer, "&timer")}));
-        auto baseReg2 = context->registerService<BaseService>("base", config({entry(&BaseService::setFoo, "${foo}"),
-                                                                                        entry(&BaseService::setTimer, "&timer")}));
+        auto setFoo = &BaseService::setFoo;
+        auto setTimer = &BaseService::setTimer;
+        auto baseReg = context->registerService<BaseService>("base", config({entry(setFoo, "${foo}"),
+                                                                                        entry(setTimer, "&timer")}));
+        auto baseReg2 = context->registerService<BaseService>("base", config({entry(setFoo, "${foo}"),
+                                                                                        entry(setTimer, "&timer")}));
         QCOMPARE(baseReg, baseReg2);
 
         configuration->setValue("foo", "Hello, world");
