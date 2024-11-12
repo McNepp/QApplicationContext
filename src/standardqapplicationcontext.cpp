@@ -203,11 +203,45 @@ QString makeName(const std::type_index& type) {
 
 
 
-class PropertyInjector : public detail::SourceTargetSubscription {
+class PropertyInjector : public detail::MultiServiceSubscription {
 public:
 
 
-    void notify(QObject* source, QObject* target) {
+
+
+    QMetaObject::Connection connectObjectsPublished() override
+    {
+        return connect(this, &detail::MultiServiceSubscription::objectsPublished, this, &PropertyInjector::notify);
+    }
+
+
+    MultiServiceSubscription* newChild(const MultiServiceSubscription::target_list_t& targets) override {
+        return new PropertyInjector{targets, m_sourceProperty, m_setter, m_loggingCategory, this};
+    }
+
+    void cancel() override {
+        for(auto& conn : connections) {
+            QObject::disconnect(conn);
+        }
+        //QPropertyNotifier will remove the binding in its destructor:
+        bindings.clear();
+        MultiServiceSubscription::cancel();
+    }
+
+    PropertyInjector(const MultiServiceSubscription::target_list_t& targets, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter, const QLoggingCategory& loggingCategory, QObject* parent) :
+        MultiServiceSubscription(targets, parent),
+        m_sourceProperty(sourceProperty),
+        m_setter(setter),
+        m_loggingCategory(loggingCategory)    {
+    }
+
+
+
+private:
+
+    void notify(const QObjectList& objs) {
+        auto source = objs[0];
+        auto target = objs[1];
         m_setter.setter(target, m_sourceProperty.read(source));
         if(m_sourceProperty.hasNotifySignal()) {
             detail::BindingProxy* proxy = new detail::BindingProxy{m_sourceProperty, source, m_setter, target};
@@ -229,36 +263,12 @@ public:
 
     }
 
-    subscription_handle_t createForSource(QObject* src) override {
-        return new PropertyInjector{nullptr, src, m_sourceProperty, m_setter, m_loggingCategory};
-    }
-
-    void cancel() override {
-        for(auto& conn : connections) {
-            QObject::disconnect(conn);
-        }
-        //QPropertyNotifier will remove the binding in its destructor:
-        bindings.clear();
-        SourceTargetSubscription::cancel();
-    }
-
-    PropertyInjector(registration_handle_t target, QObject* boundSource, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter, const QLoggingCategory& loggingCategory) :
-        SourceTargetSubscription(target, boundSource, target),
-        m_sourceProperty(sourceProperty),
-        m_setter(setter),
-        m_loggingCategory(loggingCategory)    {
-        if(boundSource) {
-            connectObjectsPublished(this, &PropertyInjector::notify);
-        }
-    }
-
-private:
-
     QMetaProperty m_sourceProperty;
     detail::property_descriptor m_setter;
     std::vector<QPropertyNotifier> bindings;
     std::vector<QMetaObject::Connection> connections;
     const QLoggingCategory& m_loggingCategory;
+
 };
 
 
@@ -445,7 +455,7 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         return nullptr;
     }
 
-    auto subscription = new PropertyInjector{target, nullptr, sourceProperty, setter, loggingCategory()};
+    auto subscription = new PropertyInjector{QList<registration_handle_t>{target}, sourceProperty, setter, loggingCategory(), target};
     qCInfo(loggingCategory()).noquote().nospace() << "Created Subscription for binding property '" << sourceProperty.name() << "' of " << *this << " to " << setter << " of " << *target;
     return subscribe(subscription);
 }

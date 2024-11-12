@@ -189,23 +189,32 @@ void BasicSubscription::connectTo(registration_handle_t source) {
     in_connection = detail::connect(source, this);
 }
 
-SourceTargetSubscription::SourceTargetSubscription(registration_handle_t target, QObject* boundSource, QObject * parent) :
-    BasicSubscription{parent},
-    m_target{target},
-    m_boundSource{boundSource} {
-    if((boundSource != nullptr) == (target != nullptr)) {
-        qCCritical(defaultLoggingCategory()).nospace() << "Invalid source " << boundSource << " and target " << target << " supplied";
-        return;
+
+
+
+QString uniquePropertyName(const void* data, std::size_t size)
+{
+    QString str{"."}; // property starts with a dot -> "private property"
+    for(const unsigned char* iter = static_cast<const unsigned char*>(data), *end = iter + size; iter < end; ++iter) {
+        str.append(QString::number(*iter, 16));
     }
-    if(boundSource) {
-        connectOut(this, &SourceTargetSubscription::onPublishedTarget);
-    } else if(target) {
-       connectOut(this, &SourceTargetSubscription::onPublishedSource);
-    }
+    return str;
 }
 
 
-void SourceTargetSubscription::cancel() {
+MultiServiceSubscription::MultiServiceSubscription(const QList<registration_handle_t> &targets, QObject *parent) :
+    BasicSubscription{parent},
+    m_targets{targets}
+{
+    if(targets.empty()) {
+        connectOut(this, &MultiServiceSubscription::onLastObjectPublished);
+    } else {
+        connectOut(this, &MultiServiceSubscription::onObjectPublished);
+    }
+}
+
+void MultiServiceSubscription::cancel()
+{
     for(auto subscr : m_children) {
         if(subscr) {
             subscr->cancel();
@@ -215,25 +224,26 @@ void SourceTargetSubscription::cancel() {
     BasicSubscription::cancel();
 }
 
-void SourceTargetSubscription::onPublishedSource(QObject* obj) {
-    auto subscr = createForSource(obj);
-    if(subscr) {
-        m_children.push_back(subscr);
-        m_target->subscribe(subscr);
-    }
-}
-
-void SourceTargetSubscription::onPublishedTarget(QObject* obj) {
-   emit objectsPublished(m_boundSource, obj);
-}
-
-QString uniquePropertyName(const void* data, std::size_t size)
+void MultiServiceSubscription::onObjectPublished(QObject* obj)
 {
-    QString str{"."}; // property starts with a dot -> "private property"
-    for(const unsigned char* iter = static_cast<const unsigned char*>(data), *end = iter + size; iter < end; ++iter) {
-        str.append(QString::number(*iter, 16));
+    QList<registration_handle_t> targets = m_targets;
+    registration_handle_t target = targets.front();
+    targets.pop_front();
+    MultiServiceSubscription* child = newChild(targets);
+    child->m_boundObjects = this->m_boundObjects;
+    child->m_boundObjects.append(obj);
+    if(targets.empty()) {
+        m_objectsPublishedConnection = child->connectObjectsPublished();
     }
-    return str;
+    m_children.push_front(child);
+    target->subscribe(child);
+}
+
+void MultiServiceSubscription::onLastObjectPublished(QObject* obj)
+{
+    QObjectList boundObjects = m_boundObjects;
+    boundObjects.append(obj);
+    emit objectsPublished(boundObjects);
 }
 
 
