@@ -1805,7 +1805,6 @@ QConfigurationWatcher *StandardApplicationContext::watchConfigValue(const QStrin
         qCWarning(loggingCategory()).nospace().noquote() << "Expression '" << expression << "' will not be watched, as auto-refresh has not been enabled";
         return nullptr;
     }
-    qCInfo(loggingCategory()).noquote().nospace() << "Expression '" << expression << "' will not be watched, as it contains no placeholders";
     return m_SettingsWatcher->watchConfigValue(getResolver(expression));
 }
 

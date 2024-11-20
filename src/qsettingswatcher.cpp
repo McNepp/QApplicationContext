@@ -87,6 +87,10 @@ QConfigurationWatcher *QSettingsWatcher::watchConfigValue(PlaceholderResolver *r
     if(!resolver) {
         return nullptr;
     }
+    if(!resolver->hasPlaceholders()) {
+        qCInfo(m_context->loggingCategory()).noquote().nospace() << "Expression '" << resolver->expression() << "' will not be watched, as it contains no placeholders";
+    }
+
     auto& watcher = m_watchedConfigValues[resolver->expression()];
     if(!watcher) {
         watcher = new QConfigurationWatcherImpl{resolver, service_config{}, m_context};
