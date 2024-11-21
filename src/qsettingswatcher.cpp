@@ -1,6 +1,6 @@
 #include "qsettingswatcher.h"
 #include "qconfigurationwatcherimpl.h"
-
+#include <QFile>
 namespace mcnepp::qtdi::detail {
 
 QSettingsWatcher::QSettingsWatcher(QApplicationContext *parent) : QObject{parent},
@@ -13,13 +13,36 @@ QSettingsWatcher::QSettingsWatcher(QApplicationContext *parent) : QObject{parent
     parent->getRegistration<QSettings>().subscribe(this, &QSettingsWatcher::add);
 }
 
+void QSettingsWatcher::handleRemovedFile(QSettings *settings) {
+    qCInfo(m_context->loggingCategory()).nospace() << "QSettings-file " << settings ->fileName() << " has been deleted.";
+    // Check in regular intervals whether the file will re-appear:
+    QTimer* checkTimer = new QTimer{};
+
+    connect(checkTimer, &QTimer::timeout, this, [checkTimer,settings,this] {
+        if(QFile::exists(settings->fileName())) {
+            checkTimer->stop();
+            checkTimer->deleteLater();
+            qCInfo(m_context->loggingCategory()).nospace() << "QSettings-file " << settings ->fileName() << " has been restored.";
+            // The file is back! Re-add it to the QFileSystemWatcher and then immediately refresh the settings:
+            m_SettingsFileWatcher->addPath(settings->fileName());
+            refreshFromSettings(settings);
+        }
+    });
+    checkTimer->start(200);
+
+}
 
 void QSettingsWatcher::refreshFromSettings(QSettings *settings)
 {
     if(settings) {
+        if(!QFile::exists(settings->fileName())) {
+            handleRemovedFile(settings);
+            return;
+        }
         qCInfo(m_context->loggingCategory()).nospace() << "Refreshing QSettings " << settings ->fileName();
         settings->sync();
     } else {
+        qCInfo(m_context->loggingCategory()) << "Refreshing all QSettings";
         for(auto setting : m_Settings) {
             if(setting) {
                 setting->sync();
@@ -76,6 +99,9 @@ void QSettingsWatcher::addWatchedProperty(PlaceholderResolver* resolver, q_varia
             setPropertyValue(propertyDescriptor, target, currentValue);
         });
     }
+   connect(watcher, &QConfigurationWatcher::errorOccurred, this, [this,watcher,name = propertyDescriptor.name] {
+        qCWarning(m_context->loggingCategory()).nospace().noquote() << "Watched property '" << name << "' could not be resolved and maintains previous value " << watcher->currentValue();
+    });
     m_watched.push_back(watcher);
     qCInfo(m_context->loggingCategory()).nospace().noquote() << "Watching property '" << propertyDescriptor.name << "' of " << target;
     m_SettingsWatchTimer->start();
@@ -97,6 +123,7 @@ QConfigurationWatcher *QSettingsWatcher::watchConfigValue(PlaceholderResolver *r
         m_watched.push_back(watcher);
         qCInfo(m_context->loggingCategory()).noquote().nospace() << "Watching expression '" << resolver->expression() << "'";
     }
+    m_SettingsWatchTimer->start();
     return watcher;
 }
 

@@ -2952,6 +2952,10 @@ signals:
     /// \brief the underlying configuration has changed.
     ///
     void currentValueChanged(const QVariant&);
+
+    /// \brief The value could not be resolved.
+    /// **Note:** When an error occurs, the currentValue() remains at the last valid value.
+    void errorOccurred();
 protected:
     explicit QConfigurationWatcher(QObject* parent = nullptr) : QObject{parent} {
 
