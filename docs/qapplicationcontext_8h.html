@@ -126,6 +126,12 @@ Its most important operation is the type-safe function <code><a class="el" href=
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">mcnepp::qtdi::ProxyRegistration&lt; S &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> that manages several ServiceRegistrations of the same type. You can do almost everything with a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> that you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>, except use it as a source for property-bindings using bind(). Instances of this class are produced by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aafdabdace508bc72e8145ae328d46a11" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">QApplicationContext::getRegistration()</a>;.  <a href="classmcnepp_1_1qtdi_1_1_proxy_registration.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html">mcnepp::qtdi::ServiceCombination&lt; S &gt;</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A combination of Services that can be subscribed. <br  />
+An instance of this type will be returned by <a class="el" href="#ae106d702aeec65e9720e7c19821aeed4" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a>. <br  />
+This type is neither copyable nor moveable. <br  />
+It is meant to be treated solely as a temporary object, on which <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html#a392e36cf6961cfd0a6356f2441f4ac4c" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">ServiceCombination::subscribe()</a> shall be invoked.  <a href="classmcnepp_1_1qtdi_1_1_service_combination.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1service__factory.html">mcnepp::qtdi::service_factory&lt; S &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A template that can be specialized to override the standard way of instantiating services. <br  />
 This template can be used to force the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> to use a static factory-function instead of a constructor. You may specialize this template for your own component-types.  <a href="structmcnepp_1_1qtdi_1_1service__factory.html#details">More...</a><br /></td></tr>
@@ -297,16 +303,16 @@ This function is the ApplicationContext-aware equivalent to QObject::connect(). 
 Whenever an instance of the source-service is published, it will subscribe to the publication of the target-service. Once the target-service is published, the connection of the sourceSignal with the targetSlot will take place. <br  />
 In case source and target represent the same <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>, the connection will still take place.  <br /></td></tr>
 <tr class="separator:a3af2e9ed942d0a2991ea109e3483c6b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeb9f91111add08d32117f97681d82a82" id="r_aeb9f91111add08d32117f97681d82a82"><td class="memTemplParams" colspan="2">template&lt;typename S1 , typename S2 , typename F &gt; </td></tr>
-<tr class="memitem:aeb9f91111add08d32117f97681d82a82"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aeb9f91111add08d32117f97681d82a82">mcnepp::qtdi::subscribeToServices</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;firstService, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S2 &gt; &amp;secondService, QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
-<tr class="memdesc:aeb9f91111add08d32117f97681d82a82"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subscribes to the publication of two services. <br  />
+<tr class="memitem:ae106d702aeec65e9720e7c19821aeed4" id="r_ae106d702aeec65e9720e7c19821aeed4"><td class="memTemplParams" colspan="2">template&lt;typename... S&gt; </td></tr>
+<tr class="memitem:ae106d702aeec65e9720e7c19821aeed4"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt;(sizeof...(S) &gt; 1), <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html">ServiceCombination</a>&lt; S... &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ae106d702aeec65e9720e7c19821aeed4">mcnepp::qtdi::combine</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;...registrations)</td></tr>
+<tr class="memdesc:ae106d702aeec65e9720e7c19821aeed4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Combines two ore more ServiceRegistrations. <br  />
+This function returns a temporary object of type <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html" title="A combination of Services that can be subscribed.  An instance of this type will be returned by mcnep...">ServiceCombination</a>. The only thing you can do with it is invoke <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html#a392e36cf6961cfd0a6356f2441f4ac4c" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">ServiceCombination::subscribe()</a>.  <br /></td></tr>
+<tr class="separator:ae106d702aeec65e9720e7c19821aeed4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad04225f77359597ad260b6d5d3be60ee" id="r_ad04225f77359597ad260b6d5d3be60ee"><td class="memTemplParams" colspan="2">template&lt;typename S1 , typename S2 , typename F &gt; </td></tr>
+<tr class="memitem:ad04225f77359597ad260b6d5d3be60ee"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt; std::is_invocable_v&lt; F, S1 *, S2 * &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ad04225f77359597ad260b6d5d3be60ee">mcnepp::qtdi::subscribeToServices</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;firstService, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S2 &gt; &amp;secondService, QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
+<tr class="memdesc:ad04225f77359597ad260b6d5d3be60ee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subscribes to the publication of two services. <br  />
 This is a convenience-function equivalent to the following code:  <br /></td></tr>
-<tr class="separator:aeb9f91111add08d32117f97681d82a82"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad2e6a3dd749366933f4b471a0dec265b" id="r_ad2e6a3dd749366933f4b471a0dec265b"><td class="memTemplParams" colspan="2">template&lt;typename S1 , typename S2 , typename T , typename R &gt; </td></tr>
-<tr class="memitem:ad2e6a3dd749366933f4b471a0dec265b"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt; std::is_base_of_v&lt; QObject, T &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ad2e6a3dd749366933f4b471a0dec265b">mcnepp::qtdi::subscribeToServices</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;firstService, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S2 &gt; &amp;secondService, T *target, R(T::*func)(S1 *, S2 *), Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
-<tr class="memdesc:ad2e6a3dd749366933f4b471a0dec265b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subscribes to the publication of two services. <br  />
-This is a convenience-function equivalent to the following code:  <br /></td></tr>
-<tr class="separator:ad2e6a3dd749366933f4b471a0dec265b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:ad04225f77359597ad260b6d5d3be60ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af3af5d12702a86a3fb75354a6e7e37a8" id="r_af3af5d12702a86a3fb75354a6e7e37a8"><td class="memTemplParams" colspan="2">template&lt;typename S1 , typename S2 &gt; </td></tr>
 <tr class="memitem:af3af5d12702a86a3fb75354a6e7e37a8"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#af3af5d12702a86a3fb75354a6e7e37a8">mcnepp::qtdi::operator!=</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;reg1, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S2 &gt; &amp;reg2)</td></tr>
 <tr class="memdesc:af3af5d12702a86a3fb75354a6e7e37a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests two Registrations for difference.  <br /></td></tr>
@@ -1015,6 +1021,41 @@ All changes made to the source-property will be propagated to all Services repre
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>the Subscription established by this binding. </dd></dl>
+
+</div>
+</div>
+<a id="ae106d702aeec65e9720e7c19821aeed4" name="ae106d702aeec65e9720e7c19821aeed4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae106d702aeec65e9720e7c19821aeed4">&#9670;&#160;</a></span>combine()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename... S&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::enable_if_t&lt;(sizeof...(S) &gt; 1), ServiceCombination&lt; S... &gt; &gt; mcnepp::qtdi::combine </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;...</td>          <td class="paramname"><span class="paramname"><em>registrations</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Combines two ore more ServiceRegistrations. <br  />
+This function returns a temporary object of type ServiceCombination. The only thing you can do with it is invoke ServiceCombination::subscribe(). </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-types. Must contain at least two entries. Curently, combining up to five services is supported. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">registrations</td><td>the list of registrations. Must contain at least two entries. Curently, combining up to five services is supported. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a ServiceCombination which can be subscribed. </dd></dl>
 
 </div>
 </div>
@@ -2255,8 +2296,8 @@ Should you want to ensure that every service derived from this service-template 
 
 </div>
 </div>
-<a id="aeb9f91111add08d32117f97681d82a82" name="aeb9f91111add08d32117f97681d82a82"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aeb9f91111add08d32117f97681d82a82">&#9670;&#160;</a></span>subscribeToServices() <span class="overload">[1/2]</span></h2>
+<a id="ad04225f77359597ad260b6d5d3be60ee" name="ad04225f77359597ad260b6d5d3be60ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad04225f77359597ad260b6d5d3be60ee">&#9670;&#160;</a></span>subscribeToServices()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2264,7 +2305,7 @@ Should you want to ensure that every service derived from this service-template 
 template&lt;typename S1 , typename S2 , typename F &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">Subscription mcnepp::qtdi::subscribeToServices </td>
+          <td class="memname">std::enable_if_t&lt; std::is_invocable_v&lt; F, S1 *, S2 * &gt;, Subscription &gt; mcnepp::qtdi::subscribeToServices </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>firstService</em></span>, </td>
         </tr>
@@ -2312,70 +2353,6 @@ In case first and second represent the same Registration, the connection will st
     <tr><td class="paramname">S1</td><td>the type of the first service. </td></tr>
     <tr><td class="paramname">S2</td><td>the type of the second service. </td></tr>
     <tr><td class="paramname">F</td><td>must be a callable type, as if it had the signature <code>F(S* source, T* target)</code>. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service and the target-service. </dd></dl>
-
-</div>
-</div>
-<a id="ad2e6a3dd749366933f4b471a0dec265b" name="ad2e6a3dd749366933f4b471a0dec265b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad2e6a3dd749366933f4b471a0dec265b">&#9670;&#160;</a></span>subscribeToServices() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename S1 , typename S2 , typename T , typename R &gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">std::enable_if_t&lt; std::is_base_of_v&lt; QObject, T &gt;, Subscription &gt; mcnepp::qtdi::subscribeToServices </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>firstService</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S2 &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>secondService</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">T *</td>          <td class="paramname"><span class="paramname"><em>target</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">R(T::*</td>          <td class="paramname"><span class="paramname"><em>func&#160;</em></span>)(S1 *, S2 *), </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">Qt::ConnectionType</td>          <td class="paramname"><span class="paramname"><em>connectionType</em></span><span class="paramdefsep"> = </span><span class="paramdefval">Qt::AutoConnection</span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Subscribes to the publication of two services. <br  />
-This is a convenience-function equivalent to the following code: </p>
-<pre class="fragment">firstService.subscribe(target, [&amp;secondService,target,func,connectionType](S1* source) {
-     secondService.subscribe(target, [source,target,func](S2* target) { (target-&gt;func)(source, target); }, connectionType);
-}, connectionType);
-</pre><p><br  />
-In case first and second represent the same Registration, the connection will still take place. </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">firstService</td><td>the first registration. </td></tr>
-    <tr><td class="paramname">secondService</td><td>the second registration. </td></tr>
-    <tr><td class="paramname">target</td><td>the target for the subscription </td></tr>
-    <tr><td class="paramname">func</td><td>will be invoked with two services. </td></tr>
-    <tr><td class="paramname">connectionType</td><td></td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
-  <table class="tparams">
-    <tr><td class="paramname">S1</td><td>the type of the first service. </td></tr>
-    <tr><td class="paramname">S2</td><td>the type of the second service. </td></tr>
-    <tr><td class="paramname">T</td><td>the type of the target </td></tr>
   </table>
   </dd>
 </dl>
