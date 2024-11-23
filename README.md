@@ -742,6 +742,8 @@ This can be achieved using the function mcnepp::qtdi::bind() like this:
 This way of binding properties has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), 
 aka those that represent more than one service. The source-property will be bound to every target-service automatically!
 
+
+
 ### Type-safe bindings
 
 The above binding used property-names to denote the source- and target-properties.
@@ -766,7 +768,7 @@ The above binding used property-names to denote the source- and target-propertie
 4. We change the first timer's objectName. This will also change the second timer's objectName!
 
 
-## Accessing a service after registration
+## Subscribing to a service after registration
 
 So far, we have published the ApplicationContext and let it take care of wiring all the components together.  
 In some cases, you need to obtain a reference to a member of the Context after it has been published.  
@@ -785,6 +787,27 @@ This code shows how to utilize it:
 The function mcnepp::qtdi::ServiceRegistration::subscribe() does return a value of type mcnepp::qtdi::Subscription.
 Usually, you may ignore this return-value. However, it can be used for error-checking and for cancelling a subscription, should that be necessary.
 
+
+### Subscribing to multiple Services
+
+As shown above, the method Registration::subscribe() is the way to go if you want to get a hold on a published service.
+
+But what if you would like to do something with more than one Service?
+
+Use mcnepp::qtdi::combine(), followed by mcnepp::qtdi::ServiceCombination::subscribe().
+
+The following example combines one service of type `PropFetcher` and one `QTimer` and invokes a member-function `fetch`
+with both arguments:
+
+    auto propFetcherRegistration = context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()), "hamburgWeather", config({{"url", "${weatherUrl}${hamburgStationId}"}})); 
+    auto timerRegistration = context->getRegistration<QTime>();
+    combine(propFetcherRegistration, timerRegistration).subscribe(this, [this](PropFetcher* fetcher, QTimer* timer) 
+      { 
+         this->fetch(fetcher, timer); 
+      });
+
+
+
 ## Accessing published services of the ApplicationContext
 
 In the previous paragraph, we used the mcnepp::qtdi::ServiceRegistration obtained by mcnepp::qtdi::QApplicationContext::registerService(), which refers to a single member of the ApplicationContext.
@@ -802,8 +825,6 @@ You may also access a specific service by name:
      qWarning() << "Could not obtain service 'hamburgWeather'";
     }
     
-
-
 
 ## Tweaking services (QApplicationContextPostProcessor) {#tweaking-services}
 

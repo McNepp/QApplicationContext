@@ -34,6 +34,7 @@ public:
 private:
     void add(QSettings* settings);
 
+    void handleRemovedFile(QSettings*);
     void refreshFromSettings(QSettings* settings);
 
     void setPropertyValue(const property_descriptor &property, QObject *target, const QVariant& value);

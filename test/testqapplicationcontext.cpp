@@ -566,16 +566,92 @@ private slots:
         watcher = context->watchConfigValue("${name}.${suffix:txt}");
         QVERIFY(watcher);
         QCOMPARE(watcher->currentValue(), "readme.doc");
-        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
-        file.write("name=hello\n");
-        file.close();
         QVariant watchedValue;
         connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [&watchedValue](const QVariant& currentValue) {watchedValue=currentValue;});
+
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text));
+        QVERIFY(file.seek(0));
+
+        file.write("name=hello\n");
+        file.close();
 
         QVERIFY(QTest::qWaitFor([&watchedValue] { return watchedValue == "hello.txt";}, 1000));
         file.remove();
 
     }
+
+void testWatchConfigurationFileChangeWithError() {
+        QFile file{"testapplicationtext.ini"};
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("name=readme\n");
+        file.write("suffix=doc\n");
+        file.write("[qtdi]\n");
+        file.write("enableAutoRefresh=true\n");
+        file.close();
+        QSettings settings{file.fileName(), QSettings::IniFormat};
+        QVERIFY(!context.get()->autoRefreshEnabled());
+        QConfigurationWatcher* watcher = context->watchConfigValue("${name}.${suffix:doc}");
+        QVERIFY(!watcher);
+        context->registerObject(&settings);
+
+        QVERIFY(context.get()->autoRefreshEnabled());
+
+        watcher = context->watchConfigValue("${name}.${suffix:txt}");
+        QVERIFY(watcher);
+        QCOMPARE(watcher->currentValue(), "readme.doc");
+        QVariant watchedValue = watcher->currentValue();
+        connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [&watchedValue](const QVariant& currentValue) {watchedValue=currentValue;});
+
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text));
+        QVERIFY(file.seek(0));
+        file.write("nose=readme\n");
+        file.close();
+
+        bool error = false;
+
+        connect(watcher, &QConfigurationWatcher::errorOccurred, this, [&error] { error = true;});
+        QVERIFY(QTest::qWaitFor([&error] { return error;}, 1000));
+        QCOMPARE(watchedValue, "readme.doc");
+
+        file.remove();
+
+    }
+  void testWatchConfigurationFileAfterDeletion() {
+        QFile file{"testapplicationtext.ini"};
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("name=readme\n");
+        file.write("suffix=doc\n");
+        file.write("[qtdi]\n");
+        file.write("enableAutoRefresh=true\n");
+        file.close();
+        QSettings settings{file.fileName(), QSettings::IniFormat};
+        QVERIFY(!context.get()->autoRefreshEnabled());
+        //Set timeout so long that it does not interfere with QFileWatcher:
+        static_cast<StandardApplicationContext*>(context.get())->setAutoRefreshMillis(10000);
+        QConfigurationWatcher* watcher = context->watchConfigValue("${name}.${suffix:doc}");
+        QVERIFY(!watcher);
+        context->registerObject(&settings);
+
+        QVERIFY(context.get()->autoRefreshEnabled());
+
+        watcher = context->watchConfigValue("${name}.${suffix:txt}");
+        QVERIFY(watcher);
+        QCOMPARE(watcher->currentValue(), "readme.doc");
+       QVariant watchedValue;
+        connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [&watchedValue](const QVariant& currentValue) {watchedValue=currentValue;});
+
+        QVERIFY(file.remove());
+        QTest::qWait(200);
+        //Open a new file with the same name:
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text));
+
+        file.write("name=hello\n");
+        file.close();
+
+        QVERIFY(QTest::qWaitFor([&watchedValue] { return watchedValue == "hello.txt";}, 1000));
+        file.remove();
+    }
+
 
     void testAutoRefreshPlaceholderPropertyFileChange() {
         QFile file{"testapplicationtext.ini"};
@@ -601,13 +677,45 @@ private slots:
         QCOMPARE(slot->foo(), "foo-value: Hello!");
         QCOMPARE(timer.objectName(), "foo-value: Hello!");
 
-        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text));
+        QVERIFY(file.seek(0));
+
         file.write("foo=Hello\n");
         file.write("suffix=\", world!\"");
         file.close();
 
         QVERIFY(QTest::qWaitFor([&slot] { return slot->foo() == "foo-value: Hello, world!";}, 1000));
         QCOMPARE(timer.objectName(), "foo-value: Hello, world!");
+        file.remove();
+    }
+
+  void testAutoRefreshPlaceholderPropertyResolveError() {
+        QFile file{"testapplicationtext.ini"};
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("foo=Hello\n");
+        file.write("suffix=!\n");
+        file.write("[qtdi]\n");
+        file.write("enableAutoRefresh=true\n");
+        file.close();
+        QSettings settings{file.fileName(), QSettings::IniFormat};
+
+        QVERIFY(!context.get()->autoRefreshEnabled());
+        context->registerObject(&settings);
+
+        QVERIFY(context.get()->autoRefreshEnabled());
+        auto reg = context->registerService<BaseService>("base", config({{"foo", "foo-value: ${foo}${suffix}"}}).withAutoRefresh());
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> slot{reg};
+
+        QCOMPARE(slot->foo(), "foo-value: Hello!");
+
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text));
+        QVERIFY(file.seek(0));
+
+        file.write("fxx=Hello\n");
+        file.close();
+        QTest::qWait(1000);
+        QCOMPARE(slot->foo(), "foo-value: Hello!");
         file.remove();
     }
 
@@ -779,10 +887,10 @@ private slots:
 
     }
 
-    void testSubscribeToServices() {
+    void testCombineTwoServices() {
         auto regSource = context->registerService(service<Interface1,BaseService>(), "base", config({{"foo", "A new beginning"}}));
         auto regTarget = context->registerService<QTimer>();
-        auto subscription = subscribeToServices(regSource, regTarget, this, [](Interface1* src, QTimer* timer) {
+        auto subscription = combine(regSource, regTarget).subscribe(this, [](Interface1* src, QTimer* timer) {
             timer->setObjectName(src->foo());
         });
 
@@ -791,6 +899,125 @@ private slots:
         RegistrationSlot<QTimer> targetSlot{regTarget};
         QCOMPARE(targetSlot->objectName(), "A new beginning");
     }
+
+    void testCombineTwoServiceProxies() {
+        context->registerService(service<Interface1,BaseService>(), "base1");
+        context->registerService(service<Interface1,BaseService>(), "base2");
+        context->registerService(service<Interface1,BaseService>(), "base3");
+        context->registerService<QTimer>("timer1");
+        context->registerService<QTimer>("timer2");
+        auto regInterfaces = context->getRegistration<Interface1>();
+        auto regTimers = context->getRegistration<QTimer>();
+        std::vector<std::pair<Interface1*,QTimer*>> combinations;
+        auto subscription = combine(regInterfaces, regTimers).subscribe(this, [&combinations](Interface1* src, QTimer* timer) {
+            combinations.push_back({src, timer});
+        });
+
+        QVERIFY(subscription);
+        QVERIFY(context->publish());
+        // We have 3 services of type Interface1 and 2 services of type QTimer. This yields a total of 6 combinations:
+        QCOMPARE(combinations.size(), 6);
+
+        RegistrationSlot<QTimer> slotTimers{regTimers};
+        RegistrationSlot<Interface1> slotInterfaces{regInterfaces};
+
+        auto contains = [&combinations](const std::pair<Interface1*,QTimer*>& entry) {
+            return std::find(combinations.begin(), combinations.end(), entry) != combinations.end();
+        };
+
+        QVERIFY(contains(std::make_pair(slotInterfaces[0], slotTimers[0])));
+        QVERIFY(contains(std::make_pair(slotInterfaces[0], slotTimers[1])));
+        QVERIFY(contains(std::make_pair(slotInterfaces[1], slotTimers[0])));
+        QVERIFY(contains(std::make_pair(slotInterfaces[1], slotTimers[1])));
+        QVERIFY(contains(std::make_pair(slotInterfaces[2], slotTimers[0])));
+        QVERIFY(contains(std::make_pair(slotInterfaces[2], slotTimers[1])));
+    }
+
+    void testCombineInvalidServices() {
+        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base", config({{"foo", "A new beginning"}}));
+        auto reg2 = context->registerService<QTimer>();
+        ServiceRegistration<Interface1> nullSourceReg;
+        ServiceRegistration<QTimer> nullTargetReg;
+        auto subscription = combine(nullSourceReg, reg2).subscribe(this, std::function<void(Interface1*,QTimer*)>{});
+
+        QVERIFY(!subscription);
+
+        auto subscription2 = combine(reg1, nullTargetReg).subscribe(this, std::function<void(Interface1*,QTimer*)>{});
+
+        QVERIFY(!subscription2);
+
+    }
+
+
+    void testCombineThreeServices() {
+        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base", config({{"foo", "A new beginning"}}));
+        auto reg2 = context->registerService<QTimer>();
+        auto reg3 = context->registerService<BaseService2>("base2");
+        auto subscription = combine(reg1, reg2, reg3).subscribe(this, [](Interface1* src, QTimer* timer, BaseService2* base2) {
+            timer->setObjectName(src->foo());
+            base2->setObjectName(src->foo());
+        });
+
+        QVERIFY(subscription);
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot2{reg2};
+        QCOMPARE(slot2->objectName(), "A new beginning");
+        RegistrationSlot<BaseService2> slot3{reg3};
+        QCOMPARE(slot3->objectName(), "A new beginning");
+
+    }
+
+    void testCombineFourServices() {
+        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base", config({{"foo", "A new beginning"}}));
+        auto reg2 = context->registerService<QTimer>();
+        auto reg3 = context->registerService<BaseService2>("base2");
+        auto reg4 = context->registerService(service<DependentService>(reg1), "dep");
+        auto subscription = combine(reg1, reg2, reg3, reg4).subscribe(this, [](Interface1* src, QTimer* timer, BaseService2* base2, DependentService* dep) {
+            timer->setObjectName(src->foo());
+            base2->setObjectName(src->foo());
+            dep->setBase(base2);
+        });
+
+        QVERIFY(subscription);
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot2{reg2};
+        QCOMPARE(slot2->objectName(), "A new beginning");
+        RegistrationSlot<BaseService2> slot3{reg3};
+        QCOMPARE(slot3->objectName(), "A new beginning");
+        RegistrationSlot<DependentService> slot4{reg4};
+        QCOMPARE(slot4->m_dependency, slot3.last());
+
+
+    }
+
+    void testCombineFiveServices() {
+        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base", config({{"foo", "A new beginning"}}));
+        auto reg2 = context->registerService<QTimer>();
+        auto reg3 = context->registerService<BaseService2>("base2");
+        auto reg4 = context->registerService(service<DependentService>(reg1), "dep");
+        auto reg5 = context->registerService(service<DependentServiceLevel2>(reg4), "dep2");
+        auto subscription = combine(reg1, reg2, reg3, reg4, reg5).subscribe(this, [](Interface1* src, QTimer* timer, BaseService2* base2, DependentService* dep, DependentServiceLevel2* dep2) {
+            timer->setObjectName(src->foo());
+            base2->setObjectName(src->foo());
+            dep->setBase(base2);
+            dep2->setObjectName(src->foo());
+        });
+
+        QVERIFY(subscription);
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> slot2{reg2};
+        QCOMPARE(slot2->objectName(), "A new beginning");
+        RegistrationSlot<BaseService2> slot3{reg3};
+        QCOMPARE(slot3->objectName(), "A new beginning");
+        RegistrationSlot<DependentService> slot4{reg4};
+        QCOMPARE(slot4->m_dependency, slot3.last());
+        RegistrationSlot<DependentServiceLevel2> slot5{reg5};
+        QCOMPARE(slot5->objectName(), "A new beginning");
+
+
+    }
+
+
 
     void testConnectServiceWithSelf() {
         auto regSource = context->registerService<BaseService>();
@@ -1358,7 +1585,8 @@ private slots:
         RegistrationSlot<DependentService> srv{reg};
         QVERIFY(context->publish());
         QCOMPARE(srv->address(), Address{"192.168.1.1"});
-        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text));
+        file.seek(0);
         file.write("host=localhost\n");
         file.close();
 
