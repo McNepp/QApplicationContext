@@ -1907,6 +1907,8 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE_NE(dependentSlot->m_dependency, dependentSlot2->m_dependency);
     }
 
+
+
     void testPrototypeReferencedAsBean() {
         auto regProto = context->registerPrototype<BaseService>("base");
         RegistrationSlot<BaseService> protoSlot{regProto};
@@ -1969,7 +1971,62 @@ void testWatchConfigurationFileChangeWithError() {
     }
 
 
+    void testPrototypeUpdatesDependencies() {
+        this->configuration->setValue("foo", "the foo");
+        context->registerObject(configuration.get());
+        auto regProto = context->registerService(prototype<DependentService>(injectIfPresent<Interface1>()), "proto");
 
+        auto regDep1 = context->registerService(service<DependentServiceLevel2>(regProto), "dep1");
+
+        QVERIFY(context->publish());
+        RegistrationSlot<DependentServiceLevel2> depSlot1{regDep1};
+        RegistrationSlot<DependentService> protoSlot{regProto};
+        QCOMPARE(protoSlot.size(), 1);
+        QVERIFY(depSlot1);
+        QVERIFY(depSlot1->m_dep);
+        QCOMPARE(depSlot1->m_dep->m_dependency, nullptr);
+
+        // The following BaseService shall be injected into the next instance of the prototype-service:
+        auto baseReg = context->registerService(service<Interface1,BaseService>());
+        // In order to trigger a new prototype-instance, we must register another dependency on it:
+        auto regDep2 = context->registerService(service<DependentServiceLevel2>(regProto), "dep2");
+
+        QVERIFY(context->publish());
+
+        QCOMPARE(protoSlot.size(), 2);
+        RegistrationSlot<DependentServiceLevel2> depSlot2{regDep2};
+        RegistrationSlot<Interface1> baseSlot{baseReg};
+        QVERIFY(depSlot2->m_dep);
+        QCOMPARE(depSlot2->m_dep->m_dependency, baseSlot.last());
+
+    }
+
+    void testPrototypeUpdatesCardinalityNDependencies() {
+        this->configuration->setValue("foo", "the foo");
+        context->registerObject(configuration.get());
+        auto regProto = context->registerService(prototype<CardinalityNService>(injectAll<Interface1>()), "proto");
+
+        auto regDep1 = context->registerService(service<DependentServiceLevel2>(regProto), "dep1");
+
+        QVERIFY(context->publish());
+        RegistrationSlot<DependentServiceLevel2> depSlot1{regDep1};
+
+        QVERIFY(depSlot1);
+        QVERIFY(depSlot1->m_card);
+        QCOMPARE(depSlot1->m_card->my_bases.size(), 0);
+        context->registerService(service<Interface1,BaseService>(), "base");
+        context->registerService(prototype<Interface1,BaseService>(), "baseProto");
+
+        auto regDep2 = context->registerService(service<DependentServiceLevel2>(regProto), "dep2");
+
+        QVERIFY(context->publish());
+        RegistrationSlot<DependentServiceLevel2> depSlot2{regDep2};
+        QVERIFY(depSlot2);
+        QVERIFY(depSlot2->m_card);
+        QCOMPARE(depSlot2->m_card->my_bases.size(), 2);
+
+
+    }
 
 
     void testAdvertiseAs() {

@@ -272,9 +272,18 @@ public:
 
 class DependentServiceLevel2 : public QObject {
 public:
-    explicit DependentServiceLevel2(DependentService*) {
+    explicit DependentServiceLevel2(DependentService* dep) :
+        m_dep{dep}{
 
     }
+
+    explicit DependentServiceLevel2(CardinalityNService* card) :
+        m_card{card}{
+
+    }
+
+    DependentService* const m_dep = nullptr;
+    CardinalityNService* const m_card = nullptr;
 };
 
 
