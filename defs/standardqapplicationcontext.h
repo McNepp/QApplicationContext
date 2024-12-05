@@ -139,6 +139,8 @@ public:
 
     virtual QConfigurationWatcher* watchConfigValue(const QString& expression) override;
 
+    virtual QVariant resolveConfigValue(const QString& expression) override;
+
 
     using QApplicationContext::registerObject;
 

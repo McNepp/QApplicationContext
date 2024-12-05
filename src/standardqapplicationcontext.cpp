@@ -1814,6 +1814,13 @@ QConfigurationWatcher *StandardApplicationContext::watchConfigValue(const QStrin
     return m_SettingsWatcher->watchConfigValue(getResolver(expression));
 }
 
+QVariant StandardApplicationContext::resolveConfigValue(const QString &expression)
+{
+    if(auto resolver = getResolver(expression)) {
+        return resolver->resolve(this, service_config{});
+    }
+    return QVariant{};
+}
 
 
 

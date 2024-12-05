@@ -3086,7 +3086,22 @@ public:
     ///
     [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
 
-
+    ///
+    /// \brief Resolves an expression.
+    /// \param expression will be parsed in order to determine the QConfigurationWatcher::currentValue().
+    /// <br>In case the expression is a simple String, it will be returned as is.
+    /// <br>The expression may contain one or more *placeholders* which will be resolved using the underlying configuration.
+    /// A *placeholder* is enclosed in curly brackets with a preceding dollar-sign.<br>
+    /// `"${name}"` will be resolved with the configuration-entry `"name"`.<br>
+    /// `"${network/name}"` will be resolved with the configuration-entry `"name"` from the section `"network"`.<br>
+    /// `"${host}://${url}"` will be resolved with the result of the concatenation of the configuration-entry `"host"`,
+    /// a colon and two slashes and the configuration-entry `"url"`.<br>
+    /// The special character-sequence asterisk-slash indicates that a value shall be resolved in a section and all its parent-sections:<br>
+    /// `"* /network/hosts/${host}"` will be resolved with the configuration-entry `"name"` from the section `"network/hosts"`, or
+    /// its parent sections.
+    /// \return a valid QVariant, or an invalid QVariant if the expression could not be parsed.
+    ///
+    [[nodiscard]] virtual QVariant resolveConfigValue(const QString& expression) = 0;
 
 
     virtual ~QConfigurationResolver() = default;
