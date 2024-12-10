@@ -30,8 +30,13 @@ public:
         return result;
     }
 
+    QVariant resolveConfigValue(const QString &expression) override {
+        return PlaceholderResolver::parse(expression, m_settings)->resolve(this, service_config{});
+    }
+
     mutable QStringList lookupKeys;
 };
+
 
 
 class TestPlaceholderResolver : public QObject {
@@ -75,7 +80,7 @@ private slots:
         PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit}", this);
         QVERIFY(resolver);
         settings->setValue("test/sayit", "Hello, world!");
-        QCOMPARE(resolver->resolve(configResolver.get(), config().withGroup("test")), "Hello, world!");
+        QCOMPARE(resolver->resolve(configResolver.get(), config() << withGroup("test")), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"test/sayit"});
     }
 
@@ -103,6 +108,18 @@ private slots:
         QCOMPARE(resolver->resolve(configResolver.get(), config({{".sayit", "world"}})), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"sayit"});
     }
+
+
+    void testResolveRecursiveFromPrivateProperty() {
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, ${sayit}!", this);
+        QVERIFY(resolver);
+
+        settings->setValue("text", "world");
+        QCOMPARE(resolver->resolve(configResolver.get(), config({{".sayit", "${text}"}})), "Hello, world!");
+        QStringList expected{"sayit", "text"};
+        QCOMPARE(configResolver->lookupKeys, expected);
+    }
+
 
     void testResolveDefaultValue() {
         PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit:Hello, world!}", this);
