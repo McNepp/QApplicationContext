@@ -1047,9 +1047,11 @@ void testWatchConfigurationFileChangeWithError() {
     }
 
     void testConfigurePrivatePropertyInServiceTemplate() {
+        configuration->setValue("externalId", 4711);
+        context->registerObject(configuration.get());
         auto serviceTemplate = context->registerServiceTemplate<BaseService>("baseTemplate", config({{"foo", "${id}-foo"}}));
 
-        auto base1 = context->registerService(service<BaseService>(), serviceTemplate, "base1", config({{".id", 4711}}));
+        auto base1 = context->registerService(service<BaseService>(), serviceTemplate, "base1", config({{".id", "${externalId}"}}));
         auto base2 = context->registerService(service<BaseService>(), serviceTemplate, "base2", config({{".id", 3141}}));
         QVERIFY(context->publish());
 
