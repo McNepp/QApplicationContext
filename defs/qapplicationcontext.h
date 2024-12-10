@@ -151,6 +151,11 @@ template<> struct service_scope_traits<ServiceScope::PROTOTYPE> {
     static constexpr bool is_constructable = true;
 };
 
+// We cannot make use of service_scope_traits here, since we also want to test this at runtime:
+constexpr bool is_binding_source(ServiceScope scope) {
+    return scope != ServiceScope::TEMPLATE;
+}
+
 #ifdef __cpp_lib_remove_cvref
 template<typename T> using remove_cvref_t = std::remove_cvref_t<T>;
 #else
@@ -322,6 +327,17 @@ inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
 
 
 
+template<typename T> struct qvariant_cast {
+    T operator()(const QVariant& v) const {
+        return v.value<T>();
+    }
+};
+
+template<typename T> struct qvariant_cast<QList<T*>> {
+    QList<T*> operator()(const QVariant& v) const {
+        return convertQList<T>(v.value<QObjectList>());
+    }
+};
 
 
 
@@ -333,11 +349,8 @@ template<typename S> struct callable_adapter {
         }
         using arg_type = detail::remove_cvref_t<A>;
         return [setter](QObject* obj,QVariant arg) {
-            if constexpr(std::is_same_v<S,QObject>) {
-                (obj->*setter)(arg.value<arg_type>());
-            } else
             if(S* ptr = dynamic_cast<S*>(obj)) {
-                (ptr->*setter)(arg.value<arg_type>());
+                (ptr->*setter)(qvariant_cast<arg_type>{}(arg));
             }
         };
     }
@@ -794,27 +807,35 @@ protected:
     struct ParentPlaceholder {
     };
 
-    struct ConfigValue {
-        QVariant expression;
-        bool autoRefresh = false;
-        q_setter_t propertySetter;
-        q_variant_converter_t variantConverter;
+    enum class ConfigValueType {
+        DEFAULT,
+        AUTO_REFRESH_EXPRESSION,
+        SERVICE,
+        SERVICE_LIST
     };
 
+    struct ConfigValue {
+        QVariant expression;
+        ConfigValueType configType = ConfigValueType::DEFAULT;
+        q_setter_t propertySetter = nullptr;
+        q_variant_converter_t variantConverter = nullptr;
+    };
+
+
+    inline bool operator==(const ConfigValue& left, const ConfigValue& right) {
+        //Two ConfigValues shall be deemed equal when the expressions and configTypes are equal. We deliberately ignore the function-pointer-members.
+        return left.expression == right.expression && left.configType == right.configType;
+    }
 
     ///
     /// \brief A type-safe configuration-entry.
     /// <br>This is an intermediate type that will be used solely to populate a ServiceConfig.
     ///
-    template<typename T> struct config_entry_t {
+    template<typename T> struct service_config_entry_t {
         QString name;
-        QVariant value;
+        detail::ConfigValue value;
     };
 
-    inline bool operator==(const ConfigValue& left, const ConfigValue& right) {
-        //Two ConfigValues shall be deemed equal when the expresions are equal, regardless of the other fields!
-        return left.expression == right.expression;
-    }
 
 #ifdef __GNUG__
     QString demangle(const char*);
@@ -838,15 +859,8 @@ protected:
 
 
 
+
 }// end namespace detail
-
-}//end namespace mcnepp::qtdi
-
-
-
-Q_DECLARE_METATYPE(mcnepp::qtdi::detail::ConfigValue)
-
-namespace mcnepp::qtdi {
 
 
 
@@ -2034,7 +2048,7 @@ template<typename S=QString> [[nodiscard]] Resolvable<S> resolve(const QString& 
 /// since the embedded default-value would always take precedence!
 ///
 /// ### Lookup in sub-sections
-/// Every key will be looked up in the section that has been provided via as an argument to config(), argument, unless the key itself starts with a forward slash,
+/// Every key will be looked up in the section that has been provided via as an argument to mcnepp::qitdi::withGroup(const QString&), argument, unless the key itself starts with a forward slash,
 /// which denotes the root-section.
 ///
 /// A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
@@ -2043,7 +2057,7 @@ template<typename S=QString> [[nodiscard]] Resolvable<S> resolve(const QString& 
 ///
 ///     //Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
 ///     //Thus, in the following example, we put a space between the asterisk and the slash:
-///     context -> registerService(service<QIODevice,QFile>(resolve("${* /filename}")), "file", config("files"));
+///     context -> registerService(service<QIODevice,QFile>(resolve("${* /filename}")), "file", config() << withyGroup("files"));
 ///
 /// The key "filename" will first be searched in the section "files". If it cannot be found, it will be searched in the root-section.
 ///
@@ -2100,40 +2114,59 @@ inline detail::ParentPlaceholder injectParent() {
 
 
 
+
 ///
 /// \brief Configures a service for an ApplicationContext.
 ///
 struct service_config final {
-    using entry_type = std::pair<QString,QVariant>;
+    using entry_type = std::pair<QString,detail::ConfigValue>;
+    using map_type = QMap<QString,detail::ConfigValue>;
+
+    ///
+    /// Denotes a function that can be applied to a service_config via the overloaded `operator <<`.
+    /// \see operator<<(config_modifier modifier)
+    ///
+    using config_modifier=std::function<void(service_config&)>;
 
 
     friend inline bool operator==(const service_config& left, const service_config& right) {
         return left.properties == right.properties && left.group == right.group && left.autowire == right.autowire;
     }
 
-    service_config withGroup(const QString& newGroup)&& {
-        return service_config{newGroup, autowire, autoRefresh, std::move(properties)};
+
+    ///
+    /// \brief Applies a *modifier* to this configuration.
+    /// <br>Usage is analogous to *iostream-manipulator*. Example:
+    ///
+    ///        config() << withAutowire;
+    ///
+    /// \param modifier will be applied to this instance.
+    /// \return `this` instance.
+    /// \see mcnepp::qtdi::withAutowire(service_config&)
+    /// \see mcnepp::qtdi::withAutoRefresh(service_config&)
+    /// \see mcnepp::qtdi::withGroup(const QString&)
+    ///
+    service_config& operator<<(config_modifier modifier) {
+        modifier(*this);
+        return *this;
     }
 
-    service_config withGroup(const QString& newGroup)const& {
-        return service_config{newGroup, autowire, autoRefresh, properties};
+
+    ///
+    /// \brief Adds an entry to this service_config.
+    /// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::entry() or mcnepp::qtdi::autoRefresh().
+    /// \return `this` instance.
+    ///
+    service_config& operator<<(const service_config::entry_type& entry) {
+        properties.insert(entry.first, entry.second);
+        return *this;
     }
 
-    service_config withAutowire()&& {
-        return service_config{std::move(group), true, autoRefresh, std::move(properties)};
-    }
 
-    service_config withAutowire()const& {
-        return service_config{group, true, autoRefresh, properties};
-    }
-
-    service_config withAutoRefresh()&& {
-        return service_config{std::move(group), autowire, true, std::move(properties)};
-    }
-
-    service_config withAutoRefresh()const& {
-        return service_config{group, autowire, true, properties};
-    }
+    ///
+    /// \brief The keys and corresponding values.
+    ///
+    map_type properties;
 
     ///
     /// \brief The optional group for the configuration.
@@ -2150,12 +2183,43 @@ struct service_config final {
     /// \brief Shall all properties be automatically refreshed?
     ///
     bool autoRefresh = false;
-    ///
-    /// \brief The keys and corresponding values.
-    ///
-    QVariantMap properties;
 };
 
+///
+/// \brief Enables auto-refresh for a service_config.
+/// <br>This function is not meant to be invoked directly.
+/// <br>Rather, its usage is analogous to that of *iostream-manipulators* from the standard-libray:
+///
+///
+///     config() << withAutoRefresh << entry("objectName", "${myService}");
+///
+inline void withAutoRefresh(service_config& cfg) {
+    cfg.autoRefresh = true;
+};
+
+///
+/// \brief Applies auto-wiring to a service_config.
+/// <br>This function is not meant to be invoked directly.
+/// <br>Rather, its usage is analogous to that of *iostream-manipulators* from the standard-libray:
+///
+///
+///     config() << withAutowire << entry("objectName", "${myService}");
+///
+inline void withAutowire(service_config& cfg) {
+    cfg.autowire = true;
+};
+
+
+///
+/// \brief Sets the group for a service_config.
+/// <br>The usage of this function is analogous to that of *iostream-manipulators* from the standard-libray:
+///
+///
+///     config() << withGroup("myServices") << entry("objectName", "${myService}");
+///
+inline service_config::config_modifier withGroup(const QString& name) {
+    return [name](service_config& cfg) { cfg.group = name;};
+}
 
 
 ///
@@ -2201,7 +2265,7 @@ struct service_config final {
 ///
 ///     //Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
 ///     //Thus, in the following example, we put a space between the asterisk and the slash:
-///     config({{"interval", "${* /timerInterval}"}}).withGroup("timers");
+///     config({{"interval", "${* /timerInterval}"}}) << withGroup("timers");
 ///
 /// The key "timerInterval" will first be searched in the section "timers". If it cannot be found, it will be searched in the root-section.
 ///
@@ -2214,16 +2278,54 @@ struct service_config final {
 /// <br>Should you want to specify a property-value starting with an ampersand, you must escape this with the backslash.
 /// \param properties the keys and value to be applied as Q_PROPERTYs.
 /// \return the service_config.
-[[nodiscard]] inline service_config config(std::initializer_list<service_config::entry_type> properties) {
-    return service_config{"", false, false, properties};
+[[nodiscard]] inline service_config config(std::initializer_list<std::pair<QString,QVariant>> properties) {
+    service_config cfg;
+    for(auto& entry : properties) {
+        cfg.properties.insert(entry.first, detail::ConfigValue{entry.second, detail::ConfigValueType::DEFAULT});
+    }
+    return cfg;
 }
+
+
+
+
+
+
 
 ///
 /// Makes a default service_config.
+/// <br>The returned service_config can then be further modified, before it gets passed to QApplicationContext::registerService().
+/// <br>Modification is done in a fashion similar to *iostreams*, i.e. by using the overloaded `operator <<`.
+/// <br>You add a configuration-entry like this:
+///
+///     config() << entry("url", "http://mcnepp.com");
+///
+/// Several configuration-entries can be chained conveniently:
+///
+///     config() << entry("url", "http://mcnepp.com") << entry("objectName", "${dataProvider}");
+///
+/// You can also specify the group within the QSettings from where the configuration-entries shall be resolved:
+///
+///     config() << withGroup("dataProviders") << entry("url", "http://mcnepp.com") << entry("objectName", "${dataProvider}");
+///
+/// If you want to enable *autowirng* for a service-registration, you can use mcnepp::qtdi::withAutowire(service_config&) like this:
+///
+///     config() << withGroup("dataProviders") << withAutowire << entry("url", "http://mcnepp.com") << entry("objectName", "${dataProvider}");
+///
+/// And finally, should you want to enable *auto-refresh* on all configuration-entries, you can use mcnepp::qtdi::withAutoRefresh(service_config&) like this:
+///
+///     config() << withGroup("dataProviders") << withAutoRefresh << entry("url", "http://mcnepp.com") << entry("objectName", "${dataProvider}");
+///
 /// \return the service_config.
 [[nodiscard]] inline service_config config() {
     return service_config{};
 }
+
+///
+/// \brief A type-safe configuration-entry.
+/// <br>This is an intermediate type that will be used solely to populate a ServiceConfig.
+///
+template<typename S> using service_config_entry=detail::service_config_entry_t<S>;
 
 
 
@@ -2234,51 +2336,75 @@ struct service_config final {
 /// <br>Also, there does not have to be a Q_PROPERTY declared for each configuration-value. You may use the syntax for *private properties*,
 /// i.e. a name preceded by a dot to indicate that.
 ///
-template<typename S> class ServiceConfig {
-    friend class QApplicationContext;
-public:
+template<typename S> struct ServiceConfig {
 
-    using entry_type = detail::config_entry_t<S>;
-
-    ServiceConfig<S>&& withGroup(const QString& group)&& {
-        data.group = group;
-        return std::move(*this);
+    ///
+    /// \brief Adds an entry to this ServiceConfig.
+    /// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::entry() or mcnepp::qtdi::autoRefresh().
+    /// \return `this` instance.
+    ///
+    ServiceConfig<S>& operator<<(const service_config_entry<S>& entry) {
+        data.properties.insert(entry.name, entry.value);
+        return *this;
     }
 
-    ServiceConfig<S> withGroup(const QString& group)const & {
-        return ServiceConfig<S>{*this}.withGroup(group);
-    }
-
-    ServiceConfig<S>&& withAutoRefresh()&& {
-        data.autoRefresh = true;
-        return std::move(*this);
-    }
-
-    ServiceConfig<S> withAutoRefresh()const & {
-        return ServiceConfig<S>{*this}.withAutoRefresh();
-    }
-
-    explicit ServiceConfig(std::initializer_list<entry_type> entries)
-    {
-        for(auto& entry: entries) {
-            data.properties.insert(entry.name, entry.value);
-        }
+    ///
+    /// \brief Applies a *modifier* to this configuration.
+    /// <br>Usage is analogous to *iostream-manipulator*. Example:
+    ///
+    ///        config() << withAutowire;
+    ///
+    /// \param modifier will be applied to this instance.
+    /// \return `this` instance.
+    /// \see mcnepp::qtdi::withAutowire(service_config&)
+    /// \see mcnepp::qtdi::withAutoRefresh(service_config&)
+    /// \see mcnepp::qtdi::withGroup(const QString&)
+    ///
+    ServiceConfig<S>& operator<<(service_config::config_modifier manip) {
+        manip(data);
+        return *this;
     }
 
 
-private:
+    ///
+    /// \brief Adds an entry to this ServiceConfig.
+    /// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::entry() or mcnepp::qtdi::autoRefresh().
+    /// \return `this` instance.
+    ///
+    ServiceConfig<S>& operator<<(const service_config::entry_type& entry) {
+        data.properties.insert(entry.first, entry.second);
+        return *this;
+    }
+
     service_config data;
 };
 
 
+
+
+
 ///
-/// An opaque type representing a type-safe entry for a service-configuration.
+/// \brief Adds a type-safe entry, creating a strongly typed ServiceConfig.
+/// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::entry() or mcnepp::qtdi::autoRefresh().
+/// \return a strongly typed ServiceConfig.
+template<typename S> [[nodiscard]] ServiceConfig<S> operator<<(service_config&& cfg, const service_config_entry<S>& entry) {
+    return ServiceConfig<S>{std::move(cfg)} << entry;
+}
+
 ///
-template<typename T> using service_config_entry = detail::config_entry_t<T>;
+/// \brief Adds a type-safe entry, creating a strongly typed ServiceConfig.
+/// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::entry() or mcnepp::qtdi::autoRefresh().
+/// \return a strongly typed ServiceConfig.
+template<typename S> [[nodiscard]] ServiceConfig<S> operator<<(const service_config& cfg, const service_config_entry<S>& entry) {
+    return ServiceConfig<S>{cfg} << entry;
+}
+
+
+
 
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
-/// <br>The resulting service_config_entry can then be used to initialize mcnepp::qtdi::config(std::initializer_list<service_config_entry<S>>);
+/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::config() using the `operator <<`.
 ///
 /// \tparam S the service-type.
 /// \param propertySetter the member-function that will be invoked with the property-value.
@@ -2287,43 +2413,94 @@ template<typename T> using service_config_entry = detail::config_entry_t<T>;
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> entry(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), QVariant::fromValue(detail::ConfigValue{expression, false, detail::callable_adapter<S>::adaptSetter(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)})};
+    if(!propertySetter) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
+        return {".invalid", QVariant{}};
+    }
+
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::callable_adapter<S>::adaptSetter(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
 }
 
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
-/// <br>The resulting service_config_entry can then be used to initialize mcnepp::qtdi::config(std::initializer_list<service_config_entry<S>>);
+/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::config() using the `operator <<`.
 /// \tparam S the service-type.
 /// \param propertySetter the member-function that will be invoked with the property-value.
 /// \param value will be set when the service is being configured.
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> entry(R(S::*propertySetter)(A), A value) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), QVariant::fromValue(detail::ConfigValue{value, false, detail::callable_adapter<S>::adaptSetter(propertySetter), nullptr})};
+    if(!propertySetter) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
+        return {".invalid", QVariant{}};
+    }
+
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{value, detail::ConfigValueType::DEFAULT, detail::callable_adapter<S>::adaptSetter(propertySetter)}};
 }
 
+///
+/// \brief Creates a type-safe configuration-entry for a service.
+/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::config() using the `operator <<`.
+/// \tparam S the service-type.
+/// \param propertySetter the member-function that will be invoked with the instance of the service of type `<A>`.
+/// \param reg the registration for the service-instance that will be injected into the configured service.
+/// \return a type-safe configuration for a service.
+///
+template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto entry(R(S::*propertySetter)(A*), const ServiceRegistration<A,scope>& reg) -> std::enable_if_t<detail::is_binding_source(scope),service_config_entry<S>>
+{
+    if(!propertySetter) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
+        return {".invalid", QVariant{}};
+    }
+    if(!reg || !detail::is_binding_source(reg.unwrap() -> scope())) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
+        return {".invalid", QVariant{}};
+    }
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::callable_adapter<S>::adaptSetter(propertySetter)}};
+}
 
+///
+/// \brief Creates a type-safe configuration-entry for a service.
+/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::config() using the `operator <<`.
+/// \tparam S the service-type.
+/// \param propertySetter the member-function that will be invoked with a `QList<A*>`, comprising all service-instances that have been published for the
+/// suppolied ProxyRegistration.
+/// \param reg the registration for those services that will be injected into the configured service.
+/// \return a type-safe configuration for a service.
+///
+template<typename S,typename R,typename A,typename L> [[nodiscard]] auto entry(R(S::*propertySetter)(L), const ProxyRegistration<A>& reg) -> std::enable_if_t<std::is_convertible_v<L,QList<A*>>,service_config_entry<S>>
+{
+    if(!propertySetter) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
+        return {".invalid", QVariant{}};
+    }
+    if(!reg) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
+        return {".invalid", QVariant{}};
+    }
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE_LIST, detail::callable_adapter<S>::adaptSetter(propertySetter), nullptr}};
+}
 
 
 ///
 /// \brief Creates a type-safe, auto-refreshing configuration-entry for a service.
-/// <br>The resulting service_config_entry can then be used to initialize mcnepp::qtdi::config(std::initializer_list<service_config_entry<S>>);
+/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::config() using the `operator <<`.
 /// <br>In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:
 ///
-///     context->registerService<QTimer>("timer", config({entry(&QTimer::setInterval, "${timerInterval}")}));
+///     context->registerService<QTimer>("timer", config() << entry(&QTimer::setInterval, "${timerInterval}"));
 ///
 /// The member-function will be initialized from the value of the configuration-key `"timerInterval"` as it
 /// is in the moment the timer is instantiated.
 ///
 /// <br>Now, contrast this with:
 ///
-///     context->registerService<QTimer>("timer", config({autoRefresh(&QTimer::setInterval, "${timerInterval}")}));
+///     context->registerService<QTimer>("timer", config() << autoRefresh(&QTimer::setInterval, "${timerInterval}"));
 ///
 /// Whenever the value for the configuration-key `"timerInterval"` changes in the underlying QSettings-Object, the
 /// expression `"${timerInterval}"` will be re-evaluated and the member-function of the timer will be updated accordingly.
 /// <br>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
 ///
-///     context->registerService<QTimer>("timer", config(entry(&QObject::setObjectName, "theTimer"), entry("interval", &QTimer::setInterval, "${timerInterval}")}).withAutoRefresh());
+///     context->registerService<QTimer>("timer", config() << withAutoRefresh << entry(&QObject::setObjectName, "theTimer") << entry("interval", &QTimer::setInterval, "${timerInterval}"));
 ///
 /// **Note:** Auto-refreshing an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
 /// by putting a configuration-entry into one of the QSettings-objects registered with the context:
@@ -2340,7 +2517,7 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), QVariant::fromValue(detail::ConfigValue{expression, true, detail::callable_adapter<S>::adaptSetter(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)})};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::callable_adapter<S>::adaptSetter(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
 }
 
 
@@ -2349,7 +2526,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 
 ///
 /// \brief Creates a configuration-entry for a service.
-/// <br>The resulting service_config_entry can then be used to initialize a mcnepp::qtdi::config(std::initializer_list<std::pair<QString,QVariant>>);
+/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::config() using the `operator <<`.
 /// \param name the name of the property to be configured. **Note:** this name must refer to a Q_PROPERTY of the service-type!
 /// The only exception is a *private property*, i.e. a configuration-entry that shall not be resolved automatically.
 /// In that case, the name must start with a dot.
@@ -2357,13 +2534,13 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 /// \return a configuration for a service.
 ///
 [[nodiscard]] inline service_config::entry_type entry(const QString& name, const QVariant& value) {
-    return {name, value};
+    return {name, detail::ConfigValue{value, detail::ConfigValueType::DEFAULT}};
 }
 
 
 ///
 /// \brief Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime.
-/// <br>This function can be used in conjunction with mcnepp::qtdi::config(std::initializer_list<std::pair<QString,QVariant>>).
+/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::config() using the `operator <<`.
 /// <br>In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:
 ///
 ///     context->registerService<QTimer>("timer", config({{"interval", "${timerInterval}"}}));
@@ -2379,7 +2556,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 /// expression `"${timerInterval}"` will be re-evaluated and the Q_PROPERTY of the timer will be updated accordingly.
 /// <br>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
 ///
-///     context->registerService<QTimer>("timer", config({{"objectName", "theTimer"}, {"interval", "${timerInterval}"}}).withAutoRefresh());
+///     context->registerService<QTimer>("timer", config() << withAutoRefresh << entry("objectName", "theTimer") << entry("interval", "${timerInterval}"));
 ///
 /// **Note:** Auto-refreshing an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
 /// by putting a configuration-entry into one of the QSettings-objects registered with the context:
@@ -2393,7 +2570,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 /// \param expression a String, possibly containing one or more placeholders.
 /// \return an  entry that will ensure that the expression will be re-evaluated when the underlying QSettings changes.
 [[nodiscard]] inline service_config::entry_type autoRefresh(const QString& name, const QString& expression) {
-    return {name, QVariant::fromValue(detail::ConfigValue{expression, true, nullptr, nullptr})};
+    return {name, detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, nullptr, nullptr}};
 }
 
 
@@ -2408,7 +2585,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 ///
 /// Note that is possible to mix type-safe configuration-entries with Q_PROPERTY-based configuration-entries:
 ///
-///     context->registerService<QQTimer>("timer", config({entry(&QTimer::setInterval, 1000), {"singleShot", "true"}}));
+///     context->registerService<QQTimer>("timer", config({entry(&QTimer::setInterval, 1000)}) << entry("singleShot", "true"));
 ///
 /// However, there is a caveat: Even though the above service-registrations are *logically equivalent*, they are *technically different*.
 /// Thus, executing the second registration after the first one will not be considered *idempotent*.
@@ -2418,10 +2595,12 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 /// \return a type-safe service-configuration.
 ///
 template<typename S> [[nodiscard]] ServiceConfig<S> config(std::initializer_list<service_config_entry<S>> entries) {
-    return ServiceConfig<S>{entries};
+    ServiceConfig<S> cfg;
+    for(auto& entry : entries) {
+        cfg << entry;
+    }
+    return cfg;
 }
-
-
 
 
 
@@ -2653,9 +2832,9 @@ struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
 
 
     static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S,scope>& dep) {
-        static_assert(scope != ServiceScope::TEMPLATE, "ServiceRegistration with ServiceScope::TEMPLATE cannot be a dependency");
+        static_assert(is_binding_source(scope), "ServiceRegistration with this scope cannot be a dependency");
         //It could still be ServiceScope::UNKNOWN statically, but ServiceScope::TEMPLATE at runtime:
-        if(dep && dep.unwrap()->scope() != ServiceScope::TEMPLATE) {
+        if(dep && is_binding_source(dep.unwrap()->scope())) {
             return { dep.unwrap()->descriptor().impl_type, static_cast<int>(Kind::MANDATORY), dep.registeredName() };
         }
         return { typeid(S), INVALID_KIND, dep.registeredName() };

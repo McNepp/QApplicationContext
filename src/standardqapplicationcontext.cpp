@@ -159,12 +159,19 @@ template<typename T> struct Collector : public detail::Subscription {
 
 
 
-QStringList determineBeanRefs(const QVariantMap& properties) {
+QStringList determineBeanRefs(const service_config::map_type& properties) {
     QStringList result;
     for(auto entry : properties.asKeyValueRange()) {
-        auto key = entry.second.toString();
-        if(key.length() > 1 && key.startsWith('&')) {
-            result.push_back(key.right(key.length()-1));
+        switch(entry.second.configType) {
+
+        case detail::ConfigValueType::AUTO_REFRESH_EXPRESSION:
+        case detail::ConfigValueType::SERVICE:
+        case detail::ConfigValueType::SERVICE_LIST:
+            continue;
+        default:
+            if(auto key = entry.second.expression.toString(); key.length() > 1 && key.startsWith('&')) {
+                result.push_back(key.right(key.length()-1));
+            }
         }
     }
     return result;
@@ -414,6 +421,7 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
 
 
 const service_config StandardApplicationContext::ObjectRegistration::defaultConfig;
+const QVariantMap StandardApplicationContext::EMPTY_MAP;
 
 
 subscription_handle_t StandardApplicationContext::DescriptorRegistration::createBindingTo(const char* sourcePropertyName, detail::Registration *target, const detail::property_descriptor& targetProperty)
@@ -481,7 +489,6 @@ StandardApplicationContext::ServiceRegistrationImpl::ServiceRegistrationImpl(Des
     DescriptorRegistration{base, index, name, desc, context, parent},
     theService(nullptr),
     m_config(config),
-    m_resolvedProperties{config.properties},
     m_state(STATE_INIT)
 {
     beanRefsCache = determineBeanRefs(config.properties);
@@ -556,8 +563,7 @@ int StandardApplicationContext::ServiceRegistrationImpl::unpublish() {
 
 StandardApplicationContext::ServiceTemplateRegistration::ServiceTemplateRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent) :
     DescriptorRegistration{base, index, name, desc, context, parent},
-    m_config(config),
-    m_resolvedProperties{config.properties} {
+    m_config(config) {
     proxySubscription = new ProxySubscription{this, true};
     beanRefsCache = determineBeanRefs(config.properties);
 }
@@ -1347,7 +1353,7 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
             }
 
             if(descriptor.meta_object && scope != ServiceScope::TEMPLATE) {
-                const QVariantMap* props = &config.properties;
+                const service_config::map_type* props = &config.properties;
                 for(DescriptorRegistration* handle = base;;handle = handle->base() ){
                     for(auto keyIter = props->keyBegin(); keyIter != props->keyEnd(); ++keyIter) {
                         auto& key = *keyIter;
@@ -1459,12 +1465,7 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
     if(!value.isValid()) {
         return {Status::fatal, false};
     }
-    QString key;
-    if(value.userType() == qMetaTypeId<detail::ConfigValue>()) {
-        key = value.value<detail::ConfigValue>().expression.toString();
-    } else {
-        key = value.toString();
-    }
+    QString key = value.toString();
     auto match = beanRefPattern().match(key);
     if(match.hasMatch()) {
         key = match.captured(1);
@@ -1545,28 +1546,40 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
     if(metaObject) {
         std::unordered_set<QString> usedProperties;
         descriptor_list createdForThis;
-        for(auto[key,value] : config.properties.asKeyValueRange()) {
-            QVariant resolvedValue = value;
-            auto[status, resolved] = resolveBeanRef(resolvedValue, createdForThis, allowPartial);
-            if(status != Status::ok) {
-                return status;
-            }
-            detail::ConfigValue cv;
-            if(value.userType() == qMetaTypeId<detail::ConfigValue>()) {
-                cv = value.value<detail::ConfigValue>();
-            }
+        for(auto[key,cv] : config.properties.asKeyValueRange()) {
+            QVariant resolvedValue = cv.expression;
             detail::PlaceholderResolver* resolver = nullptr;
             bool isAutoRefreshProperty = config.autoRefresh; // If config.autoRefresh is false, we might still find a detail::ConfigValue below
-            while(!resolved)
-            {
-                if(value.userType() == qMetaTypeId<detail::ConfigValue>()) {
-                    if(cv.expression.userType() == QMetaType::QString) {
+            switch(cv.configType) {
+            case detail::ConfigValueType::SERVICE:
+                if(auto srvReg = dynamic_cast<DescriptorRegistration*>(cv.expression.value<service_registration_handle_t>())) {
+                    resolvedValue.setValue(srvReg->obtainService(toBePublished));
+                }
+                break;
+            case detail::ConfigValueType::SERVICE_LIST:
+                if(auto proxyReg = cv.expression.value<proxy_registration_handle_t>()) {
+                    Collector<QObject> collector;
+                    proxyReg->subscribe(&collector);
+                    resolvedValue.setValue(collector.collected);
+                }
+                break;
+
+            case detail::ConfigValueType::AUTO_REFRESH_EXPRESSION:
+                isAutoRefreshProperty = true;
+                [[fallthrough]];
+            default:
+                auto[status, resolved] = resolveBeanRef(resolvedValue, createdForThis, allowPartial);
+                if(status != Status::ok) {
+                    return status;
+                }
+                if(!resolved) {
+                    if(cv.expression.typeId() == QMetaType::QString) {
                         resolver = getResolver(cv.expression.toString());
                         if(!resolver) {
                             return Status::fatal;
                         }
                         // We only need to watch this property if it does contain placeholders:
-                        isAutoRefreshProperty = cv.autoRefresh && resolver && resolver->hasPlaceholders();
+                        isAutoRefreshProperty = isAutoRefreshProperty && resolver && resolver->hasPlaceholders();
                         resolvedValue = resolver->resolve(m_injectedContext, config);
                         if(resolvedValue.isValid()) {
                             detail::convertVariant(resolvedValue, cv.variantConverter);
@@ -1574,20 +1587,10 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                     } else {
                         resolvedValue = cv.expression;
                     }
-                } else
-                if(value.userType() == QMetaType::QString) {
-                    resolver = getResolver(value.toString());
-                    if(!resolver) {
-                        return Status::fatal;
-                    }
-                    resolvedValue = resolver->resolve(m_injectedContext, config);
-                } else {
-                    break;
                 }
-                if(!resolvedValue.isValid()) {
-                    return Status::fatal;
-                }
-                resolved = true;
+            }
+            if(!resolvedValue.isValid()) {
+                return Status::fatal;
             }
             reg->resolveProperty(key, resolvedValue);
             detail::property_descriptor propertyDescriptor;
@@ -1685,26 +1688,40 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
 
 
 bool StandardApplicationContext::validateResolvers(const service_descriptor& descriptor, const service_config& config) {
-    for(auto[key,value] : config.properties.asKeyValueRange()) {
+    for(auto[key,cv] : config.properties.asKeyValueRange()) {
+        if(!cv.expression.isValid()) {
+            return false;
+        }
         bool isAutoRefreshProperty = config.autoRefresh;
-        QString asString = value.toString();
-        if(value.userType() == qMetaTypeId<detail::ConfigValue>()) {
-            detail::ConfigValue cv = value.value<detail::ConfigValue>();
-            if(cv.expression.userType() != QMetaType::QString) {
+        QString asString;
+        switch(cv.configType) {
+        case detail::ConfigValueType::SERVICE:
+            if(!cv.expression.value<service_registration_handle_t>()) {
+                qCritical(loggingCategory()).nospace().noquote() << "Invalid value for property '" << key << "'";
+                return false;
+            }
+            continue;
+        case detail::ConfigValueType::SERVICE_LIST:
+            if(!cv.expression.value<proxy_registration_handle_t>()) {
+                qCritical(loggingCategory()).nospace().noquote() << "Invalid value for property '" << key << "'";
+                return false;
+            }
+            continue;
+        case detail::ConfigValueType::AUTO_REFRESH_EXPRESSION:
+            isAutoRefreshProperty = true;
+            [[fallthrough]];
+        default:
+            if(cv.expression.typeId() != QMetaType::QString) {
                 continue;
             }
-            asString = value.value<detail::ConfigValue>().expression.toString();
-            isAutoRefreshProperty = cv.autoRefresh;
-        } else
-        if(value.userType() != QMetaType::QString || beanRefPattern().match(asString).hasMatch()) {
-           continue;
+            asString = cv.expression.toString();
         }
         detail::PlaceholderResolver* configResolver = getResolver(asString);
         if(!configResolver) {
             return false;
         }
         if(isAutoRefreshProperty && !configResolver->hasPlaceholders()) {
-            qCInfo(loggingCategory()).noquote().nospace() << "Property '" << key << "' of " << descriptor << "will not be watched, as expression '" << asString << "' contains no placeholders";
+            qCInfo(loggingCategory()).noquote().nospace() << "Property '" << key << "' of " << descriptor << " will not be watched, as expression '" << asString << "' contains no placeholders";
         }
     }
     return true;
@@ -1825,4 +1842,4 @@ QVariant StandardApplicationContext::resolveConfigValue(const QString &expressio
 
 
 
-    }//mcnepp::qtdi
+}//mcnepp::qtdi

@@ -265,6 +265,10 @@ public:
         my_bases.push_back(base);
     }
 
+    void setBases(const QList<Interface1*>& bases) {
+        my_bases = bases;
+    }
+
     QList<Interface1*> my_bases;
 };
 
