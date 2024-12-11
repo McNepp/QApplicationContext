@@ -118,6 +118,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:afb12543b6569d2683b2d3aed23f84b98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a value from the ApplicationContext's configuration. <br  />
 This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>:  <br /></td></tr>
 <tr class="separator:afb12543b6569d2683b2d3aed23f84b98"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac0785faca9002edaa1a0935028ce34ac" id="r_ac0785faca9002edaa1a0935028ce34ac"><td class="memItemLeft" align="right" valign="top">virtual QVariant&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac0785faca9002edaa1a0935028ce34ac">resolveConfigValue</a> (const QString &amp;expression)=0</td></tr>
+<tr class="memdesc:ac0785faca9002edaa1a0935028ce34ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves an expression.  <br /></td></tr>
+<tr class="separator:ac0785faca9002edaa1a0935028ce34ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -162,7 +165,7 @@ static bool&#160;</td><td class="memItemRight" valign="bottom"><b>removeLastPath
 This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>: </p>
 <ol type="1">
 <li>The environment, for a variable corresponding to the <em>placeholder</em>.</li>
-<li>The instances of <code>QSettings</code> that have been registered in the ApplicationContext. <dl class="section see"><dt>See also</dt><dd><a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.">mcnepp::qtdi::config()</a> </dd></dl>
+<li>The instances of <code>QSettings</code> that have been registered in the ApplicationContext. <dl class="section see"><dt>See also</dt><dd><a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">key</td><td>the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections. </td></tr>
@@ -175,6 +178,49 @@ This function will be used to resolve placeholders in Service-configurations. Wh
 </ol>
 
 <p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a5263ce983be7160d17e50c549af25a62">mcnepp::qtdi::StandardApplicationContext</a>.</p>
+
+</div>
+</div>
+<a id="ac0785faca9002edaa1a0935028ce34ac" name="ac0785faca9002edaa1a0935028ce34ac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac0785faca9002edaa1a0935028ce34ac">&#9670;&#160;</a></span>resolveConfigValue()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual QVariant mcnepp::qtdi::QConfigurationResolver::resolveConfigValue </td>
+          <td>(</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>expression</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">nodiscard</span><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolves an expression. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">expression</td><td>will be parsed in order to determine the QConfigurationWatcher::currentValue(). <br  />
+In case the expression is a simple String, it will be returned as is. <br  />
+The expression may contain one or more <em>placeholders</em> which will be resolved using the underlying configuration. A <em>placeholder</em> is enclosed in curly brackets with a preceding dollar-sign.<br  />
+ <code>"${name}"</code> will be resolved with the configuration-entry <code>"name"</code>.<br  />
+ <code>"${network/name}"</code> will be resolved with the configuration-entry <code>"name"</code> from the section <code>"network"</code>.<br  />
+ <code>"${host}://${url}"</code> will be resolved with the result of the concatenation of the configuration-entry <code>"host"</code>, a colon and two slashes and the configuration-entry <code>"url"</code>.<br  />
+ The special character-sequence asterisk-slash indicates that a value shall be resolved in a section and all its parent-sections:<br  />
+ <code>"* /network/hosts/${host}"</code> will be resolved with the configuration-entry <code>"name"</code> from the section <code>"network/hosts"</code>, or its parent sections. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a valid QVariant, or an invalid QVariant if the expression could not be parsed. </dd></dl>
+
+<p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a1a2b3e7978ec585d51da59c7e5a88339">mcnepp::qtdi::StandardApplicationContext</a>.</p>
 
 </div>
 </div>

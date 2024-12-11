@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['proxy_5fregistration_5fhandle_5ft_0',['proxy_registration_handle_t',['../qapplicationcontext_8h.html#aec447170b9d5815c59b29ae88ef8bd09',1,'mcnepp::qtdi']]]
+  ['dependency_5finfo_0',['dependency_info',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a41a9694c1b68949bdd33dc2394591372',1,'mcnepp::qtdi::QApplicationContext']]]
 ];

@@ -106,33 +106,32 @@ $(function(){ initResizable(false); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:ad2d40ffb9dd1bf0455c62cdf79d4cf33" id="r_ad2d40ffb9dd1bf0455c62cdf79d4cf33"><td class="memItemLeft" align="right" valign="top"><a id="ad2d40ffb9dd1bf0455c62cdf79d4cf33" name="ad2d40ffb9dd1bf0455c62cdf79d4cf33"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>entry_type</b> = std::pair&lt;QString,QVariant&gt;</td></tr>
-<tr class="separator:ad2d40ffb9dd1bf0455c62cdf79d4cf33"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aec7611cfd29ada5776916c8073a5b88c" id="r_aec7611cfd29ada5776916c8073a5b88c"><td class="memItemLeft" align="right" valign="top"><a id="aec7611cfd29ada5776916c8073a5b88c" name="aec7611cfd29ada5776916c8073a5b88c"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>entry_type</b> = std::pair&lt;QString,detail::ConfigValue&gt;</td></tr>
+<tr class="separator:aec7611cfd29ada5776916c8073a5b88c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac30c9f4a89d58ef00f469be207af0109" id="r_ac30c9f4a89d58ef00f469be207af0109"><td class="memItemLeft" align="right" valign="top"><a id="ac30c9f4a89d58ef00f469be207af0109" name="ac30c9f4a89d58ef00f469be207af0109"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>map_type</b> = QMap&lt;QString,detail::ConfigValue&gt;</td></tr>
+<tr class="separator:ac30c9f4a89d58ef00f469be207af0109"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae3af4e2a6452d341070f369d74b271d6" id="r_ae3af4e2a6452d341070f369d74b271d6"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae3af4e2a6452d341070f369d74b271d6">config_modifier</a> = std::function&lt;void(<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&amp;)&gt;</td></tr>
+<tr class="memdesc:ae3af4e2a6452d341070f369d74b271d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Denotes a function that can be applied to a <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a> via the overloaded <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="separator:ae3af4e2a6452d341070f369d74b271d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:af9d646b306c4ac406ff4fb3f412e6a92" id="r_af9d646b306c4ac406ff4fb3f412e6a92"><td class="memItemLeft" align="right" valign="top"><a id="af9d646b306c4ac406ff4fb3f412e6a92" name="af9d646b306c4ac406ff4fb3f412e6a92"></a>
-<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withGroup</b> (const QString &amp;newGroup) &amp;&amp;</td></tr>
-<tr class="separator:af9d646b306c4ac406ff4fb3f412e6a92"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ace4e0336ece3812b567437c5098df5fa" id="r_ace4e0336ece3812b567437c5098df5fa"><td class="memItemLeft" align="right" valign="top"><a id="ace4e0336ece3812b567437c5098df5fa" name="ace4e0336ece3812b567437c5098df5fa"></a>
-<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withGroup</b> (const QString &amp;newGroup) const &amp;</td></tr>
-<tr class="separator:ace4e0336ece3812b567437c5098df5fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab06b42512399e1a22e92926319367e33" id="r_ab06b42512399e1a22e92926319367e33"><td class="memItemLeft" align="right" valign="top"><a id="ab06b42512399e1a22e92926319367e33" name="ab06b42512399e1a22e92926319367e33"></a>
-<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withAutowire</b> () &amp;&amp;</td></tr>
-<tr class="separator:ab06b42512399e1a22e92926319367e33"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:accbdea58dc121caef3e091189595241d" id="r_accbdea58dc121caef3e091189595241d"><td class="memItemLeft" align="right" valign="top"><a id="accbdea58dc121caef3e091189595241d" name="accbdea58dc121caef3e091189595241d"></a>
-<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withAutowire</b> () const &amp;</td></tr>
-<tr class="separator:accbdea58dc121caef3e091189595241d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac3f6e54063e1deaede1262a653978946" id="r_ac3f6e54063e1deaede1262a653978946"><td class="memItemLeft" align="right" valign="top"><a id="ac3f6e54063e1deaede1262a653978946" name="ac3f6e54063e1deaede1262a653978946"></a>
-<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withAutoRefresh</b> () &amp;&amp;</td></tr>
-<tr class="separator:ac3f6e54063e1deaede1262a653978946"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afc35e220b863978edee1c14d11264a03" id="r_afc35e220b863978edee1c14d11264a03"><td class="memItemLeft" align="right" valign="top"><a id="afc35e220b863978edee1c14d11264a03" name="afc35e220b863978edee1c14d11264a03"></a>
-<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><b>withAutoRefresh</b> () const &amp;</td></tr>
-<tr class="separator:afc35e220b863978edee1c14d11264a03"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad38b326fd1e6e3290e098f7379ba8f48" id="r_ad38b326fd1e6e3290e098f7379ba8f48"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad38b326fd1e6e3290e098f7379ba8f48">operator&lt;&lt;</a> (<a class="el" href="#ae3af4e2a6452d341070f369d74b271d6">config_modifier</a> modifier)</td></tr>
+<tr class="memdesc:ad38b326fd1e6e3290e098f7379ba8f48"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies a <em>modifier</em> to this configuration. <br  />
+Usage is analogous to <em>iostream-manipulator</em>. Example:  <br /></td></tr>
+<tr class="separator:ad38b326fd1e6e3290e098f7379ba8f48"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc3fe48892c0a3d22e3f7f554f86e639" id="r_afc3fe48892c0a3d22e3f7f554f86e639"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc3fe48892c0a3d22e3f7f554f86e639">operator&lt;&lt;</a> (const service_config::entry_type &amp;<a class="el" href="qapplicationcontext_8h.html#a9d4f50592427143dffe1904aca6b520e">entry</a>)</td></tr>
+<tr class="memdesc:afc3fe48892c0a3d22e3f7f554f86e639"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds an entry to this <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a>.  <br /></td></tr>
+<tr class="separator:afc3fe48892c0a3d22e3f7f554f86e639"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
+<tr class="memitem:a2845b58eea90a8122d000e8bb1fb6056" id="r_a2845b58eea90a8122d000e8bb1fb6056"><td class="memItemLeft" align="right" valign="top"><a id="a2845b58eea90a8122d000e8bb1fb6056" name="a2845b58eea90a8122d000e8bb1fb6056"></a>
+map_type&#160;</td><td class="memItemRight" valign="bottom"><b>properties</b></td></tr>
+<tr class="memdesc:a2845b58eea90a8122d000e8bb1fb6056"><td class="mdescLeft">&#160;</td><td class="mdescRight">The keys and corresponding values. <br /></td></tr>
+<tr class="separator:a2845b58eea90a8122d000e8bb1fb6056"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a36ee83d47315ef0e1715b788076ff401" id="r_a36ee83d47315ef0e1715b788076ff401"><td class="memItemLeft" align="right" valign="top"><a id="a36ee83d47315ef0e1715b788076ff401" name="a36ee83d47315ef0e1715b788076ff401"></a>
 QString&#160;</td><td class="memItemRight" valign="bottom"><b>group</b></td></tr>
 <tr class="memdesc:a36ee83d47315ef0e1715b788076ff401"><td class="mdescLeft">&#160;</td><td class="mdescRight">The optional group for the configuration. <br /></td></tr>
@@ -145,10 +144,6 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>autowire</b> = false<
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>autoRefresh</b> = false</td></tr>
 <tr class="memdesc:a19d691aa3807885a3e3f60f91b02d81d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Shall all properties be automatically refreshed? <br /></td></tr>
 <tr class="separator:a19d691aa3807885a3e3f60f91b02d81d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aed4a299e2c16caa17ec5c2ace71f28f0" id="r_aed4a299e2c16caa17ec5c2ace71f28f0"><td class="memItemLeft" align="right" valign="top"><a id="aed4a299e2c16caa17ec5c2ace71f28f0" name="aed4a299e2c16caa17ec5c2ace71f28f0"></a>
-QVariantMap&#160;</td><td class="memItemRight" valign="bottom"><b>properties</b></td></tr>
-<tr class="memdesc:aed4a299e2c16caa17ec5c2ace71f28f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">The keys and corresponding values. <br /></td></tr>
-<tr class="separator:aed4a299e2c16caa17ec5c2ace71f28f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
 Friends</h2></td></tr>
@@ -158,7 +153,101 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (const
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Configures a service for an ApplicationContext. </p>
-</div><hr/>The documentation for this struct was generated from the following file:<ul>
+</div><h2 class="groupheader">Member Typedef Documentation</h2>
+<a id="ae3af4e2a6452d341070f369d74b271d6" name="ae3af4e2a6452d341070f369d74b271d6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae3af4e2a6452d341070f369d74b271d6">&#9670;&#160;</a></span>config_modifier</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#ae3af4e2a6452d341070f369d74b271d6">mcnepp::qtdi::service_config::config_modifier</a> = std::function&lt;void(<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&amp;)&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Denotes a function that can be applied to a <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a> via the overloaded <code>operator &lt;&lt;</code>. </p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="#ad38b326fd1e6e3290e098f7379ba8f48" title="Applies a modifier to this configuration.  Usage is analogous to iostream-manipulator....">operator&lt;&lt;(config_modifier modifier)</a> </dd></dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="ad38b326fd1e6e3290e098f7379ba8f48" name="ad38b326fd1e6e3290e098f7379ba8f48"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad38b326fd1e6e3290e098f7379ba8f48">&#9670;&#160;</a></span>operator&lt;&lt;() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp; mcnepp::qtdi::service_config::operator&lt;&lt; </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ae3af4e2a6452d341070f369d74b271d6">config_modifier</a></td>          <td class="paramname"><span class="paramname"><em>modifier</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Applies a <em>modifier</em> to this configuration. <br  />
+Usage is analogous to <em>iostream-manipulator</em>. Example: </p>
+<pre class="fragment">   config() &lt;&lt; withAutowire;
+</pre><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">modifier</td><td>will be applied to this instance. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>this</code> instance. </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="qapplicationcontext_8h.html#a802dafd5f967bb426a92885ad50d06a1" title="Applies auto-wiring to a service_config.  This function is not meant to be invoked directly....">mcnepp::qtdi::withAutowire(service_config&amp;)</a> </dd>
+<dd>
+<a class="el" href="qapplicationcontext_8h.html#a2eab59360607d897888d9667ab5c76ae" title="Enables auto-refresh for a service_config.  This function is not meant to be invoked directly....">mcnepp::qtdi::withAutoRefresh(service_config&amp;)</a> </dd>
+<dd>
+<a class="el" href="qapplicationcontext_8h.html#ac708701966b6cc2722175737ae6a2945" title="Sets the group for a service_config.  The usage of this function is analogous to that of iostream-man...">mcnepp::qtdi::withGroup(const QString&amp;)</a> </dd></dl>
+
+</div>
+</div>
+<a id="afc3fe48892c0a3d22e3f7f554f86e639" name="afc3fe48892c0a3d22e3f7f554f86e639"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afc3fe48892c0a3d22e3f7f554f86e639">&#9670;&#160;</a></span>operator&lt;&lt;() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp; mcnepp::qtdi::service_config::operator&lt;&lt; </td>
+          <td>(</td>
+          <td class="paramtype">const service_config::entry_type &amp;</td>          <td class="paramname"><span class="paramname"><em>entry</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Adds an entry to this <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">entry</td><td>an entry that was created by one of the overloads of <a class="el" href="qapplicationcontext_8h.html#a9d4f50592427143dffe1904aca6b520e" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::entry()</a> or <a class="el" href="qapplicationcontext_8h.html#aed65b8ca4bbc94a979cb56b3ce27a0bd" title="Creates a type-safe, auto-refreshing configuration-entry for a service.  The resulting service_config...">mcnepp::qtdi::autoRefresh()</a>. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>this</code> instance. </dd></dl>
+
+</div>
+</div>
+<hr/>The documentation for this struct was generated from the following file:<ul>
 <li>defs/<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a></li>
 </ul>
 </div><!-- contents -->
