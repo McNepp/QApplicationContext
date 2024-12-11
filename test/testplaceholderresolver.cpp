@@ -80,7 +80,7 @@ private slots:
         PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit}", this);
         QVERIFY(resolver);
         settings->setValue("test/sayit", "Hello, world!");
-        QCOMPARE(resolver->resolve(configResolver.get(), config().withGroup("test")), "Hello, world!");
+        QCOMPARE(resolver->resolve(configResolver.get(), config() << withGroup("test")), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"test/sayit"});
     }
 

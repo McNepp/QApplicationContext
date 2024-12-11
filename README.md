@@ -189,7 +189,7 @@ Such a group can be specified for your resolvable values by means of the mcnepp:
 are assumed to reside in the group named "mcnepp":
 
     auto decl = service<RestPropFetcher>(resolve("${baseUrl}?stationIds=${hamburgStationId}"), resolve<int>("${connectionTimeout}"), inject<QNetworkAccessManager>());
-    appContext -> registerService(decl, "hamburgWeather", config().withGroup("mcnepp"));
+    appContext -> registerService(decl, "hamburgWeather", config() << withGroup("mcnepp"));
 
 ### Lookup in sub-sections
 
@@ -199,15 +199,22 @@ which denotes the root-section.
 A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
 Insert `*/` right after the opening sequence of the placeholder.
 
-    context -> registerService(service<QIODevice,QFile>(resolve("${*/filename}")), "file", config().withGroup("files"));
+    context -> registerService(service<QIODevice,QFile>(resolve("${*/filename}")), "file", config() << withGroup("files"));
 
 The key "filename" will first be searched in the section "files". If it cannot be found, it will be searched in the root-section.
 
 
 
-## Configuring services with Q_PROPERTY {#configuring-services}
+## Configuring properties of services {#configuring-services}
 
-We have seen how we can inject configuration-values into Service-constructors. Another way of configuring Services is to use Q_PROPERTY declarations.
+We have seen how we can inject configuration-values into Service-constructors.
+<br>However, a service may have additional dependencies or configuration-values that need to be supplied after construction.
+<br>For this purpose, an object of type mcnepp::qtdi::service_config can be passed to QApplication::registerService().
+<br>We use one of the overloads of mcnepp::qtdi::config() in order to create a mcnepp::qtdi::service_config.
+
+### Using Q_PROPERTY
+
+One way of configuring services is to use its `Q_PROPERTY` declarations.
 Suppose we modify the declaration of `RestPropFetcher` like this:
 
     class RestPropFetcher : public QObject {
@@ -251,7 +258,7 @@ For this, the yet unused `service_config` argument comes into play: It contains 
 As you can see, the code has changed quite significantly: instead of supplying the Url as a constructor-argument, you use mcnepp::qtdi::config() and pass in the key/value-pairs for configuring
 the service's url and connectionTimeouts as Q_PROPERTYs.
 
-**Note:** Every property supplied to mcnepp::qtdi::QApplicationContext::registerService() will be considered a potential Q_PROPERTY of the target-service. mcnepp::qtdi::QApplicationContext::publish() will fail if no such property can be
+**Note:** Every property supplied to mcnepp::qtdi::QApplicationContext::registerService() will be considered a potential `Q_PROPERTY` of the target-service. mcnepp::qtdi::QApplicationContext::publish() will fail if no such property can be
 found.  
 However, if you prefix the property-key with a dot, it will be considered a *private property*. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
 Such *private properties* may be passed to a mcnepp::qtdi::QApplicationContextPostProcessor (see section [Tweaking services](#tweaking-services) below).
@@ -263,14 +270,15 @@ Also, *private properties* can be very useful in conjunction with [Service-templ
 In the previous paragraph, you could see how Q_PROPERTYs of the services were initialized using the property-names.
 <br>Now, we will show arbitrary service-properties can be configured, even if no Q_PROPERTY has been declared.
 <br>Instead of using the property-name, we'll reference the member-function that sets the value.
+<br>We use one of the various overloads of mcnepp::qtdi::entry() in order to create a type-safe configuration-entry.
 <br>Here is an example setting the `transferTimeout` of a QNetworkAccessManager. This property is not declared with the Q_PROEPRTY macro,
 thus, it cannot be set using the QMetaType-system:
 
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", config({entry(&QNetworkAccessManager::setTransferTimeout, 5000)})); 
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", config() << entry(&QNetworkAccessManager::setTransferTimeout, 5000)); 
 
 <br>Using *setters* can, of course, be combined with resolving configuration-values:
 
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", config({entry(&QNetworkAccessManager::setTransferTimeout, "${transferTimeout}")})); 
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", config() << entry(&QNetworkAccessManager::setTransferTimeout, "${transferTimeout}")); 
 
 
 ### Auto-refreshable configuration-values
@@ -281,18 +289,18 @@ exactly once, immediately after creation, right before any [service-initializers
 <br>This can be achieved by using mcnepp::qtdi::autoRefresh(const QString&,const QString&).
 <br>The following line will configure a QTimer's `interval` using an auto-refreshable configuration-value:
 
-    context->registerService<QTimer>("timer", config({autoRefresh("interval", "${timerInterval}")}));
+    context->registerService<QTimer>("timer", config() << autoRefresh("interval", "${timerInterval}"));
 
 In case the configured QSettings-object uses a file as its persistent storage, any change to that file will be immediately detected. It will lead to a re-evaluation
 of the property. In case the configured QSettings-object uses a different persistent storage (such as the Windows Registry), the changes will be polled periodically.
 <br>Auto-refresh will also work with more complex expressions for the property. In the following example, the property `objectName` will be automatically refreshed when either one of the configuration-values
 `prefix` or `suffix` is modified:
 
-    context->registerService<QTimer>("timer", config({autoRefresh("objectName", "timer-${prefix}${suffix}")}));
+    context->registerService<QTimer>("timer", config() << autoRefresh("objectName", "timer-${prefix}${suffix}"));
 
 In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
 
-     context->registerService<QTimer>("timer", config({{"objectName", "theTimer"}, {"interval", "${timerInterval}"}}).withAutoRefresh());
+     context->registerService<QTimer>("timer", config() << withAutoRefresh << entry("objectName", "theTimer") << entry("interval", "${timerInterval}"));
 
 
 **Note:** Auto-refresh will be disabled by default in mcnepp::qtdi::StandardApplicationContext.
@@ -305,7 +313,7 @@ In case all properties for one service shall be auto-refreshed, there is a more 
 
 Auto-refreshable properties can also be specified using *setters*:
 
-    context->registerService<QTimer>("timer", config({autoRefresh(&QTimer::setInterval, "${timerInterval}")}));
+    context->registerService<QTimer>("timer", config() << autoRefresh(&QTimer::setInterval, "${timerInterval}"));
     
 
 ## Service-prototypes
@@ -664,7 +672,7 @@ However, we could introduce a Q_PROPERTY like this:
     };
 
 And here's how this property will be automatically set to the ApplicationContext's `PropFetcherAggregator`. Note the ampersand as the first character of the property-value,
-which makes this a *reference to another member*:
+which makes this a *named reference to another member*:
 
 
     context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator");
@@ -674,6 +682,16 @@ which makes this a *reference to another member*:
       {"summary", "&propFetcherAggregator"}
     }));
 
+By the way, if you prefer a more type-safe way of expressing a relation with another service, here is a slightly different form of configuration,
+using member-function-pointers and service-registrations. The effect will be exactly the same, though:
+
+
+    auto propFetcherReg = context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator");
+    
+    context -> registerService(service<PropFetcher,RestPropFetcher(inject<QNetworkAccessManager>()), "hamburgWeather", config()
+      << entry("url", "${weatherUrl}${hamburgStationId}")
+      << entry(&PropFetcher::setSummary, propFetcherReg)
+    );
 
 
 ## Connecting Signals of Services to Slots

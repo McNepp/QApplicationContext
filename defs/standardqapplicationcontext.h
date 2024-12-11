@@ -177,6 +177,8 @@ private:
     //The state reported by a Service-Template
     static constexpr int STATE_IGNORE = 4;
 
+    static const QVariantMap EMPTY_MAP;
+
     class DescriptorRegistration : public detail::ServiceRegistration {
         friend class StandardApplicationContext;
 
@@ -500,7 +502,7 @@ private:
         }
 
         virtual const QVariantMap& resolvedProperties() const override {
-            return m_config.properties;
+            return EMPTY_MAP;
         }
 
 
@@ -562,7 +564,7 @@ private:
         }
 
         virtual const QVariantMap& resolvedProperties() const override {
-            return defaultConfig.properties;
+            return EMPTY_MAP;
         }
 
 
