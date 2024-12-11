@@ -1856,14 +1856,25 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(baseSlot->timer(), timerSlot.last());
     }
 
+    void testStronglyTypedServiceConfigurationValue() {
+        QTimer timer;
+        auto baseReg = context->registerService<BaseService>("base", config() << entry(&BaseService::setTimer, &timer));
+
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> baseSlot{baseReg};
+        QVERIFY(baseSlot.last());
+        QCOMPARE(baseSlot->timer(), &timer);
+    }
+
     void testStronglyTypedServiceConfiguration() {
         auto timerReg = context->registerService<QTimer>();
         auto baseReg = context->registerService<BaseService>("base", config() << entry(&BaseService::setTimer, timerReg));
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{baseReg};
-        RegistrationSlot<QTimer> timerSlot{timerReg};
         QVERIFY(baseSlot.last());
+        RegistrationSlot<QTimer> timerSlot{timerReg};
+        QVERIFY(timerSlot.last());
         QCOMPARE(baseSlot->timer(), timerSlot.last());
     }
 

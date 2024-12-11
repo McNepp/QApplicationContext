@@ -2130,7 +2130,7 @@ struct service_config final {
 
 
     friend inline bool operator==(const service_config& left, const service_config& right) {
-        return left.properties == right.properties && left.group == right.group && left.autowire == right.autowire;
+        return left.properties == right.properties && left.group == right.group && left.autowire == right.autowire && left.autoRefresh == right.autoRefresh;
     }
 
 
@@ -2339,16 +2339,6 @@ template<typename S> using service_config_entry=detail::service_config_entry_t<S
 template<typename S> struct ServiceConfig {
 
     ///
-    /// \brief Adds an entry to this ServiceConfig.
-    /// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::entry() or mcnepp::qtdi::autoRefresh().
-    /// \return `this` instance.
-    ///
-    ServiceConfig<S>& operator<<(const service_config_entry<S>& entry) {
-        data.properties.insert(entry.name, entry.value);
-        return *this;
-    }
-
-    ///
     /// \brief Applies a *modifier* to this configuration.
     /// <br>Usage is analogous to *iostream-manipulator*. Example:
     ///
@@ -2364,6 +2354,18 @@ template<typename S> struct ServiceConfig {
         manip(data);
         return *this;
     }
+
+
+    ///
+    /// \brief Adds an entry to this ServiceConfig.
+    /// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::entry() or mcnepp::qtdi::autoRefresh().
+    /// \return `this` instance.
+    ///
+    ServiceConfig<S>& operator<<(const service_config_entry<S>& entry) {
+        data.properties.insert(entry.name, entry.value);
+        return *this;
+    }
+
 
 
     ///
@@ -2388,7 +2390,8 @@ template<typename S> struct ServiceConfig {
 /// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::entry() or mcnepp::qtdi::autoRefresh().
 /// \return a strongly typed ServiceConfig.
 template<typename S> [[nodiscard]] ServiceConfig<S> operator<<(service_config&& cfg, const service_config_entry<S>& entry) {
-    return ServiceConfig<S>{std::move(cfg)} << entry;
+    cfg.properties.insert(entry.name, entry.value);
+    return ServiceConfig<S>{std::move(cfg)};
 }
 
 ///
@@ -2396,7 +2399,9 @@ template<typename S> [[nodiscard]] ServiceConfig<S> operator<<(service_config&& 
 /// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::entry() or mcnepp::qtdi::autoRefresh().
 /// \return a strongly typed ServiceConfig.
 template<typename S> [[nodiscard]] ServiceConfig<S> operator<<(const service_config& cfg, const service_config_entry<S>& entry) {
-    return ServiceConfig<S>{cfg} << entry;
+    ServiceConfig<S> copy{cfg};
+    copy.data.properties.insert(entry.name, entry.value);
+    return copy;
 }
 
 
@@ -2435,7 +2440,7 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{value, detail::ConfigValueType::DEFAULT, detail::callable_adapter<S>::adaptSetter(propertySetter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(value), detail::ConfigValueType::DEFAULT, detail::callable_adapter<S>::adaptSetter(propertySetter)}};
 }
 
 ///
@@ -2597,7 +2602,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 template<typename S> [[nodiscard]] ServiceConfig<S> config(std::initializer_list<service_config_entry<S>> entries) {
     ServiceConfig<S> cfg;
     for(auto& entry : entries) {
-        cfg << entry;
+        cfg.data.properties.insert(entry.name, entry.value);
     }
     return cfg;
 }
