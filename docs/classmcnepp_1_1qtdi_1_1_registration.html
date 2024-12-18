@@ -99,7 +99,7 @@ $(function(){ initResizable(false); });
 
 <p>A type-safe wrapper for a detail::Registration. <br  />
 This is a non-instantiable base-class. As such, it defines the operations common to both <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>. <br  />
-Its most important operation is the type-safe function <code><a class="el" href="#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">subscribe()</a></code> which should be preferred over directly connecting to the signal <code>detail::Registration::objectPublished(QObject*)</code>. <br  />
+Its most important operation is the type-safe function <code><a class="el" href="#a281f12a7c18c6793c5924a73159ff1bb" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">subscribe()</a></code> which should be preferred over directly connecting to the signal <code>detail::Registration::objectPublished(QObject*)</code>. <br  />
  A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> contains a <em>non-owning pointer</em> to a detail::Registration whose lifetime is bound to the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. The <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> will become invalid after the corresponding <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> has been destructed.  
  <a href="#details">More...</a></p>
 
@@ -127,11 +127,11 @@ const QMetaObject *&#160;</td><td class="memItemRight" valign="bottom"><b>servic
 <tr class="memdesc:a4562640be6a8d1f377411c0ab912c34f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests whether this <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> matches a type. <br  />
 This function will yield <code>true</code> if this is valid <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> and its underlying registration-handle matches the requested type. This will be the case (at least) if U is either an advertised service-interface or the implementation-type of the service.  <br /></td></tr>
 <tr class="separator:a4562640be6a8d1f377411c0ab912c34f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa70f34088d747d139cf12f9e7e02df8f" id="r_aa70f34088d747d139cf12f9e7e02df8f"><td class="memTemplParams" colspan="2">template&lt;typename F &gt; </td></tr>
-<tr class="memitem:aa70f34088d747d139cf12f9e7e02df8f"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aa70f34088d747d139cf12f9e7e02df8f">subscribe</a> (QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
-<tr class="memdesc:aa70f34088d747d139cf12f9e7e02df8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the callable immediately with the current publishedObjects(). <br  />
+<tr class="memitem:a281f12a7c18c6793c5924a73159ff1bb" id="r_a281f12a7c18c6793c5924a73159ff1bb"><td class="memTemplParams" colspan="2">template&lt;typename F &gt; </td></tr>
+<tr class="memitem:a281f12a7c18c6793c5924a73159ff1bb"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt; std::is_invocable_v&lt; F, S * &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a281f12a7c18c6793c5924a73159ff1bb">subscribe</a> (QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
+<tr class="memdesc:a281f12a7c18c6793c5924a73159ff1bb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>publishedObjectsChanged</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the callable immediately with the current publishedObjects(). <br  />
 <b>Thread-safety:</b> This function may be safely called from any thread.  <br /></td></tr>
-<tr class="separator:aa70f34088d747d139cf12f9e7e02df8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a281f12a7c18c6793c5924a73159ff1bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac4d3614e1778644d0f748fc595f71cd4" id="r_ac4d3614e1778644d0f748fc595f71cd4"><td class="memTemplParams" colspan="2">template&lt;typename T , typename R &gt; </td></tr>
 <tr class="memitem:ac4d3614e1778644d0f748fc595f71cd4"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt; std::is_base_of_v&lt; QObject, T &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ac4d3614e1778644d0f748fc595f71cd4">subscribe</a> (T *target, R(T::*setter)(S *), Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
 <tr class="memdesc:ac4d3614e1778644d0f748fc595f71cd4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive all published QObjects in a type-safe way. Connects to the <code>objectPublished</code> signal and propagates new QObjects to the callable. If the ApplicationContext has already been published, this method will invoke the setter immediately with the current publishedObjects(). <br  />
@@ -178,7 +178,7 @@ Static Public Member Functions</h2></td></tr>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename S&gt;<br />
 class mcnepp::qtdi::Registration&lt; S &gt;</div><p>A type-safe wrapper for a detail::Registration. <br  />
 This is a non-instantiable base-class. As such, it defines the operations common to both <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>. <br  />
-Its most important operation is the type-safe function <code><a class="el" href="#aa70f34088d747d139cf12f9e7e02df8f" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">subscribe()</a></code> which should be preferred over directly connecting to the signal <code>detail::Registration::objectPublished(QObject*)</code>. <br  />
+Its most important operation is the type-safe function <code><a class="el" href="#a281f12a7c18c6793c5924a73159ff1bb" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">subscribe()</a></code> which should be preferred over directly connecting to the signal <code>detail::Registration::objectPublished(QObject*)</code>. <br  />
  A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> contains a <em>non-owning pointer</em> to a detail::Registration whose lifetime is bound to the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. The <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> will become invalid after the corresponding <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> has been destructed. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a4c4c71ac5e0fb82a2af9819abae7c121" name="a4c4c71ac5e0fb82a2af9819abae7c121"></a>
@@ -416,8 +416,8 @@ If this function is successful, the <a class="el" href="structmcnepp_1_1qtdi_1_1
 
 </div>
 </div>
-<a id="aa70f34088d747d139cf12f9e7e02df8f" name="aa70f34088d747d139cf12f9e7e02df8f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa70f34088d747d139cf12f9e7e02df8f">&#9670;&#160;</a></span>subscribe() <span class="overload">[1/2]</span></h2>
+<a id="a281f12a7c18c6793c5924a73159ff1bb" name="a281f12a7c18c6793c5924a73159ff1bb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a281f12a7c18c6793c5924a73159ff1bb">&#9670;&#160;</a></span>subscribe() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -430,7 +430,7 @@ template&lt;typename F &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">mcnepp::qtdi::Registration</a>&lt; S &gt;::subscribe </td>
+          <td class="memname">std::enable_if_t&lt; std::is_invocable_v&lt; F, S * &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">mcnepp::qtdi::Registration</a>&lt; S &gt;::subscribe </td>
           <td>(</td>
           <td class="paramtype">QObject *</td>          <td class="paramname"><span class="paramname"><em>context</em></span>, </td>
         </tr>

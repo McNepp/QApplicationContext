@@ -119,7 +119,8 @@ Public Member Functions</h2></td></tr>
 This function will be used to resolve placeholders in Service-configurations. Whenever a <em>placeholder</em> shall be looked up, the ApplicationContext will search the following sources, until it can resolve the <em>placeholder</em>:  <br /></td></tr>
 <tr class="separator:afb12543b6569d2683b2d3aed23f84b98"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac0785faca9002edaa1a0935028ce34ac" id="r_ac0785faca9002edaa1a0935028ce34ac"><td class="memItemLeft" align="right" valign="top">virtual QVariant&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac0785faca9002edaa1a0935028ce34ac">resolveConfigValue</a> (const QString &amp;expression)=0</td></tr>
-<tr class="memdesc:ac0785faca9002edaa1a0935028ce34ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves an expression.  <br /></td></tr>
+<tr class="memdesc:ac0785faca9002edaa1a0935028ce34ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves an expression. <br  />
+<b>Thread-safety:</b> This function may be safely called from any thread.  <br /></td></tr>
 <tr class="separator:ac0785faca9002edaa1a0935028ce34ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
@@ -204,7 +205,8 @@ This function will be used to resolve placeholders in Service-configurations. Wh
 </table>
 </div><div class="memdoc">
 
-<p>Resolves an expression. </p>
+<p>Resolves an expression. <br  />
+<b>Thread-safety:</b> This function may be safely called from any thread. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">expression</td><td>will be parsed in order to determine the QConfigurationWatcher::currentValue(). <br  />
