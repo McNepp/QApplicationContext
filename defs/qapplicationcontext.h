@@ -859,6 +859,13 @@ protected:
 
 
 
+    ///
+    /// \brief Checks whether the current thread is the thread assigned to a QObject.
+    /// <br>This function allows it to reject some functions if they are not invoked
+    /// from the thread belonging to the QApplicationContext, without the need to #include<QThread>.
+    /// \return the result of the expression `obj && obj->thread() == QThread::currentThread()`.
+    ///
+    bool hasCurrentThreadAffinity(QObject* obj);
 
 }// end namespace detail
 
@@ -1092,7 +1099,7 @@ public:
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
     /// \return the Subscription if `this->isValid()`
     ///
-    template<typename F> Subscription subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
+    template<typename F> std::enable_if_t<std::is_invocable_v<F,S*>,Subscription> subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
         if(!registrationHolder || !context) {
             qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this;
             return Subscription{};
@@ -1593,6 +1600,7 @@ template<typename S,typename T,typename A,typename R,ServiceScope scope> Subscri
 /// <br>Whenever an instance of the source-service is published, it will subscribe to the publication of the target-service.
 /// Once the target-service is published, the connection of the sourceSignal with the targetSlot will take place.
 /// <br>In case source and target represent the same Registration, the connection will still take place.
+/// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
 /// \param source the registration of the source-service.
 /// \param sourceSignal will be passed as the second argument to QObject::connect().
 /// \param target the registration of the source-service.
@@ -1606,6 +1614,10 @@ static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject
     static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
     if(!source || !target) {
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot connect " << source << " to " << target;
+        return Subscription{};
+    }
+    if(!detail::hasCurrentThreadAffinity(source.applicationContext())) {
+        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Wrong thread for connecting " << source << " to " << target;
         return Subscription{};
     }
     auto subscription = new detail::ConnectionSubscription<S,SIG,T,SLT>{QList<registration_handle_t>{target.unwrap()}, sourceSignal, targetSlot, connectionType, target.unwrap()};
@@ -1663,10 +1675,8 @@ private:
             if(!add(tail...)) {
                 return false;
             }
-            m_registrations.push_front(first.unwrap());
-        } else {
-            m_registrations.push_back(first.unwrap());
         }
+        m_registrations.push_front(first.unwrap());
         return true;
     }
     QList<registration_handle_t> m_registrations;
@@ -3272,6 +3282,7 @@ public:
 
     ///
     /// \brief Resolves an expression.
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
     /// \param expression will be parsed in order to determine the QConfigurationWatcher::currentValue().
     /// <br>In case the expression is a simple String, it will be returned as is.
     /// <br>The expression may contain one or more *placeholders* which will be resolved using the underlying configuration.
@@ -3630,6 +3641,7 @@ public:
     /// \brief Obtains a QConfigurationWatcher for an expression.
     /// <br>If autoRefreshEnabled() and the `expression` can be successfully parsed, this function returns an instance of QConfigurationWatcher.
     /// <br>Using the Q_PROPERTY QConfigurationWatcher::currentValue(), you can then track the current configuration.
+    /// <br>**Thread-safety:** This function may be safely called from any thread. The returned QConfigurationWatcher's will have a *thread-affinity* to the QApplicationContext's thread.
     /// \param expression will be parsed in order to determine the QConfigurationWatcher::currentValue().
     /// <br>The expression shall contain one or more *placeholders* which will be resolved using the underlying configuration.
     /// A *placeholder* is enclosed in curly brackets with a preceding dollar-sign.<br>
@@ -3849,6 +3861,11 @@ template<typename S> template<typename D,typename R> Subscription Registration<S
         qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot autowire " << *this << " with " << injectionSlot;
         return Subscription{};
     }
+    if(!detail::hasCurrentThreadAffinity(applicationContext())) {
+        qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Wrong thread for autowiring " << *this;
+        return Subscription{};
+    }
+
     auto target = this->applicationContext()->template getRegistration<D>();
     auto callable = std::mem_fn(injectionSlot);
     auto subscription = new detail::CombiningSubscription<decltype(callable),S,D>{QList<registration_handle_t>{target.unwrap()}, target.unwrap(), callable, Qt::AutoConnection};

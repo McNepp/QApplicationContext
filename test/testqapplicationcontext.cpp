@@ -156,11 +156,11 @@ protected:
         QObject context;
         auto registration = m_context->getRegistration<S>();
         registration.subscribe(&context,[this](BaseService* srv) {
-            service.storeRelease(srv);
-            exit();//Leave event-loop
+            service.storeRelaxed(srv);
+            quit();//Leave event-loop
         });
 
-        subscribed = 1;
+        subscribed.storeRelaxed(1);
         QThread::run();
     }
 public:
@@ -546,6 +546,21 @@ private slots:
         QVERIFY(QTest::qWaitFor([&slot] { return slot->interval() == 999;}, 1000));
     }
 
+    void testResolveConfigValueInThread() {
+        configuration->setValue("name", "readme");
+        configuration->setValue("suffix", "txt");
+        context->registerObject(configuration.get());
+        QAtomicPointer<QVariant> resolvedValue;
+        QScopedPointer<QThread> thread{QThread::create([&resolvedValue, this] {
+            resolvedValue.storeRelaxed(new QVariant{context->resolveConfigValue("${name}.${suffix:doc}")});
+        })};
+        thread->start();
+        QVERIFY(QTest::qWaitFor([&thread] { return thread->isFinished();}, 1000));
+        QScopedPointer<QVariant> currentValue{resolvedValue.loadRelaxed()};
+        QCOMPARE(currentValue->toString(), "readme.txt");
+
+    }
+
     void testWatchConfigurationFileChange() {
         QFile file{"testapplicationtext.ini"};
         QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
@@ -579,6 +594,53 @@ private slots:
 
     }
 
+    void testWatchConfigurationFileChangeInThread() {
+        QFile file{"testapplicationtext.ini"};
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("name=readme\n");
+        file.write("suffix=doc\n");
+        file.write("[qtdi]\n");
+        file.write("enableAutoRefresh=true\n");
+        file.close();
+        QSettings settings{file.fileName(), QSettings::IniFormat};
+        QVERIFY(!context.get()->autoRefreshEnabled());
+        context->registerObject(&settings);
+
+        QVERIFY(context.get()->autoRefreshEnabled());
+
+        QAtomicInt ready;
+        QAtomicPointer<QVariant> currentValue;
+
+        QScopedPointer<QThread> thread{QThread::create([&currentValue,&ready,this] {
+            auto watcher = context->watchConfigValue("${name}.${suffix:txt}");
+            QEventLoop eventLoop;
+            connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [this,&currentValue,&eventLoop](const QVariant& val) {
+                delete currentValue.fetchAndStoreRelaxed(new QVariant{val});
+                eventLoop.quit();//Leave event-loop
+            });
+            ready.storeRelaxed(1);
+            eventLoop.exec();
+        })};
+
+
+
+        thread->start();
+        QVERIFY(QTest::qWaitFor([&ready] { return ready;}, 1000));
+
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text));
+        QVERIFY(file.seek(0));
+
+        file.write("name=hello\n");
+        file.close();
+
+        QVERIFY(QTest::qWaitFor([&thread] { return thread->isFinished();}, 1000));
+        QScopedPointer<QVariant> value{currentValue.loadRelaxed()};
+        QVERIFY(value);
+        QCOMPARE(value->toString(), "hello.txt");
+        file.remove();
+
+    }
+
 void testWatchConfigurationFileChangeWithError() {
         QFile file{"testapplicationtext.ini"};
         QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
@@ -601,20 +663,20 @@ void testWatchConfigurationFileChangeWithError() {
         QVariant watchedValue = watcher->currentValue();
         connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [&watchedValue](const QVariant& currentValue) {watchedValue=currentValue;});
 
+        bool error = false;
+        connect(watcher, &QConfigurationWatcher::errorOccurred, this, [&error] { error = true;});
+
         QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text));
         QVERIFY(file.seek(0));
         file.write("nose=readme\n");
         file.close();
 
-        bool error = false;
-
-        connect(watcher, &QConfigurationWatcher::errorOccurred, this, [&error] { error = true;});
         QVERIFY(QTest::qWaitFor([&error] { return error;}, 1000));
         QCOMPARE(watchedValue, "readme.doc");
 
         file.remove();
-
     }
+
   void testWatchConfigurationFileAfterDeletion() {
         QFile file{"testapplicationtext.ini"};
         QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
@@ -897,6 +959,25 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(context->publish());
         RegistrationSlot<QTimer> targetSlot{regTarget};
         QCOMPARE(targetSlot->objectName(), "A new beginning");
+    }
+
+    void testCombineTwoServicesInThread() {
+        auto regSource = context->registerService(service<Interface1,BaseService>(), "base");
+        auto regTarget = context->registerService<QTimer>();
+        QVERIFY(context->publish());
+
+        QAtomicInt subscriptionCalled;
+        QScopedPointer<QThread> thread{QThread::create([&regSource,&regTarget,&subscriptionCalled] {
+            QEventLoop eventLoop;
+            auto subscription = combine(regSource, regTarget).subscribe(QThread::currentThread(), [&subscriptionCalled,&eventLoop](Interface1* src, QTimer* timer) {
+                subscriptionCalled.storeRelaxed(1);
+                eventLoop.quit();
+            });
+            eventLoop.exec();
+        })};
+        thread->start();
+
+        QVERIFY(QTest::qWaitFor([&subscriptionCalled] { return subscriptionCalled.loadRelaxed();}, 1000));
     }
 
     void testCombineTwoServiceProxies() {
@@ -2714,7 +2795,7 @@ void testWatchConfigurationFileChangeWithError() {
         thread.start();
         bool hasSubscribed = QTest::qWaitFor([&thread] { return thread.subscribed;}, 1000);
         QVERIFY(hasSubscribed);
-        QVERIFY(thread.wait(1000));
+        QVERIFY(QTest::qWaitFor([&thread] { return thread.isFinished(); }, 1000));
         QVERIFY(thread.service);
         QCOMPARE(thread.service, slot.last());
     }
@@ -2729,7 +2810,7 @@ void testWatchConfigurationFileChangeWithError() {
         bool hasSubscribed = QTest::qWaitFor([&thread] { return thread.subscribed;}, 1000);
         QVERIFY(hasSubscribed);
         context->publish();
-        QVERIFY(thread.wait(1000));
+        QVERIFY(QTest::qWaitFor([&thread] { return thread.isFinished(); }, 1000));
         QVERIFY(thread.service);
         QCOMPARE(thread.service, slot.last());
     }
@@ -2741,10 +2822,10 @@ void testWatchConfigurationFileChangeWithError() {
 
         QAtomicInt success{-1};
         QThread* thread = QThread::create([this,&success] {
-            success = context->publish();
+            success.storeRelaxed(context->publish());
         });
         thread->start();
-        bool hasSubscribed = QTest::qWaitFor([&success] { return success != -1;}, 1000);
+        bool hasSubscribed = QTest::qWaitFor([&success] { return success.loadRelaxed() != -1;}, 1000);
         QVERIFY(hasSubscribed);
         QVERIFY(!success);
         QVERIFY(!slot);
@@ -2777,7 +2858,7 @@ void testWatchConfigurationFileChangeWithError() {
         thread->start();
         bool hasSetParent = QTest::qWaitFor([&reg,&mutex] {QMutexLocker locker{&mutex}; return reg.isValid();}, 1000);
         QVERIFY(hasSetParent);
-        QCOMPARE(reg.unwrap()->thread(), QThread::currentThread());
+        QVERIFY(detail::hasCurrentThreadAffinity(reg.unwrap()));
         QVERIFY(thread->wait(1000));
         delete thread;
     }

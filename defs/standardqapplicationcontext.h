@@ -29,7 +29,8 @@ class StandardApplicationContext final : public QApplicationContext
     Q_PROPERTY(int autoRefreshMillis READ autoRefreshMillis WRITE setAutoRefreshMillis NOTIFY autoRefreshMillisChanged)
 
 //Forward-declarations of nested class:
-    class CreateRegistrationHandleEvent;
+    class CreateHandleEvent;
+
 
     class DescriptorRegistration;
 
@@ -722,6 +723,8 @@ private:
     detail::PlaceholderResolver* getResolver(const QString&);
 
     void onSettingsAdded(QSettings*);
+
+    QObject* obtainHandleFromApplicationThread(std::function<QObject*()>);
 
     // QObject interface
 public:
