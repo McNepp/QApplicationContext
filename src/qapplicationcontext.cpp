@@ -1,6 +1,7 @@
 #include <QMetaProperty>
 #include <QUuid>
 #include <QCoreApplication>
+#include <QThread>
 #include "qapplicationcontext.h"
 #ifdef __GNUG__
 #include <cxxabi.h>
@@ -246,6 +247,10 @@ void MultiServiceSubscription::onLastObjectPublished(QObject* obj)
     emit objectsPublished(boundObjects);
 }
 
+
+bool hasCurrentThreadAffinity(QObject* obj)  {
+    return obj && obj->thread() == QThread::currentThread();
+}
 
 
 #ifdef __GNUG__

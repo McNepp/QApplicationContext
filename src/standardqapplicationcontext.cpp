@@ -305,35 +305,37 @@ public:
 
 
 
-class StandardApplicationContext::CreateRegistrationHandleEvent : public QEvent {
+class StandardApplicationContext::CreateHandleEvent : public QEvent {
 public:
+    using create_handle_t = std::function<QObject*()>;
+
     static QEvent::Type eventId() {
         static int eventId = QEvent::registerEventType();
         return static_cast<QEvent::Type>(eventId);
     }
 
 
-    CreateRegistrationHandleEvent(const std::type_info &service_type, const QMetaObject* metaObject) :
+    explicit CreateHandleEvent(create_handle_t func) :
         QEvent(eventId()),
-        m_service_type(service_type),
-        m_metaObject(metaObject),
-        m_result(QSharedPointer<std::optional<ProxyRegistrationImpl*>>::create())
+        m_result(QSharedPointer<std::optional<QObject*>>::create()),
+        m_func{func}
     {
     }
 
-    void createHandle(StandardApplicationContext* context) {
-        *m_result = new ProxyRegistrationImpl{m_service_type, m_metaObject, context};
+    void createHandle() {
+        *m_result = m_func();
     }
 
-    QSharedPointer<std::optional<ProxyRegistrationImpl*>> result() const {
+    QSharedPointer<std::optional<QObject*>> result() const {
         return m_result;
     }
 
 private:
-    const std::type_info &m_service_type;
-    const QMetaObject* m_metaObject;
-    QSharedPointer<std::optional<ProxyRegistrationImpl*>> m_result;
+    QSharedPointer<std::optional<QObject*>> m_result;
+    create_handle_t m_func;
 };
+
+
 
 class StandardApplicationContext::ProxySubscription : public detail::Subscription {
 public:
@@ -426,7 +428,7 @@ const QVariantMap StandardApplicationContext::EMPTY_MAP;
 
 subscription_handle_t StandardApplicationContext::DescriptorRegistration::createBindingTo(const char* sourcePropertyName, detail::Registration *target, const detail::property_descriptor& targetProperty)
 {
-    if(QThread::currentThread() != this->thread()) {
+    if(!detail::hasCurrentThreadAffinity(this)) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot create binding in different thread";
         return nullptr;
     }
@@ -876,7 +878,28 @@ detail::ServiceRegistration *StandardApplicationContext::getRegistrationHandle(c
     return nullptr;
 }
 
-
+/* Creates and returns some QObject with a thread-affinity to the application-thread.
+ * If called from the QApplicationContext's thread, it will simply return the result of the supplied func.
+ * Otherwise, posts an Event that creates some QObject and waits for it.
+   Note: Before invoking this function, the mutex MUST be locked!
+*/
+QObject* StandardApplicationContext::obtainHandleFromApplicationThread(CreateHandleEvent::create_handle_t func) {
+    if(detail::hasCurrentThreadAffinity(this)) {
+        return func();
+    }
+    CreateHandleEvent* event = new CreateHandleEvent{func};
+    auto result = event->result(); //Pin member on Stack to prevent asynchronous deletion.
+    QCoreApplication::postEvent(this, event);
+    QDeadlineTimer timer{1000}; //Wait at most one second.
+    while(!timer.hasExpired() && !result->has_value()) {
+         condition.wait(&mutex, timer);
+    }
+    if(!result->has_value()) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Could not obtain handle from another thread in time";
+        return nullptr;
+    }
+    return result->value();
+}
 
 detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(const std::type_info &service_type, const QMetaObject* metaObject) const
 {
@@ -886,26 +909,14 @@ detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(con
     if(found != proxyRegistrationCache.end()) {
         return found->second;
     }
-    ProxyRegistrationImpl* proxyReg;
-    if(QThread::currentThread() == thread()) {
-        proxyReg = new ProxyRegistrationImpl{service_type, metaObject, const_cast<StandardApplicationContext*>(this)};
-    } else {
-        //We are in a different Thread than the QApplicationContext's. Let's post an Event that will create the ProxyRegistration asynchronously:
-        auto event = new CreateRegistrationHandleEvent{service_type, metaObject};
-        auto result = event->result(); //Pin member on Stack to prevent asynchronous deletion.
-        QCoreApplication::postEvent(const_cast<StandardApplicationContext*>(this), event);
-        QDeadlineTimer timer{1000};
-        while(!result->has_value()) {
-            condition.wait(&mutex, timer);
-        }
-        if(!result->has_value()) {
-            qCCritical(loggingCategory()).noquote().nospace() << "Could not obtain Registration-handle from another thread in time";
-            return nullptr;
-        }
+    auto context = const_cast<StandardApplicationContext*>(this);
+    ProxyRegistrationImpl* proxyReg = dynamic_cast<ProxyRegistrationImpl*>(context->obtainHandleFromApplicationThread([&service_type,metaObject,context] {
+        return new ProxyRegistrationImpl{service_type, metaObject, context};
+    }));
 
-        proxyReg = result->value();
+    if(proxyReg) {
+        proxyRegistrationCache.insert({service_type, proxyReg});
     }
-    proxyRegistrationCache.insert({service_type, proxyReg});
     return proxyReg;
 }
 
@@ -1071,7 +1082,7 @@ QVariant StandardApplicationContext::resolveDependency(const QVariant &arg, desc
 
 bool StandardApplicationContext::publish(bool allowPartial)
 {
-    if(QThread::currentThread() != this->thread()) {
+    if(!detail::hasCurrentThreadAffinity(this)) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot publish ApplicationContext in different thread";
         return false;
     }
@@ -1228,7 +1239,7 @@ QList<service_registration_handle_t> StandardApplicationContext::getRegistration
 
 service_registration_handle_t StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj)
 {
-    if(QThread::currentThread() != this->thread()) {
+    if(!detail::hasCurrentThreadAffinity(this)) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
         return nullptr;
     }
@@ -1747,7 +1758,7 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key, b
     }
 
     Collector<QSettings> collector;
-    for(auto reg : getRegistrationHandles()) {
+    for(auto reg : registrations) {
         reg->subscribe(&collector);
     }
     QString searchKey = key;
@@ -1775,10 +1786,10 @@ const QLoggingCategory &StandardApplicationContext::loggingCategory() const
 
 bool StandardApplicationContext::event(QEvent *event)
 {
-    if(event->type() == CreateRegistrationHandleEvent::eventId()) {
-        auto createEvent = static_cast<CreateRegistrationHandleEvent*>(event);
+    if(event->type() == CreateHandleEvent::eventId()) {
+        auto createEvent = static_cast<CreateHandleEvent*>(event);
         QMutexLocker<QMutex> locker{&mutex};
-        createEvent->createHandle(this);
+        createEvent->createHandle();
         condition.notify_all();
         return true;
     }
@@ -1824,16 +1835,24 @@ bool StandardApplicationContext::autoRefreshEnabled() const
 
 QConfigurationWatcher *StandardApplicationContext::watchConfigValue(const QString &expression)
 {
+    QMutexLocker<QMutex> locker{&mutex};
     if(!autoRefreshEnabled()) {
         qCWarning(loggingCategory()).nospace().noquote() << "Expression '" << expression << "' will not be watched, as auto-refresh has not been enabled";
         return nullptr;
     }
-    return m_SettingsWatcher->watchConfigValue(getResolver(expression));
+    return dynamic_cast<QConfigurationWatcher*>(obtainHandleFromApplicationThread([expression,this] {
+        return m_SettingsWatcher->watchConfigValue(getResolver(expression));
+    }));
 }
 
 QVariant StandardApplicationContext::resolveConfigValue(const QString &expression)
 {
-    if(auto resolver = getResolver(expression)) {
+    detail::PlaceholderResolver* resolver;
+    {
+        QMutexLocker<QMutex> locker{&mutex};
+        resolver = dynamic_cast<detail::PlaceholderResolver*>(obtainHandleFromApplicationThread([this,expression] { return getResolver(expression);}));
+    }
+    if(resolver) {
         return resolver->resolve(this, service_config{});
     }
     return QVariant{};
