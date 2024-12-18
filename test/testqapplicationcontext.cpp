@@ -601,20 +601,20 @@ void testWatchConfigurationFileChangeWithError() {
         QVariant watchedValue = watcher->currentValue();
         connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [&watchedValue](const QVariant& currentValue) {watchedValue=currentValue;});
 
+        bool error = false;
+        connect(watcher, &QConfigurationWatcher::errorOccurred, this, [&error] { error = true;});
+
         QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text));
         QVERIFY(file.seek(0));
         file.write("nose=readme\n");
         file.close();
 
-        bool error = false;
-
-        connect(watcher, &QConfigurationWatcher::errorOccurred, this, [&error] { error = true;});
         QVERIFY(QTest::qWaitFor([&error] { return error;}, 1000));
         QCOMPARE(watchedValue, "readme.doc");
 
         file.remove();
-
     }
+
   void testWatchConfigurationFileAfterDeletion() {
         QFile file{"testapplicationtext.ini"};
         QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
