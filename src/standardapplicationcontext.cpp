@@ -385,7 +385,7 @@ StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const s
 
 QList<service_registration_handle_t> StandardApplicationContext::ProxyRegistrationImpl::registeredServices() const {
     QList<service_registration_handle_t> result;
-    for(auto reg : m_context -> getRegistrationHandles()) {
+    for(auto reg : m_context -> registrations) {
         if(reg->matches(m_type)) {
             result.push_back(reg);
         }
@@ -413,7 +413,7 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
     detail::connect(this, subscription);
     TemporarySubscriptionProxy tempProxy{subscription};
     //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
-    for(auto reg : m_context -> getRegistrationHandles()) {
+    for(auto reg : m_context -> registrations) {
         if(canAdd(reg)) {
             reg->subscribe(&tempProxy);
         }
@@ -951,11 +951,13 @@ bool StandardApplicationContext::registerAlias(service_registration_handle_t reg
 
 
 
-void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
+void StandardApplicationContext::contextObjectDestroyed(DescriptorRegistration* objectRegistration)
 {
+    qCInfo(loggingCategory()).noquote().nospace() << "Object for " << *objectRegistration << " has been destroyed externally";
+
     for(auto iter = registrationsByName.begin(); iter != registrationsByName.end();) {
         auto reg = iter->second;
-        if(reg->getObject() == obj) {
+        if(reg == objectRegistration) {
             iter = registrationsByName.erase(iter);
         } else {
             ++iter;
@@ -963,14 +965,10 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
     }
 
 
-    for(auto iter = registrations.begin(); iter != registrations.end();) {
-        if((*iter)->getObject() == obj) {
-            std::unique_ptr<DescriptorRegistration> regPtr{*iter};
-            iter = registrations.erase(iter);
-            qCInfo(loggingCategory()).noquote().nospace() << *regPtr << " has been destroyed externally";
-        } else {
-            ++iter;
-        }
+    auto found = std::find(registrations.begin(), registrations.end(), objectRegistration);
+    if(found != registrations.end()) {
+        registrations.erase(found);
+        delete objectRegistration;
     }
 }
 

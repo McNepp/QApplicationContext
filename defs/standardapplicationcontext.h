@@ -543,8 +543,8 @@ private:
             DescriptorRegistration{nullptr, index, name, desc, parent},
             theObj(obj){
             //Do not connect the signal QObject::destroyed if obj is the ApplicationContext itself:
-            if(obj != parent) {
-                connect(obj, &QObject::destroyed, parent, &StandardApplicationContext::contextObjectDestroyed);
+            if(obj != parent->m_injectedContext) {
+                connect(obj, &QObject::destroyed, parent, [this] { m_context->contextObjectDestroyed(this);});
             }
         }
 
@@ -697,7 +697,7 @@ private:
 
     void unpublish();
 
-    void contextObjectDestroyed(QObject*);
+    void contextObjectDestroyed(DescriptorRegistration*);
 
     DescriptorRegistration* getRegistrationByName(const QString& name) const;
 
