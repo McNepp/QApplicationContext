@@ -307,7 +307,12 @@ private slots:
         QTimer timer;
         context->registerObject(&timer);
         context->registerService<BaseService>();
-        auto reg = context->registerService(service<QObjectService>(injectAll<QObject>()));
+        struct factory_t {
+            using service_type = QObjectService;
+            QObjectService* operator()(const QObjectList& dep) const { return new QObjectService{dep};}
+        };
+
+        auto reg = context->registerService(service(factory_t{}, injectAll<QObject>()));
         QVERIFY(context->publish());
 
         RegistrationSlot<QObjectService> slot{reg};
@@ -2627,7 +2632,7 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testRegisterWithExplicitServiceFactory() {
         int calledFactory = 0;
-        auto baseReg = context->registerService(serviceFactory(service_factory<BaseService>{&calledFactory}).advertiseAs<Interface1>());
+        auto baseReg = context->registerService(service(service_factory<BaseService>{&calledFactory}).advertiseAs<Interface1>());
         QVERIFY(context->publish());
         QCOMPARE(calledFactory, 1);
     }
@@ -2635,11 +2640,11 @@ void testWatchConfigurationFileChangeWithError() {
     void testRegisterWithAnonymousServiceFactory() {
         int calledFactory = 0;
         auto baseFactory = [&calledFactory] { ++calledFactory; return new BaseService{}; };
-        auto baseReg = context->registerService(serviceFactory<decltype(baseFactory),BaseService>(baseFactory).advertiseAs<Interface1>());
+        auto baseReg = context->registerService(service<decltype(baseFactory),BaseService>(baseFactory).advertiseAs<Interface1>());
         QVERIFY(context->publish());
         QCOMPARE(calledFactory, 1);
-        auto depFactory = [&calledFactory](Interface1* dep) { ++calledFactory; return new DependentService{dep}; };
-        auto depReg = context->registerService(serviceFactory<decltype(depFactory),DependentService>(depFactory, baseReg));
+        auto depFactory = [&calledFactory](const Address& addr, const QString& url, Interface1* dep) { ++calledFactory; return new DependentService{addr, url, dep}; };
+        auto depReg = context->registerService(service<decltype(depFactory),DependentService>(depFactory, Address{"localhost"}, "/whatever", baseReg));
         QVERIFY(context->publish());
         QCOMPARE(calledFactory, 2);
     }

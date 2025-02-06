@@ -969,7 +969,7 @@ Here is all that we have to do:
 
 And, voila: We can register our service exactly as we did before!
 
-### Provide a custom factory
+### Provide a custom factory for the service_traits
 
 Your custom factory must provide a suitable operator().
 Additionally, it should provide a type-declaration `service_type`:
@@ -991,6 +991,16 @@ This factory should now be used with every service of type `PropFetcherAggregato
         using factory_type = propfetcher_factory;
       };
     }
+
+### Use a custom factory selectively
+
+In the previous paragraph, it was shown how you declare a custom factory and register it via the mcnepp::qtdi::service_traits.
+However, there might be occasions where you want to rely on the default mechanism for constructing your service most of the times, but
+want to supply the custom factory occasionally.
+<br>There is an overload of mcnepp::qtdi::service() that does this. You simply pass an instance of the custom factory as the first argument:
+
+    context->registerService(service(propfetcher_factory{}, injectAll<PropFetcher>()));
+
 
 
 

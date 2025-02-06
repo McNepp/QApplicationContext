@@ -184,14 +184,18 @@ inline QObjectList convertQList<QObject>(const QObjectList &list) {
 }
 
 template<typename S,Kind kind> struct default_argument_converter {
-    S* operator()(const QVariant& arg) const {
-        return dynamic_cast<S*>(arg.value<QObject*>());
+    using target_type = S*;
+
+    target_type operator()(const QVariant& arg) const {
+        return dynamic_cast<target_type>(arg.value<QObject*>());
     }
 };
 
 
 template<typename S> struct default_argument_converter<S,Kind::N> {
-    QList<S*> operator()(const QVariant& arg) const {
+    using target_type = QList<S*>;
+
+    target_type operator()(const QVariant& arg) const {
         return convertQList<S>(arg.value<QObjectList>());
     }
 };
@@ -1712,6 +1716,7 @@ template<typename...S> std::enable_if_t<(sizeof...(S) > 1),ServiceCombination<S.
 /// \tparam S1 the type of the first service.
 /// \tparam S2 the type of the second service.
 /// \tparam F must be a callable type, as if it had the signature `F(S* source, T* target)`.
+/// \deprecated Use mcnepp::qtdi::combine() instead
 /// \return a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service
 /// and the target-service.
 ///
@@ -2780,6 +2785,7 @@ template <typename S>
 struct dependency_helper {
     using type = S;
 
+    using arg_type = S;
 
     static S convert(const QVariant& arg) {
         return arg.value<S>();
@@ -2800,6 +2806,7 @@ template <typename S,Kind kind>
 struct dependency_helper<Dependency<S,kind>> {
     using type = S;
 
+    using arg_type = typename default_argument_converter<S,kind>::target_type;
 
     static dependency_info info(const Dependency<S,kind>& dep) {
         return { typeid(S), static_cast<int>(kind), dep.requiredName };
@@ -2814,7 +2821,7 @@ template <typename S,ServiceScope scope>
 struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
     using type = S;
 
-
+    using arg_type = S*;
 
     static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S,scope>& dep) {
         static_assert(is_binding_source(scope), "ServiceRegistration with this scope cannot be a dependency");
@@ -2835,7 +2842,7 @@ template <typename S>
 struct dependency_helper<mcnepp::qtdi::ProxyRegistration<S>> {
     using type = S;
 
-
+    using arg_type = QList<S*>;
 
     static dependency_info info(const mcnepp::qtdi::ProxyRegistration<S>& dep) {
         if(dep) {
@@ -2856,7 +2863,7 @@ struct dependency_helper<Resolvable<S>> {
 
     using type = S;
 
-
+    using arg_type = S;
 
     static dependency_info info(const Resolvable<S>& dep) {
         return { typeid(S), RESOLVABLE_KIND, dep.expression, dep.defaultValue, dep.variantConverter };
@@ -2874,7 +2881,7 @@ struct dependency_helper<ParentPlaceholder> {
 
     using type = ParentPlaceholder;
 
-
+    using arg_type = QObject*;
 
     static dependency_info info(const ParentPlaceholder&) {
         return { typeid(QObject*), PARENT_PLACEHOLDER_KIND};
@@ -3154,15 +3161,27 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
 /// \brief Creates a Service with an explicit factory.
 /// \param factory the factory to use. Must be a *Callable* object, i.e. provide an `Impl* operator()` that accepts
 /// the arguments derived from the dependencies and yields a pointer to the created Object.
-/// <br>The factory-type should contain a type-declaration `service_type` which denotes
+/// <br>The factory-type shall contain a type-declaration `service_type` which denotes
 /// the type of the service's implementation.
 /// \param dependencies the arguments to be injected into the factory.
 /// \tparam F the type of the factory.
 /// \tparam Impl the implementation-type of the service. If the factory-type F contains
 /// a type-declaration `service_type`, Impl will be deduced as that type.
 /// \return a Service that will use the provided factory.
-template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nodiscard]]Service<Impl,Impl,ServiceScope::SINGLETON> serviceFactory(F factory, Dep...dependencies) {
+template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nodiscard]] auto service(F factory, Dep...dependencies) ->
+    std::enable_if_t<std::is_invocable_v<F,typename detail::dependency_helper<Dep>::arg_type...>,Service<Impl,Impl,ServiceScope::SINGLETON>>
+{
     return Service<Impl,Impl,ServiceScope::SINGLETON>{detail::make_descriptor<Impl,Impl,ServiceScope::SINGLETON>(factory, dependencies...)};
+}
+
+///
+/// \brief Creates a Service with an explicit factory.
+/// <br>This function has been supplanted by service().
+/// \deprecated Use mcnepp::qtdi::service() instead
+/// \return a Service that will use the provided factory.
+/// \see service()
+template<typename F,typename Impl=typename F::service_type,typename...Dep> [[deprecated("Use service<F,Impl,Dep...>() instead")]] [[nodiscard]] Service<Impl,Impl,ServiceScope::SINGLETON> serviceFactory(F factory, Dep...dependencies) {
+    return service<F,Impl,Dep...>(factory, dependencies...);
 }
 
 
