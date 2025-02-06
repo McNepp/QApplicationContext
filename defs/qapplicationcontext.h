@@ -3843,6 +3843,24 @@ protected:
     /// \return `true` if the supplied context was the *global instance*
     static bool unsetInstance(QApplicationContext* ctx);
 
+    ///
+    /// \brief Sets this ApplicationContext as the *global instance*.
+    /// <br>Derived classes should invoke this method as the last line of their constructor.
+    /// This method will set `this` as the global instance.
+    /// <br>**Why can this not be done automatically in ApplicationContextImplBase's constructor?**
+    /// <br>Unfortunately, this would violate the C++ standard. ApplicationContextImplBase's constructor runs
+    /// before the constructor of the derived class. If it did set the global instance to `this`,
+    /// a reference to an incomplete object would be accessible by external code via QApplicationContext::instance()
+    /// \sa instance()
+    /// \return `true` if `this` could be set as the *global instance*
+    ///
+    bool setAsGlobalInstance() {
+        if(setInstance(this)) {
+            qCInfo(loggingCategory()).noquote().nospace() << "Installed " << this << " as global instance";
+            return true;
+        }
+        return false;
+    }
 
 private:
     static std::atomic<QApplicationContext*> theInstance;
@@ -3887,6 +3905,32 @@ public:
 
 
 
+///
+/// \brief Creates an ApplicationContext as a *delegate* for another context.
+/// <br>With the help of this function you can implement the interface QApplicationContext yourself.
+/// <br>The `delegatingContext` will be used for various purposes:
+/// - It will become the `QObject::parent()` of the *delegate*.
+/// - It will be injected into *init-methods* of services that choose to provide such a method.
+/// - It will be attached to all ServiceRegistrations and can be obtained via ServiceRegistration::applicationContext().
+/// \param loggingCategory will be used for logging.
+/// \param delegatingContext the context that will delegate its call to the *delegate*.
+/// \return an ApplicationContext that serves as the *delegate* for the `delegatingContext`.
+///
+QApplicationContext* newDelegate(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext);
+
+///
+/// \brief Creates an ApplicationContext as a *delegate* for another context.
+/// <br>Equivalent to `newDelegate(defaultLoggingCategory(), delegatingContext)`.
+/// \sa mcnepp::qtdi::newDelegate(const QLoggingCategory& , QApplicationContext* )
+/// \param delegatingContext the context that will delegate its call to the *delegate*.
+/// \return an ApplicationContext that serves as the *delegate* for the `delegatingContext`.
+///
+inline QApplicationContext* newDelegate(QApplicationContext* delegatingContext) {
+    return newDelegate(defaultLoggingCategory(), delegatingContext);
+}
+
+
+
 }
 
 
@@ -3922,7 +3966,6 @@ namespace std {
         }
         hash<type_index> typeHasher;
     };
-
 
 
 }

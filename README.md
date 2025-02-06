@@ -1144,8 +1144,34 @@ The following table sums this up:
 It is not possible to extend the class mcnepp::qtdi::StandardApplicationContext, as it is `final`.
 
 However, it is possible to extend the interface mcnepp::qtdi::QApplicationContext in your own code.
-If you do that, you may want to use an instance of mcnepp::qtdi::StandardApplicationContext as a *delegate* inside your derived class.
-<br>Here are some rules that you should follow:
+You could add additional virtual functions to the extended interface, to be used by client-code:
+
+    class IExtendedApplicationContext : public mcnepp::qtdi::QApplicationContext { 
+    public:
+    
+       using QApplicationContext::QApplicationContext;    
+       
+       virtual void doSomeFancyRegistration() = 0;
+    };
+
+Now, you could not implement this interface `IExtendedApplicationContext` in a class that already implements `QApplicationContext`, as that would constitute multiple inheritance of the same base.
+<br>The class-template mcnepp::qtdi::ApplicationContextImplBase solves that problem for you.
+<br>You need to supply the type of the extended interface as a type-argument:
+
+
+    class ExtendedApplicationContext : public mcnepp::qtdi::ApplicationContextImplBase<QApplicationContext> { 
+      public:
+        ExtendedApplicationContext(QObject* parent = nullptr) : ApplicationContextImplBase<QApplicationContext>{parent}
+        {
+            finishConstruction();
+        }
+        
+        virtual void doSomeFancyRegistration() override;
+    };
+
+
+Should you really insist on implementing mcnepp::qtdi::QApplicationContext from scratch,
+here are some rules that you should follow:
 
 - You can implement the **public** pure virtual functions simply by invoking them on the *delegate*.
 - The **protected** pure virtual functions can be implemented by using the corresponding static `delegate...()` functions from QApplicationContext. Pass in your *delegate* as the first argument, as shown below.
@@ -1153,12 +1179,10 @@ If you do that, you may want to use an instance of mcnepp::qtdi::StandardApplica
 Therefore, consider to unset the delegate explicitly, as shown in the code below!
 - Be aware that the *delegate* will be injected into all services as a parent automatically (unless they have an explicit parent). Also, the *init-methods* will receive
 the *delegate* as an argument, as will the QApplicationContextPostProcessor::process() method.<br>
-In order to inject your own implementation instead, use the constructor that accepts a mcnepp::qtdi::StandardApplicationContext::delegate_tag as an additional argument. This is also shown below!
+In order to inject your own implementation instead, use the function mcnepp::qtdi::newDelegate() This is also shown below.
 - Do not forget to connect your instance to the signals emitted by the delegate. You may use the static function mcnepp::qtdi::QApplicationContext::delegateConnectSignals(), as shown below.
 
-Here is an example of a custom implementation of mcnepp::qtdi::QApplicationContext:
-
-    Q_DECLARE_LOGGING_CATEGORY(extendedLoggingCategory)
+Here is an (incomplete) example of a custom implementation of mcnepp::qtdi::QApplicationContext:
 
     class ExtendedApplicationContext : public mcnepp::qtdi::QApplicationContext {
       Q_OBJECT
@@ -1166,12 +1190,12 @@ Here is an example of a custom implementation of mcnepp::qtdi::QApplicationConte
       public:
 
         explicit ExtendedApplicationContext(QObject *parent) :
-                mcnepp::qtdi::QApplicationContext{parent},
-                m_delegate{new mcnepp::qtdi::StandardApplicationContext{extendedLoggingCategory(), this, mcnepp::qtdi::StandardApplicationContext::delegate_tag}}
+                QApplicationContext{parent},
+                m_delegate{new newDelegate(this)}
         {
             unsetInstance(m_delegate); // Remove the delegate as global instance, should it have been set.
             if(setInstance(this)) { // Attempt to set this as global instance.
-                qCInfo(extendedLoggingCategory()).noquote().nospace() << "Installed " << this << " as global instance";
+                qCInfo(loggingCategory()).noquote().nospace() << "Installed " << this << " as global instance";
             } 
     // Propagate signals from delegate to this:
             delegateConnectSignals(m_delegate, this);

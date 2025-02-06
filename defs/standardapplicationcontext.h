@@ -19,8 +19,16 @@ namespace detail {
 }
 
 
+
+
+
 ///
 /// \brief A ready-to use implementation of the QApplicationContext.
+/// Using this class is the "canonical way" of instantiating a QApplicationContext.
+/// <br>It should be used in all places where you rely on what the interface QApplicationContext offers, without
+/// the need to add more functionality.
+/// <br>Should you want to provide a customized version of QApplicationContext, or should you want to augment
+/// your class with additional functionaly, you may want to resort to the helper-class ApplicationContextImplBase.
 ///
 class StandardApplicationContext final : public QApplicationContext
 {
@@ -34,9 +42,7 @@ class StandardApplicationContext final : public QApplicationContext
 
     class DescriptorRegistration;
 
-    struct delegate_tag_t {
-
-    };
+    friend QApplicationContext* newDelegate(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext);
 
 signals:
 
@@ -45,11 +51,6 @@ signals:
 public:
 
 
-    ///
-    /// \brief Determines that a StandardApplicationContext is used as a delegate by another ApplicationContext.
-    /// \sa StandardApplicationContext(const QLoggingCategory&, QApplicationContext*, delegate_tag_t);
-    ///
-    static constexpr delegate_tag_t delegate_tag{};
 
 
     /**
@@ -70,30 +71,6 @@ public:
 
     }
 
-    /**
-     * @brief Creates a StandardApplicationContext using an explicit LoggingCategory and a delegating context.
-     * <br>The delegating context comes into play when another implementor or QApplicationContext wants to use
-     * the class StandardApplicationContext as its *delegate*. When the delegating context invokes StandardApplicationContext::publish(),
-     * itself (and not the *delegate*) must be injected into the *init-methods* of services, as well as into QApplicationContextPostProcessor::process()
-     * methods.
-     * @param loggingCategory a reference to the QLoggingCategory that will be used by this ApplicationContext.
-     * @param delegatingContext the ApplicationContext that delegates its calls to this ApplicationContext. Will also become the QObject::parent().
-     */
-    StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext, delegate_tag_t):
-        StandardApplicationContext{loggingCategory, delegatingContext, delegatingContext} {
-    }
-
-    /**
-     * @brief Creates a StandardApplicationContext using a delegating context.
-     * <br>The delegating context comes into play when another implementor or QApplicationContext wants to use
-     * the class StandardApplicationContext as its *delegate*. When the delegating context invokes StandardApplicationContext::publish(),
-     * itself (and not the *delegate*) must be injected into the *init-methods* of services, as well as into QApplicationContextPostProcessor::process()
-     * methods.
-     * @param delegatingContext the ApplicationContext that delegates its calls to this ApplicationContext. Will also become the QObject::parent().
-     */
-    StandardApplicationContext(QApplicationContext* delegatingContext, delegate_tag_t):
-        StandardApplicationContext{defaultLoggingCategory(), delegatingContext, delegatingContext} {
-    }
 
 
 
@@ -162,7 +139,7 @@ protected:
 
 private:
 
-    StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* injectedContext, QObject* parent);
+    StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext, QObject* parent);
 
     bool registerAlias(service_registration_handle_t reg, const QString& alias);
 
@@ -771,6 +748,7 @@ private:
     detail::property_descriptor m_setter;
 };
 }
+
 
 
 }

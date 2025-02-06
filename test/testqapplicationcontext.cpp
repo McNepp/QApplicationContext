@@ -5,8 +5,9 @@
 #include <QSemaphore>
 #include <QFuture>
 #include <iostream>
-#include "standardapplicationcontext.h"
 #include "appcontexttestclasses.h"
+#include "applicationcontextimplbase.h"
+#include "standardapplicationcontext.h"
 #include "qtestcase.h"
 
 namespace mcnepp::qtdi {
@@ -64,6 +65,31 @@ template<> struct service_traits<Interface1> : default_service_traits<Interface1
 }
 
 namespace mcnepp::qtditest {
+
+
+class IExtendedApplicationContext : public QApplicationContext {
+public:
+    using QApplicationContext::QApplicationContext;
+
+    virtual ServiceRegistration<BaseService,ServiceScope::SINGLETON> registerBaseService(const QString& name) = 0;
+};
+
+class ExtendedApplicationContext : public ApplicationContextImplBase<IExtendedApplicationContext> {
+public:
+
+    ExtendedApplicationContext() : ApplicationContextImplBase<IExtendedApplicationContext>{testLogging()} {
+        setAsGlobalInstance();
+    }
+
+    ~ExtendedApplicationContext() {
+        unsetInstance(this);
+    }
+
+    virtual ServiceRegistration<BaseService,ServiceScope::SINGLETON> registerBaseService(const QString& name) override {
+        return registerService<BaseService>(name);
+    }
+};
+
 
 
 
@@ -268,20 +294,31 @@ private slots:
         QCOMPARE(baseSlot->parent(), context.get());
     }
 
-    void testInjectDelegatingApplicationContextAsParent() {
-        StandardApplicationContext delegateContext{qtditest::testLogging(), context.get(), StandardApplicationContext::delegate_tag};
-        auto baseReg = delegateContext.registerService(service<BaseService>(injectIfPresent<CyclicDependency>(), injectParent()));
-        QCOMPARE(baseReg.applicationContext(), context.get());
+    void testDelegatingApplicationContextAsGlobalContext() {
+        context.reset();
+        QCOMPARE(QApplicationContext::instance(), nullptr);
+        ExtendedApplicationContext delegatingContext;
+        QCOMPARE(QApplicationContext::instance(), &delegatingContext);
+    }
 
-        auto proxyReg = delegateContext.getRegistration<BaseService>();
-        QCOMPARE(proxyReg.applicationContext(), context.get());
-        QVERIFY(delegateContext.publish());
+
+    void testInjectDelegatingApplicationContextAsParent() {
+        ExtendedApplicationContext delegatingContext;
+        unsigned published = 0;
+        connect(&delegatingContext, &QApplicationContext::publishedChanged, this, [&delegatingContext,&published] { published = delegatingContext.published();});
+        auto baseReg = delegatingContext.registerService(service<BaseService>(injectIfPresent<CyclicDependency>(), injectParent()));
+        QCOMPARE(baseReg.applicationContext(), &delegatingContext);
+
+        auto proxyReg = delegatingContext.getRegistration<BaseService>();
+        QCOMPARE(proxyReg.applicationContext(), &delegatingContext);
+        QVERIFY(delegatingContext.publish());
+        QCOMPARE(published, 3);
 
         RegistrationSlot<BaseService> baseSlot{baseReg};
 
         //The ApplicationContext was supplied as parent to the constructor:
-        QCOMPARE(baseSlot->m_InitialParent, context.get());
-        QCOMPARE(baseSlot->parent(), context.get());
+        QCOMPARE(baseSlot->m_InitialParent, &delegatingContext);
+        QCOMPARE(baseSlot->parent(), &delegatingContext);
     }
 
 
@@ -1710,16 +1747,16 @@ void testWatchConfigurationFileChangeWithError() {
     }
 
     void testInitializerWithDelegatingContext() {
-        StandardApplicationContext delegateContext{qtditest::testLogging(), context.get(), StandardApplicationContext::delegate_tag};
-        auto contextReg = delegateContext.getRegistration("context").as<QApplicationContext>();
-        auto baseReg = delegateContext.registerService<BaseService>("base with init");
-        QCOMPARE(baseReg.applicationContext(), context.get());
-        QVERIFY(delegateContext.publish());
+        ExtendedApplicationContext delegatingContext;
+        auto contextReg = delegatingContext.getRegistration("context").as<QApplicationContext>();
+        auto baseReg = delegatingContext.registerBaseService("base with init");
+        QCOMPARE(baseReg.applicationContext(), &delegatingContext);
+        QVERIFY(delegatingContext.publish());
 
         RegistrationSlot<BaseService> baseSlot{baseReg};
-        RegistrationSlot<QApplicationContext> contextSlog{contextReg};
-        QCOMPARE(contextSlog.last(), context.get());
-        QCOMPARE(baseSlot->context(), context.get());
+        RegistrationSlot<QApplicationContext> contextSlot{contextReg};
+        QCOMPARE(contextSlot.last(), &delegatingContext);
+        QCOMPARE(baseSlot->context(), &delegatingContext);
 
     }
 

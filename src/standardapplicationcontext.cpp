@@ -681,10 +681,10 @@ Q_COREAPP_STARTUP_FUNCTION(registerAppInGlobalContext)
 
 
 
-StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* injectedContext, QObject* parent) :
+StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext, QObject* parent) :
     QApplicationContext(parent),
     m_loggingCategory(loggingCategory),
-    m_injectedContext(injectedContext)
+    m_injectedContext(delegatingContext)
 {
     if(auto app = QCoreApplication::instance()) {
         registerObject(app, "application");
@@ -693,12 +693,9 @@ StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& l
     m_settingsInitializer = getRegistration<QSettings>().subscribe(this, &StandardApplicationContext::onSettingsAdded).unwrap();
 
 
-    registerObject<QApplicationContext>(injectedContext, "context");
+    registerObject<QApplicationContext>(delegatingContext, "context");
 
-
-    if(setInstance(this)) {
-        qCInfo(loggingCategory()).noquote().nospace() << "Installed " << this << " as global instance";
-    }
+    setAsGlobalInstance();
 }
 
 
@@ -1856,6 +1853,10 @@ QVariant StandardApplicationContext::resolveConfigValue(const QString &expressio
     return QVariant{};
 }
 
+QApplicationContext *newDelegate(const QLoggingCategory &loggingCategory, QApplicationContext *delegatingContext)
+{
+    return new StandardApplicationContext{loggingCategory, delegatingContext, delegatingContext};
+}
 
 
 
