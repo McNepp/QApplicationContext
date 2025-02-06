@@ -235,8 +235,8 @@ private slots:
     void testNoDependency() {
         auto reg = context->registerService<BaseService>();
         QVERIFY(reg);
-        QVERIFY(!context->getRegistration<BaseService>("anotherName"));
-        QCOMPARE(context->getRegistration<BaseService>(reg.registeredName()), reg);
+        QVERIFY(!context->getRegistration("anotherName"));
+        QCOMPARE(context->getRegistration(reg.registeredName()), reg);
         QVERIFY(reg.matches<BaseService>());
         QVERIFY(reg.as<BaseService>());
         QVERIFY(!reg.as<BaseService2>());
@@ -386,7 +386,7 @@ private slots:
 
     void testAsOnTemporary() {
         auto reg = context->getRegistration<QCoreApplication>().as<QObject>();
-        auto appReg = context->getRegistration<QCoreApplication>("application").as<QObject>();
+        auto appReg = context->getRegistration("application").as<QObject>();
         QVERIFY(reg);
         QVERIFY(appReg);
         QCOMPARE(reg.registeredServices()[0], appReg);
@@ -2277,9 +2277,9 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(!reg.registerAlias("base2"));
         QVERIFY(!reg2.registerAlias("base"));
         QVERIFY(!reg2.registerAlias("Hugo"));
-        QCOMPARE(context->getRegistration<Interface1>("base"), reg);
-        QCOMPARE(context->getRegistration<Interface1>("Hugo"), reg);
-        QCOMPARE(context->getRegistration<Interface1>("Jill"), reg);
+        QCOMPARE(context->getRegistration("base"), reg);
+        QCOMPARE(context->getRegistration("Hugo"), reg);
+        QCOMPARE(context->getRegistration("Jill"), reg);
     }
 
 
@@ -2290,10 +2290,10 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg2 = context->registerService(service<Interface1,BaseService2>());
 
         QCOMPARE_NE(reg2, reg);
-        QCOMPARE(reg, context->getRegistration<Interface1>(reg.registeredName()));
-        QCOMPARE(reg2, context->getRegistration<Interface1>(reg2.registeredName()));
+        QCOMPARE(reg, context->getRegistration(reg.registeredName()));
+        QCOMPARE(reg2, context->getRegistration(reg2.registeredName()));
 
-        QVERIFY(!context->getRegistration<Interface1>(""));
+        QVERIFY(!context->getRegistration(""));
     }
 
     void testRegisterTwiceDifferentName() {

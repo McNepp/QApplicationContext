@@ -401,7 +401,7 @@ public:
       * that the type-argument specifies a non-QObject interface.
       * @return the QMetaObject of the Service, or `nullptr` if this is a Registration for a non-QObject interface.
       */
-    virtual const QMetaObject* serviceMetaObject() const = 0;
+    [[nodiscard]] virtual const QMetaObject* serviceMetaObject() const = 0;
 
 
     friend QDebug operator<<(QDebug out, const Registration& reg) {
@@ -3550,22 +3550,18 @@ public:
     }
 
     ///
-    /// \brief Obtains a ServiceRegistration for a service-type and name.
+    /// \brief Obtains a ServiceRegistration for a name.
     /// <br>This function will look up Services by the names they were registered with.
     /// Additionally, it will look up any alias that might have been given, using ServiceRegistration::registerAlias(const QString&).
-    /// <br>**Note:** If you do not provide an explicit type-argument, QObject will be assumed. This will, of course, match
-    /// any service with the supplied name.<br>
-    /// The returned ServiceRegistration may be narrowed to a more specific service-type using ServiceRegistration::as().
+    /// <br>The returned ServiceRegistration may be narrowed to a more specific service-type using ServiceRegistration::as().
     /// <br>**Thread-safety:** This function may be called safely  from any thread.
-    /// \tparam S the required service-type.
     /// \param name the desired name of the registration.
-    /// A valid ServiceRegistration will be returned only if exactly one Service that matches the requested type and name has been registered.
-    /// \return a ServiceRegistration for the required type and name. If no single Service with a matching name and service-type could be found,
+    /// A valid ServiceRegistration will be returned only if exactly one Service that matches the requested name has been registered.
+    /// \return a ServiceRegistration for the required type and name. If no single Service with a matching name could be found,
     /// an invalid ServiceRegistration will be returned.
     ///
-    template<typename S=QObject> [[nodiscard]] ServiceRegistration<S,ServiceScope::UNKNOWN> getRegistration(const QString& name) const {
-        static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
-        return ServiceRegistration<S,ServiceScope::UNKNOWN>::wrap(getRegistrationHandle(name));
+    [[nodiscard]] ServiceRegistration<QObject,ServiceScope::UNKNOWN> getRegistration(const QString& name) const {
+        return ServiceRegistration<QObject,ServiceScope::UNKNOWN>::wrap(getRegistrationHandle(name));
     }
 
 
@@ -3636,7 +3632,7 @@ public:
     /// \brief Is this the global instance?
     /// \return `true` if `this` has been installed as the global instance.
     ///
-    bool isGlobalInstance() const;
+    [[nodiscard]] bool isGlobalInstance() const;
     ///
     /// \brief Obtains a QConfigurationWatcher for an expression.
     /// <br>If autoRefreshEnabled() and the `expression` can be successfully parsed, this function returns an instance of QConfigurationWatcher.
