@@ -1154,7 +1154,7 @@ public:
     /// \tparam D the type of service that will be injected into Services of type `<S>`.
     /// \param injectionSlot the member-function to invoke when a service of type `<D>` is published.
     /// \return the Subscription created by this autowiring. If an autowiring has already been registered
-    /// for the type `D´, an invalid Subscription will be returned.
+    /// for the type `<D>`, an invalid Subscription will be returned.
     ///
     template<typename D,typename R> Subscription autowire(R (S::*injectionSlot)(D*));
 
@@ -3742,7 +3742,6 @@ protected:
     /// A valid handle to a Registration will be returned only if exactly one Service has been registered that matches
     /// the name.
     /// \return a handle to a Registration for the supplied name, or `nullptr` if no single Service has been registered with the name.
-    /// \sa getRegistration(const QString&) const.
     ///
     [[nodiscard]] virtual service_registration_handle_t getRegistrationHandle(const QString& name) const = 0;
 
@@ -3762,10 +3761,9 @@ protected:
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
-    /// <br>If you are implementing registerService(const QString&, service_descriptor*) and want to delegate
+    /// <br>If you are implementing registerService(const QString&, const service_descriptor&, const service_config&, ServiceScope, QObject*) and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
     /// <br>If this function is invoked with `appContext == nullptr`, it will return `nullptr`.
-    /// \param appContext the target on which to invoke registerService(const QString&, service_descriptor*).
     /// \param name the name of the registered service.
     /// \param descriptor describes the service.
     /// \param config configuration of the service.
@@ -3845,12 +3843,24 @@ protected:
         connect(sourceContext, &QApplicationContext::publishedChanged, targetContext, &QApplicationContext::publishedChanged, connectionType);
     }
 
-    static bool setInstance(QApplicationContext*);
 
-    static bool unsetInstance(QApplicationContext*);
+    ///
+    /// \brief Sets an ApplicationContext as the *global instance*.
+    /// <br>This function will only succeed if there is currently *no global instance*.
+    /// \param ctx the context to set.
+    /// \sa instance()
+    /// \return `true` if the supplied context could be set as the *global instance*
+    ///
+    static bool setInstance(QApplicationContext* ctx);
 
+    ///
+    /// \brief Removes the *global instance*.
+    /// <br>This function will only succeed if the supplied context is currently the *global instance*.
+    /// \param ctx the context assumed to be the current *global instance*.
+    /// \sa instance()
+    /// \return `true` if the supplied context was the *global instance*
+    static bool unsetInstance(QApplicationContext* ctx);
 
-    template<typename S,ServiceScope> friend class ServiceRegistration;
 
 private:
     static std::atomic<QApplicationContext*> theInstance;
