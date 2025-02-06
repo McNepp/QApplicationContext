@@ -614,7 +614,7 @@ private slots:
         QScopedPointer<QThread> thread{QThread::create([&currentValue,&ready,this] {
             auto watcher = context->watchConfigValue("${name}.${suffix:txt}");
             QEventLoop eventLoop;
-            connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [this,&currentValue,&eventLoop](const QVariant& val) {
+            connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [&currentValue,&eventLoop](const QVariant& val) {
                 delete currentValue.fetchAndStoreRelaxed(new QVariant{val});
                 eventLoop.quit();//Leave event-loop
             });
@@ -969,7 +969,7 @@ void testWatchConfigurationFileChangeWithError() {
         QAtomicInt subscriptionCalled;
         QScopedPointer<QThread> thread{QThread::create([&regSource,&regTarget,&subscriptionCalled] {
             QEventLoop eventLoop;
-            auto subscription = combine(regSource, regTarget).subscribe(QThread::currentThread(), [&subscriptionCalled,&eventLoop](Interface1* src, QTimer* timer) {
+            auto subscription = combine(regSource, regTarget).subscribe(QThread::currentThread(), [&subscriptionCalled,&eventLoop](Interface1*, QTimer*) {
                 subscriptionCalled.storeRelaxed(1);
                 eventLoop.quit();
             });

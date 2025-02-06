@@ -3381,7 +3381,7 @@ public:
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
     template<typename S,typename Impl,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName = "", const service_config& config = service_config{}) -> ServiceRegistration<S,scope> {
-        return ServiceRegistration<S,scope>::wrap(registerService(objectName, serviceDeclaration.descriptor, config, scope, nullptr));
+        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, config, scope, nullptr));
     }
 
     ///
@@ -3424,7 +3424,7 @@ public:
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << serviceDeclaration.descriptor << " with name '" << objectName << "'. Invalid service-template";
             return ServiceRegistration<S,scope>{};
         }
-        return ServiceRegistration<S,scope>::wrap(registerService(objectName, serviceDeclaration.descriptor, config, scope, templateRegistration.unwrap()));
+        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, config, scope, templateRegistration.unwrap()));
     }
 
 
@@ -3546,7 +3546,7 @@ public:
         }
         std::unordered_set<std::type_index> ifaces;
         (ifaces.insert(typeid(S)), ..., ifaces.insert(typeid(IFaces)));
-        return ServiceRegistration<S,ServiceScope::EXTERNAL>::wrap(registerService(objName, service_descriptor{ifaces, typeid(*obj), qObject->metaObject()}, service_config{}, ServiceScope::EXTERNAL, qObject));
+        return ServiceRegistration<S,ServiceScope::EXTERNAL>::wrap(registerServiceHandle(objName, service_descriptor{ifaces, typeid(*obj), qObject->metaObject()}, service_config{}, ServiceScope::EXTERNAL, qObject));
     }
 
     ///
@@ -3715,7 +3715,7 @@ protected:
     /// \param baseObject in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template.
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
-    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObject) = 0;
+    virtual service_registration_handle_t registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObject) = 0;
 
 
     ///
@@ -3757,9 +3757,9 @@ protected:
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
-    /// <br>If you are implementing registerService(const QString&, const service_descriptor&, const service_config&, ServiceScope, QObject*) and want to delegate
+    /// <br>If you are implementing registerServiceHandle(const QString&, const service_descriptor&, const service_config&, ServiceScope, QObject*) and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    /// <br>If this function is invoked with `appContext == nullptr`, it will return `nullptr`.
+    /// \param appContext the target on which to invoke registerServiceHandle(const QString&, const service_descriptor&, const service_config&, ServiceScope, QObject*).
     /// \param name the name of the registered service.
     /// \param descriptor describes the service.
     /// \param config configuration of the service.
@@ -3771,7 +3771,7 @@ protected:
         if(!appContext) {
             return nullptr;
         }
-        return appContext->registerService(name, descriptor, config, scope, baseObj);
+        return appContext->registerServiceHandle(name, descriptor, config, scope, baseObj);
     }
 
 
@@ -3780,7 +3780,6 @@ protected:
     /// \brief Allows you to invoke a protected virtual function on another target.
     /// <br>If you are implementing getRegistrationHandle(const std::type_info&,const QMetaObject*) const and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    /// <br>If this function is invoked with `appContext == nullptr`, it will return `nullptr`.
     /// \param appContext the target on which to invoke getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
     /// \param service_type
     /// \param metaObject the QMetaObject of the service_type. May be omitted.
@@ -3797,7 +3796,6 @@ protected:
     /// \brief Allows you to invoke a protected virtual function on another target.
     /// <br>If you are implementing getRegistrationHandle(const QString&) const and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    /// <br>If this function is invoked with `appContext == nullptr`, it will return `nullptr`.
     /// \param appContext the target on which to invoke getRegistrationHandle(const QString&) const.
     /// \param name the name under which the service is looked up.
     /// \return the result of getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
@@ -3816,7 +3814,6 @@ protected:
     /// \brief Allows you to invoke a protected virtual function on another target.
     /// <br>If you are implementing getRegistrationHandles() const and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    /// <br>If this function is invoked with `appContext == nullptr`, it will return an empty QList.
     /// \param appContext the target on which to invoke getRegistrationHandles() const.
     /// \return the result of getRegistrationHandle(const std::type_info&,const QMetaObject*) const.
     ///

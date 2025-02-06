@@ -151,7 +151,7 @@ public:
 
 protected:
 
-    virtual service_registration_handle_t registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj) override;
+    virtual service_registration_handle_t registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj) override;
 
     virtual service_registration_handle_t getRegistrationHandle(const QString& name) const override;
 

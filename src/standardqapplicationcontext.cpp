@@ -1237,7 +1237,7 @@ QList<service_registration_handle_t> StandardApplicationContext::getRegistration
 
 
 
-service_registration_handle_t StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj)
+service_registration_handle_t StandardApplicationContext::registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj)
 {
     if(!detail::hasCurrentThreadAffinity(this)) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
