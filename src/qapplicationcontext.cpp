@@ -66,7 +66,11 @@ const service_config& serviceConfig(service_registration_handle_t handle) {
 }
 
 
-QString QConfigurationResolver::makePath(const QString& section, const QString& path) {
+
+
+namespace detail {
+
+QString makeConfigPath(const QString& section, const QString& path) {
     if(section.isEmpty() || path.startsWith('/')) {
         return path;
     }
@@ -76,7 +80,7 @@ QString QConfigurationResolver::makePath(const QString& section, const QString& 
     return section + '/' + path;
 }
 
-bool QConfigurationResolver::removeLastPath(QString& s) {
+bool removeLastConfigPath(QString& s) {
     int lastSlash = s.lastIndexOf('/');
     if(lastSlash <= 0) {
         return false;
@@ -88,8 +92,6 @@ bool QConfigurationResolver::removeLastPath(QString& s) {
     return true;
 }
 
-
-namespace detail {
 
 QMetaProperty findPropertyBySignal(const QMetaMethod &signalFunction, const QMetaObject* metaObject, const QLoggingCategory& loggingCategory)
 {

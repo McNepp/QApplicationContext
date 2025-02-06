@@ -795,6 +795,11 @@ protected:
 
     QMetaProperty findPropertyBySignal(const QMetaMethod& signalFunction, const QMetaObject* metaObject, const QLoggingCategory& loggingCatgegory);
 
+    QString makeConfigPath(const QString& section, const QString& path);
+
+    bool removeLastConfigPath(QString& s);
+
+
 ///
 /// \brief Yields the name of a *private property*, incorporating some binary data.
 /// \return a String starting with a dot and comprising a representation of the supplied binary data.
@@ -3251,58 +3256,11 @@ protected:
     }
 };
 
-///
-/// \brief Provides access to the configuration of a QApplicationContext.
-///
-class QConfigurationResolver {
-public:
-    ///
-    /// \brief Retrieves a value from the ApplicationContext's configuration.
-    /// <br>This function will be used to resolve placeholders in Service-configurations.
-    /// Whenever a *placeholder* shall be looked up, the ApplicationContext will search the following sources, until it can resolve the *placeholder*:
-    /// -# The environment, for a variable corresponding to the *placeholder*.
-    /// -# The instances of `QSettings` that have been registered in the ApplicationContext.
-    /// \sa mcnepp::qtdi::config()
-    /// \param key the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections.
-    /// \param searchParentSections determines whether the key shall be searched recursively in the parent-sections.
-    /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
-    ///
-    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
-
-    ///
-    /// \brief Resolves an expression.
-    /// <br>**Thread-safety:** This function may be safely called from any thread.
-    /// \param expression will be parsed in order to determine the QConfigurationWatcher::currentValue().
-    /// <br>In case the expression is a simple String, it will be returned as is.
-    /// <br>The expression may contain one or more *placeholders* which will be resolved using the underlying configuration.
-    /// A *placeholder* is enclosed in curly brackets with a preceding dollar-sign.<br>
-    /// `"${name}"` will be resolved with the configuration-entry `"name"`.<br>
-    /// `"${network/name}"` will be resolved with the configuration-entry `"name"` from the section `"network"`.<br>
-    /// `"${host}://${url}"` will be resolved with the result of the concatenation of the configuration-entry `"host"`,
-    /// a colon and two slashes and the configuration-entry `"url"`.<br>
-    /// The special character-sequence asterisk-slash indicates that a value shall be resolved in a section and all its parent-sections:<br>
-    /// `"* /network/hosts/${host}"` will be resolved with the configuration-entry `"name"` from the section `"network/hosts"`, or
-    /// its parent sections.
-    /// \return a valid QVariant, or an invalid QVariant if the expression could not be parsed.
-    ///
-    [[nodiscard]] virtual QVariant resolveConfigValue(const QString& expression) = 0;
-
-
-    virtual ~QConfigurationResolver() = default;
-
-
-    static QString makePath(const QString& section, const QString& path);
-
-    static bool removeLastPath(QString& s);
-
-
-};
-
 
 ///
 /// \brief A DI-Container for Qt-based applications.
 ///
-class QApplicationContext : public QObject, public QConfigurationResolver
+class QApplicationContext : public QObject
 {
     Q_OBJECT
 
@@ -3622,6 +3580,53 @@ public:
     /// \return `true` if `this` has been installed as the global instance.
     ///
     [[nodiscard]] bool isGlobalInstance() const;
+
+    ///
+    /// \brief Retrieves a value from the ApplicationContext's configuration.
+    /// <br>This function will be used to resolve placeholders in Service-configurations.
+    /// Whenever a *placeholder* shall be looked up, the ApplicationContext will search the following sources, until it can resolve the *placeholder*:
+    /// -# The environment, for a variable corresponding to the *placeholder*.
+    /// -# The instances of `QSettings` that have been registered in the ApplicationContext.
+    /// \sa mcnepp::qtdi::config()
+    /// \param key the key to look up. In analogy to QSettings, the key may contain forward slashes to denote keys within sub-sections.
+    /// \param searchParentSections determines whether the key shall be searched recursively in the parent-sections.
+    /// \return the value, if it could be resolved. Otherwise, an invalid QVariant.
+    ///
+    [[nodiscard]] virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const = 0;
+
+    ///
+    /// \brief Obtains configuration-keys available in this ApplicationContext.
+    /// <br>The keys will be returned in the same order that the underlying QSettings yield them.
+    /// <br>Keys that are present in more than one QSettings will be returned only once.
+    /// <br>In contrast to etConfigurationValue(const QString&, bool), this function does not consider environment variables.
+    /// \param section determines which keys will be returned. An empty string denotes the "root".
+    /// Sub-sections shall be delimited by forward slashes, in analogy to QSettings.
+    /// \return a list with the keys that are present in the supplied section. The return keys will **comprise the supplied section**.
+    /// This is necessary if they are to be useful when supplied to getConfigurationValue(const QString&, bool).
+    ///
+    [[nodiscard]] virtual QStringList configurationKeys(const QString& section = "") const = 0;
+
+
+    ///
+    /// \brief Resolves an expression.
+    /// <br>**Thread-safety:** This function may be safely called from any thread.
+    /// \param expression will be parsed in order to determine the QConfigurationWatcher::currentValue().
+    /// <br>In case the expression is a simple String, it will be returned as is.
+    /// <br>The expression may contain one or more *placeholders* which will be resolved using the underlying configuration.
+    /// A *placeholder* is enclosed in curly brackets with a preceding dollar-sign.<br>
+    /// `"${name}"` will be resolved with the configuration-entry `"name"`.<br>
+    /// `"${network/name}"` will be resolved with the configuration-entry `"name"` from the section `"network"`.<br>
+    /// `"${host}://${url}"` will be resolved with the result of the concatenation of the configuration-entry `"host"`,
+    /// a colon and two slashes and the configuration-entry `"url"`.<br>
+    /// The special character-sequence asterisk-slash indicates that a value shall be resolved in a section and all its parent-sections:<br>
+    /// `"* /network/hosts/${host}"` will be resolved with the configuration-entry `"name"` from the section `"network/hosts"`, or
+    /// its parent sections.
+    /// \return a valid QVariant, or an invalid QVariant if the expression could not be parsed.
+    ///
+    [[nodiscard]] virtual QVariant resolveConfigValue(const QString& expression) = 0;
+
+
+
     ///
     /// \brief Obtains a QConfigurationWatcher for an expression.
     /// <br>If autoRefreshEnabled() and the `expression` can be successfully parsed, this function returns an instance of QConfigurationWatcher.

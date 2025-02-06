@@ -84,6 +84,8 @@ public:
 
     virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections) const override;
 
+    virtual QStringList configurationKeys(const QString& section = "") const override;
+
     virtual const QLoggingCategory& loggingCategory() const override;
 
     ///

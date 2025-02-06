@@ -471,6 +471,26 @@ private slots:
     }
 
 
+    void testConfigurationKeys() {
+        configuration->setValue("sub/one", "Eins");
+        configuration->setValue("sub/two", "Zwei");
+        configuration->setValue("root", "Wurzel");
+        context->registerObject(configuration.get());
+        QStringList rootKeys = context->configurationKeys();
+        QCOMPARE(rootKeys.size(), 3);
+        QVERIFY(rootKeys.contains("sub/one"));
+        QVERIFY(rootKeys.contains("sub/two"));
+        QVERIFY(rootKeys.contains("root"));
+        QCOMPARE(context->getConfigurationValue("root"), "Wurzel");
+        QVERIFY(context->getConfigurationValue("sub/root").isNull());
+        QCOMPARE(context->getConfigurationValue("sub/root", true), "Wurzel");
+
+        QStringList subKeys = context->configurationKeys("sub");
+        QCOMPARE(subKeys.size(), 2);
+        QVERIFY(rootKeys.contains("sub/one"));
+        QVERIFY(rootKeys.contains("sub/two"));
+
+    }
 
 
 

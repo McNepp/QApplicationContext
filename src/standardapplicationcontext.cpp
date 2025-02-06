@@ -1745,6 +1745,27 @@ detail::PlaceholderResolver *StandardApplicationContext::getResolver(const QStri
     return configResolver.get();
 }
 
+QStringList StandardApplicationContext::configurationKeys(const QString &section) const
+{
+    Collector<QSettings> collector;
+    for(auto reg : registrations) {
+        reg->subscribe(&collector);
+    }
+
+    QStringList orderedKeys;
+    QSet<QString> keySet;
+    for(QSettings* settings : collector.collected) {
+        for(const QString& key : settings->allKeys()) {
+            if(key.startsWith(section) && !keySet.contains(key))             {
+                keySet.insert(key);
+                orderedKeys.push_back(key);
+            }
+        }
+    }
+    return orderedKeys;
+}
+
+
 QVariant StandardApplicationContext::getConfigurationValue(const QString& key, bool searchParentSections) const {
     if(auto bytes = QString{key}.replace('/', '.').toLocal8Bit(); qEnvironmentVariableIsSet(bytes)) {
         auto value = qEnvironmentVariable(bytes);
@@ -1765,11 +1786,12 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key, b
                 return value;
             }
         }
-    } while(searchParentSections && removeLastPath(searchKey));
+    } while(searchParentSections && detail::removeLastConfigPath(searchKey));
 
     qCDebug(loggingCategory()).noquote().nospace() << "No value found for configuration-entry: " << key;
     return QVariant{};
 }
+
 
 const QLoggingCategory &StandardApplicationContext::loggingCategory() const
 {
