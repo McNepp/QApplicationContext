@@ -5,7 +5,7 @@
 #include <QUuid>
 #include <QRegularExpression>
 #include <QCoreApplication>
-#include "standardqapplicationcontext.h"
+#include "standardapplicationcontext.h"
 #include "qsettingswatcher.h"
 
 

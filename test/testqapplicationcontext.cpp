@@ -5,7 +5,7 @@
 #include <QSemaphore>
 #include <QFuture>
 #include <iostream>
-#include "standardqapplicationcontext.h"
+#include "standardapplicationcontext.h"
 #include "appcontexttestclasses.h"
 #include "qtestcase.h"
 
