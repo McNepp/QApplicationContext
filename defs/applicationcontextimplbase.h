@@ -81,7 +81,7 @@ protected:
 
     }
 
-    service_registration_handle_t registerServiceHandle(const QString &name, const QApplicationContext::service_descriptor &descriptor, const service_config &config, ServiceScope scope, QObject *baseObject) override {
+    service_registration_handle_t registerServiceHandle(const QString &name, const QApplicationContext::service_descriptor &descriptor, const QApplicationContext::service_config &config, ServiceScope scope, QObject *baseObject) override {
         return QApplicationContext::delegateRegisterService(m_delegate, name, descriptor, config, scope, baseObject);
     }
 

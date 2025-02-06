@@ -43,12 +43,11 @@ namespace mcnepp::qtdi::detail {
         virtual QVariant resolve(QApplicationContext* appContext, const service_config& config) override {
             QVariant resolved = appContext->getConfigurationValue(makeConfigPath(config.group, key), hasWildcard);
             if(!resolved.isValid()) {
-                if(!key.startsWith('.') && config.properties.contains("."+key)) {
+                if(config.properties.contains(key)) {
                     //If not found in ApplicationContext's configuration, look in the "private properties":
-                    auto cv = config.properties["." + key];
+                    auto cv = config.properties[key];
                     switch(cv.configType) {
-                    case ConfigValueType::DEFAULT:
-                    case ConfigValueType::AUTO_REFRESH_EXPRESSION:
+                    case ConfigValueType::PRIVATE:
                         resolved = cv.expression;
                         if(resolved.typeId() == QMetaType::QString) {
                             return appContext->resolveConfigValue(resolved.toString());

@@ -171,6 +171,7 @@ private:
         }
 
 
+
         virtual QApplicationContext* applicationContext() const final override {
             return m_context->m_injectedContext;
         }

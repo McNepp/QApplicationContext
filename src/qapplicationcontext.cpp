@@ -60,10 +60,6 @@ const QLoggingCategory& loggingCategory(registration_handle_t handle) {
 }
 
 
-const service_config& serviceConfig(service_registration_handle_t handle) {
-    static service_config defaultConfig;
-    return handle ? handle->config() : defaultConfig;
-}
 
 
 
@@ -197,7 +193,7 @@ void BasicSubscription::connectTo(registration_handle_t source) {
 
 QString uniquePropertyName(const void* data, std::size_t size)
 {
-    QString str{"."}; // property starts with a dot -> "private property"
+    QString str;
     for(const unsigned char* iter = static_cast<const unsigned char*>(data), *end = iter + size; iter < end; ++iter) {
         str.append(QString::number(*iter, 16));
     }

@@ -118,10 +118,6 @@ const QRegularExpression& beanRefPattern() {
 }
 
 
-inline bool isPrivateProperty(const QString& key) {
-    return key.startsWith('.');
-}
-
 
 inline void setParentIfNotSet(QObject* obj, QObject* newParent) {
     if(!obj->parent()) {
@@ -159,7 +155,7 @@ template<typename T> struct Collector : public detail::Subscription {
 
 
 
-QStringList determineBeanRefs(const service_config::map_type& properties) {
+QStringList determineBeanRefs(const detail::service_config::map_type& properties) {
     QStringList result;
     for(auto entry : properties.asKeyValueRange()) {
         switch(entry.second.configType) {
@@ -422,7 +418,7 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
 
 
 
-const service_config StandardApplicationContext::ObjectRegistration::defaultConfig;
+const detail::service_config StandardApplicationContext::ObjectRegistration::defaultConfig;
 const QVariantMap StandardApplicationContext::EMPTY_MAP;
 
 
@@ -1361,10 +1357,9 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
             if(descriptor.meta_object && scope != ServiceScope::TEMPLATE) {
                 const service_config::map_type* props = &config.properties;
                 for(DescriptorRegistration* handle = base;;handle = handle->base() ){
-                    for(auto keyIter = props->keyBegin(); keyIter != props->keyEnd(); ++keyIter) {
-                        auto& key = *keyIter;
-                        if(!isPrivateProperty(key) && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
-                            qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
+                    for(auto iter = props->begin(); iter != props->end(); ++iter) {
+                        if(iter.value().configType != detail::ConfigValueType::PRIVATE && !iter.value().propertySetter && descriptor.meta_object->indexOfProperty(iter.key().toLatin1()) < 0) {
+                            qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << iter.key() << "'";
                             return nullptr;
                         }
                     }
@@ -1538,7 +1533,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
         service_config mergedConfig{reg->base()->config()};
         //Add the 'private properties' from the current Reg to the properties from the base. Current values will overwrite inherited values:
         for(auto[key,value] : config.properties.asKeyValueRange()) {
-            if(isPrivateProperty(key)) {
+            if(value.configType == detail::ConfigValueType::PRIVATE) {
                 mergedConfig.properties.insert(key, value);
             }
         }
@@ -1600,14 +1595,11 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
             }
             reg->resolveProperty(key, resolvedValue);
             detail::property_descriptor propertyDescriptor;
-            if(isPrivateProperty(key)) {
-                if(!cv.propertySetter) {
-                    continue;
-                }
+            if(cv.propertySetter) {
                 cv.propertySetter(target, resolvedValue);
                 propertyDescriptor.setter = cv.propertySetter;
                 propertyDescriptor.name = key.toLatin1();
-            } else {
+            } else if(cv.configType != detail::ConfigValueType::PRIVATE) {
                 auto targetProperty = metaObject->property(metaObject->indexOfProperty(key.toLatin1()));
                 if(!targetProperty.isValid() || !targetProperty.isWritable()) {
                     //Refering to a non-existing Q_PROPERTY by name is always non-fixable:
@@ -1620,6 +1612,8 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                     return Status::fatal;
                 }
                 propertyDescriptor = detail::propertySetter(targetProperty);
+            } else {
+                continue;
             }
             qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
             usedProperties.insert(key);
