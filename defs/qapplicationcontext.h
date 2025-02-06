@@ -1898,34 +1898,25 @@ template<auto func> struct service_initializer {
 ///
 /// \tparam S the service-interface of the Dependency
 /// \tparam kind the kind of Dependency
-/// \tparam C the type of the converter. This must be a *default-constructible Callable* class capable of converting
 /// a QVariant to the target-type, i.e. it must have an `operator()(const QVariant&)`.
-template<typename S,Kind kind=Kind::MANDATORY,typename C=detail::default_argument_converter<S,kind>> struct Dependency {
+template<typename S,Kind kind=Kind::MANDATORY> struct Dependency {
     static_assert(detail::could_be_qobject<S>::value, "Dependency must be potentially convertible to QObject");
     ///
     /// \brief the required name for this dependency.
     /// The default-value is the empty String, with the implied meaning <em>"any dependency of the correct type may be used"</em>.
     ///
     QString requiredName;
-
-    ///
-    /// \brief The (optional) converter. This must be a *default-constructible Callable* class capable of converting
-    /// a QVariant to the target-type, i.e. it must have an `operator()(const QVariant&)`.
-    ///
-    C converter;
 };
 
 
 ///
 /// \brief Injects a mandatory Dependency.
 /// \param requiredName the required name of the dependency. If empty, no name is required.
-/// \param converter an optional *Callable* object that can convert a QVariant to the target-type.
 /// \tparam S the service-type of the dependency.
-/// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return a mandatory Dependency on the supplied type.
 ///
-template<typename S,typename C=detail::default_argument_converter<S,Kind::MANDATORY>> [[nodiscard]] constexpr Dependency<S,Kind::MANDATORY,C> inject(const QString& requiredName = "", C converter = C{}) {
-    return Dependency<S,Kind::MANDATORY,C>{requiredName, converter};
+template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::MANDATORY> inject(const QString& requiredName = "") {
+    return Dependency<S,Kind::MANDATORY>{requiredName};
 }
 
 ///
@@ -1952,13 +1943,11 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::MANDATORY> injec
 /// \brief Injects an optional Dependency to another ServiceRegistration.
 /// This function will utilize the Registration::registeredName() to match the dependency.
 /// \param requiredName the required name of the dependency. If empty, no name is required.
-/// \param converter an optional *Callable* object that can convert a QVariant to the target-type.
 /// \tparam S the service-type of the dependency.
-/// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return an optional Dependency on the supplied type.
 ///
-template<typename S,typename C=detail::default_argument_converter<S,Kind::OPTIONAL>> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL,C> injectIfPresent(const QString& requiredName = "", C converter = C{}) {
-    return Dependency<S,Kind::OPTIONAL,C>{requiredName, converter};
+template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const QString& requiredName = "") {
+    return Dependency<S,Kind::OPTIONAL>{requiredName};
 }
 
 ///
@@ -1979,13 +1968,11 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL> inject
 ///
 /// \brief Injects a 1-to-N Dependency.
 /// \param requiredName the required name of the dependency. If empty, no name is required.
-/// \param converter an optional *Callable* object that can convert a QVariant to the target-type.
 /// \tparam S the service-type of the dependency.
-/// \tparam C the type of an optional *Callable* object that can convert a QVariant to the target-type.
 /// \return a 1-to-N Dependency on the supplied type.
 ///
-template<typename S,typename C=detail::default_argument_converter<S,Kind::N>> [[nodiscard]] constexpr Dependency<S,Kind::N,C> injectAll(const QString& requiredName = "", C converter = C{}) {
-    return Dependency<S,Kind::N,C>{requiredName, converter};
+template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::N> injectAll(const QString& requiredName = "") {
+    return Dependency<S,Kind::N>{requiredName};
 }
 
 ///
@@ -2681,23 +2668,6 @@ constexpr int PARENT_PLACEHOLDER_KIND = 0x40;
 constexpr int INVALID_KIND = 0xff;
 
 
-template<typename S> struct argument_converter {
-
-
-    S operator()(const QVariant& arg) const {
-        return arg.value<S>();
-    }
-};
-
-template<typename S,Kind kind,typename C> struct argument_converter<Dependency<S,kind,C>> {
-
-    auto operator()(const QVariant& arg) const {
-        return converter(arg);
-    }
-
-    C converter;
-};
-
 
 
 struct dependency_info {
@@ -2820,23 +2790,23 @@ struct dependency_helper {
         return { typeid(S), VALUE_KIND, "", QVariant::fromValue(dep) };
     }
 
-    static auto converter(S) {
+    static auto converter() {
         return &convert;
     }
 
 };
 
-template <typename S,Kind kind,typename C>
-struct dependency_helper<Dependency<S,kind,C>> {
+template <typename S,Kind kind>
+struct dependency_helper<Dependency<S,kind>> {
     using type = S;
 
 
-    static dependency_info info(const Dependency<S,kind,C>& dep) {
+    static dependency_info info(const Dependency<S,kind>& dep) {
         return { typeid(S), static_cast<int>(kind), dep.requiredName };
     }
 
-    static C converter(const Dependency<S,kind,C>& dep) {
-        return dep.converter;
+    static auto converter() {
+        return default_argument_converter<S,kind>{};
     }
 };
 
@@ -2855,7 +2825,7 @@ struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
         return { typeid(S), INVALID_KIND, dep.registeredName() };
     }
 
-    static auto converter(const mcnepp::qtdi::ServiceRegistration<S,scope>&) {
+    static auto converter() {
         return default_argument_converter<S,Kind::MANDATORY>{};
     }
 
@@ -2874,7 +2844,7 @@ struct dependency_helper<mcnepp::qtdi::ProxyRegistration<S>> {
         return { typeid(S), INVALID_KIND };
     }
 
-    static auto converter(const mcnepp::qtdi::ProxyRegistration<S>&) {
+    static auto converter() {
         return default_argument_converter<S,Kind::N>{};
     }
 
@@ -2892,7 +2862,7 @@ struct dependency_helper<Resolvable<S>> {
         return { typeid(S), RESOLVABLE_KIND, dep.expression, dep.defaultValue, dep.variantConverter };
     }
 
-    static auto converter(const Resolvable<S>&) {
+    static auto converter() {
         return &dependency_helper<S>::convert;
     }
 };
@@ -2910,7 +2880,7 @@ struct dependency_helper<ParentPlaceholder> {
         return { typeid(QObject*), PARENT_PLACEHOLDER_KIND};
     }
 
-    static auto converter(const ParentPlaceholder&) {
+    static auto converter() {
         return &dependency_helper<QObject*>::convert;
     }
 
@@ -3040,7 +3010,7 @@ template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep
     }
     (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
     if constexpr(detail::service_scope_traits<scope>::is_constructable) {
-        descriptor.constructor = service_creator<Impl>(factory, detail::dependency_helper<Dep>::converter(deps)...);
+        descriptor.constructor = service_creator<Impl>(factory, detail::dependency_helper<Dep>::converter()...);
     }
     return descriptor;
 }
