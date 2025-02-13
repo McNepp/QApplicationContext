@@ -792,17 +792,19 @@ with both arguments:
 
 In the previous paragraph, we used the mcnepp::qtdi::ServiceRegistration obtained by mcnepp::qtdi::QApplicationContext::registerService(), which refers to a single member of the ApplicationContext.
 However, we might be interested in all services of a certain service-type.  
-This can be achieved using mcnepp::qtdi::QApplicationContext::getRegistration(), which yields a mcnepp::qtdi::ServiceRegistration that represents *all services of the requested service-type*.
+This can be achieved using mcnepp::qtdi::QApplicationContext::getRegistration(), which yields a mcnepp::qtdi::ProxyRegistration that represents *all services of the requested service-type*.
 
 
     auto registration = context -> getRegistration<PropFetcher>();
-    qInfo() << "There have been" << registration.maxPublications() << "RestPropFetchers so far!";    
+    qInfo() << "There have been" << registration.registeredServices().size() << "RestPropFetchers so far!";    
 
 You may also access a specific service by name:
 
-    auto registration = context -> getRegistration<PropFetcher>("hamburgWeather");
+    auto registration = context -> getRegistration("hamburgWeather");
     if(!registration) {
-     qWarning() << "Could not obtain service 'hamburgWeather'";
+      qWarning() << "Could not obtain service 'hamburgWeather'";
+    } else {
+      registration.as<PropFetcher>().subscribe(this, [](PropFetcher* fetcher) { qInfo() << "Got a PropFetcher!"; });
     }
     
 
