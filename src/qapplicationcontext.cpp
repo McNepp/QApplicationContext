@@ -60,13 +60,13 @@ const QLoggingCategory& loggingCategory(registration_handle_t handle) {
 }
 
 
-const service_config& serviceConfig(service_registration_handle_t handle) {
-    static service_config defaultConfig;
-    return handle ? handle->config() : defaultConfig;
-}
 
 
-QString QConfigurationResolver::makePath(const QString& section, const QString& path) {
+
+
+namespace detail {
+
+QString makeConfigPath(const QString& section, const QString& path) {
     if(section.isEmpty() || path.startsWith('/')) {
         return path;
     }
@@ -76,7 +76,7 @@ QString QConfigurationResolver::makePath(const QString& section, const QString& 
     return section + '/' + path;
 }
 
-bool QConfigurationResolver::removeLastPath(QString& s) {
+bool removeLastConfigPath(QString& s) {
     int lastSlash = s.lastIndexOf('/');
     if(lastSlash <= 0) {
         return false;
@@ -88,8 +88,6 @@ bool QConfigurationResolver::removeLastPath(QString& s) {
     return true;
 }
 
-
-namespace detail {
 
 QMetaProperty findPropertyBySignal(const QMetaMethod &signalFunction, const QMetaObject* metaObject, const QLoggingCategory& loggingCategory)
 {
@@ -195,7 +193,7 @@ void BasicSubscription::connectTo(registration_handle_t source) {
 
 QString uniquePropertyName(const void* data, std::size_t size)
 {
-    QString str{"."}; // property starts with a dot -> "private property"
+    QString str;
     for(const unsigned char* iter = static_cast<const unsigned char*>(data), *end = iter + size; iter < end; ++iter) {
         str.append(QString::number(*iter, 16));
     }

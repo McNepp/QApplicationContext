@@ -3,7 +3,7 @@ namespace mcnepp::qtdi::detail {
 
 
 
-    QVariant PlaceholderResolver::resolve(QConfigurationResolver* appContext, const service_config& config) const {
+    QVariant PlaceholderResolver::resolve(QApplicationContext* appContext, const service_config& config) const {
         QString resolvedString;
         for(auto& resolvable : m_steps) {
             QVariant resolved = resolvable->resolve(appContext, config);
@@ -22,7 +22,7 @@ namespace mcnepp::qtdi::detail {
 
 
     struct PlaceholderResolver::literal_step : resolvable_step {
-        virtual QVariant resolve(QConfigurationResolver*, const service_config&) override {
+        virtual QVariant resolve(QApplicationContext*, const service_config&) override {
             return literal;
         }
 
@@ -40,20 +40,20 @@ namespace mcnepp::qtdi::detail {
     };
 
     struct PlaceholderResolver::placeholder_step : resolvable_step {
-        virtual QVariant resolve(QConfigurationResolver* appContext, const service_config& config) override {
-            QVariant resolved = appContext->getConfigurationValue(QConfigurationResolver::makePath(config.group, key), hasWildcard);
+        virtual QVariant resolve(QApplicationContext* appContext, const service_config& config) override {
+            QVariant resolved = appContext->getConfigurationValue(makeConfigPath(config.group, key), hasWildcard);
             if(!resolved.isValid()) {
-                if(!key.startsWith('.') && config.properties.contains("."+key)) {
+                if(config.properties.contains(key)) {
                     //If not found in ApplicationContext's configuration, look in the "private properties":
-                    auto cv = config.properties["." + key];
+                    auto cv = config.properties[key];
                     switch(cv.configType) {
-                    case ConfigValueType::SERVICE:
-                        break;
-                    default:
+                    case ConfigValueType::PRIVATE:
                         resolved = cv.expression;
                         if(resolved.typeId() == QMetaType::QString) {
                             return appContext->resolveConfigValue(resolved.toString());
                         }
+                    default:
+                        break;
                     }
                 }
                 if(!resolved.isValid() && !defaultValue.isEmpty()) {

@@ -5,7 +5,7 @@
 #include <QUuid>
 #include <QRegularExpression>
 #include <QCoreApplication>
-#include "standardqapplicationcontext.h"
+#include "standardapplicationcontext.h"
 #include "qsettingswatcher.h"
 
 
@@ -118,10 +118,6 @@ const QRegularExpression& beanRefPattern() {
 }
 
 
-inline bool isPrivateProperty(const QString& key) {
-    return key.startsWith('.');
-}
-
 
 inline void setParentIfNotSet(QObject* obj, QObject* newParent) {
     if(!obj->parent()) {
@@ -159,7 +155,7 @@ template<typename T> struct Collector : public detail::Subscription {
 
 
 
-QStringList determineBeanRefs(const service_config::map_type& properties) {
+QStringList determineBeanRefs(const detail::service_config::map_type& properties) {
     QStringList result;
     for(auto entry : properties.asKeyValueRange()) {
         switch(entry.second.configType) {
@@ -385,8 +381,8 @@ StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const s
 
 QList<service_registration_handle_t> StandardApplicationContext::ProxyRegistrationImpl::registeredServices() const {
     QList<service_registration_handle_t> result;
-    for(auto reg : m_context -> getRegistrationHandles()) {
-        if(reg->matches(m_type)) {
+    for(auto reg : m_context -> registrations) {
+        if(canAdd(reg)) {
             result.push_back(reg);
         }
     }
@@ -413,7 +409,7 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
     detail::connect(this, subscription);
     TemporarySubscriptionProxy tempProxy{subscription};
     //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
-    for(auto reg : m_context -> getRegistrationHandles()) {
+    for(auto reg : m_context -> registrations) {
         if(canAdd(reg)) {
             reg->subscribe(&tempProxy);
         }
@@ -422,7 +418,7 @@ void StandardApplicationContext::ProxyRegistrationImpl::onSubscription(subscript
 
 
 
-const service_config StandardApplicationContext::ObjectRegistration::defaultConfig;
+const detail::service_config StandardApplicationContext::ObjectRegistration::defaultConfig;
 const QVariantMap StandardApplicationContext::EMPTY_MAP;
 
 
@@ -681,10 +677,10 @@ Q_COREAPP_STARTUP_FUNCTION(registerAppInGlobalContext)
 
 
 
-StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* injectedContext, QObject* parent) :
+StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext, QObject* parent) :
     QApplicationContext(parent),
     m_loggingCategory(loggingCategory),
-    m_injectedContext(injectedContext)
+    m_injectedContext(delegatingContext)
 {
     if(auto app = QCoreApplication::instance()) {
         registerObject(app, "application");
@@ -693,12 +689,9 @@ StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& l
     m_settingsInitializer = getRegistration<QSettings>().subscribe(this, &StandardApplicationContext::onSettingsAdded).unwrap();
 
 
-    registerObject<QApplicationContext>(injectedContext, "context");
+    registerObject<QApplicationContext>(delegatingContext, "context");
 
-
-    if(setInstance(this)) {
-        qCInfo(loggingCategory()).noquote().nospace() << "Installed " << this << " as global instance";
-    }
+    setAsGlobalInstance();
 }
 
 
@@ -951,11 +944,13 @@ bool StandardApplicationContext::registerAlias(service_registration_handle_t reg
 
 
 
-void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
+void StandardApplicationContext::contextObjectDestroyed(DescriptorRegistration* objectRegistration)
 {
+    qCInfo(loggingCategory()).noquote().nospace() << "Object for " << *objectRegistration << " has been destroyed externally";
+
     for(auto iter = registrationsByName.begin(); iter != registrationsByName.end();) {
         auto reg = iter->second;
-        if(reg->getObject() == obj) {
+        if(reg == objectRegistration) {
             iter = registrationsByName.erase(iter);
         } else {
             ++iter;
@@ -963,14 +958,10 @@ void StandardApplicationContext::contextObjectDestroyed(QObject* obj)
     }
 
 
-    for(auto iter = registrations.begin(); iter != registrations.end();) {
-        if((*iter)->getObject() == obj) {
-            std::unique_ptr<DescriptorRegistration> regPtr{*iter};
-            iter = registrations.erase(iter);
-            qCInfo(loggingCategory()).noquote().nospace() << *regPtr << " has been destroyed externally";
-        } else {
-            ++iter;
-        }
+    auto found = std::find(registrations.begin(), registrations.end(), objectRegistration);
+    if(found != registrations.end()) {
+        registrations.erase(found);
+        delete objectRegistration;
     }
 }
 
@@ -1237,7 +1228,7 @@ QList<service_registration_handle_t> StandardApplicationContext::getRegistration
 
 
 
-service_registration_handle_t StandardApplicationContext::registerService(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj)
+service_registration_handle_t StandardApplicationContext::registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj)
 {
     if(!detail::hasCurrentThreadAffinity(this)) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
@@ -1366,10 +1357,9 @@ service_registration_handle_t StandardApplicationContext::registerService(const 
             if(descriptor.meta_object && scope != ServiceScope::TEMPLATE) {
                 const service_config::map_type* props = &config.properties;
                 for(DescriptorRegistration* handle = base;;handle = handle->base() ){
-                    for(auto keyIter = props->keyBegin(); keyIter != props->keyEnd(); ++keyIter) {
-                        auto& key = *keyIter;
-                        if(!isPrivateProperty(key) && descriptor.meta_object->indexOfProperty(key.toLatin1()) < 0) {
-                            qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << key << "'";
+                    for(auto iter = props->begin(); iter != props->end(); ++iter) {
+                        if(iter.value().configType != detail::ConfigValueType::PRIVATE && !iter.value().propertySetter && descriptor.meta_object->indexOfProperty(iter.key().toLatin1()) < 0) {
+                            qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << iter.key() << "'";
                             return nullptr;
                         }
                     }
@@ -1543,7 +1533,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
         service_config mergedConfig{reg->base()->config()};
         //Add the 'private properties' from the current Reg to the properties from the base. Current values will overwrite inherited values:
         for(auto[key,value] : config.properties.asKeyValueRange()) {
-            if(isPrivateProperty(key)) {
+            if(value.configType == detail::ConfigValueType::PRIVATE) {
                 mergedConfig.properties.insert(key, value);
             }
         }
@@ -1605,14 +1595,11 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
             }
             reg->resolveProperty(key, resolvedValue);
             detail::property_descriptor propertyDescriptor;
-            if(isPrivateProperty(key)) {
-                if(!cv.propertySetter) {
-                    continue;
-                }
+            if(cv.propertySetter) {
                 cv.propertySetter(target, resolvedValue);
                 propertyDescriptor.setter = cv.propertySetter;
                 propertyDescriptor.name = key.toLatin1();
-            } else {
+            } else if(cv.configType != detail::ConfigValueType::PRIVATE) {
                 auto targetProperty = metaObject->property(metaObject->indexOfProperty(key.toLatin1()));
                 if(!targetProperty.isValid() || !targetProperty.isWritable()) {
                     //Refering to a non-existing Q_PROPERTY by name is always non-fixable:
@@ -1625,6 +1612,8 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                     return Status::fatal;
                 }
                 propertyDescriptor = detail::propertySetter(targetProperty);
+            } else {
+                continue;
             }
             qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
             usedProperties.insert(key);
@@ -1750,6 +1739,27 @@ detail::PlaceholderResolver *StandardApplicationContext::getResolver(const QStri
     return configResolver.get();
 }
 
+QStringList StandardApplicationContext::configurationKeys(const QString &section) const
+{
+    Collector<QSettings> collector;
+    for(auto reg : registrations) {
+        reg->subscribe(&collector);
+    }
+
+    QStringList orderedKeys;
+    QSet<QString> keySet;
+    for(QSettings* settings : collector.collected) {
+        for(const QString& key : settings->allKeys()) {
+            if(key.startsWith(section) && !keySet.contains(key))             {
+                keySet.insert(key);
+                orderedKeys.push_back(key);
+            }
+        }
+    }
+    return orderedKeys;
+}
+
+
 QVariant StandardApplicationContext::getConfigurationValue(const QString& key, bool searchParentSections) const {
     if(auto bytes = QString{key}.replace('/', '.').toLocal8Bit(); qEnvironmentVariableIsSet(bytes)) {
         auto value = qEnvironmentVariable(bytes);
@@ -1770,11 +1780,12 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key, b
                 return value;
             }
         }
-    } while(searchParentSections && removeLastPath(searchKey));
+    } while(searchParentSections && detail::removeLastConfigPath(searchKey));
 
     qCDebug(loggingCategory()).noquote().nospace() << "No value found for configuration-entry: " << key;
     return QVariant{};
 }
+
 
 const QLoggingCategory &StandardApplicationContext::loggingCategory() const
 {
@@ -1858,6 +1869,10 @@ QVariant StandardApplicationContext::resolveConfigValue(const QString &expressio
     return QVariant{};
 }
 
+QApplicationContext *newDelegate(const QLoggingCategory &loggingCategory, QApplicationContext *delegatingContext)
+{
+    return new StandardApplicationContext{loggingCategory, delegatingContext, delegatingContext};
+}
 
 
 

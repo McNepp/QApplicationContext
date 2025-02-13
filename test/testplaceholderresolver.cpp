@@ -1,4 +1,5 @@
 #include "placeholderresolver.h"
+#include "applicationcontextimplbase.h"
 #include <QSettings>
 #include <QTemporaryFile>
 #include <QTest>
@@ -6,33 +7,26 @@
 
 namespace mcnepp::qtdi::detail {
 
-class MockConfigurationResolver : public QConfigurationResolver {
+class MockConfigurationResolver : public ApplicationContextImplBase<QApplicationContext> {
 public:
-    explicit MockConfigurationResolver(QSettings* settings) :
-        m_settings{settings} {
+    explicit MockConfigurationResolver() :
+        ApplicationContextImplBase<QApplicationContext>{} {
 
     }
 
-private:
-    QSettings* m_settings;
 
-    // QConfigurationResolver interface
-public:
     QVariant getConfigurationValue(const QString &key, bool searchParentSections) const override
     {
-        lookupKeys.push_back(key);
-        QVariant result = m_settings->value(key);
-        if(!result.isValid() && searchParentSections) {
-            if(QString k = key; removeLastPath(k)) {
-                return getConfigurationValue(k, searchParentSections);
+        QString searchKey = key;
+        do {
+            lookupKeys.push_back(searchKey);
+            if(QVariant resolved = base_t::getConfigurationValue(searchKey, false); resolved.isValid()) {
+                return resolved;
             }
-        }
-        return result;
+        } while(searchParentSections && removeLastConfigPath(searchKey));
+        return {};
     }
 
-    QVariant resolveConfigValue(const QString &expression) override {
-        return PlaceholderResolver::parse(expression, m_settings)->resolve(this, service_config{});
-    }
 
     mutable QStringList lookupKeys;
 };
@@ -48,7 +42,8 @@ private slots:
         tempFile = std::make_unique<QTemporaryFile>();
         tempFile->open();
         settings = std::make_unique<QSettings>(tempFile->fileName(), QSettings::IniFormat);
-        configResolver = std::make_unique<MockConfigurationResolver>(settings.get());
+        configResolver = std::make_unique<MockConfigurationResolver>();
+        configResolver->registerObject(settings.get());
     }
 
     void testResolveLiteral() {
@@ -80,7 +75,9 @@ private slots:
         PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit}", this);
         QVERIFY(resolver);
         settings->setValue("test/sayit", "Hello, world!");
-        QCOMPARE(resolver->resolve(configResolver.get(), config() << withGroup("test")), "Hello, world!");
+        service_config cfg;
+        cfg.group="test";
+        QCOMPARE(resolver->resolve(configResolver.get(), cfg), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"test/sayit"});
     }
 
@@ -89,7 +86,7 @@ private slots:
         PlaceholderResolver* resolver = PlaceholderResolver::parse("${*/tests/test/sayit}", this);
         QVERIFY(resolver);
         settings->setValue("sayit", "Hello, world!");
-        QCOMPARE(resolver->resolve(configResolver.get(), config()), "Hello, world!");
+        QCOMPARE(resolver->resolve(configResolver.get(), service_config{}), "Hello, world!");
         QStringList expected{"tests/test/sayit", "tests/sayit", "sayit"};
         QCOMPARE(configResolver->lookupKeys, expected);
     }
@@ -105,7 +102,9 @@ private slots:
     void testResolveFromPrivateProperty() {
         PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, ${sayit}!", this);
         QVERIFY(resolver);
-        QCOMPARE(resolver->resolve(configResolver.get(), config({{".sayit", "world"}})), "Hello, world!");
+        service_config cfg;
+        cfg.properties.insert("sayit", placeholderValue("sayit", "world").second);
+        QCOMPARE(resolver->resolve(configResolver.get(), cfg), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"sayit"});
     }
 
@@ -115,8 +114,10 @@ private slots:
         QVERIFY(resolver);
 
         settings->setValue("text", "world");
-        QCOMPARE(resolver->resolve(configResolver.get(), config({{".sayit", "${text}"}})), "Hello, world!");
-        QStringList expected{"sayit", "text"};
+        service_config cfg;
+        cfg.properties.insert("sayit", placeholderValue("sayit", "${text}").second);
+        QCOMPARE(resolver->resolve(configResolver.get(), cfg), "Hello, world!");
+        QStringList expected{"sayit"};
         QCOMPARE(configResolver->lookupKeys, expected);
     }
 

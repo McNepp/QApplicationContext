@@ -12,7 +12,7 @@ class PlaceholderResolver : public QObject {
 
 public:
 
-    QVariant resolve(QConfigurationResolver* appContext, const service_config& config) const;
+    QVariant resolve(QApplicationContext* appContext, const service_config& config) const;
 
     bool hasPlaceholders() const;
 
@@ -34,7 +34,7 @@ private:
 
     struct resolvable_step {
         virtual ~resolvable_step() = default;
-        virtual QVariant resolve(QConfigurationResolver* appContext, const service_config& config) = 0;
+        virtual QVariant resolve(QApplicationContext* appContext, const service_config& config) = 0;
         virtual QString placeholder() const = 0;
     };
 
