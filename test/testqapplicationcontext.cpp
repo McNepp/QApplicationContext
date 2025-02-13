@@ -1216,7 +1216,7 @@ void testWatchConfigurationFileChangeWithError() {
         RegistrationSlot<BaseService> slot1{base1};
         RegistrationSlot<BaseService> slot2{base2};
         auto timerReg = context->getRegistration<TimerAware>();
-        QCOMPARE(timerReg.registeredServices().size(), 3);
+        QCOMPARE(timerReg.registeredServices().size(), 2);
         RegistrationSlot<TimerAware> timerSlot{timerReg};
         QVERIFY(slot1);
         QVERIFY(slot2);
@@ -1454,15 +1454,13 @@ void testWatchConfigurationFileChangeWithError() {
 
         auto timerAwareReg = context->getRegistration<TimerAware>();
 
-        QCOMPARE(timerAwareReg.registeredServices().size(), 2);
-        QVERIFY(timerAwareReg.registeredServices().contains(abstractReg));
+        QCOMPARE(timerAwareReg.registeredServices().size(), 1);
         QVERIFY(timerAwareReg.registeredServices().contains(reg));
 
 
         auto interfaceReg = context->getRegistration<Interface1>();
 
-        QCOMPARE(interfaceReg.registeredServices().size(), 2);
-        QVERIFY(interfaceReg.registeredServices().contains(abstractReg));
+        QCOMPARE(interfaceReg.registeredServices().size(), 1);
         QVERIFY(interfaceReg.registeredServices().contains(reg));
         auto depReg = context->registerService(service<DependentService>(inject<Interface1>()));
         QVERIFY(context->publish());

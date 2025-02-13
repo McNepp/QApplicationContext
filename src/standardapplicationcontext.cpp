@@ -382,7 +382,7 @@ StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const s
 QList<service_registration_handle_t> StandardApplicationContext::ProxyRegistrationImpl::registeredServices() const {
     QList<service_registration_handle_t> result;
     for(auto reg : m_context -> registrations) {
-        if(reg->matches(m_type)) {
+        if(canAdd(reg)) {
             result.push_back(reg);
         }
     }
