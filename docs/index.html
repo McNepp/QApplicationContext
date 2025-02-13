@@ -147,13 +147,13 @@ context -&gt; registerService(decl, "hamburgWeather"); // 3
 
 context -&gt; publish(); // 4
 </pre><ol type="1">
-<li>Creates a <code><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">mcnepp::qtdi::StandardApplicationContext</a></code> on the heap. Note that we assign it to a pointer of the interface <code><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">mcnepp::qtdi::QApplicationContext</a></code>. This avoids accidental use of non-public API.</li>
+<li>Creates a <code><a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext. Using this class is the &quot;canonical way&quot; of ...">mcnepp::qtdi::StandardApplicationContext</a></code> on the heap. Note that we assign it to a pointer of the interface <code><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">mcnepp::qtdi::QApplicationContext</a></code>. This avoids accidental use of non-public API.</li>
 <li>Creates a Declaration for the RestPropFetcher. The two arguments (the URL and the pointer to the <code>QNetworkAccessManager</code>) will be stored with the registration. They will be passed on to the constructor when the service is published.</li>
 <li>Registers a RestPropFetcher with the context. The first argument is the name that this service shall have in the QApplicationContext.</li>
 <li>The context is published. It will instantiate a RestPropFetcher and pass the two arguments to the constructor.</li>
 </ol>
 <p>The above code has an obvious flaw: The <code>QNetworkAccessManager</code> is created outside the QApplicationContext. It will not be managed by the Context. Should another service need a <code>QNetworkAccessManager</code>, you would have to create another instance.</p>
-<p>We fix this by not providing the pointer to the <code>QNetworkAccessManager</code>, but instead using a kind of "placeholder" for it. This placeholder is the class-template <code><a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">mcnepp::qtdi::Dependency</a></code>. We can create Dependencies by using one of the functions <a class="el" href="qapplicationcontext_8h.html#a52003170c4fd6d306dcc8a53eacd195e" title="Injects a mandatory Dependency.">mcnepp::qtdi::inject()</a>, <a class="el" href="qapplicationcontext_8h.html#a2ddf8a871e1f8982afcd787799816cc0" title="Injects an optional Dependency to another ServiceRegistration. This function will utilize the Registr...">mcnepp::qtdi::injectIfPresent()</a> or <a class="el" href="qapplicationcontext_8h.html#a52003170c4fd6d306dcc8a53eacd195e" title="Injects a mandatory Dependency.">mcnepp::qtdi::inject()</a>.</p>
+<p>We fix this by not providing the pointer to the <code>QNetworkAccessManager</code>, but instead using a kind of "placeholder" for it. This placeholder is the class-template <code><a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">mcnepp::qtdi::Dependency</a></code>. We can create Dependencies by using one of the functions <a class="el" href="qapplicationcontext_8h.html#aa230bb92d281b0431f927577348acba9" title="Injects a mandatory Dependency.">mcnepp::qtdi::inject()</a>, <a class="el" href="qapplicationcontext_8h.html#afe4b3cbeda7748a3b87a0309720cba6b" title="Injects an optional Dependency to another ServiceRegistration. This function will utilize the Registr...">mcnepp::qtdi::injectIfPresent()</a> or <a class="el" href="qapplicationcontext_8h.html#aa230bb92d281b0431f927577348acba9" title="Injects a mandatory Dependency.">mcnepp::qtdi::inject()</a>.</p>
 <p>You can think of <code>inject</code> as a request to the QApplicationContext: <em>If a service of this type has been registered, please provide it here!</em>.</p>
 <p>By leveraging <code>inject()</code>, our code becomes this:</p>
 <pre class="fragment">using namespace mcnepp::qtdi;
@@ -172,7 +172,7 @@ context -&gt; publish(); // 5
 <li>Registers the descriptor with the context (as before).</li>
 <li>The context is published. It will instantiate a QNetworkAccessManager first, then a RestPropFetcher, injecting the QNetworkAccessManager into its constructor.</li>
 </ol>
-<p><b>Note:</b> In the above example, we obtain the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a> for the <code>QNetworkAccessManager</code> in line 2.<br  />
+<p><b>Note:</b> In the above example, we obtain the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">mcnepp::qtdi::ServiceRegistration</a> for the <code>QNetworkAccessManager</code> in line 2.<br  />
  Whenever we want to express a dependency for a Service and we have the corresponding ServiceRegistration at hand, we can leave out the <code>inject()</code> and pass the ServiceRegistration directly as a dependency. <br  />
 Thus, the lines 2 to 4 from our example could be simplified like this: </p><pre class="fragment">auto networkRegistration = context -&gt; registerService&lt;QNetworkAccessManager&gt;(); // 2
 context -&gt; registerService(service&lt;RestPropFetcher&gt;(QString{"https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"), networkRegistration}, "hamburgWeather"); // 3
@@ -221,19 +221,20 @@ Specifying default values</h2>
 </ol>
 <h2><a class="anchor" id="autotoc_md15"></a>
 Specifying an explicit Group</h2>
-<p>If you structure your configuration in a hierarchical manner, you may find it useful to put your configuration-values into a <code>QSettings::group()</code>. Such a group can be specified for your resolvable values by means of the <a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> function. In the following example, the configuration-keys "baseUrl", "hamburgStationId" and "connectionTimeout" are assumed to reside in the group named "mcnepp": </p><pre class="fragment">auto decl = service&lt;RestPropFetcher&gt;(resolve("${baseUrl}?stationIds=${hamburgStationId}"), resolve&lt;int&gt;("${connectionTimeout}"), inject&lt;QNetworkAccessManager&gt;());
-appContext -&gt; registerService(decl, "hamburgWeather", config() &lt;&lt; withGroup("mcnepp"));
+<p>If you structure your configuration in a hierarchical manner, you may find it useful to put your configuration-values into a <code>QSettings::group()</code>. Such a group can be specified for your resolvable values by means of the <a class="el" href="qapplicationcontext_8h.html#a64ec1392974a8374f34bfff59fc43a8e" title="Sets the group for a service_config.  The usage of this function is analogous to that of iostream-man...">mcnepp::qtdi::withGroup(const QString&amp;)</a> function. In the following example, the configuration-keys "baseUrl", "hamburgStationId" and "connectionTimeout" are assumed to reside in the group named "mcnepp": </p><pre class="fragment">auto decl = ;
+appContext -&gt; registerService(service&lt;RestPropFetcher&gt;(resolve("${baseUrl}?stationIds=${hamburgStationId}"), resolve&lt;int&gt;("${connectionTimeout}"), inject&lt;QNetworkAccessManager&gt;())
+&lt;&lt; withGroup("mcnepp"), 
+"hamburgWeather");
 </pre><h2><a class="anchor" id="autotoc_md16"></a>
 Lookup in sub-sections</h2>
-<p>Every key will be looked up in the section that has been provided via as an argument to <a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a>, argument, unless the key itself starts with a forward slash, which denotes the root-section.</p>
-<p>A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section: Insert <code>*/</code> right after the opening sequence of the placeholder. </p><pre class="fragment">context -&gt; registerService(service&lt;QIODevice,QFile&gt;(resolve("${*/filename}")), "file", config() &lt;&lt; withGroup("files"));
+<p>Every key will be looked up in the section that has been provided via as an argument to <a class="el" href="qapplicationcontext_8h.html#a64ec1392974a8374f34bfff59fc43a8e" title="Sets the group for a service_config.  The usage of this function is analogous to that of iostream-man...">mcnepp::qtdi::withGroup(const QString&amp;)</a>, argument, unless the key itself starts with a forward slash, which denotes the root-section.</p>
+<p>A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section: Insert <code>*/</code> right after the opening sequence of the placeholder. </p><pre class="fragment">context -&gt; registerService(service&lt;QIODevice,QFile&gt;(resolve("${*/filename}")) &lt;&lt; withGroup("files"), "file");
 </pre><p>The key "filename" will first be searched in the section "files". If it cannot be found, it will be searched in the root-section.</p>
 <h1><a class="anchor" id="configuring-services"></a>
 Configuring properties of services</h1>
 <p>We have seen how we can inject configuration-values into Service-constructors. <br  />
 However, a service may have additional dependencies or configuration-values that need to be supplied after construction. <br  />
-For this purpose, an object of type <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">mcnepp::qtdi::service_config</a> can be passed to QApplication::registerService(). <br  />
-We use one of the overloads of <a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> in order to create a <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">mcnepp::qtdi::service_config</a>.</p>
+For this purpose, there are various overloads of <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html#ab08828a9cae2e021ffc10ca3bc58b75e" title="Adds a type-safe configuration-entry to this Service.">mcnepp::qtdi::Service::operator&lt;&lt;()</a>.</p>
 <h2><a class="anchor" id="autotoc_md17"></a>
 Using Q_PROPERTY</h2>
 <p>One way of configuring services is to use its <code>Q_PROPERTY</code> declarations. Suppose we modify the declaration of <code>RestPropFetcher</code> like this: </p><pre class="fragment">class RestPropFetcher : public QObject {
@@ -266,41 +267,41 @@ Using Q_PROPERTY</h2>
   void urlChanged();
   void connectionTimeoutChanged();
 };
-</pre><p>Now, the "url" cannot be injected into the constructor. Rather, it must be set explicitly via the corresponding Q_PROPERTY. For this, the yet unused <code>service_config</code> argument comes into play: It contains a <code>QVariantMap</code> with the names and values of properties to set: </p><pre class="fragment">context -&gt; registerService(service&lt;RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()), "hamburgWeather", config({{"url", "${baseUrl}?stationIds=${hamburgStationId}"}, {"connectionTimeout", "${connectionTimeout:5000}}));
-context -&gt; registerService(service&lt;RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()), "berlinWeather", config({{"url", "${baseUrl}?stationIds=${berlinStationId}"}, {"connectionTimeout", "${connectionTimeout:5000}})); 
-</pre><p>As you can see, the code has changed quite significantly: instead of supplying the Url as a constructor-argument, you use <a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> and pass in the key/value-pairs for configuring the service's url and connectionTimeouts as Q_PROPERTYs.</p>
-<p><b>Note:</b> Every property supplied to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a> will be considered a potential <code>Q_PROPERTY</code> of the target-service. <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">mcnepp::qtdi::QApplicationContext::publish()</a> will fail if no such property can be found. <br  />
- However, if you prefix the property-key with a dot, it will be considered a <em>private property</em>. It will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY. Such <em>private properties</em> may be passed to a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html" title="A mix-in interface for classes that may modify services before publication. The method process(servic...">mcnepp::qtdi::QApplicationContextPostProcessor</a> (see section <a class="el" href="#tweaking-services">Tweaking services</a> below).</p>
-<p>Also, <em>private properties</em> can be very useful in conjunction with <a class="el" href="#service-templates">Service-templates</a>.</p>
+</pre><p>Now, the "url" cannot be injected into the constructor. Rather, it must be set explicitly via the corresponding Q_PROPERTY. In order to achieve this, we must add configuration-entries to the service. We use the left-shift operator <code>&lt;&lt;</code> for this, as shown below: </p><pre class="fragment">context -&gt; registerService(service&lt;RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()) &lt;&lt; propValue("url", "${baseUrl}?stationIds=${hamburgStationId}") &lt;&lt; propValue("connectionTimeout", "${connectionTimeout:5000}"), "hamburgWeather");
+context -&gt; registerService(service&lt;RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()) &lt;&lt; propValue("url", "${baseUrl}?stationIds=${berlinStationId}") &lt;&lt; propValue("connectionTimeout", "${connectionTimeout:5000}"), "berlinWeather"); 
+</pre><p>As you can see, the code has changed quite significantly: instead of supplying the Url as a constructor-argument, you pass in the key/value-pairs for configuring the service's url and connectionTimeouts as Q_PROPERTYs.</p>
+<p><b>Note:</b> Every <a class="el" href="qapplicationcontext_8h.html#aad81e85469d866cefecc663a766def26" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::propValue()</a> supplied to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a> will be considered a potential <code>Q_PROPERTY</code> of the target-service. <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">mcnepp::qtdi::QApplicationContext::publish()</a> will fail if no such property can be found. <br  />
+ However, if you use <a class="el" href="qapplicationcontext_8h.html#a95e9c49e39e4fcbe28ceca48da71dcd1" title="Creates a configuration-entry for a service.  The resulting service_config_entry can then be passed t...">mcnepp::qtdi::placeholderValue()</a> instead, it will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY. Such <em>placeholder-value</em> may be passed to a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html" title="A mix-in interface for classes that may modify services before publication. The method process(servic...">mcnepp::qtdi::QApplicationContextPostProcessor</a> (see section <a class="el" href="#tweaking-services">Tweaking services</a> below).</p>
+<p>Also, <em>placeholder-value</em> can be very useful in conjunction with <a class="el" href="#service-templates">Service-templates</a>.</p>
 <h2><a class="anchor" id="autotoc_md18"></a>
 Configuring services with type-safe 'setters'</h2>
 <p>In the previous paragraph, you could see how Q_PROPERTYs of the services were initialized using the property-names. <br  />
 Now, we will show arbitrary service-properties can be configured, even if no Q_PROPERTY has been declared. <br  />
 Instead of using the property-name, we'll reference the member-function that sets the value. <br  />
-We use one of the various overloads of <a class="el" href="qapplicationcontext_8h.html#a9d4f50592427143dffe1904aca6b520e" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::entry()</a> in order to create a type-safe configuration-entry. <br  />
-Here is an example setting the <code>transferTimeout</code> of a QNetworkAccessManager. This property is not declared with the Q_PROEPRTY macro, thus, it cannot be set using the QMetaType-system: </p><pre class="fragment">context -&gt; registerService(service&lt;QNetworkAccessManager&gt;(), "networkManager", config() &lt;&lt; entry(&amp;QNetworkAccessManager::setTransferTimeout, 5000)); 
+We use one of the various overloads of <a class="el" href="qapplicationcontext_8h.html#aad81e85469d866cefecc663a766def26" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::propValue()</a> in order to create a type-safe configuration-entry. <br  />
+Here is an example setting the <code>transferTimeout</code> of a QNetworkAccessManager. This property is not declared with the Q_PROEPRTY macro, thus, it cannot be set using the QMetaType-system: </p><pre class="fragment">context -&gt; registerService(service&lt;QNetworkAccessManager&gt;() &lt;&lt; propValue(&amp;QNetworkAccessManager::setTransferTimeout, 5000), "networkManager"); 
 </pre><p><br  />
-Using <em>setters</em> can, of course, be combined with resolving configuration-values: </p><pre class="fragment">context -&gt; registerService(service&lt;QNetworkAccessManager&gt;(), "networkManager", config() &lt;&lt; entry(&amp;QNetworkAccessManager::setTransferTimeout, "${transferTimeout}")); 
+Using <em>setters</em> can, of course, be combined with resolving configuration-values: </p><pre class="fragment">context -&gt; registerService(service&lt;QNetworkAccessManager&gt;() &lt;&lt; propValue(&amp;QNetworkAccessManager::setTransferTimeout, "${transferTimeout}"), "networkManager"); 
 </pre><h2><a class="anchor" id="autotoc_md19"></a>
 Auto-refreshable configuration-values</h2>
-<p>If you configure a Q_PROPERTY using <a class="el" href="qapplicationcontext_8h.html#ae9134d3bd63dc9885fe60a7c1f918c2b" title="Makes a service_config and populates it with properties.  The service must have a Q_PROPERTY for ever...">mcnepp::qtdi::config(std::initializer_list&lt;std::pair&lt;QString,QVariant&gt;&gt;)</a>, the property of the Service-Object will be set exactly once, immediately after creation, right before any <a class="el" href="#service-initializers">service-initializers</a> may be invoked. After that, the service will be published. <br  />
+<p>If you configure a Q_PROPERTY using <a class="el" href="qapplicationcontext_8h.html#aad81e85469d866cefecc663a766def26" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::propValue()</a>, the property of the Service-Object will be set exactly once, immediately after creation, right before any <a class="el" href="#service-initializers">service-initializers</a> may be invoked. After that, the service will be published. <br  />
 There may be times, however, when you want a property to be refreshed automatically every time the value in the corresponding QSettings-object changeds. <br  />
-This can be achieved by using <a class="el" href="qapplicationcontext_8h.html#aac83aafd952e2c2c71032645773646c4" title="Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime....">mcnepp::qtdi::autoRefresh(const QString&amp;,const QString&amp;)</a>. <br  />
-The following line will configure a QTimer's <code>interval</code> using an auto-refreshable configuration-value: </p><pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config() &lt;&lt; autoRefresh("interval", "${timerInterval}"));
+This can be achieved by using <a class="el" href="qapplicationcontext_8h.html#aecd6c0272cea03116803d76f12e40157" title="Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime....">mcnepp::qtdi::autoRefresh(const QString&amp;,const QString&amp;)</a>. <br  />
+The following line will configure a QTimer's <code>interval</code> using an auto-refreshable configuration-value: </p><pre class="fragment">context-&gt;registerService(service&lt;QTimer&gt;() &lt;&lt; autoRefresh("interval", "${timerInterval}"), "timer");
 </pre><p>In case the configured QSettings-object uses a file as its persistent storage, any change to that file will be immediately detected. It will lead to a re-evaluation of the property. In case the configured QSettings-object uses a different persistent storage (such as the Windows Registry), the changes will be polled periodically. <br  />
-Auto-refresh will also work with more complex expressions for the property. In the following example, the property <code>objectName</code> will be automatically refreshed when either one of the configuration-values <code>prefix</code> or <code>suffix</code> is modified: </p><pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config() &lt;&lt; autoRefresh("objectName", "timer-${prefix}${suffix}"));
-</pre><p>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it: </p><pre class="fragment"> context-&gt;registerService&lt;QTimer&gt;("timer", config() &lt;&lt; withAutoRefresh &lt;&lt; entry("objectName", "theTimer") &lt;&lt; entry("interval", "${timerInterval}"));
-</pre><p><b>Note:</b> Auto-refresh will be disabled by default in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">mcnepp::qtdi::StandardApplicationContext</a>. <br  />
+Auto-refresh will also work with more complex expressions for the property. In the following example, the property <code>objectName</code> will be automatically refreshed when either one of the configuration-values <code>prefix</code> or <code>suffix</code> is modified: </p><pre class="fragment">context-&gt;registerService(service&lt;QTimer&gt;() &lt;&lt; autoRefresh("objectName", "timer-${prefix}${suffix}"), "timer");
+</pre><p>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it: </p><pre class="fragment"> context-&gt;registerService(service&lt;QTimer&gt;() &lt;&lt; withAutoRefresh &lt;&lt; propValue("objectName", "theTimer") &lt;&lt; propValue("interval", "${timerInterval}"), "timer");
+</pre><p><b>Note:</b> Auto-refresh will be disabled by default in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext. Using this class is the &quot;canonical way&quot; of ...">mcnepp::qtdi::StandardApplicationContext</a>. <br  />
 It must be explicitly enabled by putting the following configuration-entry into one of the QSettings-objects registered with the context: </p><pre class="fragment">[qtdi]
 enableAutoRefresh=true
 ; Optionally, specify the refresh-period:
 autoRefreshMillis=2000
-</pre><p>Auto-refreshable properties can also be specified using <em>setters</em>: </p><pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config() &lt;&lt; autoRefresh(&amp;QTimer::setInterval, "${timerInterval}"));
+</pre><p>Auto-refreshable properties can also be specified using <em>setters</em>: </p><pre class="fragment">context-&gt;registerService(service&lt;QTimer&gt;() &lt;&lt; autoRefresh(&amp;QTimer::setInterval, "${timerInterval}"), "timer");
 </pre><h1><a class="anchor" id="autotoc_md20"></a>
 Service-prototypes</h1>
-<p>As shown above, a service that was registered using <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a> will be instantiated once <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">mcnepp::qtdi::QApplicationContext::publish(bool)</a> is invoked. <br  />
+<p>As shown above, a service that was registered using <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a> will be instantiated once <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">mcnepp::qtdi::QApplicationContext::publish(bool)</a> is invoked. <br  />
 A single instance of the service will be injected into every other service that depends on it.</p>
-<p>However, there may be some services that cannot be shared between dependent services. In this case, use <a class="el" href="qapplicationcontext_8h.html#a2438ec3e3e81944f1c8c8eeee580998d" title="Creates a Service-prototype with the default service-factory.">mcnepp::qtdi::prototype()</a> instead of <a class="el" href="qapplicationcontext_8h.html#a07ae03c57a4c371f2f24659088813670" title="Creates a Service with the default service-factory.">mcnepp::qtdi::service()</a> as an argument to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a>. <br  />
+<p>However, there may be some services that cannot be shared between dependent services. In this case, use <a class="el" href="qapplicationcontext_8h.html#a2438ec3e3e81944f1c8c8eeee580998d" title="Creates a Service-prototype with the default service-factory.">mcnepp::qtdi::prototype()</a> instead of <a class="el" href="qapplicationcontext_8h.html#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> as an argument to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a>. <br  />
 Such a registration will not necessarily instantiate the service on <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">mcnepp::qtdi::QApplicationContext::publish(bool)</a>. Only if there are other services depending on it will a new instance be created and injected into the dependent service.</p>
 <p>Every instance of a service-protoype that gets injected into a dependent service will be made a QObject-child of the dependent service. In other words, the dependent service becomes the <em>owner</em> of the prototype-instance.</p>
 <p>The same is true for <em>references to other members</em>: if a protoype is referenced via the ampersand-syntax, the instance of that prototype will be made a child of the service that references it.</p>
@@ -308,38 +309,37 @@ Such a registration will not necessarily instantiate the service on <a class="el
 Service-templates</h1>
 <p>A service-template is a recipe for configuring a service without actually registering a concrete service. Such a template can then be re-used when further concrete services are registered. <br  />
 (For those familiar with Spring-DI: this would be an <em>"abstract"</em> bean-definition). <br  />
-A Service-template can be registered like this: </p><pre class="fragment">auto restFetcherTemplateRegistration = context -&gt; registerService(serviceTemplate&lt;RestPropFetcher&gt;(), "fetcherBase", config({
-    {"connectionTimeout", "${connectionTimeout:5000}
-    {"url", "${baseUrl}?stationIds=${stationId}"}
-}));
+A Service-template can be registered like this: </p><pre class="fragment">auto restFetcherTemplateRegistration = context -&gt; registerService(serviceTemplate&lt;RestPropFetcher&gt;()
+    &lt;&lt; propValue("connectionTimeout", "${connectionTimeout:5000}")
+    &lt;&lt; propValue("url", "${baseUrl}?stationIds=${stationId}"),
+"fetcherBase");
 </pre><p><br  />
-The return-value has the type <code>ServiceRegistration&lt;RestPropFetcher,ServiceScope::TEMPLATE&gt;</code>. It can be supplied as an additional argument to subsequent registrations: </p><pre class="fragment">context -&gt; registerService(service&lt;RestPropFetcher&gt;(), restFetcherTemplateRegistration, "hamburgWeather", config({{".stationId", "10147"}});
+The return-value has the type <code>ServiceRegistration&lt;RestPropFetcher,ServiceScope::TEMPLATE&gt;</code>. It can be supplied as an additional argument to subsequent registrations: </p><pre class="fragment">context -&gt; registerService(service&lt;RestPropFetcher&gt;() &lt;&lt; placeholderValue("stationId", "10147"), restFetcherTemplateRegistration, "hamburgWeather");
 </pre><p>If a service-registration utilizes a service-template, the type of the registered service must be implicitly convertible to the service-template's type. In particular, it can be the same type (as can be seen in the example above).</p>
 <p>Service-templates have the following capabilities:</p>
 <ol type="1">
-<li>Uniform configuration. You may configure Q_PROPERTYs in a uniform way for all services that use this template. See the property <code>connectionTimeout</code> in the above example, which will be set to the same value for every service derived from this template. Even more interesting is the use of the placeholder <code>${stationId}</code> in the template's configuration. It will be resolved by use of a <em>private property</em> at the registration of the concrete service.</li>
-<li>Init-Methods. You may specify an <em>init-method</em> via the <code><a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">mcnepp::qtdi::service_traits</a></code> of the service-template.</li>
+<li>Uniform configuration. You may configure Q_PROPERTYs in a uniform way for all services that use this template. See the property <code>connectionTimeout</code> in the above example, which will be set to the same value for every service derived from this template. Even more interesting is the use of the placeholder <code>${stationId}</code> in the template's configuration. It will be resolved by use of a <em>placeholder-value at the registration of the concrete service.</em></li>
+<li><em>Init-Methods. You may specify an *init-method</em> via the <code><a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">mcnepp::qtdi::service_traits</a></code> of the service-template.</li>
 <li>Uniform advertising of service-interfaces. You may once specify the set of interfaces that a service-template advertises. That way, you don't need to repeat this for every service that uses the template. (See section <a class="el" href="#service-interfaces">Service-interfaces</a> below).</li>
 </ol>
 <h2><a class="anchor" id="autotoc_md21"></a>
 Generic (un-validated) properties of Service-templates</h2>
 <p>Registration of a service-template differs from the registration of a "normal" service in one important aspect:</p>
-<p>The properties that you provide via <a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> will not be validated against the Q_PROPERTYs of the service's implementation-type!</p>
+<p>The properties that you provide via <a class="el" href="qapplicationcontext_8h.html#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> will not be validated against the Q_PROPERTYs of the service's implementation-type!</p>
 <p>The rationale is that the service-template may be used by services of yet unknown type. The validation of a Q_PROPERTY will therefore be postponed until registration of the concrete service that derives from this service-template.</p>
 <p>This makes it possible to register configured service-templates without assuming any particular service-type at all! <br  />
 In order to facilitate this, the type-argument of the function <a class="el" href="qapplicationcontext_8h.html#a1dc51a0152614fb643aaf888bf901eae" title="Creates a Service-template with no dependencies and no constructor.  The returned Service cannot be i...">mcnepp::qtdi::serviceTemplate()</a> has a default-type of <code>QObject</code>.</p>
 <p>Using this knowledge, let's register a service-template for arbitrary services that support a Q_PROPERTY <code>url</code>:</p>
-<pre class="fragment">auto urlAware = context-&gt;registerService(serviceTemplate(), "urlAware", config({{ "url", "http://github.com"}}));
-</pre><p>This can be expressed even more concisely using the convenience-function <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#afba617274aeee33b363468030d9064c5" title="Registers a service-template with no dependencies with this ApplicationContext. This is a convenience...">mcnepp::qtdi::QApplicationContext::registerServiceTemplate()</a>: </p><pre class="fragment">auto urlAware = context-&gt;registerServiceTemplate("urlAware", config({{ "url", "http://github.com"}}));
+<pre class="fragment">auto urlAware = context-&gt;registerService(serviceTemplate() &lt;&lt; propValue("url", "http://github.com"), "urlAware");
 </pre><h1><a class="anchor" id="autotoc_md22"></a>
 Managed Services vs. Un-managed Objects</h1>
-<p>The function <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a> that was shown in the preceeding example results in the creation of a <code>managed service</code>. <br  />
+<p>The function <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a> that was shown in the preceeding example results in the creation of a <code>managed service</code>. <br  />
  The entire lifecylce of the registered Service will be managed by the QApplicationContext. <br  />
  Sometimes, however, it will be necessary to register an existing QObject with the ApplicationContext and make it available to other components as a dependency. <br  />
  A reason for this may be that the constructor of the class does not merely accept other <code>QObject</code>-pointers (as "dependencies"), but also <code>QString</code>s or other non-QObject-typed value. <br  />
  A good example would be registering objects of type <code>QSettings</code>, which play an important role in <a class="el" href="#externalized-configuration">Externalized Configuration</a>. <br  />
 </p>
-<p>There are some crucial differences between <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a>, when invoked with either <a class="el" href="qapplicationcontext_8h.html#a07ae03c57a4c371f2f24659088813670" title="Creates a Service with the default service-factory.">mcnepp::qtdi::service()</a> or <a class="el" href="qapplicationcontext_8h.html#a2438ec3e3e81944f1c8c8eeee580998d" title="Creates a Service-prototype with the default service-factory.">mcnepp::qtdi::prototype()</a>. Also, there are differences to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8bf49def9048cc92c5aa5d1a9437682f" title="Registers an object with this ApplicationContext. The object will immediately be published....">mcnepp::qtdi::QApplicationContext::registerObject()</a>, as the following table shows:</p>
+<p>There are some crucial differences between <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a>, when invoked with either <a class="el" href="qapplicationcontext_8h.html#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> or <a class="el" href="qapplicationcontext_8h.html#a2438ec3e3e81944f1c8c8eeee580998d" title="Creates a Service-prototype with the default service-factory.">mcnepp::qtdi::prototype()</a>. Also, there are differences to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8bf49def9048cc92c5aa5d1a9437682f" title="Registers an object with this ApplicationContext. The object will immediately be published....">mcnepp::qtdi::QApplicationContext::registerObject()</a>, as the following table shows:</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone"></th><th class="markdownTableHeadNone">registerService(service())   </th><th class="markdownTableHeadNone">registerService(prototype())   </th><th class="markdownTableHeadNone">registerObject    </th></tr>
@@ -370,7 +370,7 @@ Types of dependency-relations</h1>
 <h2><a class="anchor" id="autotoc_md24"></a>
 MANDATORY</h2>
 <p>As stated before, mandatory dependencies enforce that there is exactly one service of the dependency-type present in the ApplicationContext. Otherwise, publication will fail. Mandatory dependencies can be specified by using inject(): </p><pre class="fragment">context-&gt;registerService(service&lt;RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()));
-</pre><p>In case you have the ServiceRegistration for the dependency at hand, you may skip the invocation of <a class="el" href="qapplicationcontext_8h.html#a52003170c4fd6d306dcc8a53eacd195e" title="Injects a mandatory Dependency.">mcnepp::qtdi::inject()</a> and use the ServiceRegistration directly:</p>
+</pre><p>In case you have the ServiceRegistration for the dependency at hand, you may skip the invocation of <a class="el" href="qapplicationcontext_8h.html#aa230bb92d281b0431f927577348acba9" title="Injects a mandatory Dependency.">mcnepp::qtdi::inject()</a> and use the ServiceRegistration directly:</p>
 <p>....auto networkRegistration = context-&gt;registerService&lt;QNetworkAccessManager&gt;(); context-&gt;registerService(service&lt;RestPropFetcher&gt;(networkRegistration));</p>
 <h2><a class="anchor" id="autotoc_md25"></a>
 OPTIONAL</h2>
@@ -388,7 +388,7 @@ N (one-to-many)</h2>
 </pre><p>Note that the above component comprises a one-to-,any relationship with its dependent components. We must notify the QApplicationContext about this, so that it can correctly inject all the matching dependencies into the component's constructor. <br  />
  The following statement will do the trick: </p><pre class="fragment">context -&gt; registerService(service&lt;PropFetcherAggregator&gt;(injectAll&lt;RestPropFetcher&gt;()), "propFetcherAggregation");
 </pre><p><b>Note:</b>, while constructing the <code>QList</code> with dependencies, the ordering of registrations of <b>non-interdependent services</b> will be honoured as much as possible. In the above example, the services "hamburgWeather" and "berlinWeather" will appear in that order in the <code>QList</code> that is passed to the <code>PropFetcherAggreator</code>.</p>
-<p>In case you have the ProxyRegistration for the dependency at hand, you may skip the invocation of <a class="el" href="qapplicationcontext_8h.html#a52003170c4fd6d306dcc8a53eacd195e" title="Injects a mandatory Dependency.">mcnepp::qtdi::inject()</a> and use the ProxyRegistration directly:</p>
+<p>In case you have the ProxyRegistration for the dependency at hand, you may skip the invocation of <a class="el" href="qapplicationcontext_8h.html#aa230bb92d281b0431f927577348acba9" title="Injects a mandatory Dependency.">mcnepp::qtdi::inject()</a> and use the ProxyRegistration directly:</p>
 <p>....auto networkRegistration = context-&gt;getRegistration&lt;QNetworkAccessManager&gt;(); context-&gt;registerService(service&lt;PropFetcherAggregator&gt;(networkRegistration));</p>
 <p>The following table sums up the characteristics of the different types of dependencies:</p>
 <table class="doxtable">
@@ -401,34 +401,9 @@ N (one-to-many)</h2>
 <tr>
 <td>N</td><td>Injects all dependencies of the dependency-type that have been registered into the dependent service, using a <code>QList</code> </td><td>Injects an empty <code>QList</code> into the dependent service. </td><td>See 'Normal behaviour' </td></tr>
 </table>
-<h1><a class="anchor" id="autotoc_md27"></a>
-Converting Dependencies</h1>
-<p>As we have seen in the previous section, a mandatory Dependency of type T will be injected into the dependent Service's constructor as a <code>T*</code>. <br  />
-Likewise, a one-to-many Dependency of type T will be injected into the dependent Service's constructor as a <code>QList&lt;T*&gt;</code>. <br  />
-However, sometimes a Service may have a constructor that accepts its dependencies in a different format. Suppose that the class <code>PropFetcherAggregator</code> were declared like this: </p><pre class="fragment">class PropFetcherAggregator : public QObject {
-  Q_OBJECT
-
-  public:
-
-  static constexpr MAX_FETCHERS = 10;
-
-  explicit PropFetcherAggregator(const std::array&lt;RestPropFetcher*,MAX_FETCHERS&gt;&amp; fetchers, QObject* parent = nullptr);
-};
-</pre><p>There is no implicit conversion from a QList to <code>a std::array</code>. Thus, we'd have to write a converter that accepts a <code>QObjectList</code> and produces a <code>std::array</code>. Actually, the converter's argument-type must be <code>QVariant</code>, as that will be passed by the ApplicationContext.</p>
-<pre class="fragment">struct propfetcher_set_converter {
-  using array_t = std::array&lt;RestPropFetcher*,PropFetcherAggregator::MAX_FETCHERS&gt;;
-
-  array_t operator()(const QVariant&amp; arg) const {
-    array_t target;
-    auto qlist = arg.value&lt;QObjectList&gt;();
-    std::copy_n(qlist.begin(), std::min(target.size(), qlist.size()), target.begin());
-    return target;        
-  }
-};
-</pre><p>Now when we register the <code>PropFetcherAggregator</code> with an ApplicationContext, we simply specify this converter as a type-argument: </p><pre class="fragment">context -&gt; registerService(service&lt;PropFetcherAggregator&gt;(injectAll&lt;RestPropFetcher,propfetcher_set_converter&gt;()));
-</pre><h1><a class="anchor" id="service-interfaces"></a>
+<h1><a class="anchor" id="service-interfaces"></a>
 Service-interfaces</h1>
-<p>In the preceeding example, we have registered our QObject-derived class <code>RestPropFetcher</code> directly, using the function template <a class="el" href="qapplicationcontext_8h.html#a07ae03c57a4c371f2f24659088813670" title="Creates a Service with the default service-factory.">mcnepp::qtdi::service()</a> with one type-argument (aka <code>"service&lt;RestPropFetcher&gt;()"</code>).<br  />
+<p>In the preceeding example, we have registered our QObject-derived class <code>RestPropFetcher</code> directly, using the function template <a class="el" href="qapplicationcontext_8h.html#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> with one type-argument (aka <code>"service&lt;RestPropFetcher&gt;()"</code>).<br  />
  Such a registration will register the implementation-type <code>RestPropFetcher</code> with the same service-interface. <br  />
 We have also specified the class as the dependency-type for <code>PropFetcherAggregator</code>. <br  />
  However, in most complex applications you will likely use an abstract base-class (or 'interface'). Additionally, this interface need not be derived from QObject! <br  />
@@ -483,11 +458,11 @@ context -&gt; registerService&lt;QNetworkAccessManager&gt;();
 
 context -&gt; registerService(service&lt;PropFetcherAggregator&gt;(injectAllOf&lt;PropFetcher&gt;()), "propFetcherAggration");
 
-/*2*/ context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()).advertiseAs&lt;PropFetcher&gt;(), "hamburgWeather", config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
+/*2*/ context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()).advertiseAs&lt;PropFetcher&gt;() &lt;&lt; propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"), "hamburgWeather"); 
 
 context -&gt; publish(); 
 </pre><p><b>Note:</b> The order of registrations has been switched: now, the dependent service <code>PropFetcherAggregator</code> is registered before the services it depends on. This was done to demonstrate that, <b>regardless of the ordering of registrations</b>, the dependencies will be resolved correctly! Also, there are two type-arguments for the Service now: the first specifies the type of service-interface, the second the implementation-type.</p>
-<h2><a class="anchor" id="autotoc_md28"></a>
+<h2><a class="anchor" id="autotoc_md27"></a>
 Multiple service-interfaces</h2>
 <p>A service may be advertised under more than one service-interface. This makes sense if the service-type implements several non-QObject interfaces that other services depend on. Suppose the class <code>RestPropFetcher</code> implements an additional interface <code>QNetworkManagerAware</code>: </p><pre class="fragment">class QNetworkManagerAware {
    virtual ~QNetworkManagerAware() = default;
@@ -506,10 +481,10 @@ virtual setNetworkManager(QNetworkAccessManager*) override;
 class RestPropFetcher : public PropFetcher, public QNetworkManagerAware {
 ...
 };
-</pre><p>In order to advertise a <code>RestPropFetcher</code> as both a <code>PropFetcher</code> and a <code>QNetworkManagerAware</code>, we use: </p><pre class="fragment">auto reg = context -&gt; registerService(service&lt;RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()).advertiseAs&lt;PropFetcher,QNetworkManagerAware&gt;(), "hamburgWeather", config({{"url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"}})); 
+</pre><p>In order to advertise a <code>RestPropFetcher</code> as both a <code>PropFetcher</code> and a <code>QNetworkManagerAware</code>, we use: </p><pre class="fragment">auto reg = context -&gt; registerService(service&lt;RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()).advertiseAs&lt;PropFetcher,QNetworkManagerAware&gt;() &lt;&lt; propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"), "hamburgWeather"); 
 </pre><p><b>Note:</b> The return-value <code>reg</code> will be of type <code>ServiceRegistration&lt;RestPropFetcher,ServiceScope::SINGLETON&gt;</code>.</p>
 <p>You may convert this value to <code>ServiceRegistraton&lt;PropFetcher,ServiceScope::SINGLETON&gt;</code> as well as <code>ServiceRegistration&lt;QNetworkManagerAware,ServiceScope::SINGLETON&gt;</code>, using the member-function ServiceRegistration::as(). Conversions to other types will not succeed.</p>
-<h1><a class="anchor" id="autotoc_md29"></a>
+<h1><a class="anchor" id="autotoc_md28"></a>
 Referencing other members of the ApplicationContext</h1>
 <p>Sometimes, it may be necessary to inject one member of the ApplicationContext into another member not via constructor, but via a Q_PROPERTY. <br  />
  Suppose that each <code>PropFetcher</code> shall have (for whatever reason) a reference to the <code>PropFetcherAggregator</code>. <br  />
@@ -539,18 +514,18 @@ Referencing other members of the ApplicationContext</h1>
 </pre><p>And here's how this property will be automatically set to the ApplicationContext's <code>PropFetcherAggregator</code>. Note the ampersand as the first character of the property-value, which makes this a <em>named reference to another member</em>:</p>
 <pre class="fragment">context -&gt; registerService(service&lt;PropFetcherAggregator&gt;(injectAll&lt;PropFetcher&gt;()), "propFetcherAggregator");
 
-context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher(inject&lt;QNetworkAccessManager&gt;()), "hamburgWeather", config({
-  {"url", "${weatherUrl}${hamburgStationId}"},
-  {"summary", "&amp;propFetcherAggregator"}
-}));
+context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher(inject&lt;QNetworkAccessManager&gt;())
+  &lt;&lt; propValue("url", "${weatherUrl}${hamburgStationId}")
+  &lt;&lt; propValue("summary", "&amp;propFetcherAggregator"), 
+"hamburgWeather");
 </pre><p>By the way, if you prefer a more type-safe way of expressing a relation with another service, here is a slightly different form of configuration, using member-function-pointers and service-registrations. The effect will be exactly the same, though:</p>
 <pre class="fragment">auto propFetcherReg = context -&gt; registerService(service&lt;PropFetcherAggregator&gt;(injectAll&lt;PropFetcher&gt;()), "propFetcherAggregator");
 
-context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher(inject&lt;QNetworkAccessManager&gt;()), "hamburgWeather", config()
-  &lt;&lt; entry("url", "${weatherUrl}${hamburgStationId}")
-  &lt;&lt; entry(&amp;PropFetcher::setSummary, propFetcherReg)
-);
-</pre><h1><a class="anchor" id="autotoc_md30"></a>
+context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher(inject&lt;QNetworkAccessManager&gt;())
+  &lt;&lt; propValue("url", "${weatherUrl}${hamburgStationId}")
+  &lt;&lt; propValue(&amp;PropFetcher::setSummary, propFetcherReg),
+  "hamburgWeather");
+</pre><h1><a class="anchor" id="autotoc_md29"></a>
 Connecting Signals of Services to Slots</h1>
 <p>Qt's core concept for creating workflow from one QObject to another is via <em>signals and slots</em>. <br  />
 For example, QTimer declares the <em>signal</em> QTimer::timeout(). <br  />
@@ -575,7 +550,7 @@ timerReg.subscribe(cleaner, [cleaner](QTimer* timer) {
 </pre><p>That looks pretty ugly, right? <br  />
 Luckily, the function <a class="el" href="qapplicationcontext_8h.html#a3af2e9ed942d0a2991ea109e3483c6b5" title="Connects a signal of one Service to a slot of another service.  This function is the ApplicationConte...">mcnepp::qtdi::connectServices()</a> hides all that ugly boilerplate code from us: </p><pre class="fragment">connectServices(timerReg, &amp;QTimer::timeout, cleanerReg, &amp;Cleaner::clean);
 </pre><p>As you will have notices, this looks almost exactly like the original example with the pointers-to-QObjects.</p>
-<h1><a class="anchor" id="autotoc_md31"></a>
+<h1><a class="anchor" id="autotoc_md30"></a>
 Binding source-properties to target-properties of other members of the ApplicationContext</h1>
 <p>In the preceeding example, we used a reference to another member for the purpose of <b>initializing</b> a Q_PROPERTY.</p>
 <p>However, we might also want to <b>bind</b> a target-service's property to the corresponding source-property of another service.</p>
@@ -597,7 +572,7 @@ timer1.setInterval(4711); // 4
 <li>We change the first timer's interval. This will also change the second timer's interval!</li>
 </ol>
 <p>This way of binding properties has the advantage that it can also be applied to ServiceRegistrations obtained via QApplicationContext::getRegistration(), aka those that represent more than one service. The source-property will be bound to every target-service automatically!</p>
-<h2><a class="anchor" id="autotoc_md32"></a>
+<h2><a class="anchor" id="autotoc_md31"></a>
 Type-safe bindings</h2>
 <p>The above binding used property-names to denote the source- and target-properties. <br  />
 In case the source-service offers a signal that corresponds with the property, you can use pointers to member-functions instead, which is more type-safe. <br  />
@@ -618,43 +593,45 @@ timer1.setObjectName("new Name"); // 4
 <li>We bind the property <code>objectName</code> of the second timer to the first timer's propery.</li>
 <li>We change the first timer's objectName. This will also change the second timer's objectName!</li>
 </ol>
-<h1><a class="anchor" id="autotoc_md33"></a>
+<h1><a class="anchor" id="autotoc_md32"></a>
 Subscribing to a service after registration</h1>
 <p>So far, we have published the ApplicationContext and let it take care of wiring all the components together. <br  />
  In some cases, you need to obtain a reference to a member of the Context after it has been published. <br  />
- This is where the return-value of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a> comes into play: <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>.</p>
-<p>It offers the method mcnepp::qtdi::ServiceRegistration::subscribe(), which is a type-safe version of a Qt-Signal. (It is actually implemented in terms of the Signal mcnepp::qtdi::Registration::objectPublished(QObject*)).</p>
-<p>In addition to being type-safe, the method mcnepp::qtdi::ServiceRegistration::subscribe() has the advantage that it will automatically inject the service if you subscribe after the service has already been published. <br  />
- This code shows how to utilize it: </p><pre class="fragment">auto registration = context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()), "hamburgWeather", config({{"url", "${weatherUrl}${hamburgStationId}"}})); 
+ This is where the return-value of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a> comes into play: <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">mcnepp::qtdi::ServiceRegistration</a>.</p>
+<p>It offers the method <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a281f12a7c18c6793c5924a73159ff1bb" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">mcnepp::qtdi::ServiceRegistration::subscribe()</a>, which is a type-safe version of a Qt-Signal. (It is actually implemented in terms of the Signal mcnepp::qtdi::Registration::objectPublished(QObject*)).</p>
+<p>In addition to being type-safe, the method <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a281f12a7c18c6793c5924a73159ff1bb" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">mcnepp::qtdi::ServiceRegistration::subscribe()</a> has the advantage that it will automatically inject the service if you subscribe after the service has already been published. <br  />
+ This code shows how to utilize it: </p><pre class="fragment">auto registration = context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()) &lt;&lt; propValue("url", "${weatherUrl}${hamburgStationId}"), "hamburgWeather"); 
 
 registration.subscribe(this, [](PropFetcher* fetcher) { qInfo() &lt;&lt; "I got the PropFetcher!"; });
-</pre><p>The function mcnepp::qtdi::ServiceRegistration::subscribe() does return a value of type <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">mcnepp::qtdi::Subscription</a>. Usually, you may ignore this return-value. However, it can be used for error-checking and for cancelling a subscription, should that be necessary.</p>
-<h2><a class="anchor" id="autotoc_md34"></a>
+</pre><p>The function <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a281f12a7c18c6793c5924a73159ff1bb" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">mcnepp::qtdi::ServiceRegistration::subscribe()</a> does return a value of type <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">mcnepp::qtdi::Subscription</a>. Usually, you may ignore this return-value. However, it can be used for error-checking and for cancelling a subscription, should that be necessary.</p>
+<h2><a class="anchor" id="autotoc_md33"></a>
 Subscribing to multiple Services</h2>
 <p>As shown above, the method Registration::subscribe() is the way to go if you want to get a hold on a published service.</p>
 <p>But what if you would like to do something with more than one Service?</p>
 <p>Use <a class="el" href="qapplicationcontext_8h.html#ae106d702aeec65e9720e7c19821aeed4" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a>, followed by <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html#a392e36cf6961cfd0a6356f2441f4ac4c" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">mcnepp::qtdi::ServiceCombination::subscribe()</a>.</p>
-<p>The following example combines one service of type <code>PropFetcher</code> and one <code>QTimer</code> and invokes a member-function <code>fetch</code> with both arguments: </p><pre class="fragment">auto propFetcherRegistration = context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()), "hamburgWeather", config({{"url", "${weatherUrl}${hamburgStationId}"}})); 
+<p>The following example combines one service of type <code>PropFetcher</code> and one <code>QTimer</code> and invokes a member-function <code>fetch</code> with both arguments: </p><pre class="fragment">auto propFetcherRegistration = context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()) &lt;&lt; propValue("url", "${weatherUrl}${hamburgStationId}"), "hamburgWeather"); 
 auto timerRegistration = context-&gt;getRegistration&lt;QTime&gt;();
 combine(propFetcherRegistration, timerRegistration).subscribe(this, [this](PropFetcher* fetcher, QTimer* timer) 
   { 
      this-&gt;fetch(fetcher, timer); 
   });
-</pre><h1><a class="anchor" id="autotoc_md35"></a>
+</pre><h1><a class="anchor" id="autotoc_md34"></a>
 Accessing published services of the ApplicationContext</h1>
-<p>In the previous paragraph, we used the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a> obtained by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a>, which refers to a single member of the ApplicationContext. However, we might be interested in all services of a certain service-type. <br  />
- This can be achieved using <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aafdabdace508bc72e8145ae328d46a11" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">mcnepp::qtdi::QApplicationContext::getRegistration()</a>, which yields a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a> that represents <em>all services of the requested service-type</em>.</p>
+<p>In the previous paragraph, we used the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">mcnepp::qtdi::ServiceRegistration</a> obtained by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a>, which refers to a single member of the ApplicationContext. However, we might be interested in all services of a certain service-type. <br  />
+ This can be achieved using <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9c35f37337d77fdc0e19e160d48ba569" title="Obtains a ServiceRegistration for a name.  This function will look up Services by the names they were...">mcnepp::qtdi::QApplicationContext::getRegistration()</a>, which yields a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">mcnepp::qtdi::ProxyRegistration</a> that represents <em>all services of the requested service-type</em>.</p>
 <pre class="fragment">auto registration = context -&gt; getRegistration&lt;PropFetcher&gt;();
-qInfo() &lt;&lt; "There have been" &lt;&lt; registration.maxPublications() &lt;&lt; "RestPropFetchers so far!";    
-</pre><p>You may also access a specific service by name: </p><pre class="fragment">auto registration = context -&gt; getRegistration&lt;PropFetcher&gt;("hamburgWeather");
+qInfo() &lt;&lt; "There have been" &lt;&lt; registration.registeredServices().size() &lt;&lt; "RestPropFetchers so far!";    
+</pre><p>You may also access a specific service by name: </p><pre class="fragment">auto registration = context -&gt; getRegistration("hamburgWeather");
 if(!registration) {
- qWarning() &lt;&lt; "Could not obtain service 'hamburgWeather'";
+  qWarning() &lt;&lt; "Could not obtain service 'hamburgWeather'";
+} else {
+  registration.as&lt;PropFetcher&gt;().subscribe(this, [](PropFetcher* fetcher) { qInfo() &lt;&lt; "Got a PropFetcher!"; });
 }
 </pre><h1><a class="anchor" id="tweaking-services"></a>
 Tweaking services (QApplicationContextPostProcessor)</h1>
 <p>Whenever a service has been instantiated and all properties have been set, QApplicationContext will apply all registered <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html" title="A mix-in interface for classes that may modify services before publication. The method process(servic...">mcnepp::qtdi::QApplicationContextPostProcessor</a>`s to it. These are user-supplied QObjects that implement the aforementioned interface which comprises a single method: </p><pre class="fragment">QApplicationContextPostProcessor::process(service_registration_handle_t, QObject*,const QVariantMap&amp;)
 </pre><p>In this method, you might apply further configuration to your service there, or perform logging or monitoring tasks.<br  />
- Any information that you might want to pass to a QApplicationContextPostProcessor can be supplied as so-called <em>private properties</em> via <a class="el" href="qapplicationcontext_8h.html#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a>. Just prefix the property-key with a dot.</p>
+ Any information that you might want to pass to a QApplicationContextPostProcessor can be supplied as a so-called <em>placeholder-value</em> via <a class="el" href="qapplicationcontext_8h.html#a95e9c49e39e4fcbe28ceca48da71dcd1" title="Creates a configuration-entry for a service.  The resulting service_config_entry can then be passed t...">mcnepp::qtdi::placeholderValue(const QString&amp;,const QVariant&amp;)</a>.</p>
 <h1><a class="anchor" id="service-initializers"></a>
 Service-Initializers</h1>
 <p>The last step done in <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">mcnepp::qtdi::QApplicationContext::publish()</a> for each service is the invocation of an <em>init-method</em>, should one have been specified.</p>
@@ -670,7 +647,7 @@ namespace mcnepp::qtdi {
      using initializer_type = RestPropFetcher_initializer;
   };
 }
-</pre><h2><a class="anchor" id="autotoc_md36"></a>
+</pre><h2><a class="anchor" id="autotoc_md35"></a>
 Initialization by function-reference</h2>
 <p>In the above example, the callable <code>struct RestPropFetcher_initializer</code> simply invokes the method <code>PropFetcherAggregator::init()</code>. Shouldn't we be able to get rid of the <code>struct RestPropFetcher_initializer</code> somehow? <br  />
 This is indeed possible. The helper-type <a class="el" href="structmcnepp_1_1qtdi_1_1service__initializer.html" title="A helper-template that converts a pointer to a function or a pointer to a member-function into a dist...">mcnepp::qtdi::service_initializer</a> takes a pointer to a member-function and converts it into a type. That way, we can reference the member-function (almost) directly in our service_traits: </p><pre class="fragment">namespace mcnepp::qtdi {
@@ -678,7 +655,7 @@ This is indeed possible. The helper-type <a class="el" href="structmcnepp_1_1qtd
      using initializer_type = service_initializer&lt;&amp;RestPropFetcher::init&gt;;
   };
 }
-</pre><h2><a class="anchor" id="autotoc_md37"></a>
+</pre><h2><a class="anchor" id="autotoc_md36"></a>
 Specifying initializers via interfaces</h2>
 <p>Suppose that the init-method was part of the service-interface <code>PropFetcher</code> that was introduced above. </p><pre class="fragment">class PropFetcher  {
 
@@ -699,25 +676,25 @@ Well, this is how it's done: </p><pre class="fragment">namespace mcnepp::qtdi {
 </pre><p>Of course, in order to take advantage of this, we must advertise our <code>RestPropFetcher</code> under the interface <code>PropFetcher</code>. <br  />
 Now, if you advertise a service under more than one interface, an ambiguity could arise, in case more than one interface declares its own service_initializer. In that case, compilation will fail with a corresponding diganostic. <br  />
 In order to fix this error, you should specify an initializer_type in the service_traits of the service's <em>implementation-type</em>.</p>
-<h2><a class="anchor" id="autotoc_md38"></a>
+<h2><a class="anchor" id="autotoc_md37"></a>
 Specifying initializers per Registration</h2>
 <p>There is also method that lets you specify an <em>init-method</em> without the need for a specialization of <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">mcnepp::qtdi::service_traits</a>. <br  />
 This will register only one specific service with the supplied <em>init-method</em>: </p><pre class="fragment">context -&gt; registerService(service&lt;PropFetcherAggregator&gt;(injectAll&lt;RestPropFetcher&gt;()).withInit(&amp;PropFetcherAggregator::init));
 </pre><p>See <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html#acfe0d6d931c2087dc9913dffbbde28dd" title="Specifies an init-method for this service.  This overrides the init-method that is deduced from the i...">mcnepp::qtdi::Service::withInit()</a></p>
-<h1><a class="anchor" id="autotoc_md39"></a>
+<h1><a class="anchor" id="autotoc_md38"></a>
 Resolving ambiguities</h1>
 <p>Sometimes, multiple instances of a service with the same service-type have been registered. <br  />
  (In our previous examples, this was the case with two instances of the <code>PropFetcher</code> service-type.) <br  />
  If you want to inject only one of those into a dependent service, how can you do that? <br  />
  Well, using the name of the registered service seems like a good idea. The following code will still provide a <code>QList&lt;PropFetcher*&gt;</code> to the <code>PropFetcherAggregator</code>. However, the List will contain solely the service that was registered under the name "hamburgWeather": <br  />
  </p><pre class="fragment">context -&gt; registerService(service&lt;PropFetcherAggregator&gt;(injectAll&lt;PropFetcher&gt;("hamburgWeather")), "propFetcherAggregator");
-</pre><h1><a class="anchor" id="autotoc_md40"></a>
+</pre><h1><a class="anchor" id="autotoc_md39"></a>
 Customizing service-instantiation</h1>
-<p>So far, we have seen that each call to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a> mirrors a corresponding constructor-invocation of the service-type.</p>
+<p>So far, we have seen that each call to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a> mirrors a corresponding constructor-invocation of the service-type.</p>
 <p>In order for this to work, several pre-conditions must be true:</p>
 <ol type="1">
 <li>the constructor of the service must be accessible, i.e. declared <code>public</code>.</li>
-<li>The number of mandatory arguments must match the arguments provided via <code>QApplicationContext::registerService()</code>, in excess of the service-name and, optionally, the <code>service_config</code>.</li>
+<li>The number of mandatory arguments must match the arguments provided via <code>QApplicationContext::registerService()</code>.</li>
 <li>For each <code>Dependency&lt;T&gt;</code> with <code>Kind::MANDATORY</code> or <code>Kind::OPTIONAL</code>, the argument-type must be <code>T*</code>.</li>
 <li>For each <code>Dependency&lt;T&gt;</code> with <code>Kind::N</code>, the argument-type must be <code>QList&lt;T*&gt;</code>.</li>
 </ol>
@@ -741,7 +718,7 @@ Customizing service-instantiation</h1>
 <p>Now, service-registration will fail, as <code>PropFetcherAggregator</code>'s constructor cannot be invoked.</p>
 <p>Luckily, there are two ways of solving this: you can either specialize the template <a class="el" href="structmcnepp_1_1qtdi_1_1service__factory.html" title="A template that can be specialized to override the standard way of instantiating services....">mcnepp::qtdi::service_factory</a> for your service-type, or you can provide your own factory.</p>
 <p>(This twofold-approach follows precedent from the standard-library, where you can either specizalize std::hash, or provide your own 'hasher' to classes such as std::unordered_set.)</p>
-<h2><a class="anchor" id="autotoc_md41"></a>
+<h2><a class="anchor" id="autotoc_md40"></a>
 Specializing service_factory</h2>
 <p>As with all such specializations, it must reside in the namespace of the primary template, i.e. <code>mcnepp::qtdi</code>.</p>
 <p>The specialization must provide a call-operator that takes the arguments provided by QApplicationContext, adapts those arguments to the arguments expected by the service-type, and returns a pointer to the newly created service.<br  />
@@ -756,8 +733,8 @@ Specializing service_factory</h2>
   };
 }
 </pre><p>And, voila: We can register our service exactly as we did before!</p>
-<h2><a class="anchor" id="autotoc_md42"></a>
-Provide a custom factory</h2>
+<h2><a class="anchor" id="autotoc_md41"></a>
+Provide a custom factory for the service_traits</h2>
 <p>Your custom factory must provide a suitable operator(). Additionally, it should provide a type-declaration <code>service_type</code>:</p>
 <pre class="fragment">  struct propfetcher_factory {
     using service_type = PropFetcherAggregator;
@@ -772,13 +749,17 @@ Provide a custom factory</h2>
     using factory_type = propfetcher_factory;
   };
 }
+</pre><h2><a class="anchor" id="autotoc_md42"></a>
+Use a custom factory selectively</h2>
+<p>In the previous paragraph, it was shown how you declare a custom factory and register it via the <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">mcnepp::qtdi::service_traits</a>. However, there might be occasions where you want to rely on the default mechanism for constructing your service most of the times, but want to supply the custom factory occasionally. <br  />
+There is an overload of <a class="el" href="qapplicationcontext_8h.html#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> that does this. You simply pass an instance of the custom factory as the first argument: </p><pre class="fragment">context-&gt;registerService(service(propfetcher_factory{}, injectAll&lt;PropFetcher&gt;()));
 </pre><h1><a class="anchor" id="autotoc_md43"></a>
 Publishing an ApplicationContext more than once</h1>
 <p>Sometimes, it may be desirable to inovoke QApplicationContext::publish(bool) more than once. Proceeding with the previous example, there may be several independent modules that each want to supply a service of type <code>PropFetcher</code>. Each of these modules will rightly assume that the dependency of type <code>QNetworkAccessManager</code> will be automatically supplied by the QApplicationContext.</p>
 <p>But which module shall then invoke QApplicationContext::publish(bool)? Do we need to coordinate this with additional code? That could be a bit unwieldly. Luckily, this is not necessary.</p>
-<p>Given that each module has access to the (global) QApplicationContext, you can simply do this in some initialization-code in module A: </p><pre class="fragment">context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()), "hamburgWeather", config({{"url", "${weatherUrl}${hamburgStationId}"}})); 
+<p>Given that each module has access to the (global) QApplicationContext, you can simply do this in some initialization-code in module A: </p><pre class="fragment">context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()) &lt;&lt; propValue("url", "${weatherUrl}${hamburgStationId}"), "hamburgWeather"); 
 context -&gt; publish();
-</pre><p>...and this in module B: </p><pre class="fragment">context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()), "berlinWeather", config({{"url", "${weatherUrl}${berlinStationId}"}})); 
+</pre><p>...and this in module B: </p><pre class="fragment">context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()) &lt;&lt; propValue("url", "${weatherUrl}${berlinStationId}"), "berlinWeather"); 
 context -&gt; publish();
 </pre><p>At the first <code>publish()</code>, an instance of <code>QNetworkAccessManager</code> will be instantiated. It will be injected into both <code>RestPropFetchers</code>.</p>
 <p>This will work <b>regardless of the order in which the modules are initialized</b>!</p>
@@ -839,7 +820,7 @@ When you create a QApplicationContext, the constructor will set a global variabl
 (Please not that QCoreApplication::instance() exhibits the same behaviour.)</p>
 <h1><a class="anchor" id="autotoc_md48"></a>
 The implicitly registered Services</h1>
-<p>There are two Services that will be implicitly available in all instances of <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">mcnepp::qtdi::StandardApplicationContext</a>:</p>
+<p>There are two Services that will be implicitly available in all instances of <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext. Using this class is the &quot;canonical way&quot; of ...">mcnepp::qtdi::StandardApplicationContext</a>:</p>
 <ul>
 <li>The ApplicationContext itself, registered under the name "context".</li>
 <li>The QCoreApplication::instance(), registered under the name "application".</li>
@@ -852,13 +833,13 @@ Multi-threading</h1>
 <p>Since the class <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">mcnepp::qtdi::QApplicationContext</a> is derived from QObject, each ApplicationContext has a <em>thread-affinity</em> to the thread that created it.</p>
 <p>As a consequence, there are some restrictions regarding the threads from which some of the ApplicationContext's functions may be invoked.</p>
 <p>The main thing to keep in mind is this: <b>An ApplicationContext may only be modified and published in the ApplicationContext's thread.</b></p>
-<p>However, any thread may safely obtain a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a> or a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">mcnepp::qtdi::ProxyRegistration</a> and subscribe to its publication-signal. The signal will be delivered using the target-thread's event-queue.</p>
+<p>However, any thread may safely obtain a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">mcnepp::qtdi::ServiceRegistration</a> or a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">mcnepp::qtdi::ProxyRegistration</a> and subscribe to its publication-signal. The signal will be delivered using the target-thread's event-queue.</p>
 <p>The following table sums this up:</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Function   </th><th class="markdownTableHeadNone">Allowed threads   </th><th class="markdownTableHeadNone">Remarks    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aafdabdace508bc72e8145ae328d46a11" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">mcnepp::qtdi::QApplicationContext::getRegistration(const QString&amp;) const </a>  </td><td class="markdownTableBodyNone">any   </td><td class="markdownTableBodyNone"></td></tr>
+<td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9c35f37337d77fdc0e19e160d48ba569" title="Obtains a ServiceRegistration for a name.  This function will look up Services by the names they were...">mcnepp::qtdi::QApplicationContext::getRegistration(const QString&amp;) const </a>  </td><td class="markdownTableBodyNone">any   </td><td class="markdownTableBodyNone"></td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#afce592b35526eeb43682e5acab37a63b" title="Obtains a ProxyRegistration for a service-type.  In contrast to the ServiceRegistration that is retur...">mcnepp::qtdi::QApplicationContext::getRegistration() const </a>  </td><td class="markdownTableBodyNone">any   </td><td class="markdownTableBodyNone"></td></tr>
 <tr class="markdownTableRowOdd">
@@ -870,13 +851,13 @@ Multi-threading</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abc1d419de6d4d3af4c38a8c5791edc4d" title="Obtains the global instance.  QApplicationContext&#39;s constructor will atomically install this as the g...">mcnepp::qtdi::QApplicationContext::instance()</a>   </td><td class="markdownTableBodyNone">any   </td><td class="markdownTableBodyNone"></td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return an invalid ServiceRegistration.    </td></tr>
+<td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">mcnepp::qtdi::QApplicationContext::registerService()</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return an invalid ServiceRegistration.    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8bf49def9048cc92c5aa5d1a9437682f" title="Registers an object with this ApplicationContext. The object will immediately be published....">mcnepp::qtdi::QApplicationContext::registerObject()</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return an invalid ServiceRegistration.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone">mcnepp::qtdi::ServiceRegistration::registerAlias(const QString&amp;)   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return <code>false</code>.    </td></tr>
+<td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#af740c20f57c2c6a24ec31a5691fc5c40" title="Registers an alias for a Service.  If this function is successful, the Service can be referenced by t...">mcnepp::qtdi::ServiceRegistration::registerAlias(const QString&amp;)</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return <code>false</code>.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone">mcnepp::qtdi::Registration::autowire()   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return an invalid Subscription.    </td></tr>
+<td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#afacf8c2137a7b568249532a14f53a33f" title="Connects a service with another service from the same QApplicationContext. Whenever a service of the ...">mcnepp::qtdi::Registration::autowire()</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return an invalid Subscription.    </td></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><a class="el" href="qapplicationcontext_8h.html#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">mcnepp::qtdi::bind()</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return an invalid Subscription.    </td></tr>
 <tr class="markdownTableRowEven">
@@ -884,31 +865,47 @@ Multi-threading</h1>
 </table>
 <h1><a class="anchor" id="autotoc_md50"></a>
 Extending QApplicationContext</h1>
-<p>It is not possible to extend the class <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">mcnepp::qtdi::StandardApplicationContext</a>, as it is <code>final</code>.</p>
-<p>However, it is possible to extend the interface <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">mcnepp::qtdi::QApplicationContext</a> in your own code. If you do that, you may want to use an instance of <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">mcnepp::qtdi::StandardApplicationContext</a> as a <em>delegate</em> inside your derived class. <br  />
-Here are some rules that you should follow:</p>
+<p>It is not possible to extend the class <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext. Using this class is the &quot;canonical way&quot; of ...">mcnepp::qtdi::StandardApplicationContext</a>, as it is <code>final</code>.</p>
+<p>However, it is possible to extend the interface <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">mcnepp::qtdi::QApplicationContext</a> in your own code. You could add additional virtual functions to the extended interface, to be used by client-code: </p><pre class="fragment">class IExtendedApplicationContext : public mcnepp::qtdi::QApplicationContext { 
+public:
+
+   using QApplicationContext::QApplicationContext;    
+
+   virtual void doSomeFancyRegistration() = 0;
+};
+</pre><p>Now, you could not implement this interface <code>IExtendedApplicationContext</code> in a class that already implements <code>QApplicationContext</code>, as that would constitute multiple inheritance of the same base. <br  />
+The class-template <a class="el" href="classmcnepp_1_1qtdi_1_1_application_context_impl_base.html" title="Extensible Implementation of QApplicationContext.  This class provides a means of implementating the ...">mcnepp::qtdi::ApplicationContextImplBase</a> solves that problem for you. <br  />
+You need to supply the type of the extended interface as a type-argument:</p>
+<pre class="fragment">class ExtendedApplicationContext : public mcnepp::qtdi::ApplicationContextImplBase&lt;QApplicationContext&gt; { 
+  public:
+    ExtendedApplicationContext(QObject* parent = nullptr) : ApplicationContextImplBase&lt;QApplicationContext&gt;{parent}
+    {
+        finishConstruction();
+    }
+
+    virtual void doSomeFancyRegistration() override;
+};
+</pre><p>Should you really insist on implementing <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">mcnepp::qtdi::QApplicationContext</a> from scratch, here are some rules that you should follow:</p>
 <ul>
 <li>You can implement the <b>public</b> pure virtual functions simply by invoking them on the <em>delegate</em>.</li>
 <li>The <b>protected</b> pure virtual functions can be implemented by using the corresponding static <code>delegate...()</code> functions from QApplicationContext. Pass in your <em>delegate</em> as the first argument, as shown below.</li>
 <li>Be aware that the first StandardApplicationContext that you create as a <em>delegate</em> will automatically become the global instance. This is probably not what you want. Therefore, consider to unset the delegate explicitly, as shown in the code below!</li>
 <li>Be aware that the <em>delegate</em> will be injected into all services as a parent automatically (unless they have an explicit parent). Also, the <em>init-methods</em> will receive the <em>delegate</em> as an argument, as will the QApplicationContextPostProcessor::process() method.<br  />
- In order to inject your own implementation instead, use the constructor that accepts a <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a9f1f630cb0d84ce148f8351e9167122b" title="Determines that a StandardApplicationContext is used as a delegate by another ApplicationContext.">mcnepp::qtdi::StandardApplicationContext::delegate_tag</a> as an additional argument. This is also shown below!</li>
+ In order to inject your own implementation instead, use the function <a class="el" href="qapplicationcontext_8h.html#adc186b91799443993261a9c701e1312f" title="Creates an ApplicationContext as a delegate for another context.  With the help of this function you ...">mcnepp::qtdi::newDelegate()</a> This is also shown below.</li>
 <li>Do not forget to connect your instance to the signals emitted by the delegate. You may use the static function <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8d786fec477e3eaf0959a7ae6ff7188c" title="Connects the signals of a source-context with the corresponding signals of a target-context....">mcnepp::qtdi::QApplicationContext::delegateConnectSignals()</a>, as shown below.</li>
 </ul>
-<p>Here is an example of a custom implementation of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">mcnepp::qtdi::QApplicationContext</a>: </p><pre class="fragment">Q_DECLARE_LOGGING_CATEGORY(extendedLoggingCategory)
-
-class ExtendedApplicationContext : public mcnepp::qtdi::QApplicationContext {
+<p>Here is an (incomplete) example of a custom implementation of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">mcnepp::qtdi::QApplicationContext</a>: </p><pre class="fragment">class ExtendedApplicationContext : public mcnepp::qtdi::QApplicationContext {
   Q_OBJECT
 
   public:
 
     explicit ExtendedApplicationContext(QObject *parent) :
-            mcnepp::qtdi::QApplicationContext{parent},
-            m_delegate{new mcnepp::qtdi::StandardApplicationContext{extendedLoggingCategory(), this, mcnepp::qtdi::StandardApplicationContext::delegate_tag}}
+            QApplicationContext{parent},
+            m_delegate{new newDelegate(this)}
     {
         unsetInstance(m_delegate); // Remove the delegate as global instance, should it have been set.
         if(setInstance(this)) { // Attempt to set this as global instance.
-            qCInfo(extendedLoggingCategory()).noquote().nospace() &lt;&lt; "Installed " &lt;&lt; this &lt;&lt; " as global instance";
+            qCInfo(loggingCategory()).noquote().nospace() &lt;&lt; "Installed " &lt;&lt; this &lt;&lt; " as global instance";
         } 
 // Propagate signals from delegate to this:
         delegateConnectSignals(m_delegate, this);

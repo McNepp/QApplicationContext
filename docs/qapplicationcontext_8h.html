@@ -119,12 +119,15 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">mcnepp::qtdi::Registration&lt; S &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A type-safe wrapper for a detail::Registration. <br  />
-This is a non-instantiable base-class. As such, it defines the operations common to both <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>. <br  />
+This is a non-instantiable base-class. As such, it defines the operations common to both <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>. <br  />
 Its most important operation is the type-safe function <code><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a281f12a7c18c6793c5924a73159ff1bb" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">subscribe()</a></code> which should be preferred over directly connecting to the signal <code>detail::Registration::objectPublished(QObject*)</code>. <br  />
  A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> contains a <em>non-owning pointer</em> to a detail::Registration whose lifetime is bound to the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>. The <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> will become invalid after the corresponding <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> has been destructed.  <a href="classmcnepp_1_1qtdi_1_1_registration.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration&lt; S, SCP &gt;</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A type-safe wrapper for a detail::ServiceRegistration.  <a href="classmcnepp_1_1qtdi_1_1_service_registration.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">mcnepp::qtdi::ProxyRegistration&lt; S &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> that manages several ServiceRegistrations of the same type. You can do almost everything with a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> that you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>, except use it as a source for property-bindings using bind(). Instances of this class are produced by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aafdabdace508bc72e8145ae328d46a11" title="Obtains a ServiceRegistration for a service-type and name.  This function will look up Services by th...">QApplicationContext::getRegistration()</a>;.  <a href="classmcnepp_1_1qtdi_1_1_proxy_registration.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> that manages several ServiceRegistrations of the same type. You can do almost everything with a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> that you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>, except use it as a source for property-bindings using <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. Instances of this class are produced by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9c35f37337d77fdc0e19e160d48ba569" title="Obtains a ServiceRegistration for a name.  This function will look up Services by the names they were...">QApplicationContext::getRegistration()</a>;.  <a href="classmcnepp_1_1qtdi_1_1_proxy_registration.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html">mcnepp::qtdi::ServiceCombination&lt; S &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A combination of Services that can be subscribed. <br  />
@@ -149,34 +152,22 @@ Every specialization of this template must provide at least the following declar
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A helper-template that converts a pointer to a function or a pointer to a member-function into a distinct type. <br  />
 The purpose of this template is to be used as the type-alias named <code>initializer_type</code> in the <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">service_traits</a>. The type of <code>func</code> must be one of the following:  <a href="structmcnepp_1_1qtdi_1_1service__initializer.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">mcnepp::qtdi::Dependency&lt; S, kind, C &gt;</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">mcnepp::qtdi::Dependency&lt; S, kind &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies a dependency of a service. <br  />
-Can by used as a type-argument for <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>. In the standard-case of a mandatory relationship, the use of the <code>kind</code> argument is optional. Suppose you have a service-type <code>Reader</code> that needs a mandatory pointer to a <code>DatabaseAccess</code> in its constructor: class Reader : public QObject { public: explicit Update(DatabaseAccess* dao, QObject* parent = nullptr); };.  <a href="structmcnepp_1_1qtdi_1_1_dependency.html#details">More...</a><br /></td></tr>
+Can by used as a type-argument for <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>. In the standard-case of a mandatory relationship, the use of the <code>kind</code> argument is optional. Suppose you have a service-type <code>Reader</code> that needs a mandatory pointer to a <code>DatabaseAccess</code> in its constructor: class Reader : public QObject { public: explicit Update(DatabaseAccess* dao, QObject* parent = nullptr); };.  <a href="structmcnepp_1_1qtdi_1_1_dependency.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_resolvable.html">mcnepp::qtdi::Resolvable&lt; S &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A placeholder for a resolvable constructor-argument. Use the function <a class="el" href="#a59d0392bb960299590af56049c779ba8" title="Specifies a constructor-argument that shall be resolved by the QApplicationContext....">resolve(const QString&amp;)</a> to pass a resolvable argument to a service with <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>.  <a href="structmcnepp_1_1qtdi_1_1_resolvable.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">mcnepp::qtdi::service_config</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Configures a service for an ApplicationContext.  <a href="structmcnepp_1_1qtdi_1_1service__config.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_service_config.html">mcnepp::qtdi::ServiceConfig&lt; S &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A type-safe service-configuration. <br  />
-This class is the type-safe equivalent to the <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a>. <br  />
-In contrast to <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a>, configuration-values are specified using method-pointers, not property-names. <br  />
-Also, there does not have to be a Q_PROPERTY declared for each configuration-value. You may use the syntax for <em>private properties</em>, i.e. a name preceded by a dot to indicate that.  <a href="structmcnepp_1_1qtdi_1_1_service_config.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A placeholder for a resolvable constructor-argument. Use the function <a class="el" href="#a59d0392bb960299590af56049c779ba8" title="Specifies a constructor-argument that shall be resolved by the QApplicationContext....">resolve(const QString&amp;)</a> to pass a resolvable argument to a service with <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>.  <a href="structmcnepp_1_1qtdi_1_1_resolvable.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service&lt; Srv, Impl, scope &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Describes a service by its interface and implementation. Compilation will fail if either <code>Srv</code> is not a sub-class of QObject, or if <code>Impl</code> is not a sub-class of <code>Srv</code>. <br  />
-The preferred way of creating Services is the function <a class="el" href="#a07ae03c57a4c371f2f24659088813670" title="Creates a Service with the default service-factory.">mcnepp::qtdi::service()</a>.  <a href="structmcnepp_1_1qtdi_1_1_service.html#details">More...</a><br /></td></tr>
+The preferred way of creating Services is the function <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a>.  <a href="structmcnepp_1_1qtdi_1_1_service.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html">mcnepp::qtdi::QConfigurationWatcher</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Watches a configuration-value. <br  />
 Instances will be returned from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a2229cdb9173e8e314b4ecb5bb27e7439" title="Obtains a QConfigurationWatcher for an expression.  If autoRefreshEnabled() and the expression can be...">QApplicationContext::watchConfigValue(const QString&amp;)</a>. <br  />
 The current value can be obtained through the Q_PROPERTY currentValue(). <br  />
 Should the underlying configuration be modified, the signal <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html#a92636868a90b4832c690d650af55e019" title="the underlying configuration has changed.">currentValueChanged(const QVariant&amp;)</a> will be emitted.  <a href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html">mcnepp::qtdi::QConfigurationResolver</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Provides access to the configuration of a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.  <a href="classmcnepp_1_1qtdi_1_1_q_configuration_resolver.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A DI-Container for Qt-based applications.  <a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#details">More...</a><br /></td></tr>
@@ -204,8 +195,6 @@ Typedefs</h2></td></tr>
 <tr class="memitem:ab33d4e62a8cebba89c6ff34181d65f72" id="r_ab33d4e62a8cebba89c6ff34181d65f72"><td class="memTemplParams" colspan="2"><a id="ab33d4e62a8cebba89c6ff34181d65f72" name="ab33d4e62a8cebba89c6ff34181d65f72"></a>
 template&lt;typename S &gt; </td></tr>
 <tr class="memitem:ab33d4e62a8cebba89c6ff34181d65f72"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mcnepp::qtdi::service_config_entry</b> = detail::service_config_entry_t&lt;S&gt;</td></tr>
-<tr class="memdesc:ab33d4e62a8cebba89c6ff34181d65f72"><td class="mdescLeft">&#160;</td><td class="mdescRight">A type-safe configuration-entry. <br  />
-This is an intermediate type that will be used solely to populate a <a class="el" href="structmcnepp_1_1qtdi_1_1_service_config.html" title="A type-safe service-configuration.  This class is the type-safe equivalent to the service_config....">ServiceConfig</a>. <br /></td></tr>
 <tr class="separator:ab33d4e62a8cebba89c6ff34181d65f72"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
@@ -239,8 +228,8 @@ Functions</h2></td></tr>
 <tr class="memdesc:ab271ebdb94c20e9ff86195e615d50798"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>.  <br /></td></tr>
 <tr class="separator:ab271ebdb94c20e9ff86195e615d50798"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a53cf39c5185ef9e3c0ad9ae9ad418c8d" id="r_a53cf39c5185ef9e3c0ad9ae9ad418c8d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a53cf39c5185ef9e3c0ad9ae9ad418c8d">mcnepp::qtdi::asService</a> (<a class="el" href="#a1f56afa215e218121866a25e41dcca2f">registration_handle_t</a> handle)</td></tr>
-<tr class="memdesc:a53cf39c5185ef9e3c0ad9ae9ad418c8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Narrows a handle to a registration to a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>. <br  />
-If the handle actually points to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>, this function will cast it to the more specific type. Otherwise, it will return an invalid handle.  <br /></td></tr>
+<tr class="memdesc:a53cf39c5185ef9e3c0ad9ae9ad418c8d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Narrows a handle to a registration to a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>. <br  />
+If the handle actually points to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>, this function will cast it to the more specific type. Otherwise, it will return an invalid handle.  <br /></td></tr>
 <tr class="separator:a53cf39c5185ef9e3c0ad9ae9ad418c8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afa65fe3eaeb7e84f80bea956b536479b" id="r_afa65fe3eaeb7e84f80bea956b536479b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#aec447170b9d5815c59b29ae88ef8bd09">proxy_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afa65fe3eaeb7e84f80bea956b536479b">mcnepp::qtdi::asProxy</a> (<a class="el" href="#a1f56afa215e218121866a25e41dcca2f">registration_handle_t</a> handle)</td></tr>
 <tr class="memdesc:afa65fe3eaeb7e84f80bea956b536479b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Narrows a handle to a registration to a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>. <br  />
@@ -256,43 +245,44 @@ If the handle actually points to a <a class="el" href="classmcnepp_1_1qtdi_1_1_p
 <tr class="memdesc:a19ce4ad196137c5749cc881631050853"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the registered Services from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a>.  <br /></td></tr>
 <tr class="separator:a19ce4ad196137c5749cc881631050853"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae09e67c55a69665975a9e2371e3d0a94" id="r_ae09e67c55a69665975a9e2371e3d0a94"><td class="memItemLeft" align="right" valign="top">QString&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae09e67c55a69665975a9e2371e3d0a94">mcnepp::qtdi::registeredName</a> (<a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a> handle)</td></tr>
-<tr class="memdesc:ae09e67c55a69665975a9e2371e3d0a94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the registeredName from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>.  <br /></td></tr>
+<tr class="memdesc:ae09e67c55a69665975a9e2371e3d0a94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the registeredName from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>.  <br /></td></tr>
 <tr class="separator:ae09e67c55a69665975a9e2371e3d0a94"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a01c1421ad2f49f3e219de2db9eec1b35" id="r_a01c1421ad2f49f3e219de2db9eec1b35"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a01c1421ad2f49f3e219de2db9eec1b35">mcnepp::qtdi::serviceConfig</a> (<a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a> handle)</td></tr>
-<tr class="memdesc:a01c1421ad2f49f3e219de2db9eec1b35"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the service configuration from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>.  <br /></td></tr>
-<tr class="separator:a01c1421ad2f49f3e219de2db9eec1b35"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7ba9e15cae5f876292acd7b671d56d36" id="r_a7ba9e15cae5f876292acd7b671d56d36"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7ba9e15cae5f876292acd7b671d56d36">mcnepp::qtdi::operator==</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &amp;sub1, const <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &amp;sub2)</td></tr>
 <tr class="memdesc:a7ba9e15cae5f876292acd7b671d56d36"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests two Subscriptions for equality.  <br /></td></tr>
 <tr class="separator:a7ba9e15cae5f876292acd7b671d56d36"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5e4e9e080a8d2cbb5767efc13b4efd21" id="r_a5e4e9e080a8d2cbb5767efc13b4efd21"><td class="memItemLeft" align="right" valign="top"><a id="a5e4e9e080a8d2cbb5767efc13b4efd21" name="a5e4e9e080a8d2cbb5767efc13b4efd21"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>mcnepp::qtdi::swap</b> (<a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &amp;reg1, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &amp;reg2)</td></tr>
 <tr class="separator:a5e4e9e080a8d2cbb5767efc13b4efd21"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac571dc8e8fcac2a6cab1c92ed2012ad4" id="r_ac571dc8e8fcac2a6cab1c92ed2012ad4"><td class="memTemplParams" colspan="2"><a id="ac571dc8e8fcac2a6cab1c92ed2012ad4" name="ac571dc8e8fcac2a6cab1c92ed2012ad4"></a>
+template&lt;typename U &gt; </td></tr>
+<tr class="memitem:ac571dc8e8fcac2a6cab1c92ed2012ad4"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mcnepp::qtdi::swap</b> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; U &gt; &amp;reg1, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; U &gt; &amp;reg2)</td></tr>
+<tr class="separator:ac571dc8e8fcac2a6cab1c92ed2012ad4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac0f4ea8649c340bb702201de6b6c23ba" id="r_ac0f4ea8649c340bb702201de6b6c23ba"><td class="memTemplParams" colspan="2">template&lt;typename S1 , typename S2 &gt; </td></tr>
 <tr class="memitem:ac0f4ea8649c340bb702201de6b6c23ba"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ac0f4ea8649c340bb702201de6b6c23ba">mcnepp::qtdi::operator==</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;reg1, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S2 &gt; &amp;reg2)</td></tr>
 <tr class="memdesc:ac0f4ea8649c340bb702201de6b6c23ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests two Registrations for equality.  <br /></td></tr>
 <tr class="separator:ac0f4ea8649c340bb702201de6b6c23ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0f11a14df333d20850559efeee464e15" id="r_a0f11a14df333d20850559efeee464e15"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
 <tr class="memitem:a0f11a14df333d20850559efeee464e15"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a0f11a14df333d20850559efeee464e15">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, const char *sourceProperty, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, const char *targetProperty)</td></tr>
-<tr class="memdesc:a0f11a14df333d20850559efeee464e15"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> to a property from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
+<tr class="memdesc:a0f11a14df333d20850559efeee464e15"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a property from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
 All changes made to the source-property will be propagated to the target-property. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function may only be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
 <tr class="separator:a0f11a14df333d20850559efeee464e15"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae25ab68d0a118fe38340e5d1ddd2c95c" id="r_ae25ab68d0a118fe38340e5d1ddd2c95c"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename A , typename R , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
 <tr class="memitem:ae25ab68d0a118fe38340e5d1ddd2c95c"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ae25ab68d0a118fe38340e5d1ddd2c95c">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, const char *sourceProperty, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, R(T::*setter)(A))</td></tr>
-<tr class="memdesc:ae25ab68d0a118fe38340e5d1ddd2c95c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
+<tr class="memdesc:ae25ab68d0a118fe38340e5d1ddd2c95c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
 All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function only may be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
 <tr class="separator:ae25ab68d0a118fe38340e5d1ddd2c95c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1d13428eaa3c414598ebf9ca43dddf6b" id="r_a1d13428eaa3c414598ebf9ca43dddf6b"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename AS , typename AT , typename R , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
 <tr class="memitem:a1d13428eaa3c414598ebf9ca43dddf6b"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a1d13428eaa3c414598ebf9ca43dddf6b">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, void(S::*signalFunction)(AS), <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, R(T::*setter)(AT)) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; AS, AT &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;</td></tr>
-<tr class="memdesc:a1d13428eaa3c414598ebf9ca43dddf6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
+<tr class="memdesc:a1d13428eaa3c414598ebf9ca43dddf6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
 This function identifies the source-property by the signal that is emitted when the property changes. The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding to a property of the source-service. <br  />
 All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function only may be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
 <tr class="separator:a1d13428eaa3c414598ebf9ca43dddf6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae708da19293b63d2ff632bcbd2df08e6" id="r_ae708da19293b63d2ff632bcbd2df08e6"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename A , typename R , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
 <tr class="memitem:ae708da19293b63d2ff632bcbd2df08e6"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ae708da19293b63d2ff632bcbd2df08e6">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, void(S::*signalFunction)(), <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, R(T::*setter)(A))</td></tr>
-<tr class="memdesc:ae708da19293b63d2ff632bcbd2df08e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
+<tr class="memdesc:ae708da19293b63d2ff632bcbd2df08e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
 This function identifies the source-property by the signal that is emitted when the property changes. The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding to a property of the source-service. <br  />
 All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function only may be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
@@ -323,27 +313,27 @@ This is a convenience-function equivalent to the following code:  <br /></td></t
 template&lt;typename S &gt; </td></tr>
 <tr class="memitem:a9933d42ed1e34f66da2abc1880c55276"><td class="memTemplItemLeft" align="right" valign="top">QDebug&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mcnepp::qtdi::operator&lt;&lt;</b> (QDebug out, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;reg)</td></tr>
 <tr class="separator:a9933d42ed1e34f66da2abc1880c55276"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a52003170c4fd6d306dcc8a53eacd195e" id="r_a52003170c4fd6d306dcc8a53eacd195e"><td class="memTemplParams" colspan="2">template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::MANDATORY&gt;&gt; </td></tr>
-<tr class="memitem:a52003170c4fd6d306dcc8a53eacd195e"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="#aa26d711edb47348796326730adbbc521ac25db15b6f91b287b5b3c8a515bd21ce">Kind::MANDATORY</a>, C &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a52003170c4fd6d306dcc8a53eacd195e">mcnepp::qtdi::inject</a> (const QString &amp;requiredName=&quot;&quot;, C converter=C{})</td></tr>
-<tr class="memdesc:a52003170c4fd6d306dcc8a53eacd195e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a mandatory <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a>.  <br /></td></tr>
-<tr class="separator:a52003170c4fd6d306dcc8a53eacd195e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa230bb92d281b0431f927577348acba9" id="r_aa230bb92d281b0431f927577348acba9"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
+<tr class="memitem:aa230bb92d281b0431f927577348acba9"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="#aa26d711edb47348796326730adbbc521ac25db15b6f91b287b5b3c8a515bd21ce">Kind::MANDATORY</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aa230bb92d281b0431f927577348acba9">mcnepp::qtdi::inject</a> (const QString &amp;requiredName=&quot;&quot;)</td></tr>
+<tr class="memdesc:aa230bb92d281b0431f927577348acba9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a mandatory <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a>.  <br /></td></tr>
+<tr class="separator:aa230bb92d281b0431f927577348acba9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5d7e293b970ddb734d2e2346bb8f0163" id="r_a5d7e293b970ddb734d2e2346bb8f0163"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
 <tr class="memitem:a5d7e293b970ddb734d2e2346bb8f0163"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="#aa26d711edb47348796326730adbbc521ac25db15b6f91b287b5b3c8a515bd21ce">Kind::MANDATORY</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a5d7e293b970ddb734d2e2346bb8f0163">mcnepp::qtdi::inject</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;registration)</td></tr>
 <tr class="memdesc:a5d7e293b970ddb734d2e2346bb8f0163"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a mandatory <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a> on a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
-<b>Note:</b> If the registration is actually a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>, you do not need to use <a class="el" href="#a5d7e293b970ddb734d2e2346bb8f0163" title="Injects a mandatory Dependency on a Registration.  Note: If the registration is actually a ServiceReg...">inject(const Registration&lt;S&gt;&amp; registration)</a> at all! Rather, you can pass the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a> directly to the <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>'s constructor.  <br /></td></tr>
+<b>Note:</b> If the registration is actually a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>, you do not need to use <a class="el" href="#a5d7e293b970ddb734d2e2346bb8f0163" title="Injects a mandatory Dependency on a Registration.  Note: If the registration is actually a ServiceReg...">inject(const Registration&lt;S&gt;&amp; registration)</a> at all! Rather, you can pass the <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> directly to the <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>'s constructor.  <br /></td></tr>
 <tr class="separator:a5d7e293b970ddb734d2e2346bb8f0163"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ddf8a871e1f8982afcd787799816cc0" id="r_a2ddf8a871e1f8982afcd787799816cc0"><td class="memTemplParams" colspan="2">template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::OPTIONAL&gt;&gt; </td></tr>
-<tr class="memitem:a2ddf8a871e1f8982afcd787799816cc0"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="#aa26d711edb47348796326730adbbc521a7951811e4b085cf68ed3dc3191f36405">Kind::OPTIONAL</a>, C &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a2ddf8a871e1f8982afcd787799816cc0">mcnepp::qtdi::injectIfPresent</a> (const QString &amp;requiredName=&quot;&quot;, C converter=C{})</td></tr>
-<tr class="memdesc:a2ddf8a871e1f8982afcd787799816cc0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects an optional <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a> to another <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>. This function will utilize the Registration::registeredName() to match the dependency.  <br /></td></tr>
-<tr class="separator:a2ddf8a871e1f8982afcd787799816cc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afe4b3cbeda7748a3b87a0309720cba6b" id="r_afe4b3cbeda7748a3b87a0309720cba6b"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
+<tr class="memitem:afe4b3cbeda7748a3b87a0309720cba6b"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="#aa26d711edb47348796326730adbbc521a7951811e4b085cf68ed3dc3191f36405">Kind::OPTIONAL</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#afe4b3cbeda7748a3b87a0309720cba6b">mcnepp::qtdi::injectIfPresent</a> (const QString &amp;requiredName=&quot;&quot;)</td></tr>
+<tr class="memdesc:afe4b3cbeda7748a3b87a0309720cba6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects an optional <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a> to another <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>. This function will utilize the Registration::registeredName() to match the dependency.  <br /></td></tr>
+<tr class="separator:afe4b3cbeda7748a3b87a0309720cba6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a35af95e9e5aad40a6e80d9c6fceadb69" id="r_a35af95e9e5aad40a6e80d9c6fceadb69"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
 <tr class="memitem:a35af95e9e5aad40a6e80d9c6fceadb69"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="#aa26d711edb47348796326730adbbc521a7951811e4b085cf68ed3dc3191f36405">Kind::OPTIONAL</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a35af95e9e5aad40a6e80d9c6fceadb69">mcnepp::qtdi::injectIfPresent</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;registration)</td></tr>
 <tr class="memdesc:a35af95e9e5aad40a6e80d9c6fceadb69"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects an optional <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a> on a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>.  <br /></td></tr>
 <tr class="separator:a35af95e9e5aad40a6e80d9c6fceadb69"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adbc81e2f7354efd7e77aa600539d6eb1" id="r_adbc81e2f7354efd7e77aa600539d6eb1"><td class="memTemplParams" colspan="2">template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::N&gt;&gt; </td></tr>
-<tr class="memitem:adbc81e2f7354efd7e77aa600539d6eb1"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="#aa26d711edb47348796326730adbbc521a8d9c307cb7f3c4a32822a51922d1ceaa">Kind::N</a>, C &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#adbc81e2f7354efd7e77aa600539d6eb1">mcnepp::qtdi::injectAll</a> (const QString &amp;requiredName=&quot;&quot;, C converter=C{})</td></tr>
-<tr class="memdesc:adbc81e2f7354efd7e77aa600539d6eb1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a 1-to-N <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a>.  <br /></td></tr>
-<tr class="separator:adbc81e2f7354efd7e77aa600539d6eb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ab0ce02c0834a71a536a0ac41672225" id="r_a3ab0ce02c0834a71a536a0ac41672225"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
+<tr class="memitem:a3ab0ce02c0834a71a536a0ac41672225"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="#aa26d711edb47348796326730adbbc521a8d9c307cb7f3c4a32822a51922d1ceaa">Kind::N</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a3ab0ce02c0834a71a536a0ac41672225">mcnepp::qtdi::injectAll</a> (const QString &amp;requiredName=&quot;&quot;)</td></tr>
+<tr class="memdesc:a3ab0ce02c0834a71a536a0ac41672225"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a 1-to-N <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a>.  <br /></td></tr>
+<tr class="separator:a3ab0ce02c0834a71a536a0ac41672225"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afde88d587fa7201e9eae2fe7550b63fa" id="r_afde88d587fa7201e9eae2fe7550b63fa"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
 <tr class="memitem:afde88d587fa7201e9eae2fe7550b63fa"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">Dependency</a>&lt; S, <a class="el" href="#aa26d711edb47348796326730adbbc521a8d9c307cb7f3c4a32822a51922d1ceaa">Kind::N</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#afde88d587fa7201e9eae2fe7550b63fa">mcnepp::qtdi::injectAll</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;registration)</td></tr>
 <tr class="memdesc:afde88d587fa7201e9eae2fe7550b63fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a 1-to-N <a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html" title="Specifies a dependency of a service.  Can by used as a type-argument for QApplicationContext::registe...">Dependency</a> on a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
@@ -376,82 +366,95 @@ Usually, this will not be necessary, as the <a class="el" href="classmcnepp_1_1q
 However, there can be QObject-derived classes where the <code>parent</code> argument is not optional in the constructor, so it has to be supplied explicitly. <br  />
 <b>Note:</b> Notwithstanding its self-documenting name, this function cannot ensure that the ApplicationContext is actually passed to the constructor as the <code>parent</code> argument. However, in the vast majority of cases it will be the last argument that denotes ths <code>parent</code>.  <br /></td></tr>
 <tr class="separator:a2b4cd088db70b5b3179022c6e0b00fe2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2eab59360607d897888d9667ab5c76ae" id="r_a2eab59360607d897888d9667ab5c76ae"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2eab59360607d897888d9667ab5c76ae">mcnepp::qtdi::withAutoRefresh</a> (<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;cfg)</td></tr>
-<tr class="memdesc:a2eab59360607d897888d9667ab5c76ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enables auto-refresh for a <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a>. <br  />
+<tr class="memitem:a345509cae13489dd46cc5c75ba10dec6" id="r_a345509cae13489dd46cc5c75ba10dec6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a345509cae13489dd46cc5c75ba10dec6">mcnepp::qtdi::withAutoRefresh</a> (detail::service_config &amp;cfg)</td></tr>
+<tr class="memdesc:a345509cae13489dd46cc5c75ba10dec6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enables auto-refresh for a service_config. <br  />
 This function is not meant to be invoked directly. <br  />
 Rather, its usage is analogous to that of <em>iostream-manipulators</em> from the standard-libray:  <br /></td></tr>
-<tr class="separator:a2eab59360607d897888d9667ab5c76ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a802dafd5f967bb426a92885ad50d06a1" id="r_a802dafd5f967bb426a92885ad50d06a1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a802dafd5f967bb426a92885ad50d06a1">mcnepp::qtdi::withAutowire</a> (<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;cfg)</td></tr>
-<tr class="memdesc:a802dafd5f967bb426a92885ad50d06a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies auto-wiring to a <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a>. <br  />
+<tr class="separator:a345509cae13489dd46cc5c75ba10dec6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a658a665f9b2b426543e566defd51e4ff" id="r_a658a665f9b2b426543e566defd51e4ff"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a658a665f9b2b426543e566defd51e4ff">mcnepp::qtdi::withAutowire</a> (detail::service_config &amp;cfg)</td></tr>
+<tr class="memdesc:a658a665f9b2b426543e566defd51e4ff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies auto-wiring to a service_config. <br  />
 This function is not meant to be invoked directly. <br  />
 Rather, its usage is analogous to that of <em>iostream-manipulators</em> from the standard-libray:  <br /></td></tr>
-<tr class="separator:a802dafd5f967bb426a92885ad50d06a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac708701966b6cc2722175737ae6a2945" id="r_ac708701966b6cc2722175737ae6a2945"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html#ae3af4e2a6452d341070f369d74b271d6">service_config::config_modifier</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac708701966b6cc2722175737ae6a2945">mcnepp::qtdi::withGroup</a> (const QString &amp;name)</td></tr>
-<tr class="memdesc:ac708701966b6cc2722175737ae6a2945"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the group for a <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a>. <br  />
+<tr class="separator:a658a665f9b2b426543e566defd51e4ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a64ec1392974a8374f34bfff59fc43a8e" id="r_a64ec1392974a8374f34bfff59fc43a8e"><td class="memItemLeft" align="right" valign="top">detail::service_config::config_modifier&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a64ec1392974a8374f34bfff59fc43a8e">mcnepp::qtdi::withGroup</a> (const QString &amp;name)</td></tr>
+<tr class="memdesc:a64ec1392974a8374f34bfff59fc43a8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the group for a service_config. <br  />
 The usage of this function is analogous to that of <em>iostream-manipulators</em> from the standard-libray:  <br /></td></tr>
-<tr class="separator:ac708701966b6cc2722175737ae6a2945"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae9134d3bd63dc9885fe60a7c1f918c2b" id="r_ae9134d3bd63dc9885fe60a7c1f918c2b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae9134d3bd63dc9885fe60a7c1f918c2b">mcnepp::qtdi::config</a> (std::initializer_list&lt; std::pair&lt; QString, QVariant &gt; &gt; properties)</td></tr>
-<tr class="memdesc:ae9134d3bd63dc9885fe60a7c1f918c2b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Makes a <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a> and populates it with properties. <br  />
+<tr class="separator:a64ec1392974a8374f34bfff59fc43a8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a833482784437b100f8e2be2250133ce2" id="r_a833482784437b100f8e2be2250133ce2"><td class="memItemLeft" align="right" valign="top">detail::service_config&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a833482784437b100f8e2be2250133ce2">mcnepp::qtdi::config</a> (std::initializer_list&lt; std::pair&lt; QString, QVariant &gt; &gt; properties)</td></tr>
+<tr class="memdesc:a833482784437b100f8e2be2250133ce2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Makes a service_config and populates it with properties. <br  />
 The service must have a Q_PROPERTY for every key contained in <code>properties</code>.<br  />
  Example:  <br /></td></tr>
-<tr class="separator:ae9134d3bd63dc9885fe60a7c1f918c2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5b2c15ddf8bc9c211e489ad7daea3666" id="r_a5b2c15ddf8bc9c211e489ad7daea3666"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666">mcnepp::qtdi::config</a> ()</td></tr>
-<tr class="memdesc:a5b2c15ddf8bc9c211e489ad7daea3666"><td class="mdescLeft">&#160;</td><td class="mdescRight">Makes a default <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a>. <br  />
-The returned <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html" title="Configures a service for an ApplicationContext.">service_config</a> can then be further modified, before it gets passed to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5e297b11ba712085577543de42f07c91" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>. <br  />
-Modification is done in a fashion similar to <em>iostreams</em>, i.e. by using the overloaded <code>operator &lt;&lt;</code>. <br  />
-You add a configuration-entry like this:  <br /></td></tr>
-<tr class="separator:a5b2c15ddf8bc9c211e489ad7daea3666"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a346a809b3830e0d37d99194e0e50bf4d" id="r_a346a809b3830e0d37d99194e0e50bf4d"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:a346a809b3830e0d37d99194e0e50bf4d"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a346a809b3830e0d37d99194e0e50bf4d">mcnepp::qtdi::operator&lt;&lt;</a> (<a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;&amp;cfg, const <a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt; &amp;<a class="el" href="#a9d4f50592427143dffe1904aca6b520e">entry</a>)</td></tr>
-<tr class="memdesc:a346a809b3830e0d37d99194e0e50bf4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a type-safe entry, creating a strongly typed <a class="el" href="structmcnepp_1_1qtdi_1_1_service_config.html" title="A type-safe service-configuration.  This class is the type-safe equivalent to the service_config....">ServiceConfig</a>.  <br /></td></tr>
-<tr class="separator:a346a809b3830e0d37d99194e0e50bf4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2bb0f9b8db0d5f4bb073bfc89512d75d" id="r_a2bb0f9b8db0d5f4bb073bfc89512d75d"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:a2bb0f9b8db0d5f4bb073bfc89512d75d"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a2bb0f9b8db0d5f4bb073bfc89512d75d">mcnepp::qtdi::operator&lt;&lt;</a> (const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;cfg, const <a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt; &amp;<a class="el" href="#a9d4f50592427143dffe1904aca6b520e">entry</a>)</td></tr>
-<tr class="memdesc:a2bb0f9b8db0d5f4bb073bfc89512d75d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a type-safe entry, creating a strongly typed <a class="el" href="structmcnepp_1_1qtdi_1_1_service_config.html" title="A type-safe service-configuration.  This class is the type-safe equivalent to the service_config....">ServiceConfig</a>.  <br /></td></tr>
-<tr class="separator:a2bb0f9b8db0d5f4bb073bfc89512d75d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a833482784437b100f8e2be2250133ce2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3fc81f7aac3ea559beba1e3d8c72d7a0" id="r_a3fc81f7aac3ea559beba1e3d8c72d7a0"><td class="memItemLeft" align="right" valign="top">detail::service_config&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3fc81f7aac3ea559beba1e3d8c72d7a0">mcnepp::qtdi::config</a> ()</td></tr>
+<tr class="separator:a3fc81f7aac3ea559beba1e3d8c72d7a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad81e85469d866cefecc663a766def26" id="r_aad81e85469d866cefecc663a766def26"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename C  = typename detail::variant_converter_traits&lt;detail::remove_cvref_t&lt;A&gt;&gt;::type&gt; </td></tr>
+<tr class="memitem:aad81e85469d866cefecc663a766def26"><td class="memTemplItemLeft" align="right" valign="top">service_config_entry&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aad81e85469d866cefecc663a766def26">mcnepp::qtdi::propValue</a> (R(S::*propertySetter)(A), const QString &amp;expression, C converter=C{})</td></tr>
+<tr class="memdesc:aad81e85469d866cefecc663a766def26"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="separator:aad81e85469d866cefecc663a766def26"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9d4f50592427143dffe1904aca6b520e" id="r_a9d4f50592427143dffe1904aca6b520e"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename C  = typename detail::variant_converter_traits&lt;detail::remove_cvref_t&lt;A&gt;&gt;::type&gt; </td></tr>
-<tr class="memitem:a9d4f50592427143dffe1904aca6b520e"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9d4f50592427143dffe1904aca6b520e">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(A), const QString &amp;expression, C converter=C{})</td></tr>
-<tr class="memdesc:a9d4f50592427143dffe1904aca6b520e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="memitem:a9d4f50592427143dffe1904aca6b520e"><td class="memTemplItemLeft" align="right" valign="top">service_config_entry&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9d4f50592427143dffe1904aca6b520e">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(A), const QString &amp;expression, C converter=C{})</td></tr>
 <tr class="separator:a9d4f50592427143dffe1904aca6b520e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20aed505168263eece7cbf60b3b729c7" id="r_a20aed505168263eece7cbf60b3b729c7"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A &gt; </td></tr>
+<tr class="memitem:a20aed505168263eece7cbf60b3b729c7"><td class="memTemplItemLeft" align="right" valign="top">service_config_entry&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a20aed505168263eece7cbf60b3b729c7">mcnepp::qtdi::propValue</a> (R(S::*propertySetter)(A), A value)</td></tr>
+<tr class="memdesc:a20aed505168263eece7cbf60b3b729c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="separator:a20aed505168263eece7cbf60b3b729c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4429ca7824353834eb387179a8b7ea1b" id="r_a4429ca7824353834eb387179a8b7ea1b"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A &gt; </td></tr>
-<tr class="memitem:a4429ca7824353834eb387179a8b7ea1b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a4429ca7824353834eb387179a8b7ea1b">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(A), A value)</td></tr>
-<tr class="memdesc:a4429ca7824353834eb387179a8b7ea1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="memitem:a4429ca7824353834eb387179a8b7ea1b"><td class="memTemplItemLeft" align="right" valign="top">service_config_entry&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a4429ca7824353834eb387179a8b7ea1b">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(A), A value)</td></tr>
 <tr class="separator:a4429ca7824353834eb387179a8b7ea1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad244b6558abac6ae90a92b7bb992832a" id="r_ad244b6558abac6ae90a92b7bb992832a"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:ad244b6558abac6ae90a92b7bb992832a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ad244b6558abac6ae90a92b7bb992832a">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(A *), const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; A, scope &gt; &amp;reg) -&gt; std::enable_if_t&lt; detail::is_binding_source(scope), <a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt; &gt;</td></tr>
-<tr class="memdesc:ad244b6558abac6ae90a92b7bb992832a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
-<tr class="separator:ad244b6558abac6ae90a92b7bb992832a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9fc86adce6d4387101f682a739b0d4c2" id="r_a9fc86adce6d4387101f682a739b0d4c2"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
+<tr class="memitem:a9fc86adce6d4387101f682a739b0d4c2"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9fc86adce6d4387101f682a739b0d4c2">mcnepp::qtdi::propValue</a> (R(S::*propertySetter)(A *), const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; A, scope &gt; &amp;reg) -&gt; std::enable_if_t&lt; detail::is_allowed_as_dependency(scope), service_config_entry&lt; S &gt; &gt;</td></tr>
+<tr class="memdesc:a9fc86adce6d4387101f682a739b0d4c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="separator:a9fc86adce6d4387101f682a739b0d4c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae54cac2d5e8a525840220f7a76d34f54" id="r_ae54cac2d5e8a525840220f7a76d34f54"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
+<tr class="memitem:ae54cac2d5e8a525840220f7a76d34f54"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ae54cac2d5e8a525840220f7a76d34f54">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(A *), const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; A, scope &gt; &amp;reg) -&gt; std::enable_if_t&lt; detail::is_allowed_as_dependency(scope), service_config_entry&lt; S &gt; &gt;</td></tr>
+<tr class="separator:ae54cac2d5e8a525840220f7a76d34f54"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a509df471e547cb302621d2643fc6aa98" id="r_a509df471e547cb302621d2643fc6aa98"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename L &gt; </td></tr>
+<tr class="memitem:a509df471e547cb302621d2643fc6aa98"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a509df471e547cb302621d2643fc6aa98">mcnepp::qtdi::propValue</a> (R(S::*propertySetter)(L), const <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; A &gt; &amp;reg) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; L, QList&lt; A * &gt; &gt;, service_config_entry&lt; S &gt; &gt;</td></tr>
+<tr class="memdesc:a509df471e547cb302621d2643fc6aa98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="separator:a509df471e547cb302621d2643fc6aa98"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1ee45ec90c5b8e33ec712ace1def7416" id="r_a1ee45ec90c5b8e33ec712ace1def7416"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename L &gt; </td></tr>
-<tr class="memitem:a1ee45ec90c5b8e33ec712ace1def7416"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a1ee45ec90c5b8e33ec712ace1def7416">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(L), const <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; A &gt; &amp;reg) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; L, QList&lt; A * &gt; &gt;, <a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt; &gt;</td></tr>
-<tr class="memdesc:a1ee45ec90c5b8e33ec712ace1def7416"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="memitem:a1ee45ec90c5b8e33ec712ace1def7416"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a1ee45ec90c5b8e33ec712ace1def7416">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(L), const <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; A &gt; &amp;reg) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; L, QList&lt; A * &gt; &gt;, service_config_entry&lt; S &gt; &gt;</td></tr>
 <tr class="separator:a1ee45ec90c5b8e33ec712ace1def7416"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aed65b8ca4bbc94a979cb56b3ce27a0bd" id="r_aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename C  = typename detail::variant_converter_traits&lt;detail::remove_cvref_t&lt;A&gt;&gt;::type&gt; </td></tr>
-<tr class="memitem:aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aed65b8ca4bbc94a979cb56b3ce27a0bd">mcnepp::qtdi::autoRefresh</a> (R(S::*propertySetter)(A), const QString &amp;expression, C converter=C{})</td></tr>
+<tr class="memitem:aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="memTemplItemLeft" align="right" valign="top">service_config_entry&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aed65b8ca4bbc94a979cb56b3ce27a0bd">mcnepp::qtdi::autoRefresh</a> (R(S::*propertySetter)(A), const QString &amp;expression, C converter=C{})</td></tr>
 <tr class="memdesc:aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe, auto-refreshing configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. <br  />
 In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:  <br /></td></tr>
 <tr class="separator:aed65b8ca4bbc94a979cb56b3ce27a0bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9a1a4752ea78443c03584131f67c205a" id="r_a9a1a4752ea78443c03584131f67c205a"><td class="memItemLeft" align="right" valign="top">service_config::entry_type&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9a1a4752ea78443c03584131f67c205a">mcnepp::qtdi::entry</a> (const QString &amp;name, const QVariant &amp;value)</td></tr>
-<tr class="memdesc:a9a1a4752ea78443c03584131f67c205a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
-<tr class="separator:a9a1a4752ea78443c03584131f67c205a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aac83aafd952e2c2c71032645773646c4" id="r_aac83aafd952e2c2c71032645773646c4"><td class="memItemLeft" align="right" valign="top">service_config::entry_type&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aac83aafd952e2c2c71032645773646c4">mcnepp::qtdi::autoRefresh</a> (const QString &amp;name, const QString &amp;expression)</td></tr>
-<tr class="memdesc:aac83aafd952e2c2c71032645773646c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>. <br  />
+<tr class="memitem:a7c28f9811838c5ecf5ad5ac51e9bf956" id="r_a7c28f9811838c5ecf5ad5ac51e9bf956"><td class="memItemLeft" align="right" valign="top">detail::service_config::entry_type&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7c28f9811838c5ecf5ad5ac51e9bf956">mcnepp::qtdi::propValue</a> (const QString &amp;name, const QVariant &amp;value)</td></tr>
+<tr class="memdesc:a7c28f9811838c5ecf5ad5ac51e9bf956"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="separator:a7c28f9811838c5ecf5ad5ac51e9bf956"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a95e9c49e39e4fcbe28ceca48da71dcd1" id="r_a95e9c49e39e4fcbe28ceca48da71dcd1"><td class="memItemLeft" align="right" valign="top">detail::service_config::entry_type&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a95e9c49e39e4fcbe28ceca48da71dcd1">mcnepp::qtdi::placeholderValue</a> (const QString &amp;name, const QVariant &amp;value)</td></tr>
+<tr class="memdesc:a95e9c49e39e4fcbe28ceca48da71dcd1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="separator:a95e9c49e39e4fcbe28ceca48da71dcd1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a88da3f29f245547f0f36e0df647e4f" id="r_a3a88da3f29f245547f0f36e0df647e4f"><td class="memItemLeft" align="right" valign="top">detail::service_config::entry_type&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3a88da3f29f245547f0f36e0df647e4f">mcnepp::qtdi::entry</a> (const QString &amp;name, const QVariant &amp;value)</td></tr>
+<tr class="memdesc:a3a88da3f29f245547f0f36e0df647e4f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
+<tr class="separator:a3a88da3f29f245547f0f36e0df647e4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aecd6c0272cea03116803d76f12e40157" id="r_aecd6c0272cea03116803d76f12e40157"><td class="memItemLeft" align="right" valign="top">detail::service_config::entry_type&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aecd6c0272cea03116803d76f12e40157">mcnepp::qtdi::autoRefresh</a> (const QString &amp;name, const QString &amp;expression)</td></tr>
+<tr class="memdesc:aecd6c0272cea03116803d76f12e40157"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. <br  />
 In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:  <br /></td></tr>
-<tr class="separator:aac83aafd952e2c2c71032645773646c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0f2f39eaaca1ca14c10e912cf8849c05" id="r_a0f2f39eaaca1ca14c10e912cf8849c05"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
-<tr class="memitem:a0f2f39eaaca1ca14c10e912cf8849c05"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service_config.html">ServiceConfig</a>&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a0f2f39eaaca1ca14c10e912cf8849c05">mcnepp::qtdi::config</a> (std::initializer_list&lt; <a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt; &gt; entries)</td></tr>
-<tr class="memdesc:a0f2f39eaaca1ca14c10e912cf8849c05"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a type-safe service-configuration. <br  />
-A type-safe entry can be created by invoking <a class="el" href="#a9d4f50592427143dffe1904aca6b520e" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::entry()</a> with a member-function as its first argument. For example:  <br /></td></tr>
-<tr class="separator:a0f2f39eaaca1ca14c10e912cf8849c05"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:aecd6c0272cea03116803d76f12e40157"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9306d3821ece1acaae7e0c7c9381e41b" id="r_a9306d3821ece1acaae7e0c7c9381e41b"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
+<tr class="memitem:a9306d3821ece1acaae7e0c7c9381e41b"><td class="memTemplItemLeft" align="right" valign="top">detail::service_config&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9306d3821ece1acaae7e0c7c9381e41b">mcnepp::qtdi::config</a> (std::initializer_list&lt; service_config_entry&lt; S &gt; &gt; entries)</td></tr>
+<tr class="memdesc:a9306d3821ece1acaae7e0c7c9381e41b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a type-safe service-configuration. <br  />
+A type-safe entry can be created by invoking <a class="el" href="#aad81e85469d866cefecc663a766def26" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::propValue()</a> with a member-function as its first argument. For example:  <br /></td></tr>
+<tr class="separator:a9306d3821ece1acaae7e0c7c9381e41b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a45251145dd09691a5b6ca160b1b3e6ac" id="r_a45251145dd09691a5b6ca160b1b3e6ac"><td class="memTemplParams" colspan="2">template&lt;typename F , typename Impl  = typename F::service_type, typename... Dep&gt; </td></tr>
+<tr class="memitem:a45251145dd09691a5b6ca160b1b3e6ac"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac">mcnepp::qtdi::service</a> (F factory, Dep...dependencies) -&gt; std::enable_if_t&lt; std::is_invocable_v&lt; F, typename detail::dependency_helper&lt; Dep &gt;::arg_type... &gt;, <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl, ServiceScope::SINGLETON &gt; &gt;</td></tr>
+<tr class="memdesc:a45251145dd09691a5b6ca160b1b3e6ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> with an explicit factory.  <br /></td></tr>
+<tr class="separator:a45251145dd09691a5b6ca160b1b3e6ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8ce383afad6131ee291cc692693d1782" id="r_a8ce383afad6131ee291cc692693d1782"><td class="memTemplParams" colspan="2">template&lt;typename F , typename Impl  = typename F::service_type, typename... Dep&gt; </td></tr>
 <tr class="memitem:a8ce383afad6131ee291cc692693d1782"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Impl, Impl, ServiceScope::SINGLETON &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a8ce383afad6131ee291cc692693d1782">mcnepp::qtdi::serviceFactory</a> (F factory, Dep...dependencies)</td></tr>
-<tr class="memdesc:a8ce383afad6131ee291cc692693d1782"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> with an explicit factory.  <br /></td></tr>
+<tr class="memdesc:a8ce383afad6131ee291cc692693d1782"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> with an explicit factory. <br  />
+This function has been supplanted by <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">service()</a>.  <br /></td></tr>
 <tr class="separator:a8ce383afad6131ee291cc692693d1782"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a07ae03c57a4c371f2f24659088813670" id="r_a07ae03c57a4c371f2f24659088813670"><td class="memTemplParams" colspan="2">template&lt;typename S , typename Impl  = S, typename... Dep&gt; </td></tr>
 <tr class="memitem:a07ae03c57a4c371f2f24659088813670"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; S, Impl, ServiceScope::SINGLETON &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a07ae03c57a4c371f2f24659088813670">mcnepp::qtdi::service</a> (Dep...dependencies)</td></tr>
@@ -468,6 +471,15 @@ The returned <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="D
 If you leave out the type-argument <code>Impl</code>, it will default to <code>QObject</code>. <br  />
 Should you want to ensure that every service derived from this service-template shall be advertised under a certain interface, use <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html#a0ebe286925cbbf4fc27ab6c5653ea992" title="Specifies service-interfaces.  You must specify at least one interface (or otherwise compilation will...">Service::advertiseAs()</a>.  <br /></td></tr>
 <tr class="separator:a1dc51a0152614fb643aaf888bf901eae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adc186b91799443993261a9c701e1312f" id="r_adc186b91799443993261a9c701e1312f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adc186b91799443993261a9c701e1312f">mcnepp::qtdi::newDelegate</a> (const QLoggingCategory &amp;<a class="el" href="#ad8f2bbaf5d705c9287fa8139b9037f15">loggingCategory</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *delegatingContext)</td></tr>
+<tr class="memdesc:adc186b91799443993261a9c701e1312f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates an ApplicationContext as a <em>delegate</em> for another context. <br  />
+With the help of this function you can implement the interface <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> yourself. <br  />
+The <code>delegatingContext</code> will be used for various purposes:  <br /></td></tr>
+<tr class="separator:adc186b91799443993261a9c701e1312f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad2072c0529495833af30691d4e51c630" id="r_ad2072c0529495833af30691d4e51c630"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad2072c0529495833af30691d4e51c630">mcnepp::qtdi::newDelegate</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *delegatingContext)</td></tr>
+<tr class="memdesc:ad2072c0529495833af30691d4e51c630"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates an ApplicationContext as a <em>delegate</em> for another context. <br  />
+Equivalent to <code>newDelegate(defaultLoggingCategory(), delegatingContext)</code>.  <br /></td></tr>
+<tr class="separator:ad2072c0529495833af30691d4e51c630"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Contains the class QApplicationContext and other related types and functions. </p>
@@ -517,7 +529,7 @@ Clients should have no need to know any details about this type. The only thing 
       </table>
 </div><div class="memdoc">
 <p>An opaque type that represents the ServiceRegistration on a low level. <br  />
-Clients should have no need to know any details about this type. The only thing you may do directly with a service_registration_handle_t is check for validity using an if-expression. In particular, you should not de-reference a handle, as its API might change without notice! What you can do, however, is use one of the free functions registeredName(service_registration_handle_t handle), serviceConfig(service_registration_handle_t). applicationContext(registration_handle_t handle). </p>
+Clients should have no need to know any details about this type. The only thing you may do directly with a service_registration_handle_t is check for validity using an if-expression. In particular, you should not de-reference a handle, as its API might change without notice! What you can do, however, is use one of the free functions registeredName(service_registration_handle_t handle), applicationContext(registration_handle_t handle). </p>
 
 </div>
 </div>
@@ -727,8 +739,8 @@ If the handle actually points to a ServiceRegistration, this function will cast 
 
 </div>
 </div>
-<a id="aac83aafd952e2c2c71032645773646c4" name="aac83aafd952e2c2c71032645773646c4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aac83aafd952e2c2c71032645773646c4">&#9670;&#160;</a></span>autoRefresh() <span class="overload">[1/2]</span></h2>
+<a id="aecd6c0272cea03116803d76f12e40157" name="aecd6c0272cea03116803d76f12e40157"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aecd6c0272cea03116803d76f12e40157">&#9670;&#160;</a></span>autoRefresh() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -737,7 +749,7 @@ If the handle actually points to a ServiceRegistration, this function will cast 
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">service_config::entry_type mcnepp::qtdi::autoRefresh </td>
+          <td class="memname">detail::service_config::entry_type mcnepp::qtdi::autoRefresh </td>
           <td>(</td>
           <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>name</em></span>, </td>
         </tr>
@@ -755,15 +767,15 @@ If the handle actually points to a ServiceRegistration, this function will cast 
 </div><div class="memdoc">
 
 <p>Specifies that a value for a configured Q_PROPERTY shall be automatically updated at runtime. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. <br  />
 In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer: </p>
-<pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config({{"interval", "${timerInterval}"}}));
+<pre class="fragment">context-&gt;registerService(service&lt;QTimer&gt;() &lt;&lt; propValue("interval", "${timerInterval}"), "timer");
 </pre><p>The Q_PROPERTY QTimer::interval will be initialized from the value of the configuration-key <code>"timerInterval"</code> as it is in the moment the timer is instantiated.</p>
 <p><br  />
-Now, contrast this with: </p><pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config({autoRefresh("interval", "${timerInterval}")}));
+Now, contrast this with: </p><pre class="fragment">context-&gt;registerService(service&lt;QTimer&gt;() &lt;&lt; autoRefresh("interval", "${timerInterval}"), "timer");
 </pre><p>Whenever the value for the configuration-key <code>"timerInterval"</code> changes in the underlying QSettings-Object, the expression <code>"${timerInterval}"</code> will be re-evaluated and the Q_PROPERTY of the timer will be updated accordingly. <br  />
-In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it: </p><pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config() &lt;&lt; withAutoRefresh &lt;&lt; entry("objectName", "theTimer") &lt;&lt; entry("interval", "${timerInterval}"));
-</pre><p><b>Note:</b> Auto-refreshing an optional feature that needs to be explicitly enabled for <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">mcnepp::qtdi::StandardApplicationContext</a> by putting a configuration-entry into one of the QSettings-objects registered with the context: </p><pre class="fragment">[qtdi]
+In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it: </p><pre class="fragment">context-&gt;registerService(service&lt;QTimer&gt;() &lt;&lt; withAutoRefresh &lt;&lt; propValue("objectName", "theTimer") &lt;&lt; propValue("interval", "${timerInterval}"), "timer");
+</pre><p><b>Note:</b> Auto-refreshing an optional feature that needs to be explicitly enabled for <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext. Using this class is the &quot;canonical way&quot; of ...">mcnepp::qtdi::StandardApplicationContext</a> by putting a configuration-entry into one of the QSettings-objects registered with the context: </p><pre class="fragment">[qtdi]
 enableAutoRefresh=true
 ; Optionally, specify the refresh-period:
 autoRefreshMillis=2000
@@ -813,15 +825,15 @@ template&lt;typename S , typename R , typename A , typename C  = typename detail
 </div><div class="memdoc">
 
 <p>Creates a type-safe, auto-refreshing configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. <br  />
 In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer: </p>
-<pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config() &lt;&lt; entry(&amp;QTimer::setInterval, "${timerInterval}"));
+<pre class="fragment">context-&gt;registerService(service&lt;QTimer&gt;() &lt;&lt; propValue(&amp;QTimer::setInterval, "${timerInterval}"), "timer");
 </pre><p>The member-function will be initialized from the value of the configuration-key <code>"timerInterval"</code> as it is in the moment the timer is instantiated.</p>
 <p><br  />
-Now, contrast this with: </p><pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config() &lt;&lt; autoRefresh(&amp;QTimer::setInterval, "${timerInterval}"));
+Now, contrast this with: </p><pre class="fragment">context-&gt;registerService(service&lt;QTimer&gt;() &lt;&lt; autoRefresh(&amp;QTimer::setInterval, "${timerInterval}"), "timer");
 </pre><p>Whenever the value for the configuration-key <code>"timerInterval"</code> changes in the underlying QSettings-Object, the expression <code>"${timerInterval}"</code> will be re-evaluated and the member-function of the timer will be updated accordingly. <br  />
-In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it: </p><pre class="fragment">context-&gt;registerService&lt;QTimer&gt;("timer", config() &lt;&lt; withAutoRefresh &lt;&lt; entry(&amp;QObject::setObjectName, "theTimer") &lt;&lt; entry("interval", &amp;QTimer::setInterval, "${timerInterval}"));
-</pre><p><b>Note:</b> Auto-refreshing an optional feature that needs to be explicitly enabled for <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext.">mcnepp::qtdi::StandardApplicationContext</a> by putting a configuration-entry into one of the QSettings-objects registered with the context: </p><pre class="fragment">[qtdi]
+In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it: </p><pre class="fragment">context-&gt;registerService(service&lt;QTimer&gt;() &lt;&lt; withAutoRefresh &lt;&lt; propValue(&amp;QObject::setObjectName, "theTimer") &lt;&lt; propValue("interval", &amp;QTimer::setInterval, "${timerInterval}"), "timer");
+</pre><p><b>Note:</b> Auto-refreshing an optional feature that needs to be explicitly enabled for <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext. Using this class is the &quot;canonical way&quot; of ...">mcnepp::qtdi::StandardApplicationContext</a> by putting a configuration-entry into one of the QSettings-objects registered with the context: </p><pre class="fragment">[qtdi]
 enableAutoRefresh=true
 ; Optionally, specify the refresh-period:
 autoRefreshMillis=2000
@@ -1096,8 +1108,8 @@ This function returns a temporary object of type ServiceCombination. The only th
 
 </div>
 </div>
-<a id="a5b2c15ddf8bc9c211e489ad7daea3666" name="a5b2c15ddf8bc9c211e489ad7daea3666"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5b2c15ddf8bc9c211e489ad7daea3666">&#9670;&#160;</a></span>config() <span class="overload">[1/3]</span></h2>
+<a id="a3fc81f7aac3ea559beba1e3d8c72d7a0" name="a3fc81f7aac3ea559beba1e3d8c72d7a0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3fc81f7aac3ea559beba1e3d8c72d7a0">&#9670;&#160;</a></span>config() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1106,7 +1118,7 @@ This function returns a temporary object of type ServiceCombination. The only th
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">service_config mcnepp::qtdi::config </td>
+          <td class="memname">detail::service_config mcnepp::qtdi::config </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
@@ -1118,22 +1130,24 @@ This function returns a temporary object of type ServiceCombination. The only th
   </tr>
 </table>
 </div><div class="memdoc">
-
 <p>Makes a default service_config. <br  />
 The returned service_config can then be further modified, before it gets passed to QApplicationContext::registerService(). <br  />
 Modification is done in a fashion similar to <em>iostreams</em>, i.e. by using the overloaded <code>operator &lt;&lt;</code>. <br  />
-You add a configuration-entry like this: </p>
-<pre class="fragment">config() &lt;&lt; entry("url", "http://mcnepp.com");
-</pre><p>Several configuration-entries can be chained conveniently: </p><pre class="fragment">config() &lt;&lt; entry("url", "http://mcnepp.com") &lt;&lt; entry("objectName", "${dataProvider}");
-</pre><p>You can also specify the group within the QSettings from where the configuration-entries shall be resolved: </p><pre class="fragment">config() &lt;&lt; withGroup("dataProviders") &lt;&lt; entry("url", "http://mcnepp.com") &lt;&lt; entry("objectName", "${dataProvider}");
-</pre><p>If you want to enable <em>autowirng</em> for a service-registration, you can use mcnepp::qtdi::withAutowire(service_config&amp;) like this: </p><pre class="fragment">config() &lt;&lt; withGroup("dataProviders") &lt;&lt; withAutowire &lt;&lt; entry("url", "http://mcnepp.com") &lt;&lt; entry("objectName", "${dataProvider}");
-</pre><p>And finally, should you want to enable <em>auto-refresh</em> on all configuration-entries, you can use mcnepp::qtdi::withAutoRefresh(service_config&amp;) like this: </p><pre class="fragment">config() &lt;&lt; withGroup("dataProviders") &lt;&lt; withAutoRefresh &lt;&lt; entry("url", "http://mcnepp.com") &lt;&lt; entry("objectName", "${dataProvider}");
-</pre><dl class="section return"><dt>Returns</dt><dd>the service_config. </dd></dl>
+You add a configuration-entry like this: </p><pre class="fragment">config() &lt;&lt; propValue("url", "http://mcnepp.com");
+</pre><p>The above line assumes that the service-class has a writable Q_PROPERTY named "url". Instead of relying on the Q_PROPERTY, you could also use a type-safe variant of the above. Suppose the service-class <code>MyRestService</code> offers a <em>setter-method</em> for the Url:</p>
+<p>config() &lt;&lt; propValue(&amp;MyRestService::setUrl, "http://mcnepp.com");</p>
+<p>Several configuration-entries can be chained conveniently: </p><pre class="fragment">config() &lt;&lt; propValue("url", "http://mcnepp.com") &lt;&lt; propValue("objectName", "${dataProvider}");
+</pre><p>The second configuration-entry shows the use of a <em>placeholder</em>: the token within the curly brackets will be looked up from the ApplicationContext's QSettings.</p>
+<p>You can also specify the group within the QSettings from where the configuration-entries shall be resolved: </p><pre class="fragment">config() &lt;&lt; withGroup("dataProviders") &lt;&lt; propValue("url", "http://mcnepp.com") &lt;&lt; propValue("objectName", "${dataProvider}");
+</pre><p>If you want to enable <em>autowiring</em> for a service-registration, you can use mcnepp::qtdi::withAutowire(service_config&amp;) like this: </p><pre class="fragment">config() &lt;&lt; withGroup("dataProviders") &lt;&lt; withAutowire &lt;&lt; propValue("url", "http://mcnepp.com") &lt;&lt; propValue("objectName", "${dataProvider}");
+</pre><p>And finally, should you want to enable <em>auto-refresh</em> on all configuration-entries, you can use mcnepp::qtdi::withAutoRefresh(service_config&amp;) like this: </p><pre class="fragment">config() &lt;&lt; withGroup("dataProviders") &lt;&lt; withAutoRefresh &lt;&lt; propValue("url", "http://mcnepp.com") &lt;&lt; propValue("objectName", "${dataProvider}");
+</pre><dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000003">Deprecated</a></b></dt><dd>Use <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> instead </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>the service_config. </dd></dl>
 
 </div>
 </div>
-<a id="a0f2f39eaaca1ca14c10e912cf8849c05" name="a0f2f39eaaca1ca14c10e912cf8849c05"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0f2f39eaaca1ca14c10e912cf8849c05">&#9670;&#160;</a></span>config() <span class="overload">[2/3]</span></h2>
+<a id="a9306d3821ece1acaae7e0c7c9381e41b" name="a9306d3821ece1acaae7e0c7c9381e41b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9306d3821ece1acaae7e0c7c9381e41b">&#9670;&#160;</a></span>config() <span class="overload">[2/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1144,9 +1158,9 @@ template&lt;typename S &gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">ServiceConfig&lt; S &gt; mcnepp::qtdi::config </td>
+          <td class="memname">detail::service_config mcnepp::qtdi::config </td>
           <td>(</td>
-          <td class="paramtype">std::initializer_list&lt; <a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>entries</em></span></td><td>)</td>
+          <td class="paramtype">std::initializer_list&lt; service_config_entry&lt; S &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>entries</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -1158,9 +1172,9 @@ template&lt;typename S &gt; </div>
 </div><div class="memdoc">
 
 <p>Create a type-safe service-configuration. <br  />
-A type-safe entry can be created by invoking <a class="el" href="#a9d4f50592427143dffe1904aca6b520e" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::entry()</a> with a member-function as its first argument. For example: </p>
-<pre class="fragment">context-&gt;registerService&lt;QQTimer&gt;("timer", config({entry(&amp;QTimer::setInterval, 1000), entry(&amp;QTimer::singleShot, "true")}));
-</pre><p>Note that is possible to mix type-safe configuration-entries with Q_PROPERTY-based configuration-entries: </p><pre class="fragment">context-&gt;registerService&lt;QQTimer&gt;("timer", config({entry(&amp;QTimer::setInterval, 1000)}) &lt;&lt; entry("singleShot", "true"));
+A type-safe entry can be created by invoking <a class="el" href="#aad81e85469d866cefecc663a766def26" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::propValue()</a> with a member-function as its first argument. For example: </p>
+<pre class="fragment">context-&gt;registerService&lt;QQTimer&gt;("timer", config({propValue(&amp;QTimer::setInterval, 1000), propValue(&amp;QTimer::singleShot, "true")}));
+</pre><p>Note that is possible to mix type-safe configuration-entries with Q_PROPERTY-based configuration-entries: </p><pre class="fragment">context-&gt;registerService&lt;QQTimer&gt;("timer", config({propValue(&amp;QTimer::setInterval, 1000)}) &lt;&lt; propValue("singleShot", "true"));
 </pre><p>However, there is a caveat: Even though the above service-registrations are <em>logically equivalent</em>, they are <em>technically different</em>. Thus, executing the second registration after the first one will not be considered <em>idempotent</em>. This means that the second registration will fail (i.e. return an invalid ServiceRegistration).</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -1168,12 +1182,13 @@ A type-safe entry can be created by invoking <a class="el" href="#a9d4f505924271
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000009">Deprecated</a></b></dt><dd>The preferred way of configuring a service is to use <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a>, followed by adding entries using the left-shift operator. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>a type-safe service-configuration. </dd></dl>
 
 </div>
 </div>
-<a id="ae9134d3bd63dc9885fe60a7c1f918c2b" name="ae9134d3bd63dc9885fe60a7c1f918c2b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae9134d3bd63dc9885fe60a7c1f918c2b">&#9670;&#160;</a></span>config() <span class="overload">[3/3]</span></h2>
+<a id="a833482784437b100f8e2be2250133ce2" name="a833482784437b100f8e2be2250133ce2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a833482784437b100f8e2be2250133ce2">&#9670;&#160;</a></span>config() <span class="overload">[3/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1182,7 +1197,7 @@ A type-safe entry can be created by invoking <a class="el" href="#a9d4f505924271
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">service_config mcnepp::qtdi::config </td>
+          <td class="memname">detail::service_config mcnepp::qtdi::config </td>
           <td>(</td>
           <td class="paramtype">std::initializer_list&lt; std::pair&lt; QString, QVariant &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>properties</em></span></td><td>)</td>
           <td></td>
@@ -1201,12 +1216,12 @@ The service must have a Q_PROPERTY for every key contained in <code>properties</
 <pre class="fragment">`config({{"interval", 42}});`
 </pre><p> will set the Q_PROPERTY <code>interval</code> to the value 42. </p>
 <h3><a class="anchor" id="autotoc_md3"></a>
-Private Properties</h3>
-<p>A key that starts with a dot is considered to denote a <em>private property</em>, and no attempt will be made to set a corresponding Q_PROPERTY on the Service.<br  />
- There are two ways of putting such private properties to use:<br  />
+Non-property placeholder-values</h3>
+<p>A key that starts with a dot is considered to denote a <em>placeholder-value</em>, and no attempt will be made to set a corresponding Q_PROPERTY on the Service.<br  />
+ There are two ways of putting such placeholder-values to use:<br  />
  Either, you may evaluate them via a <code>QApplicationContextPostProcessor</code>.<br  />
  Or, you can use them in conjunction with a <em>service-template</em>. Suppose, for example, you have a class <code>RestService</code> with a Q_PROPERTY <code>url</code>. You want to construct this URL by using the same pattern for every service of type <code>RestService</code>. However, one part of the URL will be unique for each Service. This is how you would do this: </p><pre class="fragment">auto restServiceTemplate = context -&gt; registerService&lt;RestService&gt;(serviceTemplate&lt;RestService&gt;(), "restTemplate", config({{"url", "https://myserver/rest/${path}"}}));
-</pre><p>Now, whenever you register a concrete RestService, you must supply the <code>templateReg</code> as an additional argument. Also, you must specify the value for <code>${path}</code> as a <em>private property</em>: </p><pre class="fragment">context -&gt; registerService(service&lt;RestService&gt;(), restServiceTemplate, "temperatureService", config({{".path", "temperature"}}));
+</pre><p>Now, whenever you register a concrete RestService, you must supply the <code>templateReg</code> as an additional argument. Also, you must specify the value for <code>${path}</code> as a <em>placeholder-value</em>: </p><pre class="fragment">context -&gt; registerService(service&lt;RestService&gt;(), restServiceTemplate, "temperatureService", config({{".path", "temperature"}}));
 </pre><h3><a class="anchor" id="autotoc_md4"></a>
 Placeholders</h3>
 <p>Values may contain <em>placeholders</em>, indicated by the syntax <code>${placeholder}</code>. Such a placeholder will be looked up via <code>QApplicationContext::getConfigurationValue(const QString&amp;,bool)</code>.<br  />
@@ -1217,7 +1232,7 @@ Should you want to specify a property-value containg the character-sequence "${"
 Lookup in sub-sections</h3>
 <p>Every key will be looked up in the provided section, as specified by the <code>group</code> argument, unless the key itself starts with a forward slash, which denotes the root-section.</p>
 <p>A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:</p>
-<p>Insert */ right after the opening sequence of the placeholder. </p><pre class="fragment">//Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
+<p>Insert *&zwj;/ right after the opening sequence of the placeholder. </p><pre class="fragment">//Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
 //Thus, in the following example, we put a space between the asterisk and the slash:
 config({{"interval", "${* /timerInterval}"}}) &lt;&lt; withGroup("timers");
 </pre><p>The key "timerInterval" will first be searched in the section "timers". If it cannot be found, it will be searched in the root-section.</p>
@@ -1231,6 +1246,7 @@ Should you want to specify a property-value starting with an ampersand, you must
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000002">Deprecated</a></b></dt><dd>The preferred way of configuring a serivce is to use <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a>, followed by adding entries using the left-shift operator. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>the service_config. </dd></dl>
 
 </div>
@@ -1290,8 +1306,8 @@ In case source and target represent the same Registration, the connection will s
 
 </div>
 </div>
-<a id="a9a1a4752ea78443c03584131f67c205a" name="a9a1a4752ea78443c03584131f67c205a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9a1a4752ea78443c03584131f67c205a">&#9670;&#160;</a></span>entry() <span class="overload">[1/5]</span></h2>
+<a id="a3a88da3f29f245547f0f36e0df647e4f" name="a3a88da3f29f245547f0f36e0df647e4f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a88da3f29f245547f0f36e0df647e4f">&#9670;&#160;</a></span>entry() <span class="overload">[1/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1300,7 +1316,7 @@ In case source and target represent the same Registration, the connection will s
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">service_config::entry_type mcnepp::qtdi::entry </td>
+          <td class="memname">detail::service_config::entry_type mcnepp::qtdi::entry </td>
           <td>(</td>
           <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>name</em></span>, </td>
         </tr>
@@ -1318,20 +1334,21 @@ In case source and target represent the same Registration, the connection will s
 </div><div class="memdoc">
 
 <p>Creates a configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>. </p>
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">name</td><td>the name of the property to be configured. <b>Note:</b> this name must refer to a Q_PROPERTY of the service-type! The only exception is a <em>private property</em>, i.e. a configuration-entry that shall not be resolved automatically. In that case, the name must start with a dot. </td></tr>
+    <tr><td class="paramname">name</td><td>the name of the property to be configured. <b>Note:</b> this name must refer to a Q_PROPERTY of the service-type! The only exception is a <em>placeholder-value</em>, i.e. a configuration-entry that shall not be resolved automatically. In that case, the name must start with a dot. </td></tr>
     <tr><td class="paramname">value</td><td>will be used as the property's value. </td></tr>
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000008">Deprecated</a></b></dt><dd>Use <a class="el" href="#aad81e85469d866cefecc663a766def26" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::propValue()</a> or <a class="el" href="#a95e9c49e39e4fcbe28ceca48da71dcd1" title="Creates a configuration-entry for a service.  The resulting service_config_entry can then be passed t...">mcnepp::qtdi::placeholderValue()</a> instead </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>a configuration for a service. </dd></dl>
 
 </div>
 </div>
-<a id="ad244b6558abac6ae90a92b7bb992832a" name="ad244b6558abac6ae90a92b7bb992832a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad244b6558abac6ae90a92b7bb992832a">&#9670;&#160;</a></span>entry() <span class="overload">[2/5]</span></h2>
+<a id="ae54cac2d5e8a525840220f7a76d34f54" name="ae54cac2d5e8a525840220f7a76d34f54"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae54cac2d5e8a525840220f7a76d34f54">&#9670;&#160;</a></span>entry() <span class="overload">[2/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1349,8 +1366,7 @@ template&lt;typename S , typename R , typename A , ServiceScope scope&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; A, scope &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>reg</em></span>&#160;) -&gt; std::enable_if_t&lt;detail::is_binding_source(scope),<a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt;S&gt;&gt;
-</td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; A, scope &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>reg</em></span>&#160;) -&gt; std::enable_if_t&lt;detail::is_allowed_as_dependency(scope),service_config_entry&lt;S&gt;&gt; </td>
         </tr>
       </table>
   </td>
@@ -1359,23 +1375,7 @@ template&lt;typename S , typename R , typename A , ServiceScope scope&gt; </div>
   </tr>
 </table>
 </div><div class="memdoc">
-
-<p>Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>. </p>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
-  <table class="tparams">
-    <tr><td class="paramname">S</td><td>the service-type. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with the instance of the service of type <code>&lt;A&gt;</code>. </td></tr>
-    <tr><td class="paramname">reg</td><td>the registration for the service-instance that will be injected into the configured service. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>a type-safe configuration for a service. </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000006">Deprecated</a></b></dt><dd>Use <a class="el" href="#aad81e85469d866cefecc663a766def26" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::propValue()</a> instead </dd></dl>
 
 </div>
 </div>
@@ -1407,23 +1407,7 @@ template&lt;typename S , typename R , typename A &gt; </div>
   </tr>
 </table>
 </div><div class="memdoc">
-
-<p>Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>. </p>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
-  <table class="tparams">
-    <tr><td class="paramname">S</td><td>the service-type. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with the property-value. </td></tr>
-    <tr><td class="paramname">value</td><td>will be set when the service is being configured. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>a type-safe configuration for a service. </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000005">Deprecated</a></b></dt><dd>Use <a class="el" href="#aad81e85469d866cefecc663a766def26" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::propValue()</a> instead </dd></dl>
 
 </div>
 </div>
@@ -1460,24 +1444,7 @@ template&lt;typename S , typename R , typename A , typename C  = typename detail
   </tr>
 </table>
 </div><div class="memdoc">
-
-<p>Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>. </p>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
-  <table class="tparams">
-    <tr><td class="paramname">S</td><td>the service-type. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with the property-value. </td></tr>
-    <tr><td class="paramname">expression</td><td>will be resolved when the service is being configured. May contain <em>placeholders</em>. </td></tr>
-    <tr><td class="paramname">converter</td><td>(optional) specifies a converter that constructs an argument of type <code>A</code> from a QString. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>a type-safe configuration for a service. </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000004">Deprecated</a></b></dt><dd>Use <a class="el" href="#aad81e85469d866cefecc663a766def26" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::propValue()</a> instead </dd></dl>
 
 </div>
 </div>
@@ -1500,8 +1467,7 @@ template&lt;typename S , typename R , typename A , typename L &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; A &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>reg</em></span>&#160;) -&gt; std::enable_if_t&lt;std::is_convertible_v&lt;L,QList&lt;A*&gt;&gt;,<a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt;S&gt;&gt;
-</td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; A &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>reg</em></span>&#160;) -&gt; std::enable_if_t&lt;std::is_convertible_v&lt;L,QList&lt;A*&gt;&gt;,service_config_entry&lt;S&gt;&gt; </td>
         </tr>
       </table>
   </td>
@@ -1510,46 +1476,26 @@ template&lt;typename S , typename R , typename A , typename L &gt; </div>
   </tr>
 </table>
 </div><div class="memdoc">
-
-<p>Creates a type-safe configuration-entry for a service. <br  />
-The resulting service_config_entry can then be passed to <a class="el" href="#a5b2c15ddf8bc9c211e489ad7daea3666" title="Makes a default service_config.  The returned service_config can then be further modified,...">mcnepp::qtdi::config()</a> using the <code>operator &lt;&lt;</code>. </p>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
-  <table class="tparams">
-    <tr><td class="paramname">S</td><td>the service-type. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with a <code>QList&lt;A*&gt;</code>, comprising all service-instances that have been published for the suppolied ProxyRegistration. </td></tr>
-    <tr><td class="paramname">reg</td><td>the registration for those services that will be injected into the configured service. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>a type-safe configuration for a service. </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000007">Deprecated</a></b></dt><dd>Use <a class="el" href="#aad81e85469d866cefecc663a766def26" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::propValue()</a> instead </dd></dl>
 
 </div>
 </div>
-<a id="a52003170c4fd6d306dcc8a53eacd195e" name="a52003170c4fd6d306dcc8a53eacd195e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a52003170c4fd6d306dcc8a53eacd195e">&#9670;&#160;</a></span>inject() <span class="overload">[1/2]</span></h2>
+<a id="aa230bb92d281b0431f927577348acba9" name="aa230bb92d281b0431f927577348acba9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa230bb92d281b0431f927577348acba9">&#9670;&#160;</a></span>inject() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::MANDATORY&gt;&gt; </div>
+template&lt;typename S &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">Dependency&lt; S, Kind::MANDATORY, C &gt; mcnepp::qtdi::inject </td>
+          <td class="memname">Dependency&lt; S, Kind::MANDATORY &gt; mcnepp::qtdi::inject </td>
           <td>(</td>
-          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>requiredName</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>requiredName</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span></td><td>)</td>
           <td></td>
-          <td class="paramtype">C</td>          <td class="paramname"><span class="paramname"><em>converter</em></span><span class="paramdefsep"> = </span><span class="paramdefval">C{}</span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -1563,14 +1509,12 @@ template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,K
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">requiredName</td><td>the required name of the dependency. If empty, no name is required. </td></tr>
-    <tr><td class="paramname">converter</td><td>an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
-    <tr><td class="paramname">C</td><td>the type of an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
   </table>
   </dd>
 </dl>
@@ -1621,26 +1565,22 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="adbc81e2f7354efd7e77aa600539d6eb1" name="adbc81e2f7354efd7e77aa600539d6eb1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adbc81e2f7354efd7e77aa600539d6eb1">&#9670;&#160;</a></span>injectAll() <span class="overload">[1/2]</span></h2>
+<a id="a3ab0ce02c0834a71a536a0ac41672225" name="a3ab0ce02c0834a71a536a0ac41672225"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3ab0ce02c0834a71a536a0ac41672225">&#9670;&#160;</a></span>injectAll() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::N&gt;&gt; </div>
+template&lt;typename S &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">Dependency&lt; S, Kind::N, C &gt; mcnepp::qtdi::injectAll </td>
+          <td class="memname">Dependency&lt; S, Kind::N &gt; mcnepp::qtdi::injectAll </td>
           <td>(</td>
-          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>requiredName</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>requiredName</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span></td><td>)</td>
           <td></td>
-          <td class="paramtype">C</td>          <td class="paramname"><span class="paramname"><em>converter</em></span><span class="paramdefsep"> = </span><span class="paramdefval">C{}</span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -1654,14 +1594,12 @@ template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,K
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">requiredName</td><td>the required name of the dependency. If empty, no name is required. </td></tr>
-    <tr><td class="paramname">converter</td><td>an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
-    <tr><td class="paramname">C</td><td>the type of an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
   </table>
   </dd>
 </dl>
@@ -1712,26 +1650,22 @@ template&lt;typename S &gt; </div>
 
 </div>
 </div>
-<a id="a2ddf8a871e1f8982afcd787799816cc0" name="a2ddf8a871e1f8982afcd787799816cc0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2ddf8a871e1f8982afcd787799816cc0">&#9670;&#160;</a></span>injectIfPresent() <span class="overload">[1/2]</span></h2>
+<a id="afe4b3cbeda7748a3b87a0309720cba6b" name="afe4b3cbeda7748a3b87a0309720cba6b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afe4b3cbeda7748a3b87a0309720cba6b">&#9670;&#160;</a></span>injectIfPresent() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,Kind::OPTIONAL&gt;&gt; </div>
+template&lt;typename S &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">Dependency&lt; S, Kind::OPTIONAL, C &gt; mcnepp::qtdi::injectIfPresent </td>
+          <td class="memname">Dependency&lt; S, Kind::OPTIONAL &gt; mcnepp::qtdi::injectIfPresent </td>
           <td>(</td>
-          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>requiredName</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>requiredName</em></span><span class="paramdefsep"> = </span><span class="paramdefval">&quot;&quot;</span></td><td>)</td>
           <td></td>
-          <td class="paramtype">C</td>          <td class="paramname"><span class="paramname"><em>converter</em></span><span class="paramdefsep"> = </span><span class="paramdefval">C{}</span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -1745,14 +1679,12 @@ template&lt;typename S , typename C  = detail::default_argument_converter&lt;S,K
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">requiredName</td><td>the required name of the dependency. If empty, no name is required. </td></tr>
-    <tr><td class="paramname">converter</td><td>an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
-    <tr><td class="paramname">C</td><td>the type of an optional <em>Callable</em> object that can convert a QVariant to the target-type. </td></tr>
   </table>
   </dd>
 </dl>
@@ -1909,6 +1841,80 @@ template&lt;typename T &gt; </div>
 
 </div>
 </div>
+<a id="adc186b91799443993261a9c701e1312f" name="adc186b91799443993261a9c701e1312f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adc186b91799443993261a9c701e1312f">&#9670;&#160;</a></span>newDelegate() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">QApplicationContext * mcnepp::qtdi::newDelegate </td>
+          <td>(</td>
+          <td class="paramtype">const QLoggingCategory &amp;</td>          <td class="paramname"><span class="paramname"><em>loggingCategory</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *</td>          <td class="paramname"><span class="paramname"><em>delegatingContext</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Creates an ApplicationContext as a <em>delegate</em> for another context. <br  />
+With the help of this function you can implement the interface QApplicationContext yourself. <br  />
+The <code>delegatingContext</code> will be used for various purposes: </p>
+<ul>
+<li>It will become the <code>QObject::parent()</code> of the <em>delegate</em>.</li>
+<li>It will be injected into <em>init-methods</em> of services that choose to provide such a method.</li>
+<li>It will be attached to all ServiceRegistrations and can be obtained via ServiceRegistration::applicationContext(). <dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">loggingCategory</td><td>will be used for logging. </td></tr>
+    <tr><td class="paramname">delegatingContext</td><td>the context that will delegate its call to the <em>delegate</em>. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>an ApplicationContext that serves as the <em>delegate</em> for the <code>delegatingContext</code>. </dd></dl>
+</li>
+</ul>
+
+</div>
+</div>
+<a id="ad2072c0529495833af30691d4e51c630" name="ad2072c0529495833af30691d4e51c630"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad2072c0529495833af30691d4e51c630">&#9670;&#160;</a></span>newDelegate() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">QApplicationContext * mcnepp::qtdi::newDelegate </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *</td>          <td class="paramname"><span class="paramname"><em>delegatingContext</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates an ApplicationContext as a <em>delegate</em> for another context. <br  />
+Equivalent to <code>newDelegate(defaultLoggingCategory(), delegatingContext)</code>. </p>
+<dl class="section see"><dt>See also</dt><dd>mcnepp::qtdi::newDelegate(const QLoggingCategory&amp; , QApplicationContext* ) </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">delegatingContext</td><td>the context that will delegate its call to the <em>delegate</em>. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>an ApplicationContext that serves as the <em>delegate</em> for the <code>delegatingContext</code>. </dd></dl>
+
+</div>
+</div>
 <a id="af3af5d12702a86a3fb75354a6e7e37a8" name="af3af5d12702a86a3fb75354a6e7e37a8"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af3af5d12702a86a3fb75354a6e7e37a8">&#9670;&#160;</a></span>operator!=()</h2>
 
@@ -1939,86 +1945,6 @@ template&lt;typename S1 , typename S2 &gt; </div>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><code>true</code> if the two Registrations are logically different. </dd></dl>
-
-</div>
-</div>
-<a id="a2bb0f9b8db0d5f4bb073bfc89512d75d" name="a2bb0f9b8db0d5f4bb073bfc89512d75d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2bb0f9b8db0d5f4bb073bfc89512d75d">&#9670;&#160;</a></span>operator&lt;&lt;() <span class="overload">[1/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename S &gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">ServiceConfig&lt; S &gt; mcnepp::qtdi::operator&lt;&lt; </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>cfg</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>entry</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">nodiscard</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Adds a type-safe entry, creating a strongly typed ServiceConfig. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">entry</td><td>an entry that was created by one of the overloads of <a class="el" href="#a9d4f50592427143dffe1904aca6b520e" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::entry()</a> or <a class="el" href="#aed65b8ca4bbc94a979cb56b3ce27a0bd" title="Creates a type-safe, auto-refreshing configuration-entry for a service.  The resulting service_config...">mcnepp::qtdi::autoRefresh()</a>. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>a strongly typed ServiceConfig. </dd></dl>
-
-</div>
-</div>
-<a id="a346a809b3830e0d37d99194e0e50bf4d" name="a346a809b3830e0d37d99194e0e50bf4d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a346a809b3830e0d37d99194e0e50bf4d">&#9670;&#160;</a></span>operator&lt;&lt;() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename S &gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">ServiceConfig&lt; S &gt; mcnepp::qtdi::operator&lt;&lt; </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;&amp;</td>          <td class="paramname"><span class="paramname"><em>cfg</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="#ab33d4e62a8cebba89c6ff34181d65f72">service_config_entry</a>&lt; S &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>entry</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">nodiscard</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Adds a type-safe entry, creating a strongly typed ServiceConfig. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">entry</td><td>an entry that was created by one of the overloads of <a class="el" href="#a9d4f50592427143dffe1904aca6b520e" title="Creates a type-safe configuration-entry for a service.  The resulting service_config_entry can then b...">mcnepp::qtdi::entry()</a> or <a class="el" href="#aed65b8ca4bbc94a979cb56b3ce27a0bd" title="Creates a type-safe, auto-refreshing configuration-entry for a service.  The resulting service_config...">mcnepp::qtdi::autoRefresh()</a>. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>a strongly typed ServiceConfig. </dd></dl>
 
 </div>
 </div>
@@ -2091,6 +2017,286 @@ template&lt;typename S1 , typename S2 &gt; </div>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><code>true</code> if the two Subscriptions are logically equal. </dd></dl>
+
+</div>
+</div>
+<a id="a95e9c49e39e4fcbe28ceca48da71dcd1" name="a95e9c49e39e4fcbe28ceca48da71dcd1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a95e9c49e39e4fcbe28ceca48da71dcd1">&#9670;&#160;</a></span>placeholderValue()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">detail::service_config::entry_type mcnepp::qtdi::placeholderValue </td>
+          <td>(</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>name</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const QVariant &amp;</td>          <td class="paramname"><span class="paramname"><em>value</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>the name of the placeholder to be configured. </td></tr>
+    <tr><td class="paramname">value</td><td>will be used as the property's value. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a configuration for a service. </dd></dl>
+
+</div>
+</div>
+<a id="a7c28f9811838c5ecf5ad5ac51e9bf956" name="a7c28f9811838c5ecf5ad5ac51e9bf956"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7c28f9811838c5ecf5ad5ac51e9bf956">&#9670;&#160;</a></span>propValue() <span class="overload">[1/5]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">detail::service_config::entry_type mcnepp::qtdi::propValue </td>
+          <td>(</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>name</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const QVariant &amp;</td>          <td class="paramname"><span class="paramname"><em>value</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>the name of the property to be configured. <b>Note:</b> this name must refer to a Q_PROPERTY of the service-type! </td></tr>
+    <tr><td class="paramname">value</td><td>will be used as the property's value. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a configuration for a service. </dd></dl>
+
+</div>
+</div>
+<a id="a9fc86adce6d4387101f682a739b0d4c2" name="a9fc86adce6d4387101f682a739b0d4c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9fc86adce6d4387101f682a739b0d4c2">&#9670;&#160;</a></span>propValue() <span class="overload">[2/5]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename S , typename R , typename A , ServiceScope scope&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">auto mcnepp::qtdi::propValue </td>
+          <td>(</td>
+          <td class="paramtype">R(S::*</td>          <td class="paramname"><span class="paramname"><em>propertySetter&#160;</em></span>)(A *), </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; A, scope &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>reg</em></span>&#160;) -&gt; std::enable_if_t&lt;detail::is_allowed_as_dependency(scope),service_config_entry&lt;S&gt;&gt;
+</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a type-safe configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with the instance of the service of type <code>&lt;A&gt;</code>. </td></tr>
+    <tr><td class="paramname">reg</td><td>the registration for the service-instance that will be injected into the configured service. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a type-safe configuration for a service. </dd></dl>
+
+</div>
+</div>
+<a id="a20aed505168263eece7cbf60b3b729c7" name="a20aed505168263eece7cbf60b3b729c7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a20aed505168263eece7cbf60b3b729c7">&#9670;&#160;</a></span>propValue() <span class="overload">[3/5]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename S , typename R , typename A &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">service_config_entry&lt; S &gt; mcnepp::qtdi::propValue </td>
+          <td>(</td>
+          <td class="paramtype">R(S::*</td>          <td class="paramname"><span class="paramname"><em>propertySetter&#160;</em></span>)(A), </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">A</td>          <td class="paramname"><span class="paramname"><em>value</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a type-safe configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with the property-value. </td></tr>
+    <tr><td class="paramname">value</td><td>will be set when the service is being configured. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a type-safe configuration for a service. </dd></dl>
+
+</div>
+</div>
+<a id="aad81e85469d866cefecc663a766def26" name="aad81e85469d866cefecc663a766def26"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad81e85469d866cefecc663a766def26">&#9670;&#160;</a></span>propValue() <span class="overload">[4/5]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename S , typename R , typename A , typename C  = typename detail::variant_converter_traits&lt;detail::remove_cvref_t&lt;A&gt;&gt;::type&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">service_config_entry&lt; S &gt; mcnepp::qtdi::propValue </td>
+          <td>(</td>
+          <td class="paramtype">R(S::*</td>          <td class="paramname"><span class="paramname"><em>propertySetter&#160;</em></span>)(A), </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>expression</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">C</td>          <td class="paramname"><span class="paramname"><em>converter</em></span><span class="paramdefsep"> = </span><span class="paramdefval">C{}</span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a type-safe configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with the property-value. </td></tr>
+    <tr><td class="paramname">expression</td><td>will be resolved when the service is being configured. May contain <em>placeholders</em>. </td></tr>
+    <tr><td class="paramname">converter</td><td>(optional) specifies a converter that constructs an argument of type <code>A</code> from a QString. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a type-safe configuration for a service. </dd></dl>
+
+</div>
+</div>
+<a id="a509df471e547cb302621d2643fc6aa98" name="a509df471e547cb302621d2643fc6aa98"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a509df471e547cb302621d2643fc6aa98">&#9670;&#160;</a></span>propValue() <span class="overload">[5/5]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename S , typename R , typename A , typename L &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">auto mcnepp::qtdi::propValue </td>
+          <td>(</td>
+          <td class="paramtype">R(S::*</td>          <td class="paramname"><span class="paramname"><em>propertySetter&#160;</em></span>)(L), </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; A &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>reg</em></span>&#160;) -&gt; std::enable_if_t&lt;std::is_convertible_v&lt;L,QList&lt;A*&gt;&gt;,service_config_entry&lt;S&gt;&gt;
+</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates a type-safe configuration-entry for a service. <br  />
+The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. </p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">propertySetter</td><td>the member-function that will be invoked with a <code>QList&lt;A*&gt;</code>, comprising all service-instances that have been published for the suppolied ProxyRegistration. </td></tr>
+    <tr><td class="paramname">reg</td><td>the registration for those services that will be injected into the configured service. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a type-safe configuration for a service. </dd></dl>
 
 </div>
 </div>
@@ -2298,9 +2504,9 @@ Should you want to specify a property-value containg the character-sequence "${"
 Lookup in sub-sections</h3>
 <p>Every key will be looked up in the section that has been provided via as an argument to mcnepp::qitdi::withGroup(const QString&amp;), argument, unless the key itself starts with a forward slash, which denotes the root-section.</p>
 <p>A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:</p>
-<p>Insert */ right after the opening sequence of the placeholder. </p><pre class="fragment">//Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
+<p>Insert *&zwj;/ right after the opening sequence of the placeholder. </p><pre class="fragment">//Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
 //Thus, in the following example, we put a space between the asterisk and the slash:
-context -&gt; registerService(service&lt;QIODevice,QFile&gt;(resolve("${* /filename}")), "file", config() &lt;&lt; withyGroup("files"));
+context -&gt; registerService(service&lt;QIODevice,QFile&gt;(resolve("${* /filename}")) &lt;&lt; withGroup("files"));
 </pre><p>The key "filename" will first be searched in the section "files". If it cannot be found, it will be searched in the root-section.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
@@ -2322,7 +2528,7 @@ context -&gt; registerService(service&lt;QIODevice,QFile&gt;(resolve("${* /filen
 </div>
 </div>
 <a id="a07ae03c57a4c371f2f24659088813670" name="a07ae03c57a4c371f2f24659088813670"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a07ae03c57a4c371f2f24659088813670">&#9670;&#160;</a></span>service()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a07ae03c57a4c371f2f24659088813670">&#9670;&#160;</a></span>service() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2364,20 +2570,27 @@ template&lt;typename S , typename Impl  = S, typename... Dep&gt; </div>
 
 </div>
 </div>
-<a id="a01c1421ad2f49f3e219de2db9eec1b35" name="a01c1421ad2f49f3e219de2db9eec1b35"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a01c1421ad2f49f3e219de2db9eec1b35">&#9670;&#160;</a></span>serviceConfig()</h2>
+<a id="a45251145dd09691a5b6ca160b1b3e6ac" name="a45251145dd09691a5b6ca160b1b3e6ac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a45251145dd09691a5b6ca160b1b3e6ac">&#9670;&#160;</a></span>service() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
+<div class="memtemplate">
+template&lt;typename F , typename Impl  = typename F::service_type, typename... Dep&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">const service_config &amp; mcnepp::qtdi::serviceConfig </td>
+          <td class="memname">auto mcnepp::qtdi::service </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a></td>          <td class="paramname"><span class="paramname"><em>handle</em></span></td><td>)</td>
+          <td class="paramtype">F</td>          <td class="paramname"><span class="paramname"><em>factory</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">Dep...</td>          <td class="paramname"><span class="paramname"><em>dependencies</em></span>&#160;) -&gt; std::enable_if_t&lt;std::is_invocable_v&lt;F,typename detail::dependency_helper&lt;Dep&gt;::arg_type...&gt;,<a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt;Impl,Impl,ServiceScope::SINGLETON&gt;&gt;
+</td>
         </tr>
       </table>
   </td>
@@ -2387,14 +2600,23 @@ template&lt;typename S , typename Impl  = S, typename... Dep&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Obtains the service configuration from a handle to a ServiceRegistration. </p>
+<p>Creates a Service with an explicit factory. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">handle</td><td>the handle to the ServiceRegistration. </td></tr>
+    <tr><td class="paramname">factory</td><td>the factory to use. Must be a <em>Callable</em> object, i.e. provide an <code>Impl* operator()</code> that accepts the arguments derived from the dependencies and yields a pointer to the created Object. <br  />
+The factory-type shall contain a type-declaration <code>service_type</code> which denotes the type of the service's implementation. </td></tr>
+    <tr><td class="paramname">dependencies</td><td>the arguments to be injected into the factory. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>the service configuration from that this ServiceRegistration was registered with, or an empty service_config if the handle is not valid. </dd></dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">F</td><td>the type of the factory. </td></tr>
+    <tr><td class="paramname">Impl</td><td>the implementation-type of the service. If the factory-type F contains a type-declaration <code>service_type</code>, Impl will be deduced as that type. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a Service that will use the provided factory. </dd></dl>
 
 </div>
 </div>
@@ -2427,23 +2649,11 @@ template&lt;typename F , typename Impl  = typename F::service_type, typename... 
 </table>
 </div><div class="memdoc">
 
-<p>Creates a Service with an explicit factory. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">factory</td><td>the factory to use. Must be a <em>Callable</em> object, i.e. provide an <code>Impl* operator()</code> that accepts the arguments derived from the dependencies and yields a pointer to the created Object. <br  />
-The factory-type should contain a type-declaration <code>service_type</code> which denotes the type of the service's implementation. </td></tr>
-    <tr><td class="paramname">dependencies</td><td>the arguments to be injected into the factory. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
-  <table class="tparams">
-    <tr><td class="paramname">F</td><td>the type of the factory. </td></tr>
-    <tr><td class="paramname">Impl</td><td>the implementation-type of the service. If the factory-type F contains a type-declaration <code>service_type</code>, Impl will be deduced as that type. </td></tr>
-  </table>
-  </dd>
-</dl>
+<p>Creates a Service with an explicit factory. <br  />
+This function has been supplanted by service(). </p>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000010">Deprecated</a></b></dt><dd>Use <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> instead </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>a Service that will use the provided factory. </dd></dl>
+<dl class="section see"><dt>See also</dt><dd>service() </dd></dl>
 
 </div>
 </div>
@@ -2580,12 +2790,13 @@ In case first and second represent the same Registration, the connection will st
   </table>
   </dd>
 </dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000001">Deprecated</a></b></dt><dd>Use <a class="el" href="#ae106d702aeec65e9720e7c19821aeed4" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a> instead </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service and the target-service. </dd></dl>
 
 </div>
 </div>
-<a id="a2eab59360607d897888d9667ab5c76ae" name="a2eab59360607d897888d9667ab5c76ae"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2eab59360607d897888d9667ab5c76ae">&#9670;&#160;</a></span>withAutoRefresh()</h2>
+<a id="a345509cae13489dd46cc5c75ba10dec6" name="a345509cae13489dd46cc5c75ba10dec6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a345509cae13489dd46cc5c75ba10dec6">&#9670;&#160;</a></span>withAutoRefresh()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2596,7 +2807,7 @@ In case first and second represent the same Registration, the connection will st
         <tr>
           <td class="memname">void mcnepp::qtdi::withAutoRefresh </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>cfg</em></span></td><td>)</td>
+          <td class="paramtype">detail::service_config &amp;</td>          <td class="paramname"><span class="paramname"><em>cfg</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -2610,12 +2821,12 @@ In case first and second represent the same Registration, the connection will st
 <p>Enables auto-refresh for a service_config. <br  />
 This function is not meant to be invoked directly. <br  />
 Rather, its usage is analogous to that of <em>iostream-manipulators</em> from the standard-libray: </p>
-<pre class="fragment">config() &lt;&lt; withAutoRefresh &lt;&lt; entry("objectName", "${myService}");
+<pre class="fragment">service&lt;MyService&gt;() &lt;&lt; withAutoRefresh &lt;&lt; propValue("objectName", "${myService}");
 </pre> 
 </div>
 </div>
-<a id="a802dafd5f967bb426a92885ad50d06a1" name="a802dafd5f967bb426a92885ad50d06a1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a802dafd5f967bb426a92885ad50d06a1">&#9670;&#160;</a></span>withAutowire()</h2>
+<a id="a658a665f9b2b426543e566defd51e4ff" name="a658a665f9b2b426543e566defd51e4ff"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a658a665f9b2b426543e566defd51e4ff">&#9670;&#160;</a></span>withAutowire()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2626,7 +2837,7 @@ Rather, its usage is analogous to that of <em>iostream-manipulators</em> from th
         <tr>
           <td class="memname">void mcnepp::qtdi::withAutowire </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="structmcnepp_1_1qtdi_1_1service__config.html">service_config</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>cfg</em></span></td><td>)</td>
+          <td class="paramtype">detail::service_config &amp;</td>          <td class="paramname"><span class="paramname"><em>cfg</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -2640,12 +2851,12 @@ Rather, its usage is analogous to that of <em>iostream-manipulators</em> from th
 <p>Applies auto-wiring to a service_config. <br  />
 This function is not meant to be invoked directly. <br  />
 Rather, its usage is analogous to that of <em>iostream-manipulators</em> from the standard-libray: </p>
-<pre class="fragment">config() &lt;&lt; withAutowire &lt;&lt; entry("objectName", "${myService}");
+<pre class="fragment">service&lt;MyService&gt;() &lt;&lt; withAutowire;
 </pre> 
 </div>
 </div>
-<a id="ac708701966b6cc2722175737ae6a2945" name="ac708701966b6cc2722175737ae6a2945"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac708701966b6cc2722175737ae6a2945">&#9670;&#160;</a></span>withGroup()</h2>
+<a id="a64ec1392974a8374f34bfff59fc43a8e" name="a64ec1392974a8374f34bfff59fc43a8e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a64ec1392974a8374f34bfff59fc43a8e">&#9670;&#160;</a></span>withGroup()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2654,7 +2865,7 @@ Rather, its usage is analogous to that of <em>iostream-manipulators</em> from th
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">service_config::config_modifier mcnepp::qtdi::withGroup </td>
+          <td class="memname">detail::service_config::config_modifier mcnepp::qtdi::withGroup </td>
           <td>(</td>
           <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>name</em></span></td><td>)</td>
           <td></td>
@@ -2669,7 +2880,7 @@ Rather, its usage is analogous to that of <em>iostream-manipulators</em> from th
 
 <p>Sets the group for a service_config. <br  />
 The usage of this function is analogous to that of <em>iostream-manipulators</em> from the standard-libray: </p>
-<pre class="fragment">config() &lt;&lt; withGroup("myServices") &lt;&lt; entry("objectName", "${myService}");
+<pre class="fragment">service&lt;MyService&gt;() &lt;&lt; withGroup("myServices") &lt;&lt; propValue("objectName", "${myService}");
 </pre> 
 </div>
 </div>
