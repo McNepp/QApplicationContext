@@ -152,7 +152,7 @@ template<> struct service_scope_traits<ServiceScope::PROTOTYPE> {
 };
 
 // We cannot make use of service_scope_traits here, since we also want to test this at runtime:
-constexpr bool is_binding_source(ServiceScope scope) {
+constexpr bool is_allowed_as_dependency(ServiceScope scope) {
     return scope != ServiceScope::TEMPLATE;
 }
 
@@ -2429,13 +2429,13 @@ template<typename S,typename R,typename A> [[nodiscard]][[deprecated("Use propVa
 /// \param reg the registration for the service-instance that will be injected into the configured service.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto propValue(R(S::*propertySetter)(A*), const ServiceRegistration<A,scope>& reg) -> std::enable_if_t<detail::is_binding_source(scope),service_config_entry<S>>
+template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto propValue(R(S::*propertySetter)(A*), const ServiceRegistration<A,scope>& reg) -> std::enable_if_t<detail::is_allowed_as_dependency(scope),service_config_entry<S>>
 {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
-    if(!reg || !detail::is_binding_source(reg.unwrap() -> scope())) {
+    if(!reg || !detail::is_allowed_as_dependency(reg.unwrap() -> scope())) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
@@ -2445,7 +2445,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
 ///
 /// \deprecated Use mcnepp::qtdi::propValue() instead
 ///
-template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]][[deprecated("Use propValue() instead")]] auto entry(R(S::*propertySetter)(A*), const ServiceRegistration<A,scope>& reg) -> std::enable_if_t<detail::is_binding_source(scope),service_config_entry<S>> {
+template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]][[deprecated("Use propValue() instead")]] auto entry(R(S::*propertySetter)(A*), const ServiceRegistration<A,scope>& reg) -> std::enable_if_t<detail::is_allowed_as_dependency(scope),service_config_entry<S>> {
     return propValue(propertySetter, reg);
 }
 
@@ -2840,9 +2840,9 @@ struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
     using arg_type = S*;
 
     static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S,scope>& dep) {
-        static_assert(is_binding_source(scope), "ServiceRegistration with this scope cannot be a dependency");
+        static_assert(is_allowed_as_dependency(scope), "ServiceRegistration with this scope cannot be a dependency");
         //It could still be ServiceScope::UNKNOWN statically, but ServiceScope::TEMPLATE at runtime:
-        if(dep && is_binding_source(dep.unwrap()->scope())) {
+        if(dep && is_allowed_as_dependency(dep.unwrap()->scope())) {
             return { dep.unwrap()->descriptor().impl_type, static_cast<int>(Kind::MANDATORY), dep.registeredName() };
         }
         return { typeid(S), INVALID_KIND, dep.registeredName() };
