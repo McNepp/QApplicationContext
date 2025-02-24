@@ -2352,6 +2352,15 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE_NE(reg, another);
     }
 
+    void testRegisterTwiceWithInit() {
+        auto reg = context->registerService(service<QTimer>(), "timer");
+        QVERIFY(reg);
+        //Same Interface, same implementation, same name, but an explicit init-method. Should fail:
+        void(QTimer::*initTimer)() = &QTimer::start;
+        auto another = context->registerService(service<QTimer>().withInit(initTimer), "timer");
+        QVERIFY(!another);
+    }
+
     void testRegisterSameObjectTwiceWithDifferentInterfaces() {
         BaseService service;
         service.setObjectName("base");

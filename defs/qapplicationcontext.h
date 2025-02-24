@@ -2768,7 +2768,8 @@ QDebug operator << (QDebug out, const service_descriptor& descriptor);
 ///
 /// \brief Determines whether two service_descriptors are deemed equal.
 /// two service_descriptors are deemed equal if their service_types, impl_type,
-/// dependencies and config are all equal.
+/// dependencies and config are all equal, and if either both have no init_method,
+/// or both have an init_method.
 /// \param left
 /// \param right
 /// \return `true` if the service_descriptors are equal to each other.
@@ -2777,9 +2778,10 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
     if (&left == &right) {
         return true;
     }
-    return left.service_types == right.service_types &&
-           left.impl_type == right.impl_type &&
-           left.dependencies == right.dependencies;
+    if(left.service_types != right.service_types || left.impl_type != right.impl_type || left.dependencies != right.dependencies) {
+        return false;
+    }
+    return static_cast<bool>(left.init_method) == static_cast<bool>(right.init_method);
  }
 
 inline bool operator!=(const service_descriptor &left, const service_descriptor &right) {
@@ -3017,8 +3019,9 @@ template<bool found,typename First,typename...Tail> q_init_t getInitializer() {
         if constexpr(!foundThis) {
             return result;
         }
+    } else {
+        return adaptInitializer<First>(typename service_traits<First>::initializer_type{});
     }
-    return adaptInitializer<First>(typename service_traits<First>::initializer_type{});
 
 }
 
