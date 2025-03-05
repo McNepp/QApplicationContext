@@ -204,6 +204,12 @@ private:
             }
         }
 
+        //Does this service provide configuration for other services?
+        //This is true for Services of type QSettings.
+        virtual bool provideConfig() const {
+            return false;
+        }
+
         virtual const service_descriptor& descriptor() const final override {
             return m_descriptor;
         }
@@ -286,6 +292,10 @@ private:
 
         virtual ServiceScope scope() const override {
             return ServiceScope::SINGLETON;
+        }
+
+        virtual bool provideConfig() const override {
+            return m_descriptor.impl_type == typeid(QSettings);
         }
 
 

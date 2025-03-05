@@ -537,7 +537,12 @@ bool StandardApplicationContext::ServiceRegistrationImpl::prepareService(const Q
                 created.insert(created.end(), createdForThis.begin(), createdForThis.end());
             if(theService) {
                 onDestroyed = connect(theService, &QObject::destroyed, this, &ServiceRegistrationImpl::serviceDestroyed);
-                m_state = STATE_NEEDS_CONFIGURATION;
+                if(provideConfig()) {
+                    m_state = STATE_PUBLISHED;
+                    emit objectPublished(theService);
+                } else {
+                    m_state = STATE_NEEDS_CONFIGURATION;
+                }
             }
         }
     }
@@ -1107,6 +1112,10 @@ bool StandardApplicationContext::publish(bool allowPartial)
     }
 
     qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext with " << toBePublished.size() << " unpublished Objects";
+
+    //Move QSettings to the beginning, so that they will be available for configuration of other services:
+    std::stable_sort(needConfiguration.begin(), needConfiguration.end(), [](const DescriptorRegistration* left, const DescriptorRegistration* right) { return left->provideConfig() && !right->provideConfig();});
+
     //Do several rounds and publish those services whose dependencies have already been published.
     //For a service with an empty set of dependencies, this means that it will be published first.
     while(!toBePublished.empty()) {
@@ -1128,8 +1137,10 @@ bool StandardApplicationContext::publish(bool allowPartial)
 
         switch(reg->state()) {
         case STATE_NEEDS_CONFIGURATION:
-            qCInfo(loggingCategory()).nospace().noquote() << "Created service " << *reg;
             needConfiguration.push_back(reg);
+            [[fallthrough]];
+        case STATE_PUBLISHED:
+            qCInfo(loggingCategory()).nospace().noquote() << "Created service " << *reg;
             [[fallthrough]];
         default:
             allCreated.push_back(reg);

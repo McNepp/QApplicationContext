@@ -508,6 +508,22 @@ private slots:
         QCOMPARE(slot->interval(), 4711);
     }
 
+    void testRegisterQSettingsAsService() {
+        auto reg = context->registerService(service<QTimer>() << propValue("interval", "${timerInterval}"));
+
+        settingsFile->write("timerInterval=4711\n");
+        settingsFile->close();
+        auto settingsReg = context->registerService(service<QSettings>(settingsFile->fileName(), QSettings::IniFormat));
+        RegistrationSlot<QSettings> settingsSlot{settingsReg};
+
+        RegistrationSlot<QTimer> timerSlot{reg};
+        QVERIFY(context->publish());
+        QVERIFY(settingsSlot);
+        QCOMPARE(settingsSlot->fileName(), settingsFile->fileName());
+        QVERIFY(timerSlot);
+        QCOMPARE(timerSlot->interval(), 4711);
+    }
+
     void testWithEscapedPlaceholderProperty() {
 
         auto reg = context->registerService(service<QTimer>() << propValue("objectName", "\\${timerName}"));
