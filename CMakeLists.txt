@@ -32,23 +32,22 @@ set(QApplicationContext_INCLUDE_DIRS ${QApplicationContext_INCLUDE_DIRS} PARENT_
 
 target_link_libraries(${PROJECT_NAME} Qt6::Core)
 
+FILE(GLOB test_sources ${CMAKE_CURRENT_LIST_DIR}/test/test*.cpp)
+
+foreach(testfile ${test_sources})
+    get_filename_component(testname ${testfile} NAME_WE)
+
+    qt_add_executable(${testname} ${testfile} ${CMAKE_CURRENT_LIST_DIR}/test/appcontexttestclasses.cpp ${CMAKE_CURRENT_LIST_DIR}/test/appcontexttestclasses.h ${CMAKE_CURRENT_LIST_DIR}/test/registrationslot.h)
+    if(MSVC)
+      target_compile_options(${testname} PRIVATE /W4 /w45262 /w44062)
+    endif()
+
+    target_link_libraries(${testname} PRIVATE QApplicationContext Qt::Core Qt::Test)
+
+    add_test(${testname} ${testname})
+endforeach()
 
 
-qt_add_executable(testapplicationcontext  ${CMAKE_CURRENT_LIST_DIR}/test/testqapplicationcontext.cpp ${CMAKE_CURRENT_LIST_DIR}/test/appcontexttestclasses.cpp ${CMAKE_CURRENT_LIST_DIR}/test/appcontexttestclasses.h)
-target_link_libraries(testapplicationcontext PRIVATE QApplicationContext Qt::Core Qt::Test)
-if(MSVC)
-  target_compile_options(testapplicationcontext PRIVATE /W4 /w45262 /w44062)
-endif()
-
-add_test(testapplicationcontext testapplicationcontext)
-
-qt_add_executable(testplaceholderresolver  ${CMAKE_CURRENT_LIST_DIR}/test/testplaceholderresolver.cpp)
-target_link_libraries(testplaceholderresolver PRIVATE QApplicationContext Qt::Core Qt::Test)
-if(MSVC)
-  target_compile_options(testplaceholderresolver PRIVATE /W4 /w45262 /w44062)
-endif()
-
-add_test(testplaceholderresolver testplaceholderresolver)
 
 
 

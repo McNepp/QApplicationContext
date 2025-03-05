@@ -8,6 +8,7 @@
 #include "appcontexttestclasses.h"
 #include "applicationcontextimplbase.h"
 #include "standardapplicationcontext.h"
+#include "registrationslot.h"
 #include "qtestcase.h"
 
 namespace mcnepp::qtdi {
@@ -92,64 +93,6 @@ public:
 
 
 
-
-
-template<typename S> class RegistrationSlot : public QObject {
-public:
-
-    explicit RegistrationSlot(const Registration<S>& registration)
-    {
-        m_subscription = const_cast<Registration<S>&>(registration).subscribe(this, &RegistrationSlot::setObj);
-    }
-
-
-    S* operator->() const {
-        return m_obj.empty() ? nullptr : m_obj.back();
-    }
-
-    S* last() const {
-        return m_obj.empty() ? nullptr : m_obj.back();
-    }
-
-    explicit operator bool() const {
-        return !m_obj.empty();
-    }
-
-
-
-
-    void setObj(S* obj) {
-        m_obj.push_back(obj);
-    }
-
-    bool operator ==(const RegistrationSlot& other) const {
-        return m_obj == other.m_obj;
-    }
-
-    bool operator !=(const RegistrationSlot& other) const {
-        return m_obj != other.m_obj;
-    }
-
-    int invocationCount() const {
-        return m_obj.size();
-    }
-
-    int size() const {
-        return m_obj.size();
-    }
-
-    S* operator[](std::size_t index) const {
-        return m_obj[index];
-    }
-
-    Subscription& subscription() {
-        return m_subscription;
-    }
-
-private:
-    QList<S*> m_obj;
-    Subscription m_subscription;
-};
 
 class PostProcessor : public QObject, public QApplicationContextPostProcessor {
 public:
@@ -275,7 +218,7 @@ private slots:
         }
         QCOMPARE(foundBits, 7);
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> slot{reg};
+        RegistrationSlot<BaseService> slot{reg, this};
         QVERIFY(slot);
         //The parent was not supplied to the constructor:
         QVERIFY(!slot->m_InitialParent);
@@ -287,7 +230,7 @@ private slots:
         auto baseReg = context->registerService(service<BaseService>(injectIfPresent<CyclicDependency>(), injectParent()));
         QVERIFY(context->publish());
 
-        RegistrationSlot<BaseService> baseSlot{baseReg};
+        RegistrationSlot<BaseService> baseSlot{baseReg, this};
 
         //The ApplicationContext was supplied as parent to the constructor:
         QCOMPARE(baseSlot->m_InitialParent, context.get());
@@ -314,7 +257,7 @@ private slots:
         QVERIFY(delegatingContext.publish());
         QCOMPARE(published, 3);
 
-        RegistrationSlot<BaseService> baseSlot{baseReg};
+        RegistrationSlot<BaseService> baseSlot{baseReg, this};
 
         //The ApplicationContext was supplied as parent to the constructor:
         QCOMPARE(baseSlot->m_InitialParent, &delegatingContext);
@@ -326,7 +269,7 @@ private slots:
         auto baseReg = context->registerService(service<BaseService>(injectIfPresent<CyclicDependency>(), this));
         QVERIFY(context->publish());
 
-        RegistrationSlot<BaseService> baseSlot{baseReg};
+        RegistrationSlot<BaseService> baseSlot{baseReg, this};
 
         //this was supplied as parent to the constructor:
         QCOMPARE(baseSlot->m_InitialParent, this);
@@ -352,7 +295,7 @@ private slots:
         auto reg = context->registerService(service(factory_t{}, injectAll<QObject>()));
         QVERIFY(context->publish());
 
-        RegistrationSlot<QObjectService> slot{reg};
+        RegistrationSlot<QObjectService> slot{reg, this};
         QVERIFY(slot.last());
         QCOMPARE(slot->m_dependencies.size(), 4); //QTimer, BaseService, QCoreApplication, QApplicationContext
         int foundBits = 0;
@@ -377,7 +320,7 @@ private slots:
         auto reg = context->registerService(service<QObjectService>() << propValue("dependency", "&context"));
         QVERIFY(context->publish());
 
-        RegistrationSlot<QObjectService> slot{reg};
+        RegistrationSlot<QObjectService> slot{reg, this};
         QVERIFY(slot.last());
         QCOMPARE(slot->dependency(), context.get());
     }
@@ -397,7 +340,7 @@ private slots:
         QCOMPARE(qReg.registeredServices().size(), 3); //BaseService, QCoreApplication, QApplicationContext
         QVERIFY(qReg.matches<QObject>());
         QVERIFY(context->publish());
-        RegistrationSlot<QObject> slot{regByName};
+        RegistrationSlot<QObject> slot{regByName, this};
         QVERIFY(slot);
     }
 
@@ -406,12 +349,12 @@ private slots:
         QVERIFY(reg.as<QObject>());
 
         QVERIFY(context->publish());
-        RegistrationSlot<QCoreApplication> slot{reg};
+        RegistrationSlot<QCoreApplication> slot{reg, this};
         QVERIFY(slot);
         QCOMPARE(slot.last(), QCoreApplication::instance());
         auto regByName = context->getRegistration("application").as<QCoreApplication,ServiceScope::EXTERNAL>();
         QVERIFY(regByName);
-        RegistrationSlot<QCoreApplication> slotByName{regByName};
+        RegistrationSlot<QCoreApplication> slotByName{regByName, this};
         QCOMPARE(slotByName.last(), QCoreApplication::instance());
     }
 
@@ -427,19 +370,19 @@ private slots:
     void testApplicationContextRegisteredAsObject() {
         auto reg = context->getRegistration<QApplicationContext>();
         QVERIFY(context->publish());
-        RegistrationSlot<QApplicationContext> slot{reg};
+        RegistrationSlot<QApplicationContext> slot{reg, this};
         QVERIFY(slot);
         QCOMPARE(slot.last(), context.get());
         auto regByName = context->getRegistration("context").as<QApplicationContext,ServiceScope::EXTERNAL>();
         QVERIFY(regByName);
-        RegistrationSlot<QApplicationContext> slotByName{regByName};
+        RegistrationSlot<QApplicationContext> slotByName{regByName, this};
         QCOMPARE(slotByName.last(), context.get());
     }
 
     void testDependOnApplicationAsParent() {
         auto reg = context->registerService(service<QTimer>(inject<QCoreApplication>()), "timer");
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
         QVERIFY(slot);
         QCOMPARE(slot->parent(), QCoreApplication::instance());
     }
@@ -447,7 +390,7 @@ private slots:
     void testDependOnApplicationContextAsParent() {
         auto reg = context->registerService(service<QTimer>(inject<QApplicationContext>()), "timer");
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
         QVERIFY(slot);
         QCOMPARE(slot->parent(), context.get());
     }
@@ -458,7 +401,7 @@ private slots:
     void testWithProperty() {
         auto reg = context->registerService(service<QTimer>() << propValue("interval", 4711));
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
         QCOMPARE(slot->interval(), 4711);
     }
 
@@ -502,7 +445,7 @@ private slots:
         QCOMPARE(4711, context->getConfigurationValue("timerInterval"));
         auto reg = context->registerService(service<QTimer>() << propValue("interval", "${timerInterval}"));
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
         QCOMPARE(postProcessor.resolvedPropertiesMap[reg.unwrap()]["interval"], 4711);
 
         QCOMPARE(slot->interval(), 4711);
@@ -514,9 +457,9 @@ private slots:
         settingsFile->write("timerInterval=4711\n");
         settingsFile->close();
         auto settingsReg = context->registerService(service<QSettings>(settingsFile->fileName(), QSettings::IniFormat));
-        RegistrationSlot<QSettings> settingsSlot{settingsReg};
+        RegistrationSlot<QSettings> settingsSlot{settingsReg, this};
 
-        RegistrationSlot<QTimer> timerSlot{reg};
+        RegistrationSlot<QTimer> timerSlot{reg, this};
         QVERIFY(context->publish());
         QVERIFY(settingsSlot);
         QCOMPARE(settingsSlot->fileName(), settingsFile->fileName());
@@ -528,7 +471,7 @@ private slots:
 
         auto reg = context->registerService(service<QTimer>() << propValue("objectName", "\\${timerName}"));
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
         QCOMPARE(slot->objectName(), "${timerName}");
     }
 
@@ -536,7 +479,7 @@ private slots:
 
         auto reg = context->registerService(service<QTimer>() << propValue("interval", "${timerInterval:4711}"));
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
         QCOMPARE(slot->interval(), 4711);
     }
 
@@ -546,7 +489,7 @@ private slots:
 
         auto reg = context->registerService(service<QTimer>() << propValue("interval", "${timerInterval:4711}"));
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
         QCOMPARE(slot->interval(), 42);
     }
 
@@ -574,7 +517,7 @@ private slots:
 
         auto reg = context->registerService(service<BaseService>() << propValue("objectName", "I am ${baseName}!"));
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> slot{reg};
+        RegistrationSlot<BaseService> slot{reg, this};
 
         QCOMPARE(slot->objectName(), "I am theBase!");
     }
@@ -585,7 +528,7 @@ private slots:
 
         auto reg = context->registerService(service<BaseService>() << propValue("objectName", "I have $${dollars}$"));
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> slot{reg};
+        RegistrationSlot<BaseService> slot{reg, this};
         QCOMPARE(slot->objectName(), "I have $one thousand$");
     }
 
@@ -604,7 +547,7 @@ private slots:
         QCOMPARE(4711, context->getConfigurationValue("timerInterval"));
         auto reg = context->registerService(service<QTimer>() << autoRefresh("interval", "${timerInterval}"));
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
 
         QCOMPARE(slot->interval(), 4711);
 
@@ -799,7 +742,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<BaseService>() << withAutoRefresh << propValue("foo", "foo-value: ${foo}${suffix}"));
         bind(reg, "foo", timerReg, "objectName");
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> slot{reg};
+        RegistrationSlot<BaseService> slot{reg, this};
 
         QCOMPARE(slot->foo(), "foo-value: Hello!");
         QCOMPARE(timer.objectName(), "foo-value: Hello!");
@@ -832,7 +775,7 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(context.get()->autoRefreshEnabled());
         auto reg = context->registerService(service<BaseService>() << withAutoRefresh << propValue("foo", "foo-value: ${foo}${suffix}"));
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> slot{reg};
+        RegistrationSlot<BaseService> slot{reg, this};
 
         QCOMPARE(slot->foo(), "foo-value: Hello!");
 
@@ -855,7 +798,7 @@ void testWatchConfigurationFileChangeWithError() {
 
         auto reg = context->registerService(service<BaseService>() << propValue("objectName", "${section}:${baseName}:yeah"));
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> slot{reg};
+        RegistrationSlot<BaseService> slot{reg, this};
         QCOMPARE(slot->objectName(), "BaseServices:theBase:yeah");
     }
 
@@ -870,7 +813,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<QTimer>() << withGroup("timers") << propValue("interval", "${interval}")
                                                                       << propValue("singleShot", "${single}"));
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
         QCOMPARE(slot->interval(), 4711);
         QVERIFY(slot->isSingleShot());
     }
@@ -883,7 +826,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<QTimer>() << withGroup("timers") << propValue("interval", "${/timers/interval}")
                                                                       << propValue("singleShot", "${aTimer/single}"));
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
         QCOMPARE(slot->interval(), 4711);
         QVERIFY(slot->isSingleShot());
     }
@@ -895,7 +838,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<QTimer>() << withGroup("timers") << propValue ("interval", "${*/aTimer/interval}")
                                                                       << propValue("singleShot", "${*/single}"));
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot{reg};
+        RegistrationSlot<QTimer> slot{reg, this};
         QCOMPARE(slot->interval(), 4711);
         QVERIFY(slot->isSingleShot());
     }
@@ -922,7 +865,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<BaseService>() << propValue("timer", "&aTimer"));
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{reg};
+        RegistrationSlot<BaseService> baseSlot{reg, this};
         QCOMPARE(baseSlot->m_timer, &timer);
     }
 
@@ -931,7 +874,7 @@ void testWatchConfigurationFileChangeWithError() {
 
         auto reg = context->registerService(service<BaseService>() << propValue("objectName", "\\&another"));
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> slot{reg};
+        RegistrationSlot<BaseService> slot{reg, this};
         QCOMPARE(slot->objectName(), "&another");
     }
 
@@ -939,7 +882,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<QTimer>() << propValue("objectName", "\\&aTimer"));
 
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> baseSlot{reg};
+        RegistrationSlot<QTimer> baseSlot{reg, this};
         QCOMPARE(baseSlot->objectName(), "&aTimer");
     }
 
@@ -952,7 +895,7 @@ void testWatchConfigurationFileChangeWithError() {
         timer.setObjectName("timer");
         auto regTimer = context->registerObject(&timer);
         auto regBase = context->registerService<BaseService>("base");
-        RegistrationSlot<BaseService> baseSlot{regBase};
+        RegistrationSlot<BaseService> baseSlot{regBase, this};
 
 
         auto subscription = bind(regTimer, "objectName", regBase, "foo");
@@ -977,7 +920,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto regBase = context->registerServiceTemplate<BaseService>("base");
 
         auto regDerived = context->registerService(service<DerivedService>(), regBase);
-        RegistrationSlot<DerivedService> derivedSlot{regDerived};
+        RegistrationSlot<DerivedService> derivedSlot{regDerived, this};
 
 
         auto subscription = bind(regTimer, "objectName", regBase, "foo");
@@ -1003,8 +946,8 @@ void testWatchConfigurationFileChangeWithError() {
         auto subscription = connectServices(regSource, &BaseService::fooChanged, regTarget, setter);
         QVERIFY(subscription);
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> sourceSlot{regSource};
-        RegistrationSlot<QTimer> targetSlot{regTarget};
+        RegistrationSlot<BaseService> sourceSlot{regSource, this};
+        RegistrationSlot<QTimer> targetSlot{regTarget, this};
         sourceSlot->setFoo("A new beginning");
         QCOMPARE(targetSlot->objectName(), "A new beginning");
 
@@ -1023,7 +966,7 @@ void testWatchConfigurationFileChangeWithError() {
 
         QVERIFY(subscription);
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> targetSlot{regTarget};
+        RegistrationSlot<QTimer> targetSlot{regTarget, this};
         QCOMPARE(targetSlot->objectName(), "A new beginning");
     }
 
@@ -1064,8 +1007,8 @@ void testWatchConfigurationFileChangeWithError() {
         // We have 3 services of type Interface1 and 2 services of type QTimer. This yields a total of 6 combinations:
         QCOMPARE(combinations.size(), 6);
 
-        RegistrationSlot<QTimer> slotTimers{regTimers};
-        RegistrationSlot<Interface1> slotInterfaces{regInterfaces};
+        RegistrationSlot<QTimer> slotTimers{regTimers, this};
+        RegistrationSlot<Interface1> slotInterfaces{regInterfaces, this};
 
         auto contains = [&combinations](const std::pair<Interface1*,QTimer*>& entry) {
             return std::find(combinations.begin(), combinations.end(), entry) != combinations.end();
@@ -1106,9 +1049,9 @@ void testWatchConfigurationFileChangeWithError() {
 
         QVERIFY(subscription);
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot2{reg2};
+        RegistrationSlot<QTimer> slot2{reg2, this};
         QCOMPARE(slot2->objectName(), "A new beginning");
-        RegistrationSlot<BaseService2> slot3{reg3};
+        RegistrationSlot<BaseService2> slot3{reg3, this};
         QCOMPARE(slot3->objectName(), "A new beginning");
 
     }
@@ -1126,11 +1069,11 @@ void testWatchConfigurationFileChangeWithError() {
 
         QVERIFY(subscription);
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot2{reg2};
+        RegistrationSlot<QTimer> slot2{reg2, this};
         QCOMPARE(slot2->objectName(), "A new beginning");
-        RegistrationSlot<BaseService2> slot3{reg3};
+        RegistrationSlot<BaseService2> slot3{reg3, this};
         QCOMPARE(slot3->objectName(), "A new beginning");
-        RegistrationSlot<DependentService> slot4{reg4};
+        RegistrationSlot<DependentService> slot4{reg4, this};
         QCOMPARE(slot4->m_dependency, slot3.last());
 
 
@@ -1151,13 +1094,13 @@ void testWatchConfigurationFileChangeWithError() {
 
         QVERIFY(subscription);
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> slot2{reg2};
+        RegistrationSlot<QTimer> slot2{reg2, this};
         QCOMPARE(slot2->objectName(), "A new beginning");
-        RegistrationSlot<BaseService2> slot3{reg3};
+        RegistrationSlot<BaseService2> slot3{reg3, this};
         QCOMPARE(slot3->objectName(), "A new beginning");
-        RegistrationSlot<DependentService> slot4{reg4};
+        RegistrationSlot<DependentService> slot4{reg4, this};
         QCOMPARE(slot4->m_dependency, slot3.last());
-        RegistrationSlot<DependentServiceLevel2> slot5{reg5};
+        RegistrationSlot<DependentServiceLevel2> slot5{reg5, this};
         QCOMPARE(slot5->objectName(), "A new beginning");
 
 
@@ -1170,7 +1113,7 @@ void testWatchConfigurationFileChangeWithError() {
         void (QObject::*setter)(const QString&) = &QObject::setObjectName;//We need this temporary variable, as setObjectName has two overloads!
         QVERIFY(connectServices(regSource, &BaseService::fooChanged, regSource, setter));
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> sourceSlot{regSource};
+        RegistrationSlot<BaseService> sourceSlot{regSource, this};
         sourceSlot->setFoo("A new beginning");
         QCOMPARE(sourceSlot->objectName(), "A new beginning");
 
@@ -1183,8 +1126,8 @@ void testWatchConfigurationFileChangeWithError() {
         auto regProxyTarget = context->getRegistration<BaseService>();
         QVERIFY(connectServices(regSource, &QObject::objectNameChanged, regProxyTarget, &BaseService::setFoo));
         QVERIFY(context->publish());
-        RegistrationSlot<QTimer> sourceSlot{regSource};
-        RegistrationSlot<BaseService> targetSlot{regProxyTarget};
+        RegistrationSlot<QTimer> sourceSlot{regSource, this};
+        RegistrationSlot<BaseService> targetSlot{regProxyTarget, this};
         QCOMPARE(targetSlot.invocationCount(), 2);
         sourceSlot->setObjectName("A new beginning");
         QCOMPARE(targetSlot[0]->foo(), "A new beginning");
@@ -1201,8 +1144,8 @@ void testWatchConfigurationFileChangeWithError() {
         auto base2 = context->registerService(service<BaseService>() << placeholderValue("id", 3141), baseServiceTemplate, "base2");
         QVERIFY(context->publish());
 
-        RegistrationSlot<BaseService> slot1{base1};
-        RegistrationSlot<BaseService> slot2{base2};
+        RegistrationSlot<BaseService> slot1{base1, this};
+        RegistrationSlot<BaseService> slot2{base2, this};
 
         QCOMPARE(slot1->foo(), "4711-foo");
         QCOMPARE(slot2->foo(), "3141-foo");
@@ -1229,11 +1172,11 @@ void testWatchConfigurationFileChangeWithError() {
         auto base2 = context->registerService(service<BaseService>() << placeholderValue("id", 3141), timerTemplate, "base2");
         QVERIFY(context->publish());
 
-        RegistrationSlot<BaseService> slot1{base1};
-        RegistrationSlot<BaseService> slot2{base2};
+        RegistrationSlot<BaseService> slot1{base1, this};
+        RegistrationSlot<BaseService> slot2{base2, this};
         auto timerReg = context->getRegistration<TimerAware>();
         QCOMPARE(timerReg.registeredServices().size(), 2);
-        RegistrationSlot<TimerAware> timerSlot{timerReg};
+        RegistrationSlot<TimerAware> timerSlot{timerReg, this};
         QVERIFY(slot1);
         QVERIFY(slot2);
 
@@ -1248,7 +1191,7 @@ void testWatchConfigurationFileChangeWithError() {
 
 
         auto regBase = context->registerService<BaseService>("base");
-        RegistrationSlot<BaseService> baseSlot{regBase};
+        RegistrationSlot<BaseService> baseSlot{regBase, this};
 
 
         auto subscription = bind(regBase, "objectName", regBase, "foo");
@@ -1303,7 +1246,7 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(context->publish());
         QCOMPARE(base.foo(), "timer");
 
-        RegistrationSlot<BaseService> base2{context->registerService<BaseService>("base2")};
+        RegistrationSlot<BaseService> base2{context->registerService<BaseService>("base2"), this};
 
         QVERIFY(context->publish());
 
@@ -1361,7 +1304,7 @@ void testWatchConfigurationFileChangeWithError() {
         bind(regBase, "foo", regTimer, setter);
         QVERIFY(context->publish());
         QCOMPARE(timer.objectName(), "baseFoo");
-        RegistrationSlot<BaseService> baseSlot{regBase};
+        RegistrationSlot<BaseService> baseSlot{regBase, this};
         baseSlot->setFoo("newFoo");
         QCOMPARE(timer.objectName(), "newFoo");
     }
@@ -1376,7 +1319,7 @@ void testWatchConfigurationFileChangeWithError() {
         bind(regBase, &BaseService::fooChanged, regTimer, setter);
         QVERIFY(context->publish());
         QCOMPARE(timer.objectName(), "baseFoo");
-        RegistrationSlot<BaseService> baseSlot{regBase};
+        RegistrationSlot<BaseService> baseSlot{regBase, this};
         baseSlot->setFoo("newFoo");
         QCOMPARE(timer.objectName(), "newFoo");
     }
@@ -1391,8 +1334,8 @@ void testWatchConfigurationFileChangeWithError() {
         bind(regBase1, &BaseService::timerChanged, regBases, &BaseService::setTimer);
         QVERIFY(context->publish());
 
-        RegistrationSlot<BaseService> baseSlot1{regBase1};
-        RegistrationSlot<BaseService> baseSlot2{regBase2};
+        RegistrationSlot<BaseService> baseSlot1{regBase1, this};
+        RegistrationSlot<BaseService> baseSlot2{regBase2, this};
         baseSlot1->setTimer(&timer);
         QCOMPARE(baseSlot2->timer(), &timer);
     }
@@ -1412,8 +1355,8 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<DerivedService>(), abstractReg, "base");
 
         QVERIFY(context->publish());
-        RegistrationSlot<DerivedService> derivedSlot{reg};
-        RegistrationSlot<BaseService> abstractBaseSlot{abstractReg};
+        RegistrationSlot<DerivedService> derivedSlot{reg, this};
+        RegistrationSlot<BaseService> abstractBaseSlot{abstractReg, this};
         QCOMPARE(derivedSlot.last(), abstractBaseSlot.last());
         QCOMPARE(derivedSlot->m_timer, &timer);
         QCOMPARE(derivedSlot->context(), context.get());
@@ -1439,7 +1382,7 @@ void testWatchConfigurationFileChangeWithError() {
 
         QVERIFY(context->publish());
 
-        RegistrationSlot<DependentService> depSlot{depReg};
+        RegistrationSlot<DependentService> depSlot{depReg, this};
         QVERIFY(depSlot);
         QVERIFY(depSlot->m_dependency);
         QCOMPARE(static_cast<BaseService*>(depSlot->m_dependency)->timer(), &timer);
@@ -1453,8 +1396,8 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<DependentService>(baseReg), abstractReg, "dep");
 
         QVERIFY(context->publish());
-        RegistrationSlot<DependentService> depSlot{reg};
-        RegistrationSlot<DependentService> abstractSlot{abstractReg};
+        RegistrationSlot<DependentService> depSlot{reg, this};
+        RegistrationSlot<DependentService> abstractSlot{abstractReg, this};
         QCOMPARE(depSlot->m_dependency, &base);
         QCOMPARE(depSlot.last(), abstractSlot.last());
     }
@@ -1480,8 +1423,8 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(interfaceReg.registeredServices().contains(reg));
         auto depReg = context->registerService(service<DependentService>(inject<Interface1>()));
         QVERIFY(context->publish());
-        RegistrationSlot<DependentService> depSlot{depReg};
-        RegistrationSlot<BaseService> baseSlot{reg};
+        RegistrationSlot<DependentService> depSlot{depReg, this};
+        RegistrationSlot<BaseService> baseSlot{reg, this};
         QVERIFY(depSlot);
         QCOMPARE(depSlot->m_dependency, baseSlot.last());
         QCOMPARE(baseSlot->timer(), &timer);
@@ -1494,7 +1437,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<BaseService2>(), abstractReg);
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService2> derivedSlot{reg};
+        RegistrationSlot<BaseService2> derivedSlot{reg, this};
         QCOMPARE(derivedSlot->initCalled, 1);
     }
 
@@ -1509,7 +1452,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerObject(&base2, "base2");
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService2> derivedSlot{reg};
+        RegistrationSlot<BaseService2> derivedSlot{reg, this};
         QCOMPARE(derivedSlot->initCalled, 1);
         QCOMPARE(derivedSlot->reference(), &base2);
     }
@@ -1533,7 +1476,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<BaseService>() << withAutowire);
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{reg};
+        RegistrationSlot<BaseService> baseSlot{reg, this};
         QCOMPARE(baseSlot->m_timer, &timer);
     }
 
@@ -1546,7 +1489,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerService<BaseService2>("timer");
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{reg};
+        RegistrationSlot<BaseService> baseSlot{reg, this};
         QCOMPARE(baseSlot->m_timer, &timer);
     }
 
@@ -1559,7 +1502,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<BaseService>() << withAutowire);
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{reg};
+        RegistrationSlot<BaseService> baseSlot{reg, this};
         QVERIFY(!baseSlot->m_timer);
 
     }
@@ -1568,7 +1511,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<BaseService2>() << withAutowire);
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService2> baseSlot{reg};
+        RegistrationSlot<BaseService2> baseSlot{reg, this};
         QVERIFY(!baseSlot->m_reference);
 
     }
@@ -1577,7 +1520,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<QObjectService>() << withAutowire);
 
         QVERIFY(context->publish());
-        RegistrationSlot<QObjectService> baseSlot{reg};
+        RegistrationSlot<QObjectService> baseSlot{reg, this};
         QVERIFY(!baseSlot->dependency());
 
     }
@@ -1586,7 +1529,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<BaseService2>() << propValue("reference", "&base"), "base");
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService2> baseSlot{reg};
+        RegistrationSlot<BaseService2> baseSlot{reg, this};
         QCOMPARE(baseSlot->m_reference, baseSlot.last());
 
     }
@@ -1598,9 +1541,9 @@ void testWatchConfigurationFileChangeWithError() {
         auto regCyclic = context->registerService(service<CyclicDependency>() << withAutowire << propValue("dependency", "&baseToUse"));
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{regBase};
-        RegistrationSlot<BaseService> baseToUseSlot{regBaseToUse};
-        RegistrationSlot<CyclicDependency> cyclicSlot{regCyclic};
+        RegistrationSlot<BaseService> baseSlot{regBase, this};
+        RegistrationSlot<BaseService> baseToUseSlot{regBaseToUse, this};
+        RegistrationSlot<CyclicDependency> cyclicSlot{regCyclic, this};
         QCOMPARE(cyclicSlot->dependency(), baseToUseSlot.last());
     }
 
@@ -1612,7 +1555,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<BaseService>() << withAutowire);
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{reg};
+        RegistrationSlot<BaseService> baseSlot{reg, this};
         QVERIFY(!baseSlot->m_timer);
     }
 
@@ -1625,7 +1568,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<BaseService>() << propValue("timer", "&theTimer"));
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{reg};
+        RegistrationSlot<BaseService> baseSlot{reg, this};
         QCOMPARE(baseSlot->m_timer, &timer);
     }
 
@@ -1643,18 +1586,20 @@ void testWatchConfigurationFileChangeWithError() {
         auto regs = context->getRegistration<Interface1>();
 
         QCOMPARE(regs.registeredServices().size(), 2);
-        QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 1);
+        RegistrationSlot<Interface1> slot{regs, this};
+        QCOMPARE(slot.invocationCount(), 1);
         context->publish();
-        QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 2);
+        QCOMPARE(slot.invocationCount(), 2);
         QVERIFY(baseReg);
         base.reset();
         QVERIFY(!baseReg);
-        QCOMPARE(RegistrationSlot<Interface1>{regs}.invocationCount(), 1);
+        RegistrationSlot<Interface1> slot2{regs, this};
+        QCOMPARE(slot2.invocationCount(), 1);
     }
 
     void testDestroyRegisteredServiceExternally() {
         auto reg = context->registerService(service<Interface1,BaseService>());
-        RegistrationSlot<Interface1> slot{reg};
+        RegistrationSlot<Interface1> slot{reg, this};
         auto regs = context->getRegistration<Interface1>();
         QCOMPARE(regs.registeredServices().size(), 1);
         QVERIFY(reg);
@@ -1664,10 +1609,11 @@ void testWatchConfigurationFileChangeWithError() {
         delete slot.last();
         QVERIFY(reg);
         QCOMPARE(regs.registeredServices().size(), 1);
-        QVERIFY(!RegistrationSlot<Interface1>{reg}.last());
+        RegistrationSlot<Interface1> slot2{reg, this};
+        QVERIFY(!slot2);
         //Publish the service again:
         context->publish();
-        QVERIFY(RegistrationSlot<Interface1>{reg}.last());
+        QVERIFY(slot2);
     }
 
     void testDestroyContext() {
@@ -1680,7 +1626,7 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testRegisterObjectSignalsImmediately() {
         BaseService base;
-        RegistrationSlot<BaseService> baseSlot{context->registerObject(&base)};
+        RegistrationSlot<BaseService> baseSlot{context->registerObject(&base), this};
         QVERIFY(baseSlot);
         QVERIFY(context->publish());
         QCOMPARE(baseSlot.invocationCount(), 1);
@@ -1691,7 +1637,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()));
         QVERIFY(reg);
         QVERIFY(context->publish());
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<DependentService> service{reg, this};
         QVERIFY(!service->m_dependency);
     }
 
@@ -1701,7 +1647,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerObject(configuration.get());
         // Use default-converter:
         auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()) << propValue(&DependentService::setAddress, "${host}"), "dep");
-        RegistrationSlot<DependentService> srv{reg};
+        RegistrationSlot<DependentService> srv{reg, this};
         QVERIFY(context->publish());
         QCOMPARE(srv->address(), Address{"localhost"});
     }
@@ -1712,7 +1658,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerObject(configuration.get());
         // Use custom-converter:
         auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()) << propValue(&DependentService::setAddress, "${host}", addressConverter), "dep");
-        RegistrationSlot<DependentService> srv{reg};
+        RegistrationSlot<DependentService> srv{reg, this};
         QVERIFY(context->publish());
         QCOMPARE(srv->address(), Address{"127.0.0.1"});
     }
@@ -1728,7 +1674,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerObject(&settings);
         // Use custom-converter:
         auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()) << autoRefresh(&DependentService::setAddress, "${host}", addressConverter), "dep");
-        RegistrationSlot<DependentService> srv{reg};
+        RegistrationSlot<DependentService> srv{reg, this};
         QVERIFY(context->publish());
         QCOMPARE(srv->address(), Address{"192.168.1.1"});
         QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text));
@@ -1744,11 +1690,11 @@ void testWatchConfigurationFileChangeWithError() {
     void testOptionalDependencyWithAutowire() {
         auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()));
         QVERIFY(reg.autowire(&DependentService::setBase));
-        RegistrationSlot<DependentService> srv{reg};
+        RegistrationSlot<DependentService> srv{reg, this};
         QVERIFY(context->publish());
         QVERIFY(!srv->m_dependency);
         auto baseReg = context->registerService(service<Interface1,BaseService>());
-        RegistrationSlot<Interface1> baseSlot{baseReg};
+        RegistrationSlot<Interface1> baseSlot{baseReg, this};
         QVERIFY(context->publish());
         QVERIFY(srv->m_dependency);
         QCOMPARE(srv->m_dependency, baseSlot.last());
@@ -1757,13 +1703,13 @@ void testWatchConfigurationFileChangeWithError() {
     void testCardinalityNDependencyWithAutowire() {
         auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>()));
         QVERIFY(reg.autowire(&CardinalityNService::addBase));
-        RegistrationSlot<CardinalityNService> srv{reg};
+        RegistrationSlot<CardinalityNService> srv{reg, this};
         QVERIFY(context->publish());
         QCOMPARE(srv->my_bases.size(), 0);
         auto baseReg1 = context->registerService(service<Interface1,BaseService>());
-        RegistrationSlot<Interface1> baseSlot1{baseReg1};
+        RegistrationSlot<Interface1> baseSlot1{baseReg1, this};
         auto baseReg2 = context->registerService(service<Interface1,BaseService2>());
-        RegistrationSlot<Interface1> baseSlot2{baseReg2};
+        RegistrationSlot<Interface1> baseSlot2{baseReg2, this};
 
         QVERIFY(context->publish());
         QCOMPARE(srv->my_bases.size(), 2);
@@ -1774,7 +1720,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto baseReg = context->registerService<BaseService>("base with init");
         QVERIFY(context->publish());
 
-        RegistrationSlot<BaseService> baseSlot{baseReg};
+        RegistrationSlot<BaseService> baseSlot{baseReg, this};
         QCOMPARE(baseSlot->context(), context.get());
 
     }
@@ -1786,8 +1732,8 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(baseReg.applicationContext(), &delegatingContext);
         QVERIFY(delegatingContext.publish());
 
-        RegistrationSlot<BaseService> baseSlot{baseReg};
-        RegistrationSlot<QApplicationContext> contextSlot{contextReg};
+        RegistrationSlot<BaseService> baseSlot{baseReg, this};
+        RegistrationSlot<QApplicationContext> contextSlot{contextReg, this};
         QCOMPARE(contextSlot.last(), &delegatingContext);
         QCOMPARE(baseSlot->context(), &delegatingContext);
 
@@ -1799,7 +1745,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto baseReg = context->registerService(service<Interface1,BaseService2>(), "base with init");
         QVERIFY(context->publish());
 
-        RegistrationSlot<Interface1> baseSlot{baseReg};
+        RegistrationSlot<Interface1> baseSlot{baseReg, this};
         QCOMPARE(dynamic_cast<BaseService2*>(baseSlot.last())->initCalled, 1);
 
     }
@@ -1808,7 +1754,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto baseReg = context->registerService(service<BaseService2>().advertiseAs<Interface1>(), "base with init");
         QVERIFY(context->publish());
 
-        RegistrationSlot<BaseService2> baseSlot{baseReg};
+        RegistrationSlot<BaseService2> baseSlot{baseReg, this};
         QCOMPARE(baseSlot.last()->initCalled, 1);
 
     }
@@ -1818,7 +1764,7 @@ void testWatchConfigurationFileChangeWithError() {
     void testWithInit() {
         auto reg = context->registerService(service<BaseService2>().withInit(&BaseService2::init));
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService2> baseSlot{reg};
+        RegistrationSlot<BaseService2> baseSlot{reg, this};
         QCOMPARE(baseSlot->initCalled, 1);
     }
 
@@ -1850,7 +1796,7 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(!context->publish());
         baseReg.registerAlias("myBase");
         QVERIFY(context->publish());
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<DependentService> service{reg, this};
         QCOMPARE(service->m_dependency, &base);
     }
 
@@ -1859,7 +1805,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto baseReg= context->registerObject<Interface1>(&base, "base");
         auto reg = context->registerService(service<DependentService>(baseReg));
         QVERIFY(context->publish());
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<DependentService> service{reg, this};
         QCOMPARE(service->m_dependency, &base);
     }
 
@@ -1869,7 +1815,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<DependentService>(Address{"localhost"}, QString{"https://web.de"}, &base), "dep");
         QVERIFY(reg);
         QVERIFY(context->publish());
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<DependentService> service{reg, this};
         QCOMPARE(service->m_dependency, &base);
         QCOMPARE(service->m_address, Address{"localhost"});
         QCOMPARE(service->m_url, QString{"https://web.de"});
@@ -1884,7 +1830,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<DependentService>(resolve<Address>("${host}"), resolve("${url}?q=${term}"), &base) << withGroup("section"), "dep");
         QVERIFY(reg);
         QVERIFY(context->publish());
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<DependentService> service{reg, this};
         QCOMPARE(service->m_dependency, &base);
         QCOMPARE(service->m_address, Address{"localhost"});
         QCOMPARE(service->m_url, QString{"https://google.de/search?q=something"});
@@ -1899,7 +1845,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<DependentService>(resolve<Address>("${host}", addressConverter), resolve("${url}?q=${term}"), &base) << withGroup("section"), "dep");
         QVERIFY(reg);
         QVERIFY(context->publish());
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<DependentService> service{reg, this};
         QCOMPARE(service->m_dependency, &base);
         QCOMPARE(service->m_address, Address{"127.0.0.1"});
         QCOMPARE(service->m_url, QString{"https://google.de/search?q=something"});
@@ -1916,7 +1862,7 @@ void testWatchConfigurationFileChangeWithError() {
         BaseService base;
         auto reg = context->registerService(service<DependentService>(resolve("${host}", Address{"localhost"}), resolve("${url}", QString{"localhost:8080"}), &base), "dep");
         QVERIFY(reg);
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<DependentService> service{reg, this};
 
         QVERIFY(context->publish());
         QCOMPARE(service->m_address, Address{"localhost"});
@@ -1931,7 +1877,7 @@ void testWatchConfigurationFileChangeWithError() {
         BaseService base;
         auto reg = context->registerService(service<DependentService>(resolve<Address>("${*/host}"), resolve("${*/dep/url}"), &base) << withGroup("section"), "dep");
         QVERIFY(reg);
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<DependentService> service{reg, this};
 
         QVERIFY(context->publish());
         QCOMPARE(service->m_address, Address{"192.168.1.1"});
@@ -1943,7 +1889,7 @@ void testWatchConfigurationFileChangeWithError() {
         BaseService base;
         auto reg = context->registerService(service<DependentService>(resolve<Address>("${host}", Address{"192.168.1.1"}), resolve("${url:n/a}", QString{"localhost:8080"}), &base), "dep");
         QVERIFY(reg);
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<DependentService> service{reg, this};
 
         QVERIFY(context->publish());
         QCOMPARE(service->m_address, Address{"192.168.1.1"});
@@ -1958,7 +1904,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<DependentService>(Address{"localhost"}, QString{"https://web.de"}, inject<Interface1>()), "dep");
         QVERIFY(reg);
         QVERIFY(context->publish());
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<DependentService> service{reg, this};
         QCOMPARE(service->m_dependency, &base);
         QCOMPARE(service->m_address, Address{"localhost"});
         QCOMPARE(service->m_url, QString{"https://web.de"});
@@ -1970,9 +1916,9 @@ void testWatchConfigurationFileChangeWithError() {
         auto depReg2 = context->registerService(service<DependentService>(injectIfPresent<Interface1>("base")));
 
         QVERIFY(context->publish());
-        RegistrationSlot<DependentService> depSlot{depReg};
+        RegistrationSlot<DependentService> depSlot{depReg, this};
         QVERIFY(!depSlot->m_dependency);
-        RegistrationSlot<DependentService> depSlot2{depReg2};
+        RegistrationSlot<DependentService> depSlot2{depReg2, this};
         QCOMPARE(depSlot2->m_dependency, &base);
 
     }
@@ -1993,8 +1939,8 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerObject(configuration.get());
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{baseReg};
-        RegistrationSlot<QTimer> timerSlot{timerReg};
+        RegistrationSlot<BaseService> baseSlot{baseReg, this};
+        RegistrationSlot<QTimer> timerSlot{timerReg, this};
         QVERIFY(baseSlot.last());
         QCOMPARE(baseSlot->foo(), "Hello, world");
         QCOMPARE(baseSlot->timer(), timerSlot.last());
@@ -2005,7 +1951,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto baseReg = context->registerService(service<BaseService>() << propValue(&BaseService::setTimer, &timer), "base");
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{baseReg};
+        RegistrationSlot<BaseService> baseSlot{baseReg, this};
         QVERIFY(baseSlot.last());
         QCOMPARE(baseSlot->timer(), &timer);
     }
@@ -2015,9 +1961,9 @@ void testWatchConfigurationFileChangeWithError() {
         auto baseReg = context->registerService(service<BaseService>() << propValue(&BaseService::setTimer, timerReg), "base");
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{baseReg};
+        RegistrationSlot<BaseService> baseSlot{baseReg, this};
         QVERIFY(baseSlot.last());
-        RegistrationSlot<QTimer> timerSlot{timerReg};
+        RegistrationSlot<QTimer> timerSlot{timerReg, this};
         QVERIFY(timerSlot.last());
         QCOMPARE(baseSlot->timer(), timerSlot.last());
     }
@@ -2032,8 +1978,8 @@ void testWatchConfigurationFileChangeWithError() {
         auto cardReg = context->registerService(service<CardinalityNService>() << propValue(&CardinalityNService::setBases, basesReg), "card");
 
         QVERIFY(context->publish());
-        RegistrationSlot<Interface1> basesSlot{basesReg};
-        RegistrationSlot<CardinalityNService> cardSlot{cardReg};
+        RegistrationSlot<Interface1> basesSlot{basesReg, this};
+        RegistrationSlot<CardinalityNService> cardSlot{cardReg, this};
         QVERIFY(cardSlot);
         QCOMPARE(cardSlot->my_bases.size(), 2);
         QVERIFY(cardSlot->my_bases.contains(basesSlot[0]));
@@ -2064,7 +2010,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerObject(configuration.get());
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> baseSlot{baseReg};
+        RegistrationSlot<BaseService> baseSlot{baseReg, this};
         QVERIFY(baseSlot.last());
         QCOMPARE(baseSlot->foo(), "Hello, world");
         QCOMPARE(baseSlot->timer(), &timer);
@@ -2080,15 +2026,15 @@ void testWatchConfigurationFileChangeWithError() {
         auto regProto = context->registerService(prototype<BaseService>() << propValue("foo", "${foo}"), "base");
 
         QVERIFY(context->publish());
-        RegistrationSlot<BaseService> protoSlot{regProto};
+        RegistrationSlot<BaseService> protoSlot{regProto, this};
         QVERIFY(!protoSlot);
         auto depReg1 = context->registerService(service<DependentService>(regProto), "dependent1");
         auto depReg2 = context->registerService(service<DependentService>(regProto), "dependent2");
 
         auto protoDepReg = context->registerService(prototype<DependentService>(regProto), "dependent3");
-        RegistrationSlot<DependentService> dependentSlot{depReg1};
-        RegistrationSlot<DependentService> dependentSlot2{depReg2};
-        RegistrationSlot<DependentService> protoDependentSlot{protoDepReg};
+        RegistrationSlot<DependentService> dependentSlot{depReg1, this};
+        RegistrationSlot<DependentService> dependentSlot2{depReg2, this};
+        RegistrationSlot<DependentService> protoDependentSlot{protoDepReg, this};
         QVERIFY(context->publish());
         QVERIFY(!protoDependentSlot);
         QCOMPARE(protoSlot.invocationCount(), 2);
@@ -2105,10 +2051,10 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testPrototypeReferencedAsBean() {
         auto regProto = context->registerPrototype<BaseService>("base");
-        RegistrationSlot<BaseService> protoSlot{regProto};
+        RegistrationSlot<BaseService> protoSlot{regProto, this};
         auto depReg = context->registerService(service<CyclicDependency>() << propValue("dependency", "&base"));
         QVERIFY(context->publish());
-        RegistrationSlot<CyclicDependency> dependentSlot{depReg};
+        RegistrationSlot<CyclicDependency> dependentSlot{depReg, this};
         QVERIFY(dependentSlot);
         QVERIFY(context->publish());
         QVERIFY(protoSlot);
@@ -2120,18 +2066,18 @@ void testWatchConfigurationFileChangeWithError() {
     void testDeletePrototypeExternally() {
         auto regProto = context->registerPrototype<BaseService>();
 
-        RegistrationSlot<BaseService> protoSlot{regProto};
+        RegistrationSlot<BaseService> protoSlot{regProto, this};
         QVERIFY(!protoSlot);
         auto depReg1 = context->registerService(service<DependentService>(regProto), "dependent1");
         context->registerService(service<DependentService>(regProto), "dependent2");
-        RegistrationSlot<DependentService> dependentSlot{depReg1};
+        RegistrationSlot<DependentService> dependentSlot{depReg1, this};
         QVERIFY(context->publish());
         QCOMPARE(protoSlot.invocationCount(), 2);
         QVERIFY(dependentSlot->m_dependency);
         QCOMPARE(dynamic_cast<QObject*>(dependentSlot->m_dependency)->parent(), dependentSlot.last());
 
         delete dependentSlot->m_dependency;
-        RegistrationSlot<BaseService> newProtoSlot{regProto};
+        RegistrationSlot<BaseService> newProtoSlot{regProto, this};
         QCOMPARE(newProtoSlot.invocationCount(), 1);
     }
 
@@ -2139,16 +2085,16 @@ void testWatchConfigurationFileChangeWithError() {
     void testNestedPrototypeDependency() {
         auto regBase2Proto = context->registerPrototype<BaseService2>();
         auto regBaseProto = context->registerPrototype<BaseService>();
-        RegistrationSlot<BaseService> baseSlot{context->getRegistration<BaseService>()};
-        RegistrationSlot<BaseService2> base2Slot{context->getRegistration<BaseService2>()};
+        RegistrationSlot<BaseService> baseSlot{context->getRegistration<BaseService>(), this};
+        RegistrationSlot<BaseService2> base2Slot{context->getRegistration<BaseService2>(), this};
         auto depProtoReg = context->registerService(prototype<DependentService>(regBaseProto), "dependent1");
-        RegistrationSlot<DependentService> depSlot{depProtoReg};
+        RegistrationSlot<DependentService> depSlot{depProtoReg, this};
         QVERIFY(context->publish());
         QVERIFY(!baseSlot);
         QVERIFY(!base2Slot);
         QVERIFY(!depSlot);
         auto threeReg = context->registerService(service<ServiceWithThreeArgs>(regBaseProto, depProtoReg, regBase2Proto), "three");
-        RegistrationSlot<ServiceWithThreeArgs> threeSlot{threeReg};
+        RegistrationSlot<ServiceWithThreeArgs> threeSlot{threeReg, this};
         QVERIFY(context->publish());
         QVERIFY(threeSlot);
         QCOMPARE(threeSlot->m_base2->parent(), threeSlot.last());
@@ -2173,8 +2119,8 @@ void testWatchConfigurationFileChangeWithError() {
         auto regDep1 = context->registerService(service<DependentServiceLevel2>(regProto), "dep1");
 
         QVERIFY(context->publish());
-        RegistrationSlot<DependentServiceLevel2> depSlot1{regDep1};
-        RegistrationSlot<DependentService> protoSlot{regProto};
+        RegistrationSlot<DependentServiceLevel2> depSlot1{regDep1, this};
+        RegistrationSlot<DependentService> protoSlot{regProto, this};
         QCOMPARE(protoSlot.size(), 1);
         QVERIFY(depSlot1);
         QVERIFY(depSlot1->m_dep);
@@ -2188,8 +2134,8 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(context->publish());
 
         QCOMPARE(protoSlot.size(), 2);
-        RegistrationSlot<DependentServiceLevel2> depSlot2{regDep2};
-        RegistrationSlot<Interface1> baseSlot{baseReg};
+        RegistrationSlot<DependentServiceLevel2> depSlot2{regDep2, this};
+        RegistrationSlot<Interface1> baseSlot{baseReg, this};
         QVERIFY(depSlot2->m_dep);
         QCOMPARE(depSlot2->m_dep->m_dependency, baseSlot.last());
 
@@ -2203,7 +2149,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto regDep1 = context->registerService(service<DependentServiceLevel2>(regProto), "dep1");
 
         QVERIFY(context->publish());
-        RegistrationSlot<DependentServiceLevel2> depSlot1{regDep1};
+        RegistrationSlot<DependentServiceLevel2> depSlot1{regDep1, this};
 
         QVERIFY(depSlot1);
         QVERIFY(depSlot1->m_card);
@@ -2214,7 +2160,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto regDep2 = context->registerService(service<DependentServiceLevel2>(regProto), "dep2");
 
         QVERIFY(context->publish());
-        RegistrationSlot<DependentServiceLevel2> depSlot2{regDep2};
+        RegistrationSlot<DependentServiceLevel2> depSlot2{regDep2, this};
         QVERIFY(depSlot2);
         QVERIFY(depSlot2->m_card);
         QCOMPARE(depSlot2->m_card->my_bases.size(), 2);
@@ -2281,8 +2227,8 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(timerReg.registeredServices().size(), 1);
         QCOMPARE(baseReg.registeredServices().size(), 1);
         QVERIFY(context->publish());
-        RegistrationSlot<Interface1> ifaceSlot{ifaceReg};
-        RegistrationSlot<TimerAware> timerSlot{timerReg};
+        RegistrationSlot<Interface1> ifaceSlot{ifaceReg, this};
+        RegistrationSlot<TimerAware> timerSlot{timerReg, this};
         QVERIFY(ifaceSlot);
         QVERIFY(timerSlot);
 
@@ -2323,8 +2269,8 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(timerReg.registeredServices().size(), 1);
         QCOMPARE(baseReg.registeredServices().size(), 1);
         QVERIFY(context->publish());
-        RegistrationSlot<Interface1> ifaceSlot{ifaceReg};
-        RegistrationSlot<TimerAware> timerSlot{timerReg};
+        RegistrationSlot<Interface1> ifaceSlot{ifaceReg, this};
+        RegistrationSlot<TimerAware> timerSlot{timerReg, this};
         QVERIFY(ifaceSlot);
         QVERIFY(timerSlot);
 
@@ -2511,23 +2457,23 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
-        RegistrationSlot<Interface1> base2{reg2};
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<Interface1> base2{reg2, this};
+        RegistrationSlot<DependentService> service{reg, this};
         QCOMPARE(service->m_dependency, base2.last());
 
     }
 
     void testPublishPartialDependencyWithRequiredName() {
         auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1");
-        RegistrationSlot<Interface1> slot1{reg1};
+        RegistrationSlot<Interface1> slot1{reg1, this};
         auto reg = context->registerService(service<DependentService>(inject<Interface1>("base2")));
-        RegistrationSlot<DependentService> srvSlot{reg};
+        RegistrationSlot<DependentService> srvSlot{reg, this};
         QVERIFY(!context->publish(true));
         QVERIFY(slot1);
         QVERIFY(!srvSlot);
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
         QVERIFY(context->publish());
-        RegistrationSlot<Interface1> slot2{reg2};
+        RegistrationSlot<Interface1> slot2{reg2, this};
         QVERIFY(slot2);
         QCOMPARE(srvSlot->m_dependency, slot2.last());
 
@@ -2535,15 +2481,15 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testPublishPartialWithBeanRef() {
         auto timerReg1 = context->registerService(service<QTimer>(), "timer1");
-        RegistrationSlot<QTimer> timerSlot1{timerReg1};
+        RegistrationSlot<QTimer> timerSlot1{timerReg1, this};
 
         auto reg = context->registerService(service<BaseService>() << propValue("timer", "&timer2"), "srv");
-        RegistrationSlot<BaseService> slot1{reg};
+        RegistrationSlot<BaseService> slot1{reg, this};
         QVERIFY(!context->publish(true));
         QVERIFY(timerSlot1);
         QVERIFY(!slot1);
         auto timerReg2 = context->registerService(service<QTimer>(), "timer2");
-        RegistrationSlot<QTimer> timerSlot2{timerReg2};
+        RegistrationSlot<QTimer> timerSlot2{timerReg2, this};
         QVERIFY(context->publish());
         QVERIFY(timerSlot2);
         QVERIFY(slot1);
@@ -2555,7 +2501,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerObject(configuration.get());
         auto reg = context->registerService(service<BaseService>() << propValue("foo", "${foo}"), "srv");
         QVERIFY(!context->publish(true));
-        RegistrationSlot<BaseService> slot1{reg};
+        RegistrationSlot<BaseService> slot1{reg, this};
         QVERIFY(!slot1);
         configuration->setValue("foo", "Hello, world");
         QVERIFY(context->publish());
@@ -2570,8 +2516,8 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<DependentService>(reg2));
 
         QVERIFY(context->publish());
-        RegistrationSlot<Interface1> base2{reg2};
-        RegistrationSlot<DependentService> service{reg};
+        RegistrationSlot<Interface1> base2{reg2, this};
+        RegistrationSlot<DependentService> service{reg, this};
         QCOMPARE(service->m_dependency, base2.last());
 
     }
@@ -2585,14 +2531,14 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
         QCOMPARE(regs.registeredServices().size(), 2);
-        RegistrationSlot<Interface1> base1{reg1};
-        RegistrationSlot<Interface1> base2{reg2};
-        RegistrationSlot<CardinalityNService> service{reg};
+        RegistrationSlot<Interface1> base1{reg1, this};
+        RegistrationSlot<Interface1> base2{reg2, this};
+        RegistrationSlot<CardinalityNService> service{reg, this};
         QCOMPARE_NE(base1, base2);
 
         QCOMPARE(service->my_bases.size(), 2);
 
-        RegistrationSlot<Interface1> services{regs};
+        RegistrationSlot<Interface1> services{regs, this};
         QCOMPARE(services.invocationCount(), 2);
         QVERIFY(service->my_bases.contains(base1.last()));
         QVERIFY(service->my_bases.contains(base2.last()));
@@ -2607,14 +2553,14 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<CardinalityNService>(regs));
         QVERIFY(context->publish());
         QCOMPARE(regs.registeredServices().size(), 2);
-        RegistrationSlot<Interface1> base1{reg1};
-        RegistrationSlot<Interface1> base2{reg2};
-        RegistrationSlot<CardinalityNService> service{reg};
+        RegistrationSlot<Interface1> base1{reg1, this};
+        RegistrationSlot<Interface1> base2{reg2, this};
+        RegistrationSlot<CardinalityNService> service{reg, this};
         QCOMPARE_NE(base1, base2);
 
         QCOMPARE(service->my_bases.size(), 2);
 
-        RegistrationSlot<Interface1> services{regs};
+        RegistrationSlot<Interface1> services{regs, this};
         QCOMPARE(services.invocationCount(), 2);
         QVERIFY(service->my_bases.contains(base1.last()));
         QVERIFY(service->my_bases.contains(base2.last()));
@@ -2627,13 +2573,13 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>("base2")));
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
-        RegistrationSlot<Interface1> base1{reg1};
-        RegistrationSlot<Interface1> base2{reg2};
-        RegistrationSlot<CardinalityNService> service{reg};
+        RegistrationSlot<Interface1> base1{reg1, this};
+        RegistrationSlot<Interface1> base2{reg2, this};
+        RegistrationSlot<CardinalityNService> service{reg, this};
         QCOMPARE_NE(base1, base2);
         QCOMPARE(service->my_bases.size(), 1);
 
-        RegistrationSlot<Interface1> services{regs};
+        RegistrationSlot<Interface1> services{regs, this};
         QCOMPARE(services.invocationCount(), 2);
         QCOMPARE(service->my_bases[0], services.last());
 
@@ -2641,13 +2587,13 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testCancelSubscription() {
         auto reg = context->getRegistration<Interface1>();
-        RegistrationSlot<Interface1> services{reg};
+        RegistrationSlot<Interface1> services{reg, this};
         context->registerService(service<Interface1,BaseService>(), "base1");
         context->publish();
-        QCOMPARE(1, services.size());
+        QCOMPARE(1, services.invocationCount());
         BaseService2 base2;
         context->registerObject<Interface1>(&base2);
-        QCOMPARE(2, services.size());
+        QCOMPARE(2, services.invocationCount());
         services.subscription().cancel();
         BaseService2 base3;
         context->registerObject<Interface1>(&base3);
@@ -2657,7 +2603,7 @@ void testWatchConfigurationFileChangeWithError() {
     void testCancelAutowireSubscription() {
         auto reg = context->registerService<CardinalityNService>(service<CardinalityNService>(injectAll<Interface1>()));
         auto subscription = reg.autowire(&CardinalityNService::addBase);
-        RegistrationSlot<CardinalityNService> slot{reg};
+        RegistrationSlot<CardinalityNService> slot{reg, this};
         context->publish();
         QCOMPARE(slot->my_bases.size(), 0);
         context->registerService(service<Interface1,BaseService>(), "base1");
@@ -2683,7 +2629,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto reg1 = context->registerService(service<Interface1,BaseService>() << propValue("foo", "${foo}"));
         auto reg2 = context->registerService(service<Interface1,BaseService2>() << placeholderValue("store", "for later use"));
         QVERIFY(context->publish());
-        RegistrationSlot<PostProcessor> processSlot{processReg};
+        RegistrationSlot<PostProcessor> processSlot{processReg, this};
         QCOMPARE(processSlot->servicesMap.size(), 2);
         QVERIFY(dynamic_cast<BaseService*>(processSlot->servicesMap[reg1.unwrap()]));
         QVERIFY(dynamic_cast<BaseService2*>(processSlot->servicesMap[reg2.unwrap()]));
@@ -2696,7 +2642,7 @@ void testWatchConfigurationFileChangeWithError() {
     void testCardinalityNServiceEmpty() {
         auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>()));
         QVERIFY(context->publish());
-        RegistrationSlot<CardinalityNService> service{reg};
+        RegistrationSlot<CardinalityNService> service{reg, this};
         QCOMPARE(service->my_bases.size(), 0);
     }
 
@@ -2771,8 +2717,8 @@ void testWatchConfigurationFileChangeWithError() {
 
         QVERIFY(context->publish());
 
-        RegistrationSlot<CyclicDependency> cyclicSlot{regCyclic};
-        RegistrationSlot<BaseService> baseSlot{regBase};
+        RegistrationSlot<CyclicDependency> cyclicSlot{regCyclic, this};
+        RegistrationSlot<BaseService> baseSlot{regBase, this};
 
         QVERIFY(cyclicSlot);
         QCOMPARE(cyclicSlot.last(), baseSlot->dependency());
@@ -2791,8 +2737,8 @@ void testWatchConfigurationFileChangeWithError() {
 
         QVERIFY(context->publish());
 
-        RegistrationSlot<CyclicDependency> cyclicSlot{regCyclic};
-        RegistrationSlot<BaseService> baseSlot{regBase};
+        RegistrationSlot<CyclicDependency> cyclicSlot{regCyclic, this};
+        RegistrationSlot<BaseService> baseSlot{regBase, this};
 
         QVERIFY(cyclicSlot);
         QCOMPARE(cyclicSlot.last(), baseSlot->dependency());
@@ -2807,7 +2753,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerService(service<Interface1,BaseService>(), "base3");
         auto regCard = context->registerService(service<CardinalityNService>(injectAll<Interface1>()));
         auto regCyclic = context->registerService(service<CyclicDependency>(inject<BaseService>("base3")));
-        RegistrationSlot<CardinalityNService> slotCard{regCard};
+        RegistrationSlot<CardinalityNService> slotCard{regCard, this};
         QVERIFY(context->publish());
         QCOMPARE(slotCard->my_bases.size(), 3);
         QCOMPARE(static_cast<BaseService*>(slotCard->my_bases[0])->objectName(), "base1");
@@ -2826,9 +2772,9 @@ void testWatchConfigurationFileChangeWithError() {
         auto baseReg = context->getRegistration<Interface1>();
         context->registerService(service<Interface1,BaseService>(), "base");
         QCOMPARE(contextPending, 1);
-        RegistrationSlot<Interface1> baseSlot{baseReg};
+        RegistrationSlot<Interface1> baseSlot{baseReg, this};
         auto regDep = context->registerService(service<DependentService>(inject<Interface1>()));
-        RegistrationSlot<DependentService> depSlot{regDep};
+        RegistrationSlot<DependentService> depSlot{regDep, this};
         QCOMPARE(contextPending, 2);
         QCOMPARE(contextPublished, 2); //The QCoreApplication and the QApplicationContext.
         QVERIFY(context->publish());
@@ -2843,13 +2789,13 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(contextPending, 1);
         QCOMPARE(contextPublished, 4);
 
-        RegistrationSlot<Interface1> anotherBaseSlot{anotherBaseReg};
+        RegistrationSlot<Interface1> anotherBaseSlot{anotherBaseReg, this};
         auto regCard = context->registerService(service<CardinalityNService>(injectAll<Interface1>()));
         QCOMPARE(contextPending, 2);
         QCOMPARE(contextPublished, 4);
 
 
-        RegistrationSlot<CardinalityNService> cardSlot{regCard};
+        RegistrationSlot<CardinalityNService> cardSlot{regCard, this};
         QVERIFY(context->publish());
         QCOMPARE(contextPending, 0);
         QCOMPARE(contextPublished, 6);
@@ -2862,7 +2808,7 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testPublishThenSubscribeInThread() {
         auto registration = context->registerService<BaseService>();
-        RegistrationSlot<BaseService> slot{registration};
+        RegistrationSlot<BaseService> slot{registration, this};
         context->publish();
         SubscriptionThread<BaseService> thread{context.get()};
         thread.start();
@@ -2877,7 +2823,7 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testSubscribeInThreadThenPublish() {
         auto registration = context->registerService<BaseService>();
-        RegistrationSlot<BaseService> slot{registration};
+        RegistrationSlot<BaseService> slot{registration, this};
         SubscriptionThread<BaseService> thread{context.get()};
         thread.start();
         bool hasSubscribed = QTest::qWaitFor([&thread] { return thread.subscribed;}, 1000);
@@ -2891,7 +2837,7 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testPublishInThreadFails() {
         auto registration = context->registerService<BaseService>();
-        RegistrationSlot<BaseService> slot{registration};
+        RegistrationSlot<BaseService> slot{registration, this};
 
         QAtomicInt success{-1};
         QThread* thread = QThread::create([this,&success] {
@@ -2969,14 +2915,14 @@ void testWatchConfigurationFileChangeWithError() {
 
         QVERIFY(context->publish());
 
-        RegistrationSlot<BaseService> base{baseReg};
-        RegistrationSlot<BaseService2> base2{base2Reg};
-        RegistrationSlot<DependentService> dependent{dependentReg};
-        RegistrationSlot<DependentServiceLevel2> dependent2{dependent2Reg};
-        RegistrationSlot<ServiceWithThreeArgs> three{threeReg};
-        RegistrationSlot<ServiceWithFourArgs> four{fourReg};
-        RegistrationSlot<ServiceWithFiveArgs> five{fiveReg};
-        RegistrationSlot<ServiceWithSixArgs> six{sixReg};
+        RegistrationSlot<BaseService> base{baseReg, this};
+        RegistrationSlot<BaseService2> base2{base2Reg, this};
+        RegistrationSlot<DependentService> dependent{dependentReg, this};
+        RegistrationSlot<DependentServiceLevel2> dependent2{dependent2Reg, this};
+        RegistrationSlot<ServiceWithThreeArgs> three{threeReg, this};
+        RegistrationSlot<ServiceWithFourArgs> four{fourReg, this};
+        RegistrationSlot<ServiceWithFiveArgs> five{fiveReg, this};
+        RegistrationSlot<ServiceWithSixArgs> six{sixReg, this};
 
 
         QCOMPARE(publishedInOrder.size(), 8);
