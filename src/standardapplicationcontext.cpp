@@ -112,9 +112,14 @@ bool isBindable(const QMetaProperty& sourceProperty) {
 
 namespace {
 
-const QRegularExpression& beanRefPattern() {
+bool getBeanRef(QString& str) {
     static QRegularExpression regEx{"^&([^.]+)"};
-    return regEx;
+    auto match = regEx.match(str);
+    if(match.hasMatch()) {
+        str = match.captured(1);
+        return true;
+    }
+    return false;
 }
 
 
@@ -165,8 +170,9 @@ QStringList determineBeanRefs(const detail::service_config::map_type& properties
         case detail::ConfigValueType::SERVICE_LIST:
             continue;
         default:
-            if(auto key = entry.second.expression.toString(); key.length() > 1 && key.startsWith('&')) {
-                result.push_back(key.right(key.length()-1));
+
+            if(QString key = entry.second.expression.toString(); getBeanRef(key)) {
+                result.push_back(key);
             }
         }
     }
@@ -1478,9 +1484,7 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
         return {Status::fatal, false};
     }
     QString key = value.toString();
-    auto match = beanRefPattern().match(key);
-    if(match.hasMatch()) {
-        key = match.captured(1);
+    if(getBeanRef(key)) {
         auto beanReg = getRegistrationByName(key);
         if(!beanReg) {
             if(allowPartial) {
@@ -1502,7 +1506,11 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
 
 
 StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::findAutowiringCandidate(service_registration_handle_t target, const QMetaProperty& prop) {
-    auto propMetaType = prop.metaType().metaObject();
+    auto propType = prop.metaType();
+    if(!(propType.flags() & QMetaType::PointerToQObject)) {
+        return nullptr;
+    }
+    auto propMetaType = propType.metaObject();
     DescriptorRegistration* candidate = getRegistrationByName(prop.name()); //First, try by name
     //If the candidate is assignable to the property, return it, unless it is the target. (We never autowire a property with a pointer to the same service)
     if(candidate && candidate != target && candidate -> getObject() && candidate->getObject()->metaObject()->inherits(propMetaType)) {
@@ -1644,26 +1652,42 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
         }
         toBePublished.insert(toBePublished.end(), createdForThis.begin(), createdForThis.end());
         if(config.autowire) {
+            QString group = config.group;
+            if(group.isEmpty()) {
+                group = reg->registeredName();
+            }
+            QStringList keys = configurationKeys(group);
+
             for(int p = 0; p < metaObject->propertyCount(); ++p) {
                 auto prop = metaObject->property(p);
                 if(usedProperties.find(prop.name()) != usedProperties.end()) {
                     qCDebug(loggingCategory()).nospace() << "Skip Autowiring property '" << prop.name() << "' of " << *reg << " because it has been explicitly set";
                     continue; //Already set this property explicitly
                 }
-                auto propType = prop.metaType();
-                if(!(propType.flags() & QMetaType::PointerToQObject)) {
+                QVariant propValue;
+                if(QString path = detail::makeConfigPath(group, prop.name()); keys.contains(path)) {
+                    propValue = getConfigurationValue(path);
+                    if(QString beanRef = propValue.toString(); getBeanRef(beanRef)) {
+                        if(auto candidate = getRegistrationByName(beanRef)) {
+                            propValue.setValue(candidate->getObject());
+                        }
+                    }
+                } else
+                if(DescriptorRegistration* candidate = findAutowiringCandidate(reg, prop)) {
+                    propValue.setValue(candidate->getObject());
+                }
+                if(!propValue.isValid()) {
+                    qCInfo(loggingCategory()).nospace().noquote() << "Could not autowire property '" << prop.name()  << "' of " << *reg;
                     continue;
                 }
-                DescriptorRegistration* candidate = findAutowiringCandidate(reg, prop);
-                if(candidate) {
-                    if(prop.write(target, QVariant::fromValue(candidate->getObject()))) {
-                        qCInfo(loggingCategory()).nospace() << "Autowired property '" << prop.name() << "' of " << *reg << " to " << *candidate;
-                    } else {
-                        qCWarning(loggingCategory()).nospace().noquote() << "Autowiring property '" << prop.name()  << "' of " << *reg << " to " << *candidate << " failed.";
-                    }
+
+                if(prop.write(target, propValue)) {
+                    qCInfo(loggingCategory()).nospace() << "Autowired property '" << prop.name() << "' of " << *reg << " to " << propValue;
+                    usedProperties.insert(prop.name());
                 } else {
-                    qCInfo(loggingCategory()).nospace().noquote() << "Could not autowire property '" << prop.name()  << "' of " << *reg;
+                    qCWarning(loggingCategory()).nospace().noquote() << "Autowiring property '" << prop.name()  << "' of " << *reg << " to " << propValue << " failed.";
                 }
+
             }
         }
 
@@ -1759,9 +1783,10 @@ QStringList StandardApplicationContext::configurationKeys(const QString &section
 
     QStringList orderedKeys;
     QSet<QString> keySet;
+    QString prefix = detail::makeConfigPath(section, "");
     for(QSettings* settings : collector.collected) {
         for(const QString& key : settings->allKeys()) {
-            if(key.startsWith(section) && !keySet.contains(key))             {
+            if(key.startsWith(prefix) && !keySet.contains(key))             {
                 keySet.insert(key);
                 orderedKeys.push_back(key);
             }

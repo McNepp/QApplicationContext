@@ -2221,7 +2221,7 @@ template<typename S> using service_config_entry=detail::service_config_entry_t<S
 /// <br>Rather, its usage is analogous to that of *iostream-manipulators* from the standard-libray:
 ///
 ///
-///     service<MyService>() << withAutoRefresh << propValue("objectName", "${myService}");
+///     context->registerService(service<MyService>() << withAutoRefresh << propValue("objectName", "${myService}"));
 ///
 inline void withAutoRefresh(detail::service_config& cfg) {
     cfg.autoRefresh = true;
@@ -2230,10 +2230,46 @@ inline void withAutoRefresh(detail::service_config& cfg) {
 ///
 /// \brief Applies auto-wiring to a service_config.
 /// <br>This function is not meant to be invoked directly.
-/// <br>Rather, its usage is analogous to that of *iostream-manipulators* from the standard-libray:
+/// <br>Rather, its usage is analogous to that of *iostream-manipulators* from the standard-library:
 ///
 ///
-///     service<MyService>() << withAutowire;
+///     context->registerService(service<MyService>() << withAutowire);
+///
+/// Applying auto-wiring has the following consequences:
+///
+/// - After the %Service has been instantiated, all its properties (obtained via its QMetaObject) will be inspected.
+/// - Properties will be resolved using the registered QSettings: If a matching configuration-entry
+/// can be found in the section specified by mcnepp::qtdi::withGroup(const QString&), this entry's value will be injected.<br>
+/// Otherwise, if a matching configuration-entry can be found in the section matching the %Service's registered name, that entry's value will be injected.
+/// - If a configuration-entry has been found for a property that starts with an ampersand, this is treated as a *service-ref*: A matching %Service will be looked up
+/// by this name.
+/// - Properties for which no configuration-entry can be found will be injected if a matching service
+/// has been registered under the name of the property is present.<br>Otherwise, if exactly one service of the property's type
+/// has been registered, that will be injected.
+///
+/// Example: Suppose there is the following class:
+///
+///     class PingService {
+///        public:
+///           Q_PROPERTY(QNetworkAccessManager* networkManager READ networkManager WRITE setNetworkManager NOTIFY networkManagerChanged)
+///           Q_PROPERTY(int timeout READ timeout WRITE setTimeout NOTIFY timeoutChanged)
+///     };
+///
+/// Then we assume a file `"context.ini"` with the following contents:
+///
+///     [ping]
+///     timeout=5000
+///     networkManager=&networkAccess
+///
+/// Then, with the following code, the `PingService` will be auto-wired:
+///
+///     context->registerService(service<QSettings>("context.ini", QSettings::IniFormat));
+///     context->registerService<QNetworkAccessManager>("networkAccess");
+///     context->registerService(service<PingService>() << withAutowire, "ping");
+///
+/// Note that in this particular case, we could actually remove the line `networkManager=&networkAccess` from the INI-File, and everything would still be auto-wired.
+/// The reason is that there is exactly one %Service of type QNetworkAccessManager registered, so that can be unambiguously found!
+///
 ///
 inline void withAutowire(detail::service_config& cfg) {
     cfg.autowire = true;
@@ -2245,7 +2281,7 @@ inline void withAutowire(detail::service_config& cfg) {
 /// <br>The usage of this function is analogous to that of *iostream-manipulators* from the standard-libray:
 ///
 ///
-///     service<MyService>() << withGroup("myServices") << propValue("objectName", "${myService}");
+///     context->registerService(service<MyService>() << withGroup("myServices") << propValue("objectName", "${myService}"));
 ///
 inline detail::service_config::config_modifier withGroup(const QString& name) {
     return [name](detail::service_config& cfg) { cfg.group = name;};
@@ -3692,7 +3728,7 @@ public:
     /// \brief Obtains configuration-keys available in this ApplicationContext.
     /// <br>The keys will be returned in the same order that the underlying QSettings yield them.
     /// <br>Keys that are present in more than one QSettings will be returned only once.
-    /// <br>In contrast to etConfigurationValue(const QString&, bool), this function does not consider environment variables.
+    /// <br>In contrast to getConfigurationValue(const QString&, bool), this function does not consider environment variables.
     /// \param section determines which keys will be returned. An empty string denotes the "root".
     /// Sub-sections shall be delimited by forward slashes, in analogy to QSettings.
     /// \return a list with the keys that are present in the supplied section. The return keys will **comprise the supplied section**.

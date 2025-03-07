@@ -82,7 +82,7 @@ public:
 
     virtual unsigned pendingPublication() const override;
 
-    virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections) const override;
+    virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const override;
 
     virtual QStringList configurationKeys(const QString& section = "") const override;
 

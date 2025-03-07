@@ -1468,6 +1468,50 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(!context->publish());
     }
 
+    void testAutowiredPropertiesByServiceName() {
+        configuration->setValue("timer/interval", 4711);
+        configuration->setValue("timer/singleShot", true);
+        context->registerObject(configuration.get());
+        auto regTimer = context->registerService(service<QTimer>() << withAutowire, "timer");
+
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> timerSlot{regTimer, this};
+        QVERIFY(timerSlot);
+        QCOMPARE(timerSlot->interval(), 4711);
+        QVERIFY(timerSlot->isSingleShot());
+    }
+
+    void testAutowiredPropertiesWithBeanRef() {
+        configuration->setValue("base/timer", "&theTimer");
+        configuration->setValue("base/foo", "Hello, world");
+        context->registerObject(configuration.get());
+        auto regTimer1 = context->registerService(service<QTimer>(), "theTimer");
+        //By registering another QTimer, we make auto-wiring by type impossible
+        context->registerService(service<QTimer>(), "anotherTimer");
+
+        auto regBase = context->registerService(service<BaseService>() << withAutowire, "base");
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> timerSlot1{regTimer1, this};
+        QVERIFY(timerSlot1);
+        RegistrationSlot<BaseService> baseSlot{regBase, this};
+        QVERIFY(baseSlot);
+        QCOMPARE(baseSlot->timer(), timerSlot1.last());
+        QCOMPARE(baseSlot->foo(), "Hello, world");
+    }
+
+    void testAutowiredPropertiesByGroup() {
+        configuration->setValue("timer/interval", 4711);
+        configuration->setValue("timer/singleShot", true);
+        context->registerObject(configuration.get());
+        auto regTimer = context->registerService(service<QTimer>() << withGroup("timer") << withAutowire);
+
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> timerSlot{regTimer, this};
+        QVERIFY(timerSlot);
+        QCOMPARE(timerSlot->interval(), 4711);
+        QVERIFY(timerSlot->isSingleShot());
+    }
+
 
     void testAutowiredPropertyByName() {
         QTimer timer;
