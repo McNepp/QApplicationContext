@@ -5,6 +5,6 @@ var searchData=
   ['example_2',['Example',['../qapplicationcontext_8h.html#autotoc_md0',1,'']]],
   ['example_3',['An example',['../index.html#autotoc_md10',1,'']]],
   ['explicit_20group_4',['Specifying an explicit Group',['../index.html#autotoc_md15',1,'']]],
-  ['extending_20qapplicationcontext_5',['Extending QApplicationContext',['../index.html#autotoc_md50',1,'']]],
+  ['extending_20qapplicationcontext_5',['Extending QApplicationContext',['../index.html#autotoc_md56',1,'']]],
   ['externalized_20configuration_6',['Externalized Configuration',['../index.html#externalized-configuration',1,'']]]
 ];

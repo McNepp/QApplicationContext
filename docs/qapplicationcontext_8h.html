@@ -154,10 +154,10 @@ The purpose of this template is to be used as the type-alias named <code>initial
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_dependency.html">mcnepp::qtdi::Dependency&lt; S, kind &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies a dependency of a service. <br  />
-Can by used as a type-argument for <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>. In the standard-case of a mandatory relationship, the use of the <code>kind</code> argument is optional. Suppose you have a service-type <code>Reader</code> that needs a mandatory pointer to a <code>DatabaseAccess</code> in its constructor: class Reader : public QObject { public: explicit Update(DatabaseAccess* dao, QObject* parent = nullptr); };.  <a href="structmcnepp_1_1qtdi_1_1_dependency.html#details">More...</a><br /></td></tr>
+Can by used as a type-argument for <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ae4098e3ccaeeb2f4c0f40a5a119c555b" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>. In the standard-case of a mandatory relationship, the use of the <code>kind</code> argument is optional. Suppose you have a service-type <code>Reader</code> that needs a mandatory pointer to a <code>DatabaseAccess</code> in its constructor: class Reader : public QObject { public: explicit Update(DatabaseAccess* dao, QObject* parent = nullptr); };.  <a href="structmcnepp_1_1qtdi_1_1_dependency.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_resolvable.html">mcnepp::qtdi::Resolvable&lt; S &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A placeholder for a resolvable constructor-argument. Use the function <a class="el" href="#a59d0392bb960299590af56049c779ba8" title="Specifies a constructor-argument that shall be resolved by the QApplicationContext....">resolve(const QString&amp;)</a> to pass a resolvable argument to a service with <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abcefbb53aef5bee09aa4737716c15895" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>.  <a href="structmcnepp_1_1qtdi_1_1_resolvable.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A placeholder for a resolvable constructor-argument. Use the function <a class="el" href="#a59d0392bb960299590af56049c779ba8" title="Specifies a constructor-argument that shall be resolved by the QApplicationContext....">resolve(const QString&amp;)</a> to pass a resolvable argument to a service with <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ae4098e3ccaeeb2f4c0f40a5a119c555b" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>.  <a href="structmcnepp_1_1qtdi_1_1_resolvable.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service&lt; Srv, Impl, scope &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Describes a service by its interface and implementation. Compilation will fail if either <code>Srv</code> is not a sub-class of QObject, or if <code>Impl</code> is not a sub-class of <code>Srv</code>. <br  />
@@ -192,6 +192,8 @@ Typedefs</h2></td></tr>
 <tr class="separator:aec447170b9d5815c59b29ae88ef8bd09"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a39dc357c96a514de650b3113f5142cfc" id="r_a39dc357c96a514de650b3113f5142cfc"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a39dc357c96a514de650b3113f5142cfc">mcnepp::qtdi::subscription_handle_t</a> = detail::Subscription*</td></tr>
 <tr class="separator:a39dc357c96a514de650b3113f5142cfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae6c23817c171c31a11e310fd61c2f857" id="r_ae6c23817c171c31a11e310fd61c2f857"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae6c23817c171c31a11e310fd61c2f857">mcnepp::qtdi::Profiles</a> = QSet&lt;QString&gt;</td></tr>
+<tr class="separator:ae6c23817c171c31a11e310fd61c2f857"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab33d4e62a8cebba89c6ff34181d65f72" id="r_ab33d4e62a8cebba89c6ff34181d65f72"><td class="memTemplParams" colspan="2"><a id="ab33d4e62a8cebba89c6ff34181d65f72" name="ab33d4e62a8cebba89c6ff34181d65f72"></a>
 template&lt;typename S &gt; </td></tr>
 <tr class="memitem:ab33d4e62a8cebba89c6ff34181d65f72"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mcnepp::qtdi::service_config_entry</b> = detail::service_config_entry_t&lt;S&gt;</td></tr>
@@ -247,6 +249,10 @@ If the handle actually points to a <a class="el" href="classmcnepp_1_1qtdi_1_1_p
 <tr class="memitem:ae09e67c55a69665975a9e2371e3d0a94" id="r_ae09e67c55a69665975a9e2371e3d0a94"><td class="memItemLeft" align="right" valign="top">QString&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae09e67c55a69665975a9e2371e3d0a94">mcnepp::qtdi::registeredName</a> (<a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a> handle)</td></tr>
 <tr class="memdesc:ae09e67c55a69665975a9e2371e3d0a94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the registeredName from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>.  <br /></td></tr>
 <tr class="separator:ae09e67c55a69665975a9e2371e3d0a94"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af9ca29feabd6dedf77a23eb44e00ab3a" id="r_af9ca29feabd6dedf77a23eb44e00ab3a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#ae6c23817c171c31a11e310fd61c2f857">Profiles</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af9ca29feabd6dedf77a23eb44e00ab3a">mcnepp::qtdi::registeredProfiles</a> (<a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a> handle)</td></tr>
+<tr class="memdesc:af9ca29feabd6dedf77a23eb44e00ab3a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the profiles for which the Service was registered. <br  />
+No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration.  <br /></td></tr>
+<tr class="separator:af9ca29feabd6dedf77a23eb44e00ab3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7ba9e15cae5f876292acd7b671d56d36" id="r_a7ba9e15cae5f876292acd7b671d56d36"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7ba9e15cae5f876292acd7b671d56d36">mcnepp::qtdi::operator==</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &amp;sub1, const <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &amp;sub2)</td></tr>
 <tr class="memdesc:a7ba9e15cae5f876292acd7b671d56d36"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests two Subscriptions for equality.  <br /></td></tr>
 <tr class="separator:a7ba9e15cae5f876292acd7b671d56d36"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -374,7 +380,7 @@ Rather, its usage is analogous to that of <em>iostream-manipulators</em> from th
 <tr class="memitem:a658a665f9b2b426543e566defd51e4ff" id="r_a658a665f9b2b426543e566defd51e4ff"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a658a665f9b2b426543e566defd51e4ff">mcnepp::qtdi::withAutowire</a> (detail::service_config &amp;cfg)</td></tr>
 <tr class="memdesc:a658a665f9b2b426543e566defd51e4ff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies auto-wiring to a service_config. <br  />
 This function is not meant to be invoked directly. <br  />
-Rather, its usage is analogous to that of <em>iostream-manipulators</em> from the standard-libray:  <br /></td></tr>
+Rather, its usage is analogous to that of <em>iostream-manipulators</em> from the standard-library:  <br /></td></tr>
 <tr class="separator:a658a665f9b2b426543e566defd51e4ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a64ec1392974a8374f34bfff59fc43a8e" id="r_a64ec1392974a8374f34bfff59fc43a8e"><td class="memItemLeft" align="right" valign="top">detail::service_config::config_modifier&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a64ec1392974a8374f34bfff59fc43a8e">mcnepp::qtdi::withGroup</a> (const QString &amp;name)</td></tr>
 <tr class="memdesc:a64ec1392974a8374f34bfff59fc43a8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the group for a service_config. <br  />
@@ -485,6 +491,22 @@ Equivalent to <code>newDelegate(defaultLoggingCategory(), delegatingContext)</co
 <div class="textblock"><p>Contains the class QApplicationContext and other related types and functions. </p>
 <dl class="section author"><dt>Author</dt><dd>McNepp </dd></dl>
 </div><h2 class="groupheader">Typedef Documentation</h2>
+<a id="ae6c23817c171c31a11e310fd61c2f857" name="ae6c23817c171c31a11e310fd61c2f857"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae6c23817c171c31a11e310fd61c2f857">&#9670;&#160;</a></span>Profiles</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="#ae6c23817c171c31a11e310fd61c2f857">mcnepp::qtdi::Profiles</a> = QSet&lt;QString&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>A set of profiles. Will be used at registration in order to specify for which profiles a Service shall be active. <br  />
+Each QApplicationContext has a set of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a087e667e535be79c5c968f48bc031441" title="What profiles are active?  Obtains the profiles that have been activated for this ApplicationContext....">mcnepp::qtdi::QApplicationContext::activeProfiles()</a>. </p>
+
+</div>
+</div>
 <a id="aec447170b9d5815c59b29ae88ef8bd09" name="aec447170b9d5815c59b29ae88ef8bd09"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aec447170b9d5815c59b29ae88ef8bd09">&#9670;&#160;</a></span>proxy_registration_handle_t</h2>
 
@@ -2377,6 +2399,41 @@ template&lt;typename S , typename Impl  = S, typename... Dep&gt; </div>
 
 </div>
 </div>
+<a id="af9ca29feabd6dedf77a23eb44e00ab3a" name="af9ca29feabd6dedf77a23eb44e00ab3a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af9ca29feabd6dedf77a23eb44e00ab3a">&#9670;&#160;</a></span>registeredProfiles()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">Profiles mcnepp::qtdi::registeredProfiles </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a></td>          <td class="paramname"><span class="paramname"><em>handle</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Obtains the profiles for which the Service was registered. <br  />
+No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>the handle to the ServiceRegistration. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>the (possibly empty) List of profiles for which the Service was registered. </dd></dl>
+
+</div>
+</div>
 <a id="a19ce4ad196137c5749cc881631050853" name="a19ce4ad196137c5749cc881631050853"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a19ce4ad196137c5749cc881631050853">&#9670;&#160;</a></span>registeredServices()</h2>
 
@@ -2821,7 +2878,7 @@ In case first and second represent the same Registration, the connection will st
 <p>Enables auto-refresh for a service_config. <br  />
 This function is not meant to be invoked directly. <br  />
 Rather, its usage is analogous to that of <em>iostream-manipulators</em> from the standard-libray: </p>
-<pre class="fragment">service&lt;MyService&gt;() &lt;&lt; withAutoRefresh &lt;&lt; propValue("objectName", "${myService}");
+<pre class="fragment">context-&gt;registerService(service&lt;MyService&gt;() &lt;&lt; withAutoRefresh &lt;&lt; propValue("objectName", "${myService}"));
 </pre> 
 </div>
 </div>
@@ -2850,9 +2907,30 @@ Rather, its usage is analogous to that of <em>iostream-manipulators</em> from th
 
 <p>Applies auto-wiring to a service_config. <br  />
 This function is not meant to be invoked directly. <br  />
-Rather, its usage is analogous to that of <em>iostream-manipulators</em> from the standard-libray: </p>
-<pre class="fragment">service&lt;MyService&gt;() &lt;&lt; withAutowire;
-</pre> 
+Rather, its usage is analogous to that of <em>iostream-manipulators</em> from the standard-library: </p>
+<pre class="fragment">context-&gt;registerService(service&lt;MyService&gt;() &lt;&lt; withAutowire);
+</pre><p>Applying auto-wiring has the following consequences:</p>
+<ul>
+<li>After the Service has been instantiated, all its properties (obtained via its QMetaObject) will be inspected.</li>
+<li>Properties will be resolved using the registered QSettings: If a matching configuration-entry can be found in the section specified by <a class="el" href="#a64ec1392974a8374f34bfff59fc43a8e" title="Sets the group for a service_config.  The usage of this function is analogous to that of iostream-man...">mcnepp::qtdi::withGroup(const QString&amp;)</a>, this entry's value will be injected.<br  />
+ Otherwise, if a matching configuration-entry can be found in the section matching the Service's registered name, that entry's value will be injected.</li>
+<li>If a configuration-entry has been found for a property that starts with an ampersand, this is treated as a <em>service-ref</em>: A matching Service will be looked up by this name.</li>
+<li>Properties for which no configuration-entry can be found will be injected if a matching service has been registered under the name of the property is present.<br  />
+Otherwise, if exactly one service of the property's type has been registered, that will be injected.</li>
+</ul>
+<p>Example: Suppose there is the following class: </p><pre class="fragment">class PingService {
+   public:
+      Q_PROPERTY(QNetworkAccessManager* networkManager READ networkManager WRITE setNetworkManager NOTIFY networkManagerChanged)
+      Q_PROPERTY(int timeout READ timeout WRITE setTimeout NOTIFY timeoutChanged)
+};
+</pre><p>Then we assume a file <code>"context.ini"</code> with the following contents: </p><pre class="fragment">[ping]
+timeout=5000
+networkManager=&amp;networkAccess
+</pre><p>Then, with the following code, the <code>PingService</code> will be auto-wired: </p><pre class="fragment">context-&gt;registerService(service&lt;QSettings&gt;("context.ini", QSettings::IniFormat));
+context-&gt;registerService&lt;QNetworkAccessManager&gt;("networkAccess");
+context-&gt;registerService(service&lt;PingService&gt;() &lt;&lt; withAutowire, "ping");
+</pre><p>Note that in this particular case, we could actually remove the line <code>networkManager=&amp;networkAccess</code> from the INI-File, and everything would still be auto-wired. The reason is that there is exactly one Service of type QNetworkAccessManager registered, so that can be unambiguously found! </p>
+
 </div>
 </div>
 <a id="a64ec1392974a8374f34bfff59fc43a8e" name="a64ec1392974a8374f34bfff59fc43a8e"></a>
@@ -2880,7 +2958,7 @@ Rather, its usage is analogous to that of <em>iostream-manipulators</em> from th
 
 <p>Sets the group for a service_config. <br  />
 The usage of this function is analogous to that of <em>iostream-manipulators</em> from the standard-libray: </p>
-<pre class="fragment">service&lt;MyService&gt;() &lt;&lt; withGroup("myServices") &lt;&lt; propValue("objectName", "${myService}");
+<pre class="fragment">context-&gt;registerService(service&lt;MyService&gt;() &lt;&lt; withGroup("myServices") &lt;&lt; propValue("objectName", "${myService}"));
 </pre> 
 </div>
 </div>

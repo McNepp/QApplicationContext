@@ -6,9 +6,11 @@ var searchData=
   ['delegateconnectsignals_3',['delegateConnectSignals',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a8d786fec477e3eaf0959a7ae6ff7188c',1,'mcnepp::qtdi::QApplicationContext']]],
   ['delegategetregistrationhandle_4',['delegateGetRegistrationHandle',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a037a10e982936032db6ea24b2909e65f',1,'mcnepp::qtdi::QApplicationContext::delegateGetRegistrationHandle(const QApplicationContext *appContext, const std::type_info &amp;service_type, const QMetaObject *metaObject)'],['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a5b216d957e2595dc74a86553f09e13bb',1,'mcnepp::qtdi::QApplicationContext::delegateGetRegistrationHandle(const QApplicationContext *appContext, const QString &amp;name)']]],
   ['delegategetregistrationhandles_5',['delegateGetRegistrationHandles',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a3e656b4f8a4d21d82fa107470ae1de5b',1,'mcnepp::qtdi::QApplicationContext']]],
-  ['delegateregisterservice_6',['delegateRegisterService',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a5cfdf599c5b7cea4b216018e8186a4fb',1,'mcnepp::qtdi::QApplicationContext']]],
+  ['delegateregisterservice_6',['delegateRegisterService',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a8cc931abe19bb9e88bfe69a2aef4bf0a',1,'mcnepp::qtdi::QApplicationContext']]],
   ['dependency_7',['Dependency',['../structmcnepp_1_1qtdi_1_1_dependency.html',1,'mcnepp::qtdi']]],
   ['dependency_20relations_8',['Types of dependency-relations',['../index.html#autotoc_md23',1,'']]],
   ['dependency_5finfo_9',['dependency_info',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a41a9694c1b68949bdd33dc2394591372',1,'mcnepp::qtdi::QApplicationContext']]],
-  ['deprecated_20list_10',['Deprecated List',['../deprecated.html',1,'']]]
+  ['deprecated_20list_10',['Deprecated List',['../deprecated.html',1,'']]],
+  ['detection_20of_20ambiguity_20at_20publication_11',['Detection of ambiguity at publication',['../index.html#autotoc_md33',1,'']]],
+  ['detection_20of_20ambiguous_20registrations_12',['Detection of ambiguous registrations',['../index.html#autotoc_md32',1,'']]]
 ];
