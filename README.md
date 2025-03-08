@@ -601,6 +601,106 @@ You may convert this value to `ServiceRegistraton<PropFetcher,ServiceScope::SING
 using the member-function ServiceRegistration::as(). Conversions to other types will not succeed.
 
 
+## Profiles
+
+Every ApplicationContext has one or more mcnepp::qtdi::QApplicationContext::activeProfiles().
+
+If not otherwise specified, there is one active profile name `"default"`.
+When using a mcnepp::qtdi::StandardApplicationContext, the *active profiles* can be set by putting an entry with the key `"qtdi/activeProfiles"` into the ApplicationContext's configuration.
+
+When registering a %Service, you may specify one or more profiles for which the %Service shall be active. If you supply an empty set (which is the default),
+the %Service will be active always.
+
+### Registering optional services
+
+With the help of Profiles, it becomes possible to register some some services that will be instantiated only if a certain profile is active.
+<br>For example, in addition to the existing service "hamburgWeather", you may register an additional `RestPropFetcher` named "munichWeather" that will be instantiated only if the profile `"bavaria"` is activated:
+
+    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher,QNetworkManagerAware>() << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"), "hamburgWeather");
+    
+    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher,QNetworkManagerAware>() << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10870"), 
+    "munichWeather",
+    {"bavaria"}); 
+
+### Registering alternative services
+
+With the help of profiles, you may circumvent the usual restriction regarding the uniqueness of service-names:
+<br>You may indeed register two different Services under the same name - provided their list of profiles is disjunct.
+
+One handy application is the registration of *Mock-Services*. Given the above interface `PropFetcher`, you may want to use a Mock-implementation if your REST-Endpoint is not available.
+
+Let's recap the "normal" registration of a `RestPropFetcher`, advertised under the interface `PropFetcher`:
+
+    context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()) << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"), 
+    "hamburgWeather"); 
+
+If you want to register an alternative *Mock-Service* , this will be the necessary code:
+
+    context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()) << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"),
+    "hamburgWeather",
+    {"default"}); // 1
+    
+    context -> registerService(service<PropFetcher,MockPropFetcher>(), "hamburgWeather", {"mock"}); // 2
+
+1. Added an explicit profile as the last argument to mcnepp::qtdi::QApplicationContext::registerService(). In this case, we use the default-profile.
+2. Registered a second service under the same name and advertised using the same interface. This is only possible because we are using a different profile `"mock"`.
+
+With everything else untouched, the application will behave exactly as before. The profile `"default"`will be active, and a %Service with implementation-type `RestPropFetcher` will be created.
+<br>However, if we change the *active profile* to "mock", an instance of implementation-type `MockPropFetcher` will be instantiated instead!
+
+### Configuring the active profiles
+
+If the environment variable `QTDI_ACTIVE_PROFILES` is defined, its value will determine the *active profiles* of each newly constructed ApplicationContext.
+<br>**Note:** Changing the value of the environment variable will have no impact on already constructed ApplicationContexts.
+<br>The *active profiles* may be overwritten through configuration-entries: From every QSettings registered with an ApplicationContext, the following entry will be read: 
+
+    [qtdi]
+    activeProfiles=mock
+
+The value for the entry will be read, converted to a QStringList and appended to the ApplicationContext's *active profiles*.
+<br>If neither the environment variable `QTDI_ACTIVE_PROFILES` is defined nor an entry `"qtdi/activeProfiles"` found, the *active profile* will be "default".
+
+
+### Detection of ambiguous registrations
+
+As stated before, profiles offer a way to register more than one service with the same name - something that is strictly forbidden otherwise.
+
+However, the set of profiles for which those services are registered must be *disjunct*. 
+Some examples of that will fail at registration-time:
+
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"default", "test"});
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"test"});
+
+The second registration will fail because if "test" were set as the *active profile* in the ApplicationContext, both registration would be active, which is forbidden.
+<br>Note that the registration will fail even though for some other profile ("default", for example) there would be no amgiguity!
+
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"default", "test"});
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"test", "default"});
+
+The second registration will fail because the set of profiles is the same as for the first registration. The order of the profiles is irrelevant.
+
+
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"default", "test"});
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager");
+
+The second registration will fail because it would be active for *any profile*. Thus, if "test" or "default" were set as the *active profile* in the ApplicationContext, 
+both registrations would be active, which is forbidden.
+<br>Note that the registration will fail even though for any profile other than "test" or "default" there would be no ambiguity.
+
+### Detection of ambiguity at publication
+
+Some cases of ambiguity cannot be detected at registration-time. However, they will be caught when mcnepp::qtdi::QApplicationContext::publish() is invoked:
+
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"default"});
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"test"});
+    context -> publish();
+
+
+
+The above registrations will succeed. However, if you set the *active profiles* of the ApplicationContext to `{"default", "test"}`, 
+the invocation of mcnepp::qtdi::QApplicationContext::publish() will fail.
+
+
 
 
 ## Referencing other members of the ApplicationContext
@@ -1215,9 +1315,9 @@ Here is an (incomplete) example of a custom implementation of mcnepp::qtdi::QApp
      
       protected:
 
-        mcnepp::qtdi::service_registration_handle_t registerService(const QString &name, const service_descriptor &descriptor, const service_config& config, ServiceScope scope, QObject* baseObject) override {
+        mcnepp::qtdi::service_registration_handle_t registerService(const QString &name, const service_descriptor &descriptor, const service_config& config, ServiceScope scope, const QStringList& profiles, QObject* baseObject) override {
         // Implement a protected pure virtual method by leveraging the corresponding static helper:
-            return delegateRegisterService(m_delegate, name, descriptor, config, scope, baseObject);
+            return delegateRegisterService(m_delegate, name, descriptor, config, scope, profiles, baseObject);
         }
         
      // More protected methods...

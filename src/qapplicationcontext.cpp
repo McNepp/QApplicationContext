@@ -159,9 +159,13 @@ QDebug operator<<(QDebug out, const dependency_info& info) {
 
 QDebug operator << (QDebug out, const service_descriptor& descriptor) {
     QDebugStateSaver state{out};
-    out.nospace().noquote() << "Descriptor [service-types=";
-    const char* del = "";
+    out.nospace().noquote() << "Descriptor [impl-type=" << detail::type_name(descriptor.impl_type);
+    //The section 'service-types' will only be written if at least one service_type is different than the impl_type.
+    const char* del = " service-types=";
     for(auto& t : descriptor.service_types) {
+        if(t == descriptor.impl_type) {
+            continue;
+        }
         out << del << detail::type_name(t);
         del = ", ";
     }
