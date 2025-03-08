@@ -124,7 +124,12 @@ template<typename S,ServiceScope> class ServiceRegistration;
 
 Q_DECLARE_LOGGING_CATEGORY(defaultLoggingCategory)
 
-
+///
+/// A set of profiles.
+/// Will be used at registration in order to specify for which profiles a %Service shall be active.
+/// <br>Each QApplicationContext has a set of mcnepp::qtdi::QApplicationContext::activeProfiles().
+///
+using Profiles = QSet<QString>;
 
 
 namespace detail {
@@ -730,6 +735,13 @@ public:
      */
     [[nodiscard]] virtual ServiceScope scope() const = 0;
 
+    /**
+     * @brief The profiles for which this %Service was registered.
+     * <br>No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration.
+     * @return The (possibly empty) List of profiles for which this %Service was registered.
+     */
+    [[nodiscard]] virtual Profiles registeredProfiles() const = 0;
+
 
     virtual const QMetaObject* serviceMetaObject() const override;
 
@@ -1067,6 +1079,16 @@ template<typename T> [[nodiscard]] inline bool matches(registration_handle_t han
     return handle ? handle->registeredName() : QString{};
 }
 
+///
+/// \brief Obtains the profiles for which the %Service was registered.
+/// <br>No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration.
+/// \param handle the handle to the ServiceRegistration.
+/// \return the (possibly empty) List of profiles for which the %Service was registered.
+///
+[[nodiscard]] inline Profiles registeredProfiles(service_registration_handle_t handle) {
+    return handle ? handle->registeredProfiles() : Profiles{};
+}
+
 
 
 /**
@@ -1342,6 +1364,16 @@ public:
         //We can use static_cast here, as the constructor enforces the correct type:
         return static_cast<service_registration_handle_t>(Registration<S>::unwrap());
     }
+
+    /**
+     * @brief The profiles for which this %Service was registered.
+     * <br>No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration.
+     * @return The (possibly empty) List of profiles for which this %Service was registered.
+     */
+    [[nodiscard]] Profiles registeredProfiles() const {
+        return mcnepp::qtdi::registeredProfiles(unwrap());
+    }
+
 
 
     /**
@@ -2221,7 +2253,7 @@ template<typename S> using service_config_entry=detail::service_config_entry_t<S
 /// <br>Rather, its usage is analogous to that of *iostream-manipulators* from the standard-libray:
 ///
 ///
-///     service<MyService>() << withAutoRefresh << propValue("objectName", "${myService}");
+///     context->registerService(service<MyService>() << withAutoRefresh << propValue("objectName", "${myService}"));
 ///
 inline void withAutoRefresh(detail::service_config& cfg) {
     cfg.autoRefresh = true;
@@ -2230,10 +2262,46 @@ inline void withAutoRefresh(detail::service_config& cfg) {
 ///
 /// \brief Applies auto-wiring to a service_config.
 /// <br>This function is not meant to be invoked directly.
-/// <br>Rather, its usage is analogous to that of *iostream-manipulators* from the standard-libray:
+/// <br>Rather, its usage is analogous to that of *iostream-manipulators* from the standard-library:
 ///
 ///
-///     service<MyService>() << withAutowire;
+///     context->registerService(service<MyService>() << withAutowire);
+///
+/// Applying auto-wiring has the following consequences:
+///
+/// - After the %Service has been instantiated, all its properties (obtained via its QMetaObject) will be inspected.
+/// - Properties will be resolved using the registered QSettings: If a matching configuration-entry
+/// can be found in the section specified by mcnepp::qtdi::withGroup(const QString&), this entry's value will be injected.<br>
+/// Otherwise, if a matching configuration-entry can be found in the section matching the %Service's registered name, that entry's value will be injected.
+/// - If a configuration-entry has been found for a property that starts with an ampersand, this is treated as a *service-ref*: A matching %Service will be looked up
+/// by this name.
+/// - Properties for which no configuration-entry can be found will be injected if a matching service
+/// has been registered under the name of the property is present.<br>Otherwise, if exactly one service of the property's type
+/// has been registered, that will be injected.
+///
+/// Example: Suppose there is the following class:
+///
+///     class PingService {
+///        public:
+///           Q_PROPERTY(QNetworkAccessManager* networkManager READ networkManager WRITE setNetworkManager NOTIFY networkManagerChanged)
+///           Q_PROPERTY(int timeout READ timeout WRITE setTimeout NOTIFY timeoutChanged)
+///     };
+///
+/// Then we assume a file `"context.ini"` with the following contents:
+///
+///     [ping]
+///     timeout=5000
+///     networkManager=&networkAccess
+///
+/// Then, with the following code, the `PingService` will be auto-wired:
+///
+///     context->registerService(service<QSettings>("context.ini", QSettings::IniFormat));
+///     context->registerService<QNetworkAccessManager>("networkAccess");
+///     context->registerService(service<PingService>() << withAutowire, "ping");
+///
+/// Note that in this particular case, we could actually remove the line `networkManager=&networkAccess` from the INI-File, and everything would still be auto-wired.
+/// The reason is that there is exactly one %Service of type QNetworkAccessManager registered, so that can be unambiguously found!
+///
 ///
 inline void withAutowire(detail::service_config& cfg) {
     cfg.autowire = true;
@@ -2245,7 +2313,7 @@ inline void withAutowire(detail::service_config& cfg) {
 /// <br>The usage of this function is analogous to that of *iostream-manipulators* from the standard-libray:
 ///
 ///
-///     service<MyService>() << withGroup("myServices") << propValue("objectName", "${myService}");
+///     context->registerService(service<MyService>() << withGroup("myServices") << propValue("objectName", "${myService}"));
 ///
 inline detail::service_config::config_modifier withGroup(const QString& name) {
     return [name](detail::service_config& cfg) { cfg.group = name;};
@@ -2768,7 +2836,8 @@ QDebug operator << (QDebug out, const service_descriptor& descriptor);
 ///
 /// \brief Determines whether two service_descriptors are deemed equal.
 /// two service_descriptors are deemed equal if their service_types, impl_type,
-/// dependencies and config are all equal.
+/// dependencies and config are all equal, and if either both have no init_method,
+/// or both have an init_method.
 /// \param left
 /// \param right
 /// \return `true` if the service_descriptors are equal to each other.
@@ -2777,9 +2846,10 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
     if (&left == &right) {
         return true;
     }
-    return left.service_types == right.service_types &&
-           left.impl_type == right.impl_type &&
-           left.dependencies == right.dependencies;
+    if(left.service_types != right.service_types || left.impl_type != right.impl_type || left.dependencies != right.dependencies) {
+        return false;
+    }
+    return static_cast<bool>(left.init_method) == static_cast<bool>(right.init_method);
  }
 
 inline bool operator!=(const service_descriptor &left, const service_descriptor &right) {
@@ -3017,8 +3087,9 @@ template<bool found,typename First,typename...Tail> q_init_t getInitializer() {
         if constexpr(!foundThis) {
             return result;
         }
+    } else {
+        return adaptInitializer<First>(typename service_traits<First>::initializer_type{});
     }
-    return adaptInitializer<First>(typename service_traits<First>::initializer_type{});
 
 }
 
@@ -3372,12 +3443,14 @@ public:
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
+    /// \param profiles the list of profiles for which the service shall be active. If the service shall be active for all profiles, supply an empty List.
+    /// If the List contains a profile more than once, the second occurrence will be silently ignored.
     /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName = "") -> ServiceRegistration<S,scope> {
-        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, nullptr));
+    template<typename S,typename Impl,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName = "", const Profiles& profiles = {}) -> ServiceRegistration<S,scope> {
+        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, profiles, nullptr));
     }
 
     ///
@@ -3391,11 +3464,11 @@ public:
     /// \param config the Configuration for the service.
     /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&) instead.
+    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Profiles&) instead.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,ServiceScope scope> [[deprecated("Use registerService(const Service&,const QQString&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
-        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, nullptr));
+    template<typename S,typename Impl,ServiceScope scope> [[deprecated("Use registerService(const Service&,const QQString&,const Profiles&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
+        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, {}, nullptr));
     }
 
 
@@ -3415,17 +3488,19 @@ public:
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param templateRegistration the registration of the service-template that this service shall inherit from. Must be valid!
+    /// \param profiles the list of profiles for which the service shall be active. If the service shall be active for all profiles, supply an empty List.
+    /// If the List contains a profile more than once, the second occurrence will be silently ignored.
     /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,typename B,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName = "") -> ServiceRegistration<S,scope> {
+    template<typename S,typename Impl,typename B,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName = "", const Profiles& profiles = {}) -> ServiceRegistration<S,scope> {
         static_assert(std::is_base_of_v<B,Impl>, "Service-type does not extend type of Service-template.");
         if(!templateRegistration) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << serviceDeclaration.descriptor << " with name '" << objectName << "'. Invalid service-template";
             return ServiceRegistration<S,scope>{};
         }
-        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, templateRegistration.unwrap()));
+        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, profiles, templateRegistration.unwrap()));
     }
 
     ///
@@ -3440,16 +3515,16 @@ public:
     /// \param templateRegistration the registration of the service-template that this service shall inherit from. Must be valid!
     /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&,const ServiceRegistration<B,ServiceScope::TEMPLATE>&,const QString&) instead.
+    /// \deprecated Use registerService(const Service<S,Impl,scope>&,const ServiceRegistration<B,ServiceScope::TEMPLATE>&,const QString&,const Profiles&) instead.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,typename B,ServiceScope scope> [[deprecated("Use Use registerService(const Service&,const ServiceRegistration<B,ServiceScope::TEMPLATE>&,const QString&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
+    template<typename S,typename Impl,typename B,ServiceScope scope> [[deprecated("Use Use registerService(const Service&,const ServiceRegistration<B,ServiceScope::TEMPLATE>&,const QString&,const Profiles&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
         static_assert(std::is_base_of_v<B,Impl>, "Service-type does not extend type of Service-template.");
         if(!templateRegistration) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << serviceDeclaration.descriptor << " with name '" << objectName << "'. Invalid service-template";
             return ServiceRegistration<S,scope>{};
         }
-        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, templateRegistration.unwrap()));
+        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, {}, templateRegistration.unwrap()));
     }
 
 
@@ -3481,10 +3556,10 @@ public:
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&) instead.
+    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Profiles&) instead.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> [[deprecated("Use Use registerService(const Service&, const QString&) instead")]] auto registerService(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::SINGLETON> {
+    template<typename S> [[deprecated("Use Use registerService(const Service&, const QString&,const Profiles&) instead")]] auto registerService(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::SINGLETON> {
         return registerService(service<S>(), objectName, config);
     }
 
@@ -3511,10 +3586,10 @@ public:
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&) instead.
+    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Profiles&) instead.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> [[deprecated("Use Use registerService(const Service&, const QString&) instead")]] auto registerPrototype(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::PROTOTYPE> {
+    template<typename S> [[deprecated("Use Use registerService(const Service&, const QString&,const Profiles&) instead")]] auto registerPrototype(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::PROTOTYPE> {
         return registerService(prototype<S>(), objectName, config);
     }
 
@@ -3548,10 +3623,10 @@ public:
     /// \param config the Configuration for the service.
     /// <br>**Note:** Since a service-template may be used by services of types that are yet unknown, the properties supplied here cannot be validated.
     /// \tparam S the service-type.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&) instead.
+    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Profiles&) instead.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S=QObject> [[deprecated("Use Use registerService(const Service&, const QString&) instead")]] auto registerServiceTemplate(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
+    template<typename S=QObject> [[deprecated("Use Use registerService(const Service&, const QString&,const Profiles&) instead")]] auto registerServiceTemplate(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
         return registerService(serviceTemplate<S>(), objectName, config);
     }
 
@@ -3585,13 +3660,15 @@ public:
         }
         std::unordered_set<std::type_index> ifaces;
         (ifaces.insert(typeid(S)), ..., ifaces.insert(typeid(IFaces)));
-        return ServiceRegistration<S,ServiceScope::EXTERNAL>::wrap(registerServiceHandle(objName, service_descriptor{ifaces, typeid(*obj), qObject->metaObject()}, service_config{}, ServiceScope::EXTERNAL, qObject));
+        return ServiceRegistration<S,ServiceScope::EXTERNAL>::wrap(registerServiceHandle(objName, service_descriptor{ifaces, typeid(*obj), qObject->metaObject()}, service_config{}, ServiceScope::EXTERNAL, Profiles{}, qObject));
     }
 
     ///
     /// \brief Obtains a ServiceRegistration for a name.
     /// <br>This function will look up Services by the names they were registered with.
     /// Additionally, it will look up any alias that might have been given, using ServiceRegistration::registerAlias(const QString&).
+    /// <br>The function will take into account the QApplicationContext::activeProfiles(). If more than one profile is active, and if more than one %Service
+    /// with the supplied name has been registered, this function will log an error and return an invalid ServiceRegistration.
     /// <br>The returned ServiceRegistration may be narrowed to a more specific service-type using ServiceRegistration::as().
     /// <br>**Thread-safety:** This function may be called safely  from any thread.
     /// \param name the desired name of the registration.
@@ -3689,7 +3766,7 @@ public:
     /// \brief Obtains configuration-keys available in this ApplicationContext.
     /// <br>The keys will be returned in the same order that the underlying QSettings yield them.
     /// <br>Keys that are present in more than one QSettings will be returned only once.
-    /// <br>In contrast to etConfigurationValue(const QString&, bool), this function does not consider environment variables.
+    /// <br>In contrast to getConfigurationValue(const QString&, bool), this function does not consider environment variables.
     /// \param section determines which keys will be returned. An empty string denotes the "root".
     /// Sub-sections shall be delimited by forward slashes, in analogy to QSettings.
     /// \return a list with the keys that are present in the supplied section. The return keys will **comprise the supplied section**.
@@ -3756,6 +3833,19 @@ public:
     [[nodiscard]] virtual bool autoRefreshEnabled() const = 0;
 
     ///
+    /// \brief What profiles are active?
+    /// <br>Obtains the profiles that have been activated for this ApplicationContext.
+    /// <br>If not otherwise specified, this function shall yield a List with one entry named `"default"`.
+    /// <br>When using a StandardApplicationContext, the active profiles can be determined by putting a configuration-entry into one of the QSettings-objects registered with the context:
+    ///
+    ///     [qtdi]
+    ///     activeProfiles=unit-test,integration-test
+    ///
+    /// \return the list of active profiles. No profile will occur more than once in the returned list. The profiles will be in no particular order.
+    ///
+    [[nodiscard]] virtual Profiles activeProfiles() const = 0;
+
+    ///
     /// \brief The QLoggingCategory that this ApplicationContext uses.
     /// \return The QLoggingCategory that this ApplicationContext uses.
     /// \sa mcnepp::qtdi::defaultLoggingCategory()
@@ -3797,10 +3887,11 @@ protected:
     /// \param descriptor the descriptor of the service.
     /// \param config the configuration of the service.
     /// \param scope determines the service's lifeycle
+    /// \param profiles the list of profiles for which the service shall be active. If the service shall be active for all profiles, supply an empty List.
     /// \param baseObject in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template.
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
-    virtual service_registration_handle_t registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObject) = 0;
+    virtual service_registration_handle_t registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Profiles& profiles, QObject* baseObject) = 0;
 
 
     ///
@@ -3842,21 +3933,22 @@ protected:
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
-    /// <br>If you are implementing registerServiceHandle(const QString&, const service_descriptor&, const service_config&, ServiceScope, QObject*) and want to delegate
+    /// <br>If you are implementing registerServiceHandle(const QString&, const service_descriptor&, const service_config&, ServiceScope, const Profiles&, QObject*) and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
     /// \param appContext the target on which to invoke registerServiceHandle(const QString&, const service_descriptor&, const service_config&, ServiceScope, QObject*).
     /// \param name the name of the registered service.
     /// \param descriptor describes the service.
     /// \param config configuration of the service.
     /// \param scope detemines the service's lifecyle.
+    /// \param profiles the list of profiles for which the service shall be active. If the service shall be active for all profiles, supply an empty List.
     /// \param baseObj in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template.
     /// \return the result of registerService(const QString&, service_descriptor*,const service_config&,ServiceScope,QObject*).
     ///
-    static service_registration_handle_t delegateRegisterService(QApplicationContext* appContext, const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj) {
+    static service_registration_handle_t delegateRegisterService(QApplicationContext* appContext, const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Profiles& profiles, QObject* baseObj) {
         if(!appContext) {
             return nullptr;
         }
-        return appContext->registerServiceHandle(name, descriptor, config, scope, baseObj);
+        return appContext->registerServiceHandle(name, descriptor, config, scope, profiles, baseObj);
     }
 
 

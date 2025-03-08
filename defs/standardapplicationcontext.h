@@ -52,7 +52,6 @@ public:
 
 
 
-
     /**
      * @brief Creates a StandardApplicationContext using an explicit LoggingCategory.
      * @param loggingCategory a reference to the QLoggingCategory that will be used by this ApplicationContext.
@@ -82,7 +81,7 @@ public:
 
     virtual unsigned pendingPublication() const override;
 
-    virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections) const override;
+    virtual QVariant getConfigurationValue(const QString& key, bool searchParentSections = false) const override;
 
     virtual QStringList configurationKeys(const QString& section = "") const override;
 
@@ -117,6 +116,8 @@ public:
     ///
     bool autoRefreshEnabled() const override;
 
+    virtual Profiles activeProfiles() const override;
+
     virtual QConfigurationWatcher* watchConfigValue(const QString& expression) override;
 
     virtual QVariant resolveConfigValue(const QString& expression) override;
@@ -130,7 +131,7 @@ public:
 
 protected:
 
-    virtual service_registration_handle_t registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, QObject* baseObj) override;
+    virtual service_registration_handle_t registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Profiles& profiles, QObject* baseObj) override;
 
     virtual service_registration_handle_t getRegistrationHandle(const QString& name) const override;
 
@@ -149,6 +150,7 @@ private:
     using descriptor_set = std::unordered_set<DescriptorRegistration*>;
 
     using descriptor_list = std::deque<DescriptorRegistration*>;
+
 
 
     static constexpr int STATE_INIT = 0;
@@ -204,6 +206,12 @@ private:
             }
         }
 
+        //Does this service provide configuration for other services?
+        //This is true for Services of type QSettings.
+        virtual bool provideConfig() const {
+            return false;
+        }
+
         virtual const service_descriptor& descriptor() const final override {
             return m_descriptor;
         }
@@ -215,6 +223,10 @@ private:
 
         virtual bool registerAlias(const QString& alias) override {
             return m_context->registerAlias(this, alias);
+        }
+
+        virtual Profiles registeredProfiles() const override {
+            return m_profiles;
         }
 
         bool matches(const std::type_info& type) const override {
@@ -260,6 +272,9 @@ private:
         DescriptorRegistration* base() const {
             return m_base;
         }
+
+        bool isActiveInProfile() const;
+
     protected:
 
         service_descriptor m_descriptor;
@@ -268,6 +283,7 @@ private:
         unsigned const m_index;
         StandardApplicationContext* const m_context;
         DescriptorRegistration* const m_base;
+        Profiles m_profiles;
     };
 
 
@@ -286,6 +302,10 @@ private:
 
         virtual ServiceScope scope() const override {
             return ServiceScope::SINGLETON;
+        }
+
+        virtual bool provideConfig() const override {
+            return m_descriptor.impl_type == typeid(QSettings);
         }
 
 
@@ -626,9 +646,9 @@ private:
             return m_type;
         }
 
-        bool add(service_registration_handle_t reg);
+        bool add(DescriptorRegistration* reg);
 
-        bool canAdd(service_registration_handle_t reg) const;
+        bool canAdd(DescriptorRegistration* reg) const;
 
         virtual void onSubscription(subscription_handle_t subscription) override;
 
@@ -679,7 +699,7 @@ private:
 
     void contextObjectDestroyed(DescriptorRegistration*);
 
-    DescriptorRegistration* getRegistrationByName(const QString& name) const;
+    DescriptorRegistration* getActiveRegistrationByName(const QString& name) const;
 
 
     std::pair<QVariant,Status> resolveDependency(const descriptor_list& published, DescriptorRegistration* reg, const dependency_info& d, bool allowPartial);
@@ -706,6 +726,8 @@ private:
 
     QObject* obtainHandleFromApplicationThread(std::function<QObject*()>);
 
+    void insertByName(const QString& name, DescriptorRegistration* reg);
+
     // QObject interface
 public:
     bool event(QEvent *event) override;
@@ -713,10 +735,25 @@ public:
 
 private:
 
+    struct ProfileAndName {
+        QString profile;
+        QString name;
+
+        friend bool operator==(const ProfileAndName& left, const ProfileAndName& right) {
+            return left.profile == right.profile && left.name == right.name;
+        }
+    };
+
+    struct ProfileNameHash {
+        std::size_t operator()(const ProfileAndName& profileAndName) const {
+            return qHash(profileAndName.profile) ^ qHash(profileAndName.name);
+        }
+    };
+
 
     descriptor_list registrations;
 
-    std::unordered_map<QString,DescriptorRegistration*> registrationsByName;
+    std::unordered_map<ProfileAndName,DescriptorRegistration*,ProfileNameHash> registrationsByName;
 
     mutable std::unordered_map<std::type_index,ProxyRegistrationImpl*> proxyRegistrationCache;
     mutable QMutex mutex;
@@ -727,8 +764,9 @@ private:
     QApplicationContext* const m_injectedContext;
 
     detail::QSettingsWatcher* m_SettingsWatcher = nullptr;
-    subscription_handle_t m_settingsInitializer = nullptr;
     std::unordered_map<QString,QPointer<detail::PlaceholderResolver>> resolverCache;
+    Profiles m_registeredProfiles;
+    Profiles* m_activeProfiles;
 };
 
 namespace detail {
