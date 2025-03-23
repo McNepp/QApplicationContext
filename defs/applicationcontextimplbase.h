@@ -27,7 +27,7 @@ public:
     QVariant getConfigurationValue(const QString &key, bool searchParentSections = false) const override {
         return m_delegate->getConfigurationValue(key, searchParentSections);
     }
-    QStringList configurationKeys(const QString &section = "") const override {
+    QStringList configurationKeys(const QString &section = {}) const override {
         return m_delegate->configurationKeys(section);
     }
     QVariant resolveConfigValue(const QString &expression) override {

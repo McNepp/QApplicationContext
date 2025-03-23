@@ -190,6 +190,27 @@ private slots:
         QVERIFY(dynamic_cast<BaseService2*>(dependentSlot->m_dependency));
     }
 
+    void testProfileSpecificDependencies() {
+        auto baseReg = context->registerService(service<Interface1,BaseService>(), "base");
+        context->registerService(service<Interface1,BaseService>(), "base-with-profile", {"default"});
+        auto testReg = context->registerService(service<Interface1,BaseService2>(), "base-with-profile", {"test"});
+
+        auto dependentReg = context->registerService(service<CardinalityNService>(injectAll<Interface1>()));
+
+        configuration->setValue("qtdi/activeProfiles", QStringList{"test"});
+        context->registerObject(configuration.get());
+
+        QVERIFY(context->publish());
+
+        RegistrationSlot<Interface1> baseSlot{baseReg, this};
+        RegistrationSlot<Interface1> testSlot{testReg, this};
+        RegistrationSlot<CardinalityNService> dependentSlot{dependentReg, this};
+        QVERIFY(dependentSlot);
+        QCOMPARE(dependentSlot->my_bases.size(), 2);
+        QVERIFY(dependentSlot->my_bases.contains(baseSlot.last()));
+        QVERIFY(dependentSlot->my_bases.contains(testSlot.last()));
+    }
+
     void testAmbiguousRegistrationAtPublish() {
 
         QVERIFY(context->registerService(service<Interface1,BaseService>(), "base-with-profile", {"default"}));

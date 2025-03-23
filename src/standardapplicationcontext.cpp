@@ -158,12 +158,7 @@ bool profilesOverlap(const Profiles& profiles1, const Profiles& profiles2) {
     if(profiles1.empty() || profiles2.empty()) {
         return true; //An empty list indicates "always active"
     }
-    for(auto& profile : profiles1) {
-        if(profiles2.contains(profile)) {
-            return true;
-        }
-    }
-    return false;
+    return profiles1.intersects(profiles2);
 }
 
 
