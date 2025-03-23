@@ -37,6 +37,12 @@ QApplicationContext* QApplicationContext::instance() {
     return theInstance.load();
 }
 
+const Profiles &QApplicationContext::anyProfile()
+{
+    static const Profiles emptyProfiles;
+    return emptyProfiles;
+}
+
 
 
 QApplicationContext::~QApplicationContext() {

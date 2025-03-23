@@ -2049,7 +2049,7 @@ template<typename S,Kind kind=Kind::MANDATORY> struct Dependency {
 /// \tparam S the service-type of the dependency.
 /// \return a mandatory Dependency on the supplied type.
 ///
-template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::MANDATORY> inject(const QString& requiredName = "") {
+template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::MANDATORY> inject(const QString& requiredName = {}) {
     return Dependency<S,Kind::MANDATORY>{requiredName};
 }
 
@@ -2080,7 +2080,7 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::MANDATORY> injec
 /// \tparam S the service-type of the dependency.
 /// \return an optional Dependency on the supplied type.
 ///
-template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const QString& requiredName = "") {
+template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const QString& requiredName = {}) {
     return Dependency<S,Kind::OPTIONAL>{requiredName};
 }
 
@@ -2105,7 +2105,7 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL> inject
 /// \tparam S the service-type of the dependency.
 /// \return a 1-to-N Dependency on the supplied type.
 ///
-template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::N> injectAll(const QString& requiredName = "") {
+template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::N> injectAll(const QString& requiredName = {}) {
     return Dependency<S,Kind::N>{requiredName};
 }
 
@@ -3395,7 +3395,12 @@ public:
     /// <br>**Note:** the global instance will not be deleted automatically! It is the responsibilty of the user to delete it.
     /// \return  the global instance, or `nullptr` if no QApplicationContext is currently alive.
     ///
-    static QApplicationContext* instance();
+    [[nodiscard]] static QApplicationContext* instance();
+
+    /// \brief Denotes that the registration of a service will be active for any profile.
+    /// <br>This is the default-argument passed to registerService(const Service<S,Impl,scope>&, const QString&, const Profiles& profiles).
+    /// \return an instance of Profiles denoting any active profile.
+    [[nodiscard]] static const Profiles& anyProfile();
 
 
 
@@ -3443,13 +3448,13 @@ public:
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
-    /// \param profiles the list of profiles for which the service shall be active. If the service shall be active for all profiles, supply an empty List.
-    /// If the List contains a profile more than once, the second occurrence will be silently ignored.
+    /// \param profiles the list of profiles for which the service shall be active. If the List contains a profile more than once, the second occurrence will be silently ignored.
+    /// <br>If the service shall be active for all profiles, supply anyProfile()
     /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName = "", const Profiles& profiles = {}) -> ServiceRegistration<S,scope> {
+    template<typename S,typename Impl,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName = {}, const Profiles& profiles = anyProfile()) -> ServiceRegistration<S,scope> {
         return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, profiles, nullptr));
     }
 
@@ -3488,13 +3493,13 @@ public:
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param templateRegistration the registration of the service-template that this service shall inherit from. Must be valid!
-    /// \param profiles the list of profiles for which the service shall be active. If the service shall be active for all profiles, supply an empty List.
-    /// If the List contains a profile more than once, the second occurrence will be silently ignored.
+    /// \param profiles the list of profiles for which the service shall be active. If the List contains a profile more than once, the second occurrence will be silently ignored.
+    /// <br>If the service shall be active for all profiles, supply anyProfile().
     /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,typename B,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName = "", const Profiles& profiles = {}) -> ServiceRegistration<S,scope> {
+    template<typename S,typename Impl,typename B,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName = {}, const Profiles& profiles = anyProfile()) -> ServiceRegistration<S,scope> {
         static_assert(std::is_base_of_v<B,Impl>, "Service-type does not extend type of Service-template.");
         if(!templateRegistration) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << serviceDeclaration.descriptor << " with name '" << objectName << "'. Invalid service-template";
@@ -3502,6 +3507,7 @@ public:
         }
         return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, profiles, templateRegistration.unwrap()));
     }
+
 
     ///
     /// \brief Registers a service with this ApplicationContext.
@@ -3543,7 +3549,7 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> auto registerService(const QString& objectName = "") -> ServiceRegistration<S,ServiceScope::SINGLETON> {
+    template<typename S> auto registerService(const QString& objectName = {}) -> ServiceRegistration<S,ServiceScope::SINGLETON> {
         return registerService(service<S>(), objectName);
     }
 
@@ -3573,7 +3579,7 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> auto registerPrototype(const QString& objectName = "") -> ServiceRegistration<S,ServiceScope::PROTOTYPE> {
+    template<typename S> auto registerPrototype(const QString& objectName = {}) -> ServiceRegistration<S,ServiceScope::PROTOTYPE> {
         return registerService(prototype<S>(), objectName);
     }
 
@@ -3608,7 +3614,7 @@ public:
     /// \tparam S the service-type.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S=QObject> auto registerServiceTemplate(const QString& objectName = "") -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
+    template<typename S=QObject> auto registerServiceTemplate(const QString& objectName = {}) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
         return registerService(serviceTemplate<S>(), objectName);
     }
 
@@ -3643,7 +3649,7 @@ public:
     /// \tparam IFaces additional service-interfaces to be advertised. If a type appears more than once in the set of types comprising `S` and `IFaces`, compilation will fail with a diagnostic.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename... IFaces> ServiceRegistration<S,ServiceScope::EXTERNAL> registerObject(S* obj, const QString& objName = "") {
+    template<typename S,typename... IFaces> ServiceRegistration<S,ServiceScope::EXTERNAL> registerObject(S* obj, const QString& objName = {}) {
         static_assert(detail::could_be_qobject<S>::value, "Object is not potentially convertible to QObject");
         QObject* qObject = dynamic_cast<QObject*>(obj);
         if(!qObject) {
@@ -3772,7 +3778,7 @@ public:
     /// \return a list with the keys that are present in the supplied section. The return keys will **comprise the supplied section**.
     /// This is necessary if they are to be useful when supplied to getConfigurationValue(const QString&, bool).
     ///
-    [[nodiscard]] virtual QStringList configurationKeys(const QString& section = "") const = 0;
+    [[nodiscard]] virtual QStringList configurationKeys(const QString& section = {}) const = 0;
 
 
     ///
