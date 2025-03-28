@@ -1346,6 +1346,12 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(!bind(regBase1, &BaseService::signalWithoutProperty, regBase1, &BaseService::setTimer));
     }
 
+    void testCannotBindToNonSignalFunction() {
+
+        auto regBase1 = context->registerService<BaseService>("base1");
+        QVERIFY(!bind(regBase1, &BaseService::init, regBase1, &BaseService::setTimer));
+    }
+
     void testServiceTemplate() {
         QTimer timer;
         timer.setObjectName("aTimer");
