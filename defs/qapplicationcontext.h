@@ -68,6 +68,7 @@ using proxy_registration_handle_t = detail::ProxyRegistration*;
 using subscription_handle_t = detail::Subscription*;
 
 
+
 /**
 * \brief Specifies the kind of a service-dependency.
 * Will be used as a non-type argument to Dependency, when registering a service.
@@ -327,9 +328,29 @@ struct property_descriptor {
     q_setter_t setter;
 };
 
+///
+/// \brief Describes the property of the source.
+/// <br>A property may be identifier either by its name, or by its signalMethod.
+/// In the latter case, the name will be empty.
+///
+struct source_property_descriptor {
+    QByteArray name;
+    QMetaMethod signalMethod;
+};
+
 inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
     if(!descriptor.name.isEmpty()) {
         out.noquote().nospace() << "property '" << descriptor.name << "'";
+    }
+    return out;
+}
+
+inline QDebug operator << (QDebug out, const source_property_descriptor& descriptor) {
+    if(!descriptor.name.isEmpty()) {
+        return out.noquote().nospace() << "property '" << descriptor.name << "'";
+    }
+    if(descriptor.signalMethod.isValid()) {
+        return out.noquote().nospace() << "property '" << descriptor.signalMethod.name() << "'";
     }
     return out;
 }
@@ -350,22 +371,29 @@ template<typename T> struct qvariant_cast<QList<T*>> {
 
 
 
-template<typename S> struct callable_adapter {
-
-    template<typename A,typename R> static q_setter_t adaptSetter(R (S::*setter)(A)) {
-        if(!setter) {
-            return nullptr;
-        }
-        using arg_type = detail::remove_cvref_t<A>;
-        return [setter](QObject* obj,QVariant arg) {
-            if(S* ptr = dynamic_cast<S*>(obj)) {
-                (ptr->*setter)(qvariant_cast<arg_type>{}(arg));
-            }
-        };
+template<typename S,typename A,typename R> static q_setter_t adaptSetter(R (S::*setter)(A)) {
+    if(!setter) {
+        return nullptr;
     }
+    using arg_type = detail::remove_cvref_t<A>;
+    return [setter](QObject* obj,QVariant arg) {
+        if(S* ptr = dynamic_cast<S*>(obj)) {
+            (ptr->*setter)(qvariant_cast<arg_type>{}(arg));
+        }
+    };
+}
 
+template<typename F,typename S,typename A> struct is_signal : std::false_type {
 };
 
+template<typename S,typename A> struct is_signal<void(S::*)(),S,A> : std::true_type {
+};
+
+template<typename S,typename A> struct is_signal<void(S::*)(A),S,A> : std::true_type {
+};
+
+template<typename S,typename A> struct is_signal<void(S::*)(const A&),S,A> : std::true_type {
+};
 
 
 
@@ -696,6 +724,8 @@ class ServiceRegistration : public Registration {
 
     template<typename S,ServiceScope> friend class mcnepp::qtdi::ServiceRegistration;
 
+    friend subscription_handle_t bind(service_registration_handle_t, const detail::source_property_descriptor&, registration_handle_t, const detail::property_descriptor&);
+
 public:
     ///
     /// \brief The name of this Registration.
@@ -766,13 +796,15 @@ protected:
     ///
     /// \brief Creates a binding from a property of this service to a property of a target-service.
     /// <br>The returned Subscription will have been subscribed to already!
-    /// \param sourcePropertyName
+    /// \param sourcePropertyDescriptor
     /// \param target
     /// \param targetProperty
     /// \return the Subscription for binding this service to a target-service, or `nullptr` if something went wrong.
     ///
-    virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) = 0;
+    virtual subscription_handle_t createBindingTo(const source_property_descriptor& sourcePropertyDescriptor, registration_handle_t target, const detail::property_descriptor& targetProperty) = 0;
 };
+
+subscription_handle_t bind(service_registration_handle_t source, const source_property_descriptor& sourcePropertyDescriptor, registration_handle_t target, const property_descriptor& targetPropertyDescriptor);
 
 class ProxyRegistration : public Registration {
     Q_OBJECT
@@ -804,8 +836,6 @@ protected:
     }
 
 };
-
-    QMetaProperty findPropertyBySignal(const QMetaMethod& signalFunction, const QMetaObject* metaObject, const QLoggingCategory& loggingCatgegory);
 
     QString makeConfigPath(const QString& section, const QString& path);
 
@@ -1059,6 +1089,7 @@ template<typename T> [[nodiscard]] inline bool matches(registration_handle_t han
 /// \return the QLoggingCategory of the associated QApplicationContext, if the handle is valid. Otherwise, mcnepp:qtdi::defaultLoggingCategory()
 ///
 [[nodiscard]] const QLoggingCategory& loggingCategory(registration_handle_t handle);
+
 
 
 ///
@@ -1345,12 +1376,8 @@ template<typename U> void swap(Registration<U>& reg1, Registration<U>& reg2) {
 /// Instances of this class are being produces by the public function-templates QApplicationContext::registerService() and QApplicationContext::registerObject().
 ///
 template<typename S,ServiceScope SCP=ServiceScope::UNKNOWN> class ServiceRegistration final : public Registration<S> {
-    template<typename F,typename T,ServiceScope scope> friend Subscription bind(const ServiceRegistration<F,scope>&, const char*, Registration<T>&, const char*);
-
-    template<typename F,typename T,typename A,typename R,ServiceScope scope> friend Subscription bind(const ServiceRegistration<F,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A));
 
     template<typename T,ServiceScope TSCP> friend class ServiceRegistration;
-
 public:
     using service_type = S;
 
@@ -1507,17 +1534,7 @@ private:
     }
 
 
-    Subscription bind(const char* sourceProperty, registration_handle_t target, const detail::property_descriptor& descriptor) const {
-        static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
-        static_assert(detail::service_scope_traits<SCP>::is_binding_source, "The scope of the service does not permit binding");
 
-        if(!target || !*this) {
-            qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot bind " << *this << " to " << target;
-            return Subscription{};
-        }
-        auto subscription = unwrap() -> createBindingTo(sourceProperty, target, descriptor);
-        return Subscription{subscription};
-     }
 
 
 };
@@ -1637,7 +1654,10 @@ template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, 
 ///
 template<typename S,typename T,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, const char* targetProperty) {
     static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
-    return source.bind(sourceProperty, target.unwrap(), {targetProperty, nullptr});
+    static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
+    static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
+
+    return Subscription{detail::bind(source.unwrap(), {sourceProperty}, target.unwrap(), {targetProperty, nullptr})};
 }
 
 ///
@@ -1654,11 +1674,14 @@ template<typename S,typename T,ServiceScope scope> Subscription bind(const Servi
 /// \return the Subscription established by this binding.
 ///
 template<typename S,typename T,typename A,typename R,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, R(T::*setter)(A)) {
+    static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
+    static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
+
     if(!setter) {
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
-    return source.bind(sourceProperty, target.unwrap(), {detail::uniquePropertyName(&setter, sizeof setter).toLatin1(), detail::callable_adapter<T>::adaptSetter(setter)});
+    return Subscription{detail::bind(source.unwrap(), {sourceProperty}, target.unwrap(), {detail::uniquePropertyName(&setter, sizeof setter).toLatin1(), detail::adaptSetter<T>(setter)})};
 }
 
 
@@ -1678,50 +1701,27 @@ template<typename S,typename T,typename A,typename R,ServiceScope scope> Subscri
 /// \param target the Registration with the target-property to which the source-property shall be bound.
 /// \param setter the method in the target which shall be bound to the source-property.
 /// \tparam S the type of the source.
-/// \tparam T the type of the target.
+/// \tparam T the type of the target
+/// \tparam A the type of the property.
+/// \tparam SI the type of the signal-function. Must be a non-static member-function of S with either no arguments or one argument of type A.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename AS,typename AT,typename R,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(AS), Registration<T>& target, R(T::*setter)(AT)) ->
-    std::enable_if_t<std::is_convertible_v<AS,AT>,Subscription> {
-    if(!setter || !signalFunction || !source || !target) {
-        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to target";
-        return Subscription{};
+template<typename S,typename T,typename A,typename SI,typename R,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, SI signalFunction, Registration<T>& target, R(T::*setter)(A)) ->
+    std::enable_if_t<detail::is_signal<SI,S,detail::remove_cvref_t<A>>::value,Subscription> {
+    static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
+    static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
+
+    if(setter && signalFunction) {
+        if(auto signalMethod = QMetaMethod::fromSignal(signalFunction); signalMethod.isValid()) {
+            return Subscription{detail::bind(source.unwrap(), {{}, signalMethod}, target.unwrap(), {detail::uniquePropertyName(&setter, sizeof setter).toLatin1(), detail::adaptSetter<T>(setter)})};
+        }
     }
-    if(auto signalProperty = detail::findPropertyBySignal(QMetaMethod::fromSignal(signalFunction), source.serviceMetaObject(), loggingCategory(source.unwrap())); signalProperty.isValid()) {
-        return bind(source, signalProperty.name(), target, setter);
-    }
+
+    qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to " << target;
     return Subscription{};
 }
 
 
-
-
-///
-/// \brief Binds a property of one ServiceRegistration to a Setter from  another Registration.
-/// <br>This function identifies the source-property by the signal that is emitted when the property changes.
-/// The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding
-/// to a property of the source-service.
-/// <br>All changes made to the source-property will be propagated to all Services represented by the target.
-/// For each target-property, there can be only successful call to bind().
-/// <br>**Thread-safety:** This function only may be called from the QApplicationContext's thread.
-/// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
-/// \param signalFunction the address of the member-function that is emitted as the signal for the property.
-/// \param target the Registration with the target-property to which the source-property shall be bound.
-/// \param setter the method in the target which shall be bound to the source-property.
-/// \tparam S the type of the source.
-/// \tparam T the type of the target.
-/// \return the Subscription established by this binding.
-///
-template<typename S,typename T,typename A,typename R,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(), Registration<T>& target, R(T::*setter)(A)) {
-    if(!setter || !signalFunction || !source || !target) {
-        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to " << target;
-        return Subscription{};
-    }
-    if(auto signalProperty = detail::findPropertyBySignal(QMetaMethod::fromSignal(signalFunction), source.serviceMetaObject(), loggingCategory(source.unwrap())); signalProperty.isValid()) {
-        return bind(source, signalProperty.name(), target, setter);
-    }
-    return Subscription{};
-}
 
 
 
@@ -2455,7 +2455,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::callable_adapter<S>::adaptSetter(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
 }
 
 ///
@@ -2479,7 +2479,7 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(value), detail::ConfigValueType::DEFAULT, detail::callable_adapter<S>::adaptSetter(propertySetter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(value), detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter)}};
 }
 
 ///
@@ -2507,7 +2507,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::callable_adapter<S>::adaptSetter(propertySetter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter)}};
 }
 
 ///
@@ -2536,7 +2536,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE_LIST, detail::callable_adapter<S>::adaptSetter(propertySetter), nullptr}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE_LIST, detail::adaptSetter<S>(propertySetter), nullptr}};
 }
 
 ///
@@ -2582,7 +2582,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]][[deprecated(
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::callable_adapter<S>::adaptSetter(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
 }
 
 

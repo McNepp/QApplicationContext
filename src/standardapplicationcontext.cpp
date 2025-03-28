@@ -456,7 +456,7 @@ const detail::service_config StandardApplicationContext::ObjectRegistration::def
 const QVariantMap StandardApplicationContext::EMPTY_MAP;
 
 
-subscription_handle_t StandardApplicationContext::DescriptorRegistration::createBindingTo(const char* sourcePropertyName, detail::Registration *target, const detail::property_descriptor& targetProperty)
+subscription_handle_t StandardApplicationContext::DescriptorRegistration::createBindingTo(const detail::source_property_descriptor& sourcePropertyDescriptor, detail::Registration *target, const detail::property_descriptor& targetProperty)
 {
     if(!detail::hasCurrentThreadAffinity(this)) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot create binding in different thread";
@@ -464,28 +464,34 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
     }
 
     detail::property_descriptor setter = targetProperty;
-    if(this == target && QString{sourcePropertyName} == setter.name) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to self";
+    auto sourceProperty = getProperty(this, sourcePropertyDescriptor);
+    if(!sourceProperty.isValid()) {
+        qCCritical(loggingCategory()).noquote().nospace() << sourcePropertyDescriptor << " not found for " << *this;
+        return nullptr;
+
+    }
+
+    if(this == target && sourceProperty.name() == setter.name) {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourceProperty.name() << "' of " << *this << " to self";
         return nullptr;
     }
 
     if(target->applicationContext() != applicationContext()) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << *target << " from different ApplicationContext";
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourceProperty.name() << "' of " << *this << " to " << *target << " from different ApplicationContext";
         return nullptr;
     }
 
-    auto sourceProperty = getProperty(this, sourcePropertyName);
     if(!detail::isBindable(sourceProperty)) {
-        qCWarning(loggingCategory()).noquote().nospace() << "Property '" << sourcePropertyName << "' in " << *this << " is not bindable";
+        qCWarning(loggingCategory()).noquote().nospace() << "Property '" << sourceProperty.name() << "' in " << *this << " is not bindable";
     }
     if(!setter.setter) {
-        auto targetProp = getProperty(target, setter.name);
+        auto targetProp = getProperty(target, {setter.name});
         if(!targetProp.isValid() || !targetProp.isWritable()) {
             qCCritical(loggingCategory()).noquote().nospace() << setter << " is not a writable property for " << *target;
             return nullptr;
         }
         if(!QMetaType::canConvert(sourceProperty.metaType(), targetProp.metaType())) {
-            qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourcePropertyName << "' of " << *this << " to " << setter << " of " << *target << " with incompatible types";
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourceProperty.name() << "' of " << *this << " to " << setter << " of " << *target << " with incompatible types";
             return nullptr;
         }
         setter = detail::propertySetter(targetProp);
@@ -628,7 +634,7 @@ QStringList StandardApplicationContext::ServiceTemplateRegistration::getBeanRefs
 
 }
 
-subscription_handle_t StandardApplicationContext::ServiceTemplateRegistration::createBindingTo(const char*, registration_handle_t, const detail::property_descriptor&)
+subscription_handle_t StandardApplicationContext::ServiceTemplateRegistration::createBindingTo(const detail::source_property_descriptor&, registration_handle_t, const detail::property_descriptor&)
 {
     qCCritical(loggingCategory()).noquote().nospace() << "Cannot create binding from " << *this;
     return nullptr;
@@ -697,7 +703,7 @@ void StandardApplicationContext::PrototypeRegistration::print(QDebug out) const 
     out.nospace().noquote() << "Prototype '" << registeredName() << "' with " << this->descriptor();
 }
 
-subscription_handle_t StandardApplicationContext::PrototypeRegistration::createBindingTo(const char*, registration_handle_t, const detail::property_descriptor&)
+subscription_handle_t StandardApplicationContext::PrototypeRegistration::createBindingTo(const detail::source_property_descriptor&, registration_handle_t, const detail::property_descriptor&)
 {
     qCCritical(loggingCategory()).noquote().nospace() << "Cannot create binding from " << *this;
     return nullptr;
@@ -1032,6 +1038,24 @@ bool StandardApplicationContext::registerAlias(service_registration_handle_t reg
     qCInfo(loggingCategory()).noquote().nospace() << "Registered alias '" << alias << "' for " << *reg;
     return true;
 
+}
+
+QMetaProperty StandardApplicationContext::getProperty(registration_handle_t reg, const detail::source_property_descriptor& sourceProperty) {
+    if(auto meta = reg->serviceMetaObject()) {
+        if(sourceProperty.name.isEmpty()) {
+            if(sourceProperty.signalMethod.isValid()) {
+                for(int index = 0; index < meta->propertyCount(); ++index) {
+                    auto prop = meta->property(index);
+                    if(prop.hasNotifySignal() && prop.notifySignal() == sourceProperty.signalMethod) {
+                        return prop;
+                    }
+                }
+            }
+        } else {
+            return meta->property(meta->indexOfProperty(sourceProperty.name));
+        }
+    }
+    return QMetaProperty{};
 }
 
 

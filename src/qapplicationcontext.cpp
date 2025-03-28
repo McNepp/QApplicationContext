@@ -72,6 +72,14 @@ const QLoggingCategory& loggingCategory(registration_handle_t handle) {
 
 namespace detail {
 
+subscription_handle_t bind(service_registration_handle_t source, const source_property_descriptor& sourcePropertyDescriptor, registration_handle_t target, const property_descriptor& targetPropertyDescriptor) {
+    if(!target || !source) {
+        qCCritical(loggingCategory(source)).noquote().nospace() << "Cannot bind " << source << " to " << target;
+        return nullptr;
+    }
+    return source -> createBindingTo(sourcePropertyDescriptor, target, targetPropertyDescriptor);
+}
+
 QString makeConfigPath(const QString& section, const QString& path) {
     if(section.isEmpty() || path.startsWith('/')) {
         return path;
@@ -95,24 +103,6 @@ bool removeLastConfigPath(QString& s) {
 }
 
 
-QMetaProperty findPropertyBySignal(const QMetaMethod &signalFunction, const QMetaObject* metaObject, const QLoggingCategory& loggingCategory)
-{
-    auto owner = signalFunction.enclosingMetaObject();
-    if(owner && metaObject && owner == metaObject) {
-        for(int index = 0; index < owner->propertyCount(); ++index) {
-            auto prop = owner->property(index);
-            if(prop.hasNotifySignal() && prop.notifySignal() == signalFunction) {
-                return prop;
-            }
-        }
-    }
-    if(metaObject) {
-        qCritical(loggingCategory).noquote().nospace() << "Signal " << signalFunction.name() << " does not correspond to a property of " << metaObject->className();
-    } else {
-        qCritical(loggingCategory).noquote().nospace() << "Signal " << signalFunction.name() << " cannot be validated to correspond to any property";
-    }
-    return QMetaProperty{};
-}
 
 const QMetaObject *ServiceRegistration::serviceMetaObject() const
 {
