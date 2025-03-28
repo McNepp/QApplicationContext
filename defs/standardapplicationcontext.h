@@ -164,7 +164,7 @@ private:
     class DescriptorRegistration : public detail::ServiceRegistration {
         friend class StandardApplicationContext;
 
-        virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
+        virtual subscription_handle_t createBindingTo(const detail::source_property_descriptor& sourceProperty, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
 
 
 
@@ -406,7 +406,7 @@ private:
             handle->subscribe(proxySubscription);
         }
 
-        virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
+        virtual subscription_handle_t createBindingTo(const detail::source_property_descriptor& sourceProperty, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
 
         void notifyPublished() override {
         }
@@ -507,7 +507,7 @@ private:
         }
 
 
-        virtual subscription_handle_t createBindingTo(const char* sourcePropertyName, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
+        virtual subscription_handle_t createBindingTo(const detail::source_property_descriptor& sourceProperty, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
 
         virtual QStringList getBeanRefs() const override;
 
@@ -672,12 +672,7 @@ private:
 
 
 
-    static QMetaProperty getProperty(registration_handle_t reg, const char* name) {
-        if(auto meta = reg->serviceMetaObject()) {
-            return meta->property(meta->indexOfProperty(name));
-        }
-        return QMetaProperty{};
-    }
+    static QMetaProperty getProperty(registration_handle_t reg, const detail::source_property_descriptor& sourceProperty);
 
 
 
