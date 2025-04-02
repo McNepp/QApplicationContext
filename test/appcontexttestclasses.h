@@ -102,8 +102,6 @@ public:
 signals:
     void timerChanged(QTimer*);
 
-    void dependencyChanged();
-
     void fooChanged(const QString&);
 
     void signalWithoutProperty();

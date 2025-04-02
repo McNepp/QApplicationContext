@@ -1311,17 +1311,37 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testBindParameterlessSignalToObjectSetter() {
 
-        QTimer timer;
-        timer.setObjectName("timer");
-        auto regTimer = context->registerObject(&timer).as<QObject>();
-        auto regBase = context->registerService(service<BaseService>() << propValue("foo", "baseFoo"));
-        void (QObject::*setter)(const QString&) = &QObject::setObjectName;//We need this temporary variable, as setObjectName has two overloads!
-        bind(regBase, &BaseService::fooChanged, regTimer, setter);
+
+        auto regBase2 = context->registerService(service<BaseService2>());
+        auto regObjectService = context->registerService(service<QObjectService>(injectAll<QObject>()));
+
+        bind(regBase2, &BaseService2::referenceChanged, regObjectService, &QObjectService::setDependency);
+
         QVERIFY(context->publish());
-        QCOMPARE(timer.objectName(), "baseFoo");
-        RegistrationSlot<BaseService> baseSlot{regBase, this};
-        baseSlot->setFoo("newFoo");
-        QCOMPARE(timer.objectName(), "newFoo");
+        RegistrationSlot<BaseService2> baseSlot2{regBase2, this};
+        RegistrationSlot<QObjectService> objectServiceSlot{regObjectService, this};
+        QVERIFY(!baseSlot2->reference());
+        QVERIFY(!objectServiceSlot->dependency());
+        BaseService2 base2;
+        baseSlot2->setReference(&base2);
+        QCOMPARE(objectServiceSlot->dependency(), &base2);
+    }
+
+    void testBindParameterlessSignalToFunction() {
+        QObject* lastDep = nullptr;
+
+        auto regBase2 = context->registerService(service<BaseService2>());
+        auto regObjectService = context->registerService(service<QObjectService>(injectAll<QObject>()));
+
+        mcnepp::qtdi::bind(regBase2, &BaseService2::referenceChanged, regObjectService, std::function{[&lastDep](QObjectService*, QObject* dep) { lastDep = dep;}});
+
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService2> baseSlot2{regBase2, this};
+        QVERIFY(!baseSlot2->reference());
+        QVERIFY(!lastDep);
+        BaseService2 base2;
+        baseSlot2->setReference(&base2);
+        QCOMPARE(lastDep, &base2);
     }
 
 
@@ -1340,10 +1360,31 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(baseSlot2->timer(), &timer);
     }
 
+
+    void testBindSignalWithParameterToLambda() {
+
+        QString lastFoo;
+        auto regBase1 = context->registerService(service<BaseService>() << propValue(&BaseService::setFoo, "foo"));
+        auto regBase2 = context->registerService<BaseService>("base2");
+        bind(regBase1, &BaseService::fooChanged, regBase2, [&lastFoo](BaseService*, QString foo) { lastFoo = foo;});
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> baseSlot1{regBase1, this};
+        QCOMPARE(lastFoo, "foo");
+        baseSlot1->setFoo("Mickey Mouse");
+        QCOMPARE(lastFoo, "Mickey Mouse");
+    }
+
     void testCannotBindToSignalWithoutProperty() {
 
         auto regBase1 = context->registerService<BaseService>("base1");
         QVERIFY(!bind(regBase1, &BaseService::signalWithoutProperty, regBase1, &BaseService::setTimer));
+    }
+
+    void testCannotBindToNonSignalFunction() {
+
+        auto regBase1 = context->registerService<BaseService>("base1");
+        QVERIFY(!bind(regBase1, &BaseService::init, regBase1, &BaseService::setTimer));
     }
 
     void testServiceTemplate() {
