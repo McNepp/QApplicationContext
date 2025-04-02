@@ -273,26 +273,21 @@ template&lt;typename U &gt; </td></tr>
 All changes made to the source-property will be propagated to the target-property. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function may only be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
 <tr class="separator:a0f11a14df333d20850559efeee464e15"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae25ab68d0a118fe38340e5d1ddd2c95c" id="r_ae25ab68d0a118fe38340e5d1ddd2c95c"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename A , typename R , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:ae25ab68d0a118fe38340e5d1ddd2c95c"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ae25ab68d0a118fe38340e5d1ddd2c95c">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, const char *sourceProperty, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, R(T::*setter)(A))</td></tr>
-<tr class="memdesc:ae25ab68d0a118fe38340e5d1ddd2c95c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
+<tr class="memitem:a75e7b1403cdd41b6d2792fb0b757c624" id="r_a75e7b1403cdd41b6d2792fb0b757c624"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename SLT , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
+<tr class="memitem:a75e7b1403cdd41b6d2792fb0b757c624"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a75e7b1403cdd41b6d2792fb0b757c624">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, const char *sourceProperty, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, SLT setter) -&gt; std::enable_if_t&lt; detail::property_change_signal_traits&lt; S, detail::simple_signal_t&lt; S &gt;, T, SLT &gt;::is_compatible, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;</td></tr>
+<tr class="memdesc:a75e7b1403cdd41b6d2792fb0b757c624"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
 All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function only may be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
-<tr class="separator:ae25ab68d0a118fe38340e5d1ddd2c95c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1d13428eaa3c414598ebf9ca43dddf6b" id="r_a1d13428eaa3c414598ebf9ca43dddf6b"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename AS , typename AT , typename R , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:a1d13428eaa3c414598ebf9ca43dddf6b"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a1d13428eaa3c414598ebf9ca43dddf6b">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, void(S::*signalFunction)(AS), <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, R(T::*setter)(AT)) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; AS, AT &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;</td></tr>
-<tr class="memdesc:a1d13428eaa3c414598ebf9ca43dddf6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
-This function identifies the source-property by the signal that is emitted when the property changes. The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding to a property of the source-service. <br  />
+<tr class="separator:a75e7b1403cdd41b6d2792fb0b757c624"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa6d4596a9412fb636b3a7dd485fa893" id="r_afa6d4596a9412fb636b3a7dd485fa893"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename SIGN , typename SLT , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
+<tr class="memitem:afa6d4596a9412fb636b3a7dd485fa893"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#afa6d4596a9412fb636b3a7dd485fa893">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, SIGN signalFunction, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, SLT func) -&gt; std::enable_if_t&lt; detail::property_change_signal_traits&lt; S, SIGN, T, SLT &gt;::is_compatible, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;</td></tr>
+<tr class="memdesc:afa6d4596a9412fb636b3a7dd485fa893"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a slot from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
+This function identifies the source-property by the signal that is emitted when the property changes. The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding to a property of the source-service, according to <code>QMetaMethod::fromSignal(SI)</code>. <br  />
+If <code>SI</code> denotes a signal with no argument, then <code>F</code> must denote a pointer to a member-function of <code>T</code>, taking one argument. There will be no compile-time check whether the type of the source-property actually matches the type of the target-property! <br  />
+If <code>SI</code> denotes a signal with one argument, then <code>F</code> shall either denote a pointer to a member-function of <code>T</code>, taking one argument that is assignment-compatible with the signal's argument, or it shall denote a callable object that can be invoked with one argument of type <code>T*</code> and one argument of the signal's argument-type. <br  />
 All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function only may be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
-<tr class="separator:a1d13428eaa3c414598ebf9ca43dddf6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae708da19293b63d2ff632bcbd2df08e6" id="r_ae708da19293b63d2ff632bcbd2df08e6"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename A , typename R , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:ae708da19293b63d2ff632bcbd2df08e6"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ae708da19293b63d2ff632bcbd2df08e6">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, void(S::*signalFunction)(), <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, R(T::*setter)(A))</td></tr>
-<tr class="memdesc:ae708da19293b63d2ff632bcbd2df08e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
-This function identifies the source-property by the signal that is emitted when the property changes. The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding to a property of the source-service. <br  />
-All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
-<b>Thread-safety:</b> This function only may be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
-<tr class="separator:ae708da19293b63d2ff632bcbd2df08e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:afa6d4596a9412fb636b3a7dd485fa893"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3af2e9ed942d0a2991ea109e3483c6b5" id="r_a3af2e9ed942d0a2991ea109e3483c6b5"><td class="memTemplParams" colspan="2">template&lt;typename S , typename SIG , typename T , typename SLT &gt; </td></tr>
 <tr class="memitem:a3af2e9ed942d0a2991ea109e3483c6b5"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a3af2e9ed942d0a2991ea109e3483c6b5">mcnepp::qtdi::connectServices</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;source, SIG sourceSignal, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, SLT targetSlot, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
 <tr class="memdesc:a3af2e9ed942d0a2991ea109e3483c6b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects a signal of one <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> to a slot of another service. <br  />
@@ -878,7 +873,7 @@ autoRefreshMillis=2000
 </div>
 </div>
 <a id="a0f11a14df333d20850559efeee464e15" name="a0f11a14df333d20850559efeee464e15"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0f11a14df333d20850559efeee464e15">&#9670;&#160;</a></span>bind() <span class="overload">[1/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a0f11a14df333d20850559efeee464e15">&#9670;&#160;</a></span>bind() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -931,16 +926,16 @@ All changes made to the source-property will be propagated to the target-propert
 
 </div>
 </div>
-<a id="ae25ab68d0a118fe38340e5d1ddd2c95c" name="ae25ab68d0a118fe38340e5d1ddd2c95c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae25ab68d0a118fe38340e5d1ddd2c95c">&#9670;&#160;</a></span>bind() <span class="overload">[2/4]</span></h2>
+<a id="a75e7b1403cdd41b6d2792fb0b757c624" name="a75e7b1403cdd41b6d2792fb0b757c624"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a75e7b1403cdd41b6d2792fb0b757c624">&#9670;&#160;</a></span>bind() <span class="overload">[2/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S , typename T , typename A , typename R , ServiceScope scope&gt; </div>
+template&lt;typename S , typename T , typename SLT , ServiceScope scope&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">Subscription mcnepp::qtdi::bind </td>
+          <td class="memname">auto mcnepp::qtdi::bind </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>source</em></span>, </td>
         </tr>
@@ -957,7 +952,7 @@ template&lt;typename S , typename T , typename A , typename R , ServiceScope sco
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">R(T::*</td>          <td class="paramname"><span class="paramname"><em>setter&#160;</em></span>)(A)&#160;)</td>
+          <td class="paramtype">SLT</td>          <td class="paramname"><span class="paramname"><em>setter</em></span>&#160;) -&gt; std::enable_if_t&lt;detail::property_change_signal_traits&lt;S,detail::simple_signal_t&lt;S&gt;,T,SLT&gt;::is_compatible,<a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&gt; </td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -978,6 +973,7 @@ All changes made to the source-property will be propagated to all Services repre
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the type of the source. </td></tr>
     <tr><td class="paramname">T</td><td>the type of the target. </td></tr>
+    <tr><td class="paramname">SLT</td><td>the type of the slot </td></tr>
   </table>
   </dd>
 </dl>
@@ -985,68 +981,13 @@ All changes made to the source-property will be propagated to all Services repre
 
 </div>
 </div>
-<a id="ae708da19293b63d2ff632bcbd2df08e6" name="ae708da19293b63d2ff632bcbd2df08e6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae708da19293b63d2ff632bcbd2df08e6">&#9670;&#160;</a></span>bind() <span class="overload">[3/4]</span></h2>
+<a id="afa6d4596a9412fb636b3a7dd485fa893" name="afa6d4596a9412fb636b3a7dd485fa893"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afa6d4596a9412fb636b3a7dd485fa893">&#9670;&#160;</a></span>bind() <span class="overload">[3/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S , typename T , typename A , typename R , ServiceScope scope&gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">Subscription mcnepp::qtdi::bind </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>source</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">void(S::*</td>          <td class="paramname"><span class="paramname"><em>signalFunction&#160;</em></span>)(), </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">R(T::*</td>          <td class="paramname"><span class="paramname"><em>setter&#160;</em></span>)(A)&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Binds a property of one ServiceRegistration to a Setter from another Registration. <br  />
-This function identifies the source-property by the signal that is emitted when the property changes. The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding to a property of the source-service. <br  />
-All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to bind(). <br  />
-<b>Thread-safety:</b> This function only may be called from the QApplicationContext's thread. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">source</td><td>the ServiceRegistration with the source-property to which the target-property shall be bound. </td></tr>
-    <tr><td class="paramname">signalFunction</td><td>the address of the member-function that is emitted as the signal for the property. </td></tr>
-    <tr><td class="paramname">target</td><td>the Registration with the target-property to which the source-property shall be bound. </td></tr>
-    <tr><td class="paramname">setter</td><td>the method in the target which shall be bound to the source-property. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="tparams"><dt>Template Parameters</dt><dd>
-  <table class="tparams">
-    <tr><td class="paramname">S</td><td>the type of the source. </td></tr>
-    <tr><td class="paramname">T</td><td>the type of the target. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>the Subscription established by this binding. </dd></dl>
-
-</div>
-</div>
-<a id="a1d13428eaa3c414598ebf9ca43dddf6b" name="a1d13428eaa3c414598ebf9ca43dddf6b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1d13428eaa3c414598ebf9ca43dddf6b">&#9670;&#160;</a></span>bind() <span class="overload">[4/4]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;typename S , typename T , typename AS , typename AT , typename R , ServiceScope scope&gt; </div>
+template&lt;typename S , typename T , typename SIGN , typename SLT , ServiceScope scope&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">auto mcnepp::qtdi::bind </td>
@@ -1056,7 +997,7 @@ template&lt;typename S , typename T , typename AS , typename AT , typename R , S
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">void(S::*</td>          <td class="paramname"><span class="paramname"><em>signalFunction&#160;</em></span>)(AS), </td>
+          <td class="paramtype">SIGN</td>          <td class="paramname"><span class="paramname"><em>signalFunction</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1066,13 +1007,15 @@ template&lt;typename S , typename T , typename AS , typename AT , typename R , S
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">R(T::*</td>          <td class="paramname"><span class="paramname"><em>setter&#160;</em></span>)(AT)&#160;) -&gt; std::enable_if_t&lt;std::is_convertible_v&lt;AS,AT&gt;,<a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&gt; </td>
+          <td class="paramtype">SLT</td>          <td class="paramname"><span class="paramname"><em>func</em></span>&#160;) -&gt; std::enable_if_t&lt;detail::property_change_signal_traits&lt;S,SIGN,T,SLT&gt;::is_compatible,<a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&gt; </td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Binds a property of one ServiceRegistration to a Setter from another Registration. <br  />
-This function identifies the source-property by the signal that is emitted when the property changes. The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding to a property of the source-service. <br  />
+<p>Binds a property of one ServiceRegistration to a slot from another Registration. <br  />
+This function identifies the source-property by the signal that is emitted when the property changes. The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding to a property of the source-service, according to <code>QMetaMethod::fromSignal(SI)</code>. <br  />
+If <code>SI</code> denotes a signal with no argument, then <code>F</code> must denote a pointer to a member-function of <code>T</code>, taking one argument. There will be no compile-time check whether the type of the source-property actually matches the type of the target-property! <br  />
+If <code>SI</code> denotes a signal with one argument, then <code>F</code> shall either denote a pointer to a member-function of <code>T</code>, taking one argument that is assignment-compatible with the signal's argument, or it shall denote a callable object that can be invoked with one argument of type <code>T*</code> and one argument of the signal's argument-type. <br  />
 All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to bind(). <br  />
 <b>Thread-safety:</b> This function only may be called from the QApplicationContext's thread. </p>
 <dl class="params"><dt>Parameters</dt><dd>
@@ -1080,14 +1023,17 @@ All changes made to the source-property will be propagated to all Services repre
     <tr><td class="paramname">source</td><td>the ServiceRegistration with the source-property to which the target-property shall be bound. </td></tr>
     <tr><td class="paramname">signalFunction</td><td>the address of the member-function that is emitted as the signal for the property. </td></tr>
     <tr><td class="paramname">target</td><td>the Registration with the target-property to which the source-property shall be bound. </td></tr>
-    <tr><td class="paramname">setter</td><td>the method in the target which shall be bound to the source-property. </td></tr>
+    <tr><td class="paramname">func</td><td>the method in the target which shall be bound to the source-property. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">S</td><td>the type of the source. </td></tr>
-    <tr><td class="paramname">T</td><td>the type of the target. </td></tr>
+    <tr><td class="paramname">T</td><td>the type of the target </td></tr>
+    <tr><td class="paramname">A</td><td>the type of the property. </td></tr>
+    <tr><td class="paramname">SIGN</td><td>the type of the signal-function. Must be a non-static member-function of S with either no arguments or one argument of type A. </td></tr>
+    <tr><td class="paramname">SLT</td><td>the type of the slot. Must either be a non-static member-function of T with one argument, or a callable object taking two arguments, one of type <code>T*</code> and the second of the signal's argument-type. </td></tr>
   </table>
   </dd>
 </dl>
