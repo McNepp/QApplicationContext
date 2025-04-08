@@ -69,33 +69,7 @@ using subscription_handle_t = detail::Subscription*;
 
 
 
-/**
-* \brief Specifies the kind of a service-dependency.
-* Will be used as a non-type argument to Dependency, when registering a service.
-* The following table sums up the characteristics of each type of dependency:
-* <table><tr><th>&nbsp;</th><th>Normal behaviour</th><th>What if no dependency can be found?</th><th>What if more than one dependency can be found?</th></tr>
-* <tr><td>MANDATORY</td><td>Injects one dependency into the dependent service.</td><td>Publication of the ApplicationContext will fail.</td>
-* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
-* <tr><td>OPTIONAL</td><td>Injects one dependency into the dependent service</td><td>Injects `nullptr` into the dependent service.</td>
-* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
-* <tr><td>N</td><td>Injects all dependencies of the dependency-type that have been registered into the dependent service, using a `QList`</td>
-* <td>Injects an empty `QList` into the dependent service.</td>
-* <td>See 'Normal behaviour'</td></tr>
-* </table>
-*/
-enum class Kind {
-    ///
-    /// This dependency must be present in the ApplicationContext.
-    MANDATORY,
-    /// This dependency need not be present in the ApplicationContext.
-    /// If not, `nullptr` will be provided.
-    OPTIONAL,
-    ///
-    /// All Objects with the required service-type will be pushed into QList
-    /// and provided to the constructor of the service that depends on them.
-    N
 
-};
 
 /**
  * @brief Specifies the scope of a ServiceRegistration.
@@ -134,6 +108,35 @@ using Profiles = QSet<QString>;
 
 
 namespace detail {
+
+/**
+* \brief Specifies the kind of a service-dependency.
+* Will be used as a non-type argument to Dependency, when registering a service.
+* The following table sums up the characteristics of each type of dependency:
+* <table><tr><th>&nbsp;</th><th>Normal behaviour</th><th>What if no dependency can be found?</th><th>What if more than one dependency can be found?</th></tr>
+* <tr><td>MANDATORY</td><td>Injects one dependency into the dependent service.</td><td>Publication of the ApplicationContext will fail.</td>
+* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+* <tr><td>OPTIONAL</td><td>Injects one dependency into the dependent service</td><td>Injects `nullptr` into the dependent service.</td>
+* <td>Publication will fail with a diagnostic, unless a `requiredName` has been specified for that dependency.</td></tr>
+* <tr><td>N</td><td>Injects all dependencies of the dependency-type that have been registered into the dependent service, using a `QList`</td>
+* <td>Injects an empty `QList` into the dependent service.</td>
+* <td>See 'Normal behaviour'</td></tr>
+* </table>
+*/
+enum class Kind {
+    ///
+    /// This dependency must be present in the ApplicationContext.
+    MANDATORY,
+    /// This dependency need not be present in the ApplicationContext.
+    /// If not, `nullptr` will be provided.
+    OPTIONAL,
+    ///
+    /// All Objects with the required service-type will be pushed into QList
+    /// and provided to the constructor of the service that depends on them.
+    N
+
+};
+
 
 
 template<ServiceScope scope> struct service_scope_traits {
@@ -1063,6 +1066,37 @@ protected:
     }
 
 
+    ///
+    /// \brief A placeholder for a resolvable constructor-argument.
+    /// Use the function resolve(const QString&) to pass a resolvable argument to a service
+    /// with QApplicationContext::registerService().
+    ///
+    template<typename S> struct Resolvable {
+        QString expression;
+        QVariant defaultValue;
+        detail::q_variant_converter_t variantConverter;
+    };
+
+
+    ///
+    /// \brief Specifies a dependency of a service.
+    /// <br>Can by used as a type-argument for QApplicationContext::registerService().
+    /// Usually, you will not instantiate `Dependency`directly. Rather, you will use one of the functions
+    /// mcnepp::qtdi::inject(), mcnepp::qtdi::injectIfPresent() or mcnepp::qtdi::injectAll().
+    ///
+    /// \tparam S the service-interface of the Dependency
+    /// \tparam kind the kind of Dependency
+    /// \sa mcnepp::qtdi::inject()
+    /// \sa mcnepp::qtdi::injectIfPresent()
+    /// \sa mcnepp::qtdi::injectAll()
+    template<typename S,Kind kind> struct Dependency {
+        static_assert(could_be_qobject<S>::value, "Dependency must be potentially convertible to QObject");
+        ///
+        /// \brief the required name for this dependency.
+        /// The default-value is the empty String, with the implied meaning <em>"any dependency of the correct type may be used"</em>.
+        ///
+        QString requiredName;
+    };
 }// end namespace detail
 
 
@@ -1664,7 +1698,14 @@ private:
 
 };
 
+namespace detail {
 
+//Tests whether the type T is a ServiceRegistration with type Srv and an arbitrary ServiceScope:
+template<typename Srv,typename T> struct is_service_registration : std::false_type {};
+
+template<typename Srv,ServiceScope scope> struct is_service_registration<Srv,mcnepp::qtdi::ServiceRegistration<Srv,scope>> : std::true_type {};
+
+}
 
 ///
 /// \brief Tests two Registrations for equality.
@@ -2034,101 +2075,91 @@ template<auto func> struct service_initializer {
     }
 };
 
+///
+/// Denotes the kind of dependency.
+///
+using DependencyKind = detail::Kind;
 
-
 ///
-/// \brief Specifies a dependency of a service.
-/// <br>Can by used as a type-argument for QApplicationContext::registerService().
-/// In the standard-case of a mandatory relationship, the use of the `kind` argument is optional.
-/// Suppose you have a service-type `Reader` that needs a mandatory pointer to a `DatabaseAccess` in its constructor:
-///     class Reader : public QObject {
-///       public:
-///         explicit Update(DatabaseAccess* dao, QObject* parent = nullptr);
-///     };
+/// An opaque type describing a dependency for a %Service.
 ///
-/// Usually, you will not instantiate `Dependency`directly. Rather, you will use one of the functions
-/// inject(), injectIfPresent() or injectAll().
-///
-/// Thus, the following two lines would be completely equivalent:
-///
-///     context->registerService(service<Reader>(Dependency<DatabaseAccess>{}), "reader");
-///
-///     context->registerService(service<Reader>(inject<DatabaseAccess>()), "reader");
-///
-/// However, if your service can do without a `DatabaseAccess`, you should register it like this:
-///
-///     context->registerService(service<Reader>(injectIfPresent<DatabaseAccess>()), "reader");
-///
-/// Consider the case where your `Reader` takes a List of `DatabaseAccess` instances:
-///
-///     class Reader : public QObject {
-///       public:
-///         explicit Update(const QList<DatabaseAccess>& daos, QObject* parent = nullptr);
-///     };
-///
-/// In that case, it would be registered in an ApplicationContext using the following line:
-///
-///     context->registerService(service<Reader>(injectAll<DatabaseAccess>()), "reader");
-///
-/// <b>Note:</b> In many cases, you may already have the ServiceRegistration for the dependency at hand.
-/// In that case, you can simply pass that to the Service's constructor, without the need for wrapping it via inject(const ServiceRegistration&):
-///
-///     auto accessReg = context->registerService<DatabaseAccess>();
-///
-///     context->registerService(service<Reader>(accessReg), "reader");
-///
-/// \tparam S the service-interface of the Dependency
-/// \tparam kind the kind of Dependency
-/// a QVariant to the target-type, i.e. it must have an `operator()(const QVariant&)`.
-template<typename S,Kind kind=Kind::MANDATORY> struct Dependency {
-    static_assert(detail::could_be_qobject<S>::value, "Dependency must be potentially convertible to QObject");
-    ///
-    /// \brief the required name for this dependency.
-    /// The default-value is the empty String, with the implied meaning <em>"any dependency of the correct type may be used"</em>.
-    ///
-    QString requiredName;
-};
+template<typename S,DependencyKind kind> using Dependency = detail::Dependency<S,kind>;
 
 
 ///
 /// \brief Injects a mandatory Dependency.
+/// <br>This will instruct the ApplicationContext to find exactly one Dependency of the service-type and inject it
+/// into the *dependent %Service*.
+/// <br>The lookup may additionally be further restricted using the name of another %Service.
+/// <br>Should there not be exactly one %Service of the service-type available, the instantiation of the dependent %Service will fail.
+/// <br>
+/// Suppose you have a service-type `Reader` that needs a mandatory pointer to a `DatabaseAccess` in its constructor:
+///
+///     class Reader : public QObject {
+///       public:
+///         explicit Reader(DatabaseAccess* dao, QObject* parent = nullptr);
+///     };
+///
+/// A %Service of type `Reader` may be registered like this:
+///
+///     context->registerService(service<Reader>(inject<DatabaseAccess>()), "reader");
+///
+///
 /// \param requiredName the required name of the dependency. If empty, no name is required.
 /// \tparam S the service-type of the dependency.
 /// \return a mandatory Dependency on the supplied type.
 ///
-template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::MANDATORY> inject(const QString& requiredName = {}) {
-    return Dependency<S,Kind::MANDATORY>{requiredName};
+template<typename S> [[nodiscard]] constexpr Dependency<S,DependencyKind::MANDATORY> inject(const QString& requiredName = {}) {
+    return Dependency<S,DependencyKind::MANDATORY>{requiredName};
 }
 
 ///
 /// \brief Injects a mandatory Dependency on a Registration.
-/// <br><b>Note:</b> If the registration is actually a ServiceRegistration, you do not need
-/// to use inject(const Registration<S>& registration) at all! Rather, you can pass the ServiceRegistration
+/// <br><b>Note:</b> You do not need to use inject(const Registration<S>& registration) at all! Rather, you can pass the Registration
 /// directly to the Service's constructor.
 /// \param registration the Registration of the dependency.
 /// \tparam S the service-type of the dependency.
 /// \return a mandatory Dependency on the supplied registration.
+/// \deprecated You can simply pass the Registration directly to mcnepp::qtdi::service().
 ///
-template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::MANDATORY> inject(const Registration<S>& registration) {
+template<typename S> [[deprecated("Instead, inject the registration directly into mcnepp::qtdi::service()")]][[nodiscard]] constexpr Dependency<S,DependencyKind::MANDATORY> inject(const Registration<S>& registration) {
     if(auto srv = asService(registration.unwrap())) {
-        return Dependency<S,Kind::MANDATORY>{registeredName(srv)};
+        return Dependency<S,DependencyKind::MANDATORY>{registeredName(srv)};
     }
-    return Dependency<S,Kind::MANDATORY>{};
+    return Dependency<S,DependencyKind::MANDATORY>{};
 }
 
 
 
 
 
+
 ///
-/// \brief Injects an optional Dependency to another ServiceRegistration.
-/// This function will utilize the Registration::registeredName() to match the dependency.
+/// \brief Injects an optional Dependency.
+/// <br>This will instruct the ApplicationContext to find exactly one Dependency of the service-type and inject it
+/// into the *dependent %Service*.
+/// <br>The lookup may additionally be further restricted using the name of another %Service.
+/// <br>Should there not be exactly one %Service of the service-type available, the dependent %Service will be created
+/// with a `nullptr` passed as the dependency.
+/// <br>
+/// Suppose you have a service-type `Reader` that accepts an optional pointer to a `DatabaseAccess` in its constructor:
+///
+///     class Reader : public QObject {
+///       public:
+///         explicit Reader(DatabaseAccess* dao = nullptr, QObject* parent = nullptr);
+///     };
+///
+/// A %Service of type `Reader` may be registered like this:
+///
+///     context->registerService(service<Reader>(injectIfPresent<DatabaseAccess>()), "reader");
+///
+///
 /// \param requiredName the required name of the dependency. If empty, no name is required.
 /// \tparam S the service-type of the dependency.
 /// \return an optional Dependency on the supplied type.
 ///
-template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const QString& requiredName = {}) {
-    return Dependency<S,Kind::OPTIONAL>{requiredName};
+template<typename S> [[nodiscard]] constexpr Dependency<S,DependencyKind::OPTIONAL> injectIfPresent(const QString& requiredName = {}) {
+    return Dependency<S,DependencyKind::OPTIONAL>{requiredName};
 }
 
 ///
@@ -2136,53 +2167,71 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL> inject
 /// \param registration the Registration of the dependency.
 /// \tparam S the service-type of the dependency.
 /// \return an optional Dependency on the supplied registration.
+/// \deprecated Use injectIfPresent(const QString&) instead.
 ///
-template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::OPTIONAL> injectIfPresent(const Registration<S>& registration) {
+template<typename S> [[deprecated("Use injectIfPresent(const QString&) instead")]][[nodiscard]] constexpr Dependency<S,DependencyKind::OPTIONAL> injectIfPresent(const Registration<S>& registration) {
     if(auto srv = asService(registration.unwrap())) {
-        return Dependency<S,Kind::OPTIONAL>{registeredName(srv)};
+        return Dependency<S,DependencyKind::OPTIONAL>{registeredName(srv)};
     }
-    return Dependency<S,Kind::OPTIONAL>{};
+    return Dependency<S,DependencyKind::OPTIONAL>{};
 }
 
 
 
 ///
 /// \brief Injects a 1-to-N Dependency.
-/// \param requiredName the required name of the dependency. If empty, no name is required.
+/// <br>This will instruct the ApplicationContext to find as many Dependencies of the service-type and inject them
+/// into the *dependent %Service*.
+/// <br>The lookup may additionally be further restricted using the names of other %Services.
+/// <br>Should there not be any %Service of the service-type available, the dependent %Service will be created
+/// with an empty `QList` passed as the dependency.
+/// <br>
+/// Suppose you have a service-type `Collector` that needs a `QList<Reader>` in its constructor:
+///
+///     class Collector : public QObject {
+///       public:
+///         explicit Collector(const QList<Reader>& readers, QObject* parent = nullptr);
+///     };
+///
+/// A %Service of type `Collector` may be registered like this:
+///
+///     context->registerService(service<Collector>(injectAll<Reader>()), "collector");
+///
+///
+/// \param requiredNames the required names for the dependencies. If empty, no name is required.
 /// \tparam S the service-type of the dependency.
 /// \return a 1-to-N Dependency on the supplied type.
 ///
-template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::N> injectAll(const QString& requiredName = {}) {
-    return Dependency<S,Kind::N>{requiredName};
+template<typename S,typename...Names> [[nodiscard]] auto injectAll(Names&&...requiredNames) ->
+std::enable_if_t<std::conjunction_v<std::is_convertible<detail::remove_cvref_t<Names>,QString>...>,Dependency<S,DependencyKind::N>> {
+    QStringList requiredNamesList;
+    (requiredNamesList.push_back(requiredNames), ...);
+    return Dependency<S,DependencyKind::N>{requiredNamesList.join(',')};
 }
 
 ///
-/// \brief Injects a 1-to-N Dependency on a Registration.
-/// <br><b>Note:</b> If the registration is actually a ProxyRegistration, you do not need
-/// to use inject(const Registration<S>& registration) at all! Rather, you can pass the ProxyRegistration
-/// directly to the Service's constructor.
-/// \param registration the Registration of the dependency.
+/// \brief Injects a 1-to-N Dependency.
+/// <br>You may restrict the set of dependencies by supplying some ServiceRegistrations, of which the ServiceRegistration::registeredName()
+/// will be used.
+/// \param first the first ServiceRegistration.
+/// \param tail more ServiceRegistrations.
 /// \tparam S the service-type of the dependency.
+/// \tparam Reg a list of values implicitly convertible to `Registration<S>`.
 /// \return a 1-to-N  Dependency on the supplied registration.
 ///
-template<typename S> [[nodiscard]] constexpr Dependency<S,Kind::N> injectAll(const Registration<S>& registration) {
-    if(auto srv = asService(registration.unwrap())) {
-        return Dependency<S,Kind::N>{registeredName(srv)};
-    }
-    return Dependency<S,Kind::N>{};
+template<typename S,ServiceScope scope,typename...Reg> [[nodiscard]] auto injectAll(const ServiceRegistration<S,scope>& first, Reg&&... tail) ->
+    std::enable_if_t<std::conjunction_v<detail::is_service_registration<S,detail::remove_cvref_t<Reg>>...>,Dependency<S,DependencyKind::N>> {
+    QStringList requiredNames;
+    (requiredNames.push_back(first.registeredName()), ..., requiredNames.push_back(tail.registeredName()));
+    return Dependency<S,DependencyKind::N>{requiredNames.join(',')};
 }
 
+///
+/// An opaque type denoting a constructor-argument for a %Service.
+/// \sa mcnepp::qtdi::resolve(const QString&)
+///
+template<typename S> using Resolvable = detail::Resolvable<S>;
 
-///
-/// \brief A placeholder for a resolvable constructor-argument.
-/// Use the function resolve(const QString&) to pass a resolvable argument to a service
-/// with QApplicationContext::registerService().
-///
-template<typename S> struct Resolvable {
-    QString expression;
-    QVariant defaultValue;
-    detail::q_variant_converter_t variantConverter;
-};
 
 ///
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
@@ -2241,14 +2290,15 @@ template<typename S=QString> [[nodiscard]] Resolvable<S> resolve(const QString& 
 ///
 ///
 /// \tparam S the result-type of the resolved constructor-argument.
-/// \tparam C the type of the converter. Must be a callable that accepts a QString and returns a value of type `T`. The default will invoke the constructor
-/// `T{const QString&}` if it exists.
+/// \tparam C the type of the converter. Must be a callable that accepts a QString and returns a value of type `S`. The default will invoke the constructor
+/// `S{const QString&}` if it exists.
 /// \param defaultValue the value to use if the placeholder cannot be resolved.
 /// \param expression a String, possibly containing one or more placeholders.
 /// \param converter Will be used to convert the resolved expression into a value.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S,typename C,typename=std::invoke_result_t<C,QString>> [[nodiscard]] Resolvable<S>  resolve(const QString& expression, const S& defaultValue, C converter) {
+template<typename S,typename C> [[nodiscard]] auto resolve(const QString& expression, const S& defaultValue, C converter) ->
+std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,S>,Resolvable<S>> {
     return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::variant_converter_traits<S>::makeConverter(converter)};
 }
 
@@ -2259,7 +2309,8 @@ template<typename S,typename C,typename=std::invoke_result_t<C,QString>> [[nodis
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
 /// <br>This is an overload of mcnepp::qtdi::resolve(const QString&,const S&,C) without the default-value.
 ///
-template<typename S,typename C,typename=std::invoke_result_t<C,QString>> [[nodiscard]] Resolvable<S>  resolve(const QString& expression, C converter) {
+template<typename S,typename C> [[nodiscard]] auto resolve(const QString& expression, C converter) ->
+std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,S>,Resolvable<S>> {
     return Resolvable<S>{expression, QVariant{}, detail::variant_converter_traits<S>::makeConverter(converter)};
 }
 
@@ -2493,16 +2544,37 @@ inline detail::service_config::config_modifier withGroup(const QString& name) {
 /// \tparam S the service-type.
 /// \param propertySetter the member-function that will be invoked with the property-value.
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
-/// \param converter (optional) specifies a converter that constructs an argument of type `A` from a QString.
+/// \param converter specifies a converter that constructs an argument of type `A` from a QString.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> propValue(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
+template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propValue(R(S::*propertySetter)(A), const QString& expression, C converter) ->
+    std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,A>,service_config_entry<S>>
+
+{
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
 
     return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+}
+
+///
+/// \brief Creates a type-safe configuration-entry for a service.
+/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
+///
+/// \tparam S the service-type.
+/// \param propertySetter the member-function that will be invoked with the property-value.
+/// \param expression will be resolved when the service is being configured. May contain *placeholders*.
+/// \return a type-safe configuration for a service.
+///
+template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> propValue(R(S::*propertySetter)(A), const QString& expression) {
+    if(!propertySetter) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
+        return {".invalid", QVariant{}};
+    }
+
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter()}};
 }
 
 ///
@@ -3155,8 +3227,6 @@ template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep
     }
     return descriptor;
 }
-
-
 
 } // namespace detail
 

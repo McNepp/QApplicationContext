@@ -79,7 +79,7 @@ We will soon see why this direct translation is usually not a good idea, but jus
 The above code has an obvious flaw: The `QNetworkAccessManager` is created outside the QApplicationContext. It will not be managed by the Context. Should another service need a `QNetworkAccessManager`,
 you would have to create another instance.
 
-We fix this by not providing the pointer to the `QNetworkAccessManager`, but instead using a kind of "placeholder" for it. This placeholder is the class-template `mcnepp::qtdi::Dependency`.
+We fix this by not providing the pointer to the `QNetworkAccessManager`, but instead using a kind of "proxy" for it. This proxy is of the opaque type `mcnepp::qtdi::Dependency`.
 We can create Dependencies by using one of the functions mcnepp::qtdi::inject(), mcnepp::qtdi::injectIfPresent() or mcnepp::qtdi::inject().
 
 You can think of `inject` as a request to the QApplicationContext: *If a service of this type has been registered, please provide it here!*.
@@ -413,7 +413,7 @@ Also, there are differences to mcnepp::qtdi::QApplicationContext::registerObject
 In our previous example, we have seen the dependency of our `RestPropFetcher` to a `QNetworkAccessManager`.  
 This constitutes a *mandatory dependency*: instantion of the `RestPropFetcher`will fail if no `QNetworkAccessManager`can be found.
 However, there are more ways to express a dependency-relation.  
-This is reflected by the enum-type `mcnepp::qtdi::Kind` and its enum-constants as listed below:
+This is reflected by the enum-type `mcnepp::qtdi::DependencyKind` and its enum-constants as listed below:
 
 
 ### MANDATORY
@@ -433,9 +433,13 @@ In case you have the ServiceRegistration for the dependency at hand, you may ski
 ### OPTIONAL
 A service that has an *optional dependency* to another service may be instantiated even when no matching other service can be found in the ApplicationContext.
 In that case, `nullptr` will be passed to the service's constructor.  
-Optional dependencies are specified the `Dependency` helper-template. Suppose it were possible to create our `RestPropFetcher` without a `QNetworkAccessManage`:
+Optional dependencies are specified using the function mcnepp::qtdi::injectIfPresent(). Suppose it were possible to create our `RestPropFetcher` without a `QNetworkAccessManage`:
 
     context->registerService(service<RestPropFetcher>(injectIfPresent<QNetworkAccessManager>()));
+
+When the Service is later created, the ApplicationContext will look for another Service of type `QNetworkAccessManager`. 
+If exactly one matching Service is found, it will be injected into the `RestPropFetcher`. Otherwise, `nullptr` will be injected.
+
 
 ### N (one-to-many)
 
@@ -1017,8 +1021,8 @@ In order for this to work, several pre-conditions must be true:
 
 1. the constructor of the service must be accessible, i.e. declared `public`.
 2. The number of mandatory arguments must match the arguments provided via `QApplicationContext::registerService()`.
-3. For each `Dependency<T>` with `Kind::MANDATORY` or `Kind::OPTIONAL`, the argument-type must be `T*`.
-4. For each `Dependency<T>` with `Kind::N`, the argument-type must be `QList<T*>`.
+3. For each mandatory or optional dependency, the argument-type must be `T*`.
+4. For each dependency with cardinality N, the argument-type must be `QList<T*>`.
 
 If any of these conditions fails, then the invocation of `QApplicationContext::registerService()` will fail compilation.
 
@@ -1157,7 +1161,7 @@ We've also added a member-function `addPropFetcher(PropFetcher*)`, which we'll p
     context -> publish();
     
 
-1. No need to specify Dependency anymore. Therefore, we can use the simplified overload of QApplicationContext::registerService().
+1. No need to specify the dependency anymore. Therefore, we can use the simplified overload of QApplicationContext::registerService().
 2. Will cause all PropFetchers to be injected into PropFetcherAggregator.
 
 And that's all that is needed to get rid of any mandatory order of initialization of the modules A, B and C.

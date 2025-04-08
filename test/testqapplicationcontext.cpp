@@ -2652,21 +2652,41 @@ void testWatchConfigurationFileChangeWithError() {
 
     }
 
-    void testCardinalityNServiceWithRequiredName() {
-        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1");
+    void testInjectAllWithRequiredNames() {
+        context->registerService(service<Interface1,BaseService>(), "base1");
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
-        auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>("base2")));
+        auto reg3 = context->registerService(service<Interface1,BaseService>(), "base3");
+        auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>("base2", "base3")));
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
-        RegistrationSlot<Interface1> base1{reg1, this};
         RegistrationSlot<Interface1> base2{reg2, this};
+        RegistrationSlot<Interface1> base3{reg3, this};
         RegistrationSlot<CardinalityNService> service{reg, this};
-        QCOMPARE_NE(base1, base2);
-        QCOMPARE(service->my_bases.size(), 1);
+        QCOMPARE(service->my_bases.size(), 2);
+        QVERIFY(service->my_bases.contains(base2.last()));
+        QVERIFY(service->my_bases.contains(base3.last()));
 
         RegistrationSlot<Interface1> services{regs, this};
-        QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(service->my_bases[0], services.last());
+        QCOMPARE(services.invocationCount(), 3);
+
+    }
+
+    void testInjectAllWithRequiredRegistrations() {
+        context->registerService(service<Interface1,BaseService>(), "base1");
+        auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
+        auto reg3 = context->registerService(prototype<Interface1,BaseService>(), "base3");
+        auto reg = context->registerService(service<CardinalityNService>(injectAll(reg2, reg3)));
+        QVERIFY(context->publish());
+        auto regs = context->getRegistration<Interface1>();
+        RegistrationSlot<Interface1> base2{reg2, this};
+        RegistrationSlot<Interface1> base3{reg3, this};
+        RegistrationSlot<CardinalityNService> service{reg, this};
+        QCOMPARE(service->my_bases.size(), 2);
+        QVERIFY(service->my_bases.contains(base2.last()));
+        QVERIFY(service->my_bases.contains(base3.last()));
+
+        RegistrationSlot<Interface1> services{regs, this};
+        QCOMPARE(services.invocationCount(), 3);
 
     }
 

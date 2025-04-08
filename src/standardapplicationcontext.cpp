@@ -864,15 +864,20 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     const std::type_info& type = d.type;
 
     QList<DescriptorRegistration*> depRegs;
-
+    auto requiredNames = d.expression.split(',', Qt::SkipEmptyParts);
     for(auto pub : published) {
         if(pub->matches(type) && pub->scope() != ServiceScope::TEMPLATE) {
-            if(d.has_required_name()) {
-                auto byName = getActiveRegistrationByName(d.expression);
-                if(!byName || byName != pub) {
-                    continue;
+            if(!requiredNames.isEmpty()) {
+                for(auto& name : requiredNames) {
+                    auto byName = getActiveRegistrationByName(name);
+                    if(byName && byName == pub) {
+                        requiredNames.removeAll(name);
+                        goto use_dep;
+                    }
                 }
+                continue;
             }
+        use_dep:
             depRegs.push_back(pub);
         }
     }
@@ -908,7 +913,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     case detail::PARENT_PLACEHOLDER_KIND:
         return {QVariant::fromValue(static_cast<QObject*>(m_injectedContext)), Status::ok};
 
-    case static_cast<int>(Kind::MANDATORY):
+    case static_cast<int>(DependencyKind::MANDATORY):
         if(depRegs.empty()) {
             if(allowPartial) {
                 qCWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
@@ -919,7 +924,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             }
 
         }
-    case static_cast<int>(Kind::OPTIONAL):
+    case static_cast<int>(DependencyKind::OPTIONAL):
         switch(depRegs.size()) {
         case 0:
             qCInfo(loggingCategory()).noquote().nospace() << "Skipped " << d;
@@ -932,7 +937,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             qCCritical(loggingCategory()).noquote().nospace() << d << " is ambiguous";
             return {QVariant{}, Status::fatal};
         }
-    case static_cast<int>(Kind::N):
+    case static_cast<int>(DependencyKind::N):
         qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << depRegs.size() << " objects.";
         {
             //Sort the dependencies by their index(), which is the order of registration:
