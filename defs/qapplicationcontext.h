@@ -92,6 +92,21 @@ enum class ServiceScope {
     TEMPLATE
 };
 
+///
+/// \brief Determines whether a %Service's *init-method* is invoked before or after the service is published.
+/// <br>
+/// <table>
+/// <tr><td>DEFAULT</td><td>the *init-method* is invoked as the last step **before** the
+/// publication of the service is announced.</td></tr>
+/// <tr><td>AFTER_PUBLICATION</td><td>the *init-method* is invoked immediately **after** the
+/// publication of the service has been announced.</td></tr>
+/// </table>
+///
+enum class ServiceInitializationPolicy {
+    DEFAULT,
+    AFTER_PUBLICATION
+};
+
 template<typename S> class Registration;
 
 template<typename S,ServiceScope> class ServiceRegistration;
@@ -2021,18 +2036,26 @@ template<typename S> struct service_factory {
 /// <br>Specializations of service_traits in client-code are encouraged to extend this type!
 /// <br>this template provides the following declarations:
 /// - service_type an alias for S.
-/// - factory_type an alias for service_factory.
 /// - initializer_type an alias for std::nullptr_t.
+/// - static constexpr ServiceInitializationPolicy initialization_policy = ServiceInitializationPolicy::DEFAULT;
+/// - factory_type an alias for service_factory.
+///
+/// \tparam S the service-type
+/// \tparam I the type of the initializer. Defaults to std::nullptr_t.
+/// \tparam serviceInitPolicy determines whether the initializer will be invoked before publication (the default) or after it.
+/// \tparam F the type of the service-factory. Defaults to mcnepp::qtdi::service_factory.
 ///
 
-template<typename S> struct default_service_traits {
+template<typename S,typename I=std::nullptr_t,ServiceInitializationPolicy serviceInitPolicy=ServiceInitializationPolicy::DEFAULT,typename F=service_factory<S>> struct default_service_traits {
     static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
 
     using service_type = S;
 
-    using factory_type = service_factory<S>;
+    using initializer_type = I;
 
-    using initializer_type = std::nullptr_t;
+    static constexpr ServiceInitializationPolicy initialization_policy = serviceInitPolicy;
+
+    using factory_type = F;
 };
 
 
@@ -2040,7 +2063,6 @@ template<typename S> struct default_service_traits {
 /// \brief The traits for services.
 /// <br>Every specialization of this template must provide at least the following declarations:
 /// - `service_type` the type of service that this traits describe.
-/// - `factory_type` the type of the factory.
 /// - `initializer_type` the type of the initializer. Must be one of the following:
 ///   -# pointer to a non-static member-function with no arguments
 ///   -# pointer to a non-static member-function with one parameter of type `QApplicationContext*`
@@ -2049,6 +2071,8 @@ template<typename S> struct default_service_traits {
 ///   -# type with a call-operator with one argument of the service-type.
 ///   -# type with a call-operator with two arguments, the second being of type `QApplicationContext*`.
 ///   -# `nullptr`
+/// - a `static constexpr` value named `initialization_policy` of type `ServiceInitializationPolicy`
+/// - `factory_type` the type of the factory.
 ///
 template<typename S> struct service_traits : default_service_traits<S> {
 };
@@ -2944,6 +2968,7 @@ struct service_descriptor {
     constructor_t constructor;
     std::vector<dependency_info> dependencies;
     q_init_t init_method;
+    ServiceInitializationPolicy initialization_policy = ServiceInitializationPolicy::DEFAULT;
 };
 
 
@@ -3197,16 +3222,17 @@ constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4,
 
 template<typename S> constexpr bool has_initializer = std::negation_v<std::is_same<std::nullptr_t,typename service_traits<S>::initializer_type>>;
 
-template<bool found,typename First,typename...Tail> q_init_t getInitializer() {
+template<bool found,typename First,typename...Tail> q_init_t getInitializer(ServiceInitializationPolicy& initializationPolicy) {
     constexpr bool foundThis = has_initializer<First>;
     static_assert(!(foundThis && found), "Ambiguous initializers in advertised interfaces");
     if constexpr(sizeof...(Tail) > 0) {
         //Invoke recursively, until we either trigger an assertion or find no other initializer:
-        auto result = getInitializer<foundThis,Tail...>();
+        auto result = getInitializer<foundThis,Tail...>(initializationPolicy);
         if constexpr(!foundThis) {
             return result;
         }
     } else {
+        initializationPolicy = service_traits<First>::initialization_policy;
         return adaptInitializer<First>(typename service_traits<First>::initializer_type{});
     }
 
@@ -3217,8 +3243,10 @@ template<bool found,typename First,typename...Tail> q_init_t getInitializer() {
 template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep> service_descriptor make_descriptor(F factory, Dep...deps) {
     detail::service_descriptor descriptor{{typeid(Srv)}, typeid(Impl), &Impl::staticMetaObject};
     if constexpr(has_initializer<Impl>) {
-         descriptor.init_method = adaptInitializer<Impl>(typename service_traits<Impl>::initializer_type{});
+        descriptor.initialization_policy = service_traits<Impl>::initialization_policy;
+        descriptor.init_method = adaptInitializer<Impl>(typename service_traits<Impl>::initializer_type{});
     } else {
+        descriptor.initialization_policy = service_traits<Srv>::initialization_policy;
         descriptor.init_method = adaptInitializer<Srv>(typename service_traits<Srv>::initializer_type{});
     }
     (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
@@ -3295,7 +3323,7 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
         }
         (descriptor.service_types.insert(typeid(IFaces)), ...);
         if constexpr(!detail::has_initializer<Impl>) {
-            descriptor.init_method = detail::getInitializer<false,IFaces...>();
+            descriptor.init_method = detail::getInitializer<false,IFaces...>(descriptor.initialization_policy);
         }
         return std::move(*this);
     }
@@ -3330,10 +3358,12 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
      * - a member-function of the service's implementation-type with one argument of pointer to QApplicationContext.
      *
      * @tparam I the type of the initializer.
+     * @tparam initializationPolicy determines whether the *init-method* will be invoked before or after the service has been published.
      * @param initializer Will be invoked after all properties have been set and before the signal for the publication is emitted.
      * @return this instance
      */
-    template<typename I> Service<Srv,Impl,scope>&& withInit(I initializer) && {
+    template<ServiceInitializationPolicy initializationPolicy = ServiceInitializationPolicy::DEFAULT,typename I> Service<Srv,Impl,scope>&& withInit(I initializer) && {
+        descriptor.initialization_policy = initializationPolicy;
         descriptor.init_method = detail::adaptInitializer<Impl>(initializer);
         return std::move(*this);
     }
@@ -3350,11 +3380,12 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
      * - a member-function of the service's implementation-type with one argument of pointer to QApplicationContext.
      *
      * @tparam I the type of the initializer.
+     * @tparam initializationPolicy determines whether the *init-method* will be invoked before or after the service has been published.
      * @param initializer Will be invoked after all properties have been set and before the signal for the publication is emitted.
      * @return a service with the supplied initializer.
      */
-    template<typename I> Service<Srv,Impl,scope> withInit(I initializer) const& {
-        return Service<Srv,Impl,scope>{*this}.withInit(initializer);
+    template<ServiceInitializationPolicy initializationPolicy = ServiceInitializationPolicy::DEFAULT,typename I> Service<Srv,Impl,scope> withInit(I initializer) const& {
+        return Service<Srv,Impl,scope>{*this}.withInit<initializationPolicy>(initializer);
     }
 
     ///

@@ -931,6 +931,8 @@ specified.
 
 The same *init-method* should be used for every service of a certain type. In order to achieve this, you need to specialize
 mcnepp::qtdi::service_traits for your service-type and declare a type-alias named `initializer_type`.
+<br>It is recommended to make use of the helper-template mcnepp::qtdi::default_service_traits for this purpose, which will declare the necessary
+type-aliases for you:
 
 A suitable type would be a callable `struct` with either one argument of the service-type, or with two arguments, the second being of type `QApplicationContext*`.
 
@@ -941,8 +943,7 @@ A suitable type would be a callable `struct` with either one argument of the ser
     };
     
     namespace mcnepp::qtdi {
-      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher> {
-         using initializer_type = RestPropFetcher_initializer;
+      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher,RestPropFetcher_initializer> {
       };
     }
 
@@ -956,8 +957,7 @@ Shouldn't we be able to get rid of the `struct RestPropFetcher_initializer` some
 That way, we can reference the member-function (almost) directly in our service_traits:
 
     namespace mcnepp::qtdi {
-      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher> {
-         using initializer_type = service_initializer<&RestPropFetcher::init>;
+      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher,service_initializer<&RestPropFetcher::init>> {
       };
     }
 
@@ -981,8 +981,7 @@ We would like to specify the use of the member-function `PropFetcher::init()` fo
 <br>Well, this is how it's done:
 
     namespace mcnepp::qtdi {
-      template<> struct service_traits<PropFetcher> : default_service_traits<RropFetcher> {
-         using initializer_type = service_initializer<&PropFetcher::init>;
+      template<> struct service_traits<PropFetcher> : default_service_traits<PropFetcher,service_initializer<&PropFetcher::init>> {
       };
     }
 
@@ -1000,6 +999,27 @@ There is also method that lets you specify an *init-method* without the need for
     context -> registerService(service<PropFetcherAggregator>(injectAll<RestPropFetcher>()).withInit(&PropFetcherAggregator::init));
 
 See mcnepp::qtdi::Service::withInit()
+
+
+### Changing the order of initialization
+
+Per default, publication of a Service is announced **after** the *init-method* has run.
+<br>However, there may be cases where you would like to subscribe to ServiceRegistrations and have the Subscription be invoked
+**before** the *init-method* has run.
+<br>In order to achieve this, there is the enumeration mcnepp::qtdi::ServiceInitializationPolicy.
+<br>You may specify a different ServiceInitializationPolicy via the service_traits.
+The following example will determine that Services of type PropFetcher will be announced **before** their method `PropFetcher::init`
+has run:
+
+    namespace mcnepp::qtdi {
+      template<> struct service_traits<PropFetcher> : default_service_traits<PropFetcher,service_initializer<&PropFetcher::init>,ServiceInitializationPolicy::AFTER_PUBLICATION> {
+      };
+    }
+
+Of course, a ServiceInitializationPolicy can also be supplied per registration, as shown here:
+
+    context -> registerService(service<PropFetcherAggregator>(injectAll<RestPropFetcher>()).withInit<ServiceInitializationPolicy::AFTER_PUBLICATION>(&PropFetcherAggregator::init));
+
 
 
 ## Resolving ambiguities
