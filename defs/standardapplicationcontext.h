@@ -705,7 +705,9 @@ private:
 
     Status configure(DescriptorRegistration*, const service_config& config, QObject*, descriptor_list& toBePublished, bool allowPartial);
 
-    Status init(DescriptorRegistration*, const QList<QApplicationContextPostProcessor*>& postProcessors);
+    bool init(DescriptorRegistration*, ServiceInitializationPolicy);
+
+    void runPostProcessors(DescriptorRegistration*, const QList<QApplicationContextPostProcessor*>& postProcessors);
 
     std::pair<Status,bool> resolveBeanRef(QVariant& value, descriptor_list& toBePublished, bool allowPartial);
 
