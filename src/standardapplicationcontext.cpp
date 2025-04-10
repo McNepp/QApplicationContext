@@ -864,15 +864,20 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     const std::type_info& type = d.type;
 
     QList<DescriptorRegistration*> depRegs;
-
+    auto requiredNames = d.expression.split(',', Qt::SkipEmptyParts);
     for(auto pub : published) {
         if(pub->matches(type) && pub->scope() != ServiceScope::TEMPLATE) {
-            if(d.has_required_name()) {
-                auto byName = getActiveRegistrationByName(d.expression);
-                if(!byName || byName != pub) {
-                    continue;
+            if(!requiredNames.isEmpty()) {
+                for(auto& name : requiredNames) {
+                    auto byName = getActiveRegistrationByName(name);
+                    if(byName && byName == pub) {
+                        requiredNames.removeAll(name);
+                        goto use_dep;
+                    }
                 }
+                continue;
             }
+        use_dep:
             depRegs.push_back(pub);
         }
     }
@@ -908,7 +913,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     case detail::PARENT_PLACEHOLDER_KIND:
         return {QVariant::fromValue(static_cast<QObject*>(m_injectedContext)), Status::ok};
 
-    case static_cast<int>(Kind::MANDATORY):
+    case static_cast<int>(DependencyKind::MANDATORY):
         if(depRegs.empty()) {
             if(allowPartial) {
                 qCWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
@@ -919,7 +924,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             }
 
         }
-    case static_cast<int>(Kind::OPTIONAL):
+    case static_cast<int>(DependencyKind::OPTIONAL):
         switch(depRegs.size()) {
         case 0:
             qCInfo(loggingCategory()).noquote().nospace() << "Skipped " << d;
@@ -932,7 +937,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             qCCritical(loggingCategory()).noquote().nospace() << d << " is ambiguous";
             return {QVariant{}, Status::fatal};
         }
-    case static_cast<int>(Kind::N):
+    case static_cast<int>(DependencyKind::N):
         qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << depRegs.size() << " objects.";
         {
             //Sort the dependencies by their index(), which is the order of registration:
@@ -1314,22 +1319,23 @@ bool StandardApplicationContext::publish(bool allowPartial)
     }
     while(!toBePublished.empty()) {
         auto reg = toBePublished.front();
-        auto initResult = init(reg, postProcessors);
-        switch(initResult) {
-        case Status::fatal:
+        QObject* target = reg->getObject();
+        if(!target) {
             qCCritical(loggingCategory()).nospace().noquote() << "Could not initialize " << *reg;
             return false;
-        case Status::fixable:
-            qCWarning(loggingCategory()).nospace().noquote() << "Could not initialize " << *reg;
-            validationResult = Status::fixable;
-            continue;
-
-        case Status::ok:
-            toBePublished.pop_front();
-            ++publishedCount;
-            reg->notifyPublished();
-            qCInfo(loggingCategory()).noquote().nospace() << "Published " << *reg;
         }
+        bool initialized = init(reg, ServiceInitializationPolicy::DEFAULT);
+        runPostProcessors(reg, postProcessors);
+        reg->notifyPublished();
+        if(!initialized) {
+            init(reg, ServiceInitializationPolicy::AFTER_PUBLICATION);
+        }
+        //If the service has no parent, make it a child of this ApplicationContext.
+        //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
+        setParentIfNotSet(target, m_injectedContext);
+        toBePublished.pop_front();
+        ++publishedCount;
+        qCInfo(loggingCategory()).noquote().nospace() << "Published " << *reg;
     }
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has published " << publishedCount << " objects";
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has a total number of " << allCreated.size() << " published objects of which " << managed << " are managed.";
@@ -1840,11 +1846,21 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
     return Status::ok;
 }
 
-StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRegistration* reg, const QList<QApplicationContextPostProcessor*>& postProcessors) {
+bool StandardApplicationContext::init(DescriptorRegistration* reg, ServiceInitializationPolicy policy) {
     QObject* target = reg->getObject();
-    if(!target) {
-        return Status::fatal;
+
+    for(DescriptorRegistration* self = reg; self; self = self->base()) {
+        if(auto initMethod = self->descriptor().init_method; initMethod && self->descriptor().initialization_policy == policy) {
+            initMethod(target, m_injectedContext);
+            qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
+            return true;
+       }
     }
+    return false;
+}
+
+void StandardApplicationContext::runPostProcessors(DescriptorRegistration* reg, const QList<QApplicationContextPostProcessor*>& postProcessors) {
+    QObject* target = reg->getObject();
 
     for(auto processor : postProcessors) {
         if(processor != dynamic_cast<QApplicationContextPostProcessor*>(target)) {
@@ -1852,18 +1868,6 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
             processor->process(reg, target, reg->resolvedProperties());
         }
     }
-
-    for(DescriptorRegistration* self = reg; self; self = self->base()) {
-        if(self->descriptor().init_method) {
-            self->descriptor().init_method(target, m_injectedContext);
-            qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
-            break;
-       }
-    }
-    //If the service has no parent, make it a child of this ApplicationContext.
-    //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
-    setParentIfNotSet(target, m_injectedContext);
-    return Status::ok;
 }
 
 
