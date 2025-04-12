@@ -35,6 +35,7 @@ class StandardApplicationContext final : public QApplicationContext
     Q_OBJECT
 
     Q_PROPERTY(int autoRefreshMillis READ autoRefreshMillis WRITE setAutoRefreshMillis NOTIFY autoRefreshMillisChanged)
+    Q_PROPERTY(Profiles activeProfiles READ activeProfiles WRITE setActiveProfiles NOTIFY activeProfilesChanged)
 
 //Forward-declarations of nested class:
     class CreateHandleEvent;
@@ -47,6 +48,8 @@ class StandardApplicationContext final : public QApplicationContext
 signals:
 
     void autoRefreshMillisChanged(int);
+
+    void activeProfilesChanged(const Profiles&);
 
 public:
 
@@ -100,6 +103,14 @@ public:
     /// \param newRefreshMillis the new number of milliseconds between refreshes of the configuration.
     ///
     void setAutoRefreshMillis(int newRefreshMillis);
+
+    ///
+    /// \brief Sets the active Profiles.
+    /// <br>Invoking this method will overrule any profiles determined by the configuration-entry `"qtdi/activeProfiles"`.
+    /// <br>**Note:** Changing the active profiles is only possible when no profile-dependent %Service has been published yet.
+    /// \param profiles the profiles to activate. Must not be empty.
+    ///
+    void setActiveProfiles(const Profiles& profiles);
 
     ///
     /// \brief Has auto-refresh been enabled?
@@ -724,6 +735,8 @@ private:
     QObject* obtainHandleFromApplicationThread(std::function<QObject*()>);
 
     void insertByName(const QString& name, DescriptorRegistration* reg);
+
+    bool canChangeActiveProfiles();
 
     // QObject interface
 public:

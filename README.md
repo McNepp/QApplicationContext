@@ -663,6 +663,9 @@ If the environment variable `QTDI_ACTIVE_PROFILES` is defined, its value will de
 
 The value for the entry will be read, converted to a QStringList and appended to the ApplicationContext's *active profiles*.
 <br>If neither the environment variable `QTDI_ACTIVE_PROFILES` is defined nor an entry `"qtdi/activeProfiles"` found, the *active profile* will be "default".
+<br>You may also set the active profiles programmatically using mcnepp::qtdi::StandardApplicationContext::setActiveProfiles().
+<br>**Note:** The active profiles can be changed only as long as no profile-dependent services have been published!
+Any attempt at doing otherwise will fail and result in an error logged.
 
 
 ### Detection of ambiguous registrations
