@@ -434,7 +434,7 @@ bool StandardApplicationContext::ProxyRegistrationImpl::add(
 
 bool StandardApplicationContext::ProxyRegistrationImpl::canAdd(
     DescriptorRegistration* reg) const {
-    return reg->scope() != ServiceScope::TEMPLATE && reg->matches(m_type) && reg->isActiveInProfile();
+    return reg->scope() != ServiceScope::TEMPLATE && reg->matches(m_type);
 }
 
 
@@ -741,14 +741,13 @@ Q_COREAPP_STARTUP_FUNCTION(registerAppInGlobalContext)
 StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext, QObject* parent) :
     QApplicationContext(parent),
     m_loggingCategory(loggingCategory),
-    m_injectedContext(delegatingContext)
+    m_injectedContext(delegatingContext),
+    m_activeProfiles{&defaultProfiles()}
 {
 
     if(qEnvironmentVariableIsSet("QTDI_ACTIVE_PROFILES")) {
         auto profiles = splitList(qEnvironmentVariable("QTDI_ACTIVE_PROFILES"));
         m_activeProfiles = new Profiles{profiles.begin(), profiles.end()};
-    } else {
-        m_activeProfiles = &defaultProfiles();
     }
 
     if(auto app = QCoreApplication::instance()) {
@@ -1019,6 +1018,20 @@ void StandardApplicationContext::insertByName(const QString &name, DescriptorReg
             m_registeredProfiles.insert(profile);
         }
     }
+}
+
+bool StandardApplicationContext::canChangeActiveProfiles()
+{
+    for(auto reg : registrations) {
+        if(reg->isPublished() &&!reg->registeredProfiles().empty()) {
+            qCWarning(loggingCategory()).nospace() << "Cannot change active profiles, as a profile-dependent Service has already been published: " << *reg;
+            return false;
+        }
+    }
+    if(m_activeProfiles == &defaultProfiles()) {
+        m_activeProfiles = new Profiles{};
+    }
+    return true;
 }
 
 
@@ -2002,11 +2015,11 @@ void StandardApplicationContext::onSettingsAdded(QSettings * settings)
     } else {
         profiles = splitList(profilesSetting.toString());
     }
-    if(!profiles.empty()) {
-        if(m_activeProfiles == &defaultProfiles()) {
-            m_activeProfiles = new Profiles{profiles.begin(), profiles.end()};
-        } else {
-            std::copy(profiles.begin(), profiles.end(), std::insert_iterator(*m_activeProfiles, m_activeProfiles->end()));
+    if(!profiles.empty() && canChangeActiveProfiles()) {
+        Profiles profilesToAdd{profiles.begin(), profiles.end()};
+        if(!m_activeProfiles -> contains(profilesToAdd)) {
+            *m_activeProfiles += profilesToAdd;
+            emit activeProfilesChanged(*m_activeProfiles);
         }
     }
     if(!m_SettingsWatcher) {
@@ -2033,6 +2046,18 @@ void StandardApplicationContext::setAutoRefreshMillis(int newRefreshMillis)
         return;
     }
     m_SettingsWatcher->setAutoRefreshMillis(newRefreshMillis);
+}
+
+void StandardApplicationContext::setActiveProfiles(const Profiles &profiles)
+{
+    if(profiles.empty()) {
+        qCCritical(loggingCategory()).nospace() << "Cannot set the active profiles to an empty set";
+        return;
+    }
+    if(canChangeActiveProfiles() && *m_activeProfiles != profiles) {
+        *m_activeProfiles = profiles;
+        emit activeProfilesChanged(profiles);
+    }
 }
 
 bool StandardApplicationContext::autoRefreshEnabled() const
