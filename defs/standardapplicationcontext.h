@@ -738,6 +738,10 @@ private:
 
     bool canChangeActiveProfiles();
 
+    QSettings* settingsForProfile(QSettings* settings, const QString& profile);
+
+    void initSettingsForActiveProfiles();
+
     // QObject interface
 public:
     bool event(QEvent *event) override;
@@ -777,6 +781,7 @@ private:
     std::unordered_map<QString,QPointer<detail::PlaceholderResolver>> resolverCache;
     Profiles m_registeredProfiles;
     Profiles* m_activeProfiles;
+    std::unordered_map<ProfileAndName,QSettings*,ProfileNameHash> m_profileSettings;
 };
 
 namespace detail {
