@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.12.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>QApplicationContext: mcnepp::qtdi::default_service_traits&lt; S &gt; Struct Template Reference</title>
+<title>QApplicationContext: mcnepp::qtdi::default_service_traits&lt; S, I, serviceInitPolicy, F &gt; Struct Template Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -91,8 +91,9 @@ $(function(){ initResizable(false); });
 <div class="header">
   <div class="summary">
 <a href="#pub-types">Public Types</a> &#124;
+<a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="structmcnepp_1_1qtdi_1_1default__service__traits-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">mcnepp::qtdi::default_service_traits&lt; S &gt; Struct Template Reference</div></div>
+  <div class="headertitle"><div class="title">mcnepp::qtdi::default_service_traits&lt; S, I, serviceInitPolicy, F &gt; Struct Template Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
@@ -103,37 +104,53 @@ this template provides the following declarations:
 
 <p><code>#include &lt;<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a>&gt;</code></p>
 <div class="dynheader">
-Inheritance diagram for mcnepp::qtdi::default_service_traits&lt; S &gt;:</div>
+Inheritance diagram for mcnepp::qtdi::default_service_traits&lt; S, I, serviceInitPolicy, F &gt;:</div>
 <div class="dyncontent">
  <div class="center">
-  <img src="structmcnepp_1_1qtdi_1_1default__service__traits.png" usemap="#mcnepp::qtdi::default_5Fservice_5Ftraits_3C_20S_20_3E_map" alt=""/>
-  <map id="mcnepp::qtdi::default_5Fservice_5Ftraits_3C_20S_20_3E_map" name="mcnepp::qtdi::default_5Fservice_5Ftraits_3C_20S_20_3E_map">
-<area href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d..." alt="mcnepp::qtdi::service_traits&lt; S &gt;" shape="rect" coords="0,56,240,80"/>
+  <img src="structmcnepp_1_1qtdi_1_1default__service__traits.png" usemap="#mcnepp::qtdi::default_5Fservice_5Ftraits_3C_20S_2C_20I_2C_20serviceInitPolicy_2C_20F_20_3E_map" alt=""/>
+  <map id="mcnepp::qtdi::default_5Fservice_5Ftraits_3C_20S_2C_20I_2C_20serviceInitPolicy_2C_20F_20_3E_map" name="mcnepp::qtdi::default_5Fservice_5Ftraits_3C_20S_2C_20I_2C_20serviceInitPolicy_2C_20F_20_3E_map">
+<area href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d..." alt="mcnepp::qtdi::service_traits&lt; S &gt;" shape="rect" coords="0,56,371,80"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:a3fb43d645d2c546c2b85c170fd1c2d9d" id="r_a3fb43d645d2c546c2b85c170fd1c2d9d"><td class="memItemLeft" align="right" valign="top"><a id="a3fb43d645d2c546c2b85c170fd1c2d9d" name="a3fb43d645d2c546c2b85c170fd1c2d9d"></a>
+<tr class="memitem:a58ad456c36fcc9b8f0e7275269f59709" id="r_a58ad456c36fcc9b8f0e7275269f59709"><td class="memItemLeft" align="right" valign="top"><a id="a58ad456c36fcc9b8f0e7275269f59709" name="a58ad456c36fcc9b8f0e7275269f59709"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>service_type</b> = S</td></tr>
-<tr class="separator:a3fb43d645d2c546c2b85c170fd1c2d9d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad003570cdf93f7f9f81dde240d4d9253" id="r_ad003570cdf93f7f9f81dde240d4d9253"><td class="memItemLeft" align="right" valign="top"><a id="ad003570cdf93f7f9f81dde240d4d9253" name="ad003570cdf93f7f9f81dde240d4d9253"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>factory_type</b> = <a class="el" href="structmcnepp_1_1qtdi_1_1service__factory.html">service_factory</a>&lt;S&gt;</td></tr>
-<tr class="separator:ad003570cdf93f7f9f81dde240d4d9253"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a421ed2358a3f42b27fca76510ff68eb7" id="r_a421ed2358a3f42b27fca76510ff68eb7"><td class="memItemLeft" align="right" valign="top"><a id="a421ed2358a3f42b27fca76510ff68eb7" name="a421ed2358a3f42b27fca76510ff68eb7"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>initializer_type</b> = std::nullptr_t</td></tr>
-<tr class="separator:a421ed2358a3f42b27fca76510ff68eb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a58ad456c36fcc9b8f0e7275269f59709"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9b78b54a1e36930e6450b7d7d1dcab79" id="r_a9b78b54a1e36930e6450b7d7d1dcab79"><td class="memItemLeft" align="right" valign="top"><a id="a9b78b54a1e36930e6450b7d7d1dcab79" name="a9b78b54a1e36930e6450b7d7d1dcab79"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>initializer_type</b> = I</td></tr>
+<tr class="separator:a9b78b54a1e36930e6450b7d7d1dcab79"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a52cb93bd3a52a96fa3eb622f63300d27" id="r_a52cb93bd3a52a96fa3eb622f63300d27"><td class="memItemLeft" align="right" valign="top"><a id="a52cb93bd3a52a96fa3eb622f63300d27" name="a52cb93bd3a52a96fa3eb622f63300d27"></a>
+using&#160;</td><td class="memItemRight" valign="bottom"><b>factory_type</b> = F</td></tr>
+<tr class="separator:a52cb93bd3a52a96fa3eb622f63300d27"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
+Static Public Attributes</h2></td></tr>
+<tr class="memitem:a8bc1d81421809443a1c911ade8b3f03c" id="r_a8bc1d81421809443a1c911ade8b3f03c"><td class="memItemLeft" align="right" valign="top"><a id="a8bc1d81421809443a1c911ade8b3f03c" name="a8bc1d81421809443a1c911ade8b3f03c"></a>
+static constexpr <a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a>&#160;</td><td class="memItemRight" valign="bottom"><b>initialization_policy</b> = serviceInitPolicy</td></tr>
+<tr class="separator:a8bc1d81421809443a1c911ade8b3f03c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><div class="compoundTemplParams">template&lt;typename S&gt;<br />
-struct mcnepp::qtdi::default_service_traits&lt; S &gt;</div><p>Provides default-values for <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">service_traits</a>. <br  />
+<div class="textblock"><div class="compoundTemplParams">template&lt;typename S, typename I = std::nullptr_t, <a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a> serviceInitPolicy = ServiceInitializationPolicy::DEFAULT, typename F = service_factory&lt;S&gt;&gt;<br />
+struct mcnepp::qtdi::default_service_traits&lt; S, I, serviceInitPolicy, F &gt;</div><p>Provides default-values for <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">service_traits</a>. <br  />
 Specializations of <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">service_traits</a> in client-code are encouraged to extend this type! <br  />
 this template provides the following declarations: </p>
 <ul>
 <li>service_type an alias for S.</li>
+<li>initializer_type an alias for std::nullptr_t.</li>
+<li>static constexpr ServiceInitializationPolicy initialization_policy = ServiceInitializationPolicy::DEFAULT;</li>
 <li>factory_type an alias for <a class="el" href="structmcnepp_1_1qtdi_1_1service__factory.html" title="A template that can be specialized to override the standard way of instantiating services....">service_factory</a>.</li>
-<li>initializer_type an alias for std::nullptr_t. </li>
 </ul>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type </td></tr>
+    <tr><td class="paramname">I</td><td>the type of the initializer. Defaults to std::nullptr_t. </td></tr>
+    <tr><td class="paramname">serviceInitPolicy</td><td>determines whether the initializer will be invoked before publication (the default) or after it. </td></tr>
+    <tr><td class="paramname">F</td><td>the type of the service-factory. Defaults to <a class="el" href="structmcnepp_1_1qtdi_1_1service__factory.html" title="A template that can be specialized to override the standard way of instantiating services....">mcnepp::qtdi::service_factory</a>. </td></tr>
+  </table>
+  </dd>
+</dl>
 </div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>defs/<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a></li>
 </ul>
