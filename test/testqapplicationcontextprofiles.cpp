@@ -51,6 +51,12 @@ private slots:
     }
 
     void testConfigureActiveProfiles() {
+        QFileInfo info{configuration->fileName()};
+
+        qInfo().nospace() << info.path() << " " << info.fileName() << " " << info.baseName();
+
+        QFileInfo profileInto{info.path(), info.baseName()+"-test."+info.suffix()};
+        qInfo().nospace() << profileInto.path() << " " << profileInto.fileName() << " " << profileInto.baseName();
 
         QCOMPARE(context->activeProfiles(), Profiles{"default"});
 
@@ -124,6 +130,74 @@ private slots:
         context->registerObject(&tempConfig);
         Profiles expected{"unit-test", "mock"};
         QCOMPARE(context->activeProfiles(), expected);
+    }
+
+    void testProfileSpecificPropertiesInFile() {
+        configuration->setValue("timer/interval", 5000);
+        configuration->setValue("timer/singleShot", true);
+        configuration -> setValue("qtdi/activeProfiles", "test");
+        configuration->setValue("qtdi/enableProfileSpecificSettings", true);
+        QFileInfo info{settingsFile->fileName()};
+        QString withProfile = QDir{info.path()}.filePath(info.completeBaseName()+"-test."+info.suffix());
+        auto removeFile = [](QFile* file) { file->remove(); delete file;};
+        std::unique_ptr<QFile,decltype(removeFile)> profileSpecific{new QFile{withProfile}, removeFile};
+
+        QVERIFY(profileSpecific->open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate));
+        profileSpecific->write("[timer]\n");
+        profileSpecific->write("interval=4711");
+        profileSpecific->close();
+        context->registerObject(configuration.get());
+
+        auto timerReg = context->registerService(service<QTimer>() << withAutowire, "timer");
+        RegistrationSlot<QTimer> timerSlot{timerReg, this};
+        QVERIFY(context->publish());
+        QCOMPARE(timerSlot->interval(), 4711);
+        QVERIFY(timerSlot->isSingleShot());
+    }
+
+    void testProfileSpecificPropertiesNative() {
+        QSettings settings{QSettings::NativeFormat, QSettings::UserScope, "mcnepp", "qtditest"};
+        settings.setValue("timer/interval", 5000);
+        settings.setValue("timer/singleShot", true);
+        settings.setValue("qtdi/activeProfiles", "test");
+        settings.setValue("qtdi/enableProfileSpecificSettings", true);
+
+        {
+            QSettings profileSpecific{QSettings::NativeFormat, QSettings::UserScope, "mcnepp", "qtditest-test"};
+            profileSpecific.setValue("timer/interval", 4711);
+        } //QSettings goes out of scope but leaves persistent configuration-entries in place.
+
+        context->registerObject(&settings);
+
+        auto timerReg = context->registerService(service<QTimer>() << withAutowire, "timer");
+        RegistrationSlot<QTimer> timerSlot{timerReg, this};
+        QVERIFY(context->publish());
+        QCOMPARE(timerSlot->interval(), 4711);
+        QVERIFY(timerSlot->isSingleShot());
+    }
+
+    void testProfileSpecificPropertiesAutoRefresh() {
+        QSettings settings{QSettings::NativeFormat, QSettings::UserScope, "mcnepp", "qtditest"};
+        settings.setValue("timer/interval", 5000);
+        settings.setValue("qtdi/enableAutoRefresh", true);
+        settings.setValue("qtdi/autoRefreshMillis", 100);
+        settings.setValue("qtdi/activeProfiles", "test");
+        settings.setValue("qtdi/enableProfileSpecificSettings", true);
+
+        QSettings profileSpecific{QSettings::NativeFormat, QSettings::UserScope, "mcnepp", "qtditest-test"};
+        profileSpecific.setValue("timer/interval", 4711);
+
+        context->registerObject(&settings);
+
+        auto timerReg = context->registerService(service<QTimer>() << autoRefresh("interval", "${timer/interval}"), "timer");
+        RegistrationSlot<QTimer> timerSlot{timerReg, this};
+        QVERIFY(context->publish());
+        QCOMPARE(timerSlot->interval(), 4711);
+
+        profileSpecific.setValue("timer/interval", 1812);
+        profileSpecific.sync();
+        QVERIFY(QTest::qWaitFor([&timerSlot] { return timerSlot->interval() == 1812;}, 1000));
+        settings.setValue("qtdi/enableAutoRefresh", false);
     }
 
     void testConfigureActiveProfilesViaEnvironment() {

@@ -652,6 +652,37 @@ If you want to register an alternative *Mock-Service* , this will be the necessa
 With everything else untouched, the application will behave exactly as before. The profile `"default"`will be active, and a %Service with implementation-type `RestPropFetcher` will be created.
 <br>However, if we change the *active profile* to "mock", an instance of implementation-type `MockPropFetcher` will be instantiated instead!
 
+### Profile-specific configuration-entries
+
+Sometimes, you may want to configure your Services differently, based on the *active profiles*.
+<br>One possible way of doing this has been shown above: you could register different Services for different profiles.
+<br>However, QApplicationContext offers a much easier way: the lookup of configuration-entries will automatically take into account the *active profiles*, preferring
+profile-specific entries of generic ones.
+<br>This is how it works:
+- For every QSettings-Object that has been registered, the configuration-entry `"qtdi/enableProfileSpecificSettings"` will be inspected. If that is `true`, then for each active profile, an additional QSettings-Object will be created internally.
+- The new QSettings will have the same QSettings::format() as the ones they are based on.
+- In case the QSettings::applicationName() is present, the new QSettings will have the same QSettings::organizationName() and QSettings::scope() as the original one.
+As its QSettings::applicationName(), it will get the concatenation of the original name with a dash and the name of the active profile.
+- Should no QSettings::applicationName() be present, the QSettings::fileName() will be used to construct a new QSettings-Object. Its fileName() will be comprised of the base-name with a dash and the name of the active profile, followed by the original suffix.
+
+Example: Suppose you are registering a QSettings with 
+
+    scope: UserScope
+    format: NativeFormat
+    organizationName: mycompany
+    applicationName: thesuperapp
+
+You set the *active profiles* to `{"default", "headless", "productive"}`.
+
+Suppose a configuration-entry `baseUrl` shall be resolved. It will now be looked up in the following sequence, until it has been resolved:
+
+1. `mycompany/thesuperapp-headless/baseUrl`
+2. `mycompany/thesuperapp-productive/baseUrl`
+3. `mycompany/thesuperapp/baseUrl`
+
+**Note:** The lookup-sequence will not change when remove `"default"` from the set of *active profiles*!
+
+
 ### Configuring the active profiles
 
 If the environment variable `QTDI_ACTIVE_PROFILES` is defined, its value will determine the *active profiles* of each newly constructed ApplicationContext.

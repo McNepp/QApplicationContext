@@ -5,6 +5,8 @@
 #include <QUuid>
 #include <QRegularExpression>
 #include <QCoreApplication>
+#include <QFileInfo>
+#include <QDir>
 #include "standardapplicationcontext.h"
 #include "qsettingswatcher.h"
 
@@ -166,6 +168,14 @@ template<typename T> struct Collector : public detail::Subscription {
 
     Collector() {
         QObject::connect(this, &detail::Subscription::objectPublished, this, &Collector::collect);
+    }
+
+    template<typename Cont> auto subscribeAll(const Cont& container) ->
+        std::enable_if_t<std::conjunction_v<std::is_assignable<registration_handle_t&,decltype(*container.begin())>,std::is_assignable<registration_handle_t&,decltype(*container.end())>>,void>
+    {
+        for(auto& reg : container) {
+            reg->subscribe(this);
+        }
     }
 
     QList<T*> collected;
@@ -1020,6 +1030,45 @@ void StandardApplicationContext::insertByName(const QString &name, DescriptorReg
     }
 }
 
+QSettings* StandardApplicationContext::settingsForProfile(QSettings* settings, const QString& profile) {
+    QSettings* forProfile;
+    //If the applicationName is empty, we create a new QSettings using the fileName of the existing one:
+    if(settings -> applicationName().isEmpty()) {
+        QFileInfo info{settings -> fileName()};
+        QString withProfile = QDir{info.path()}.filePath(info.completeBaseName()+"-"+profile+"."+info.suffix());
+        forProfile = new QSettings{withProfile, settings->format(), m_injectedContext};
+    } else {
+        forProfile = new QSettings{settings->format(), settings->scope(), settings->organizationName(), settings->applicationName()+"-"+profile, m_injectedContext};
+    }
+    return forProfile;
+}
+
+void StandardApplicationContext::initSettingsForActiveProfiles() {
+    if(m_activeProfiles != &defaultProfiles()) {
+        Collector<QSettings> collector;
+        collector.subscribeAll(registrations);
+        for(QSettings* settings : collector.collected) {
+            //Only create profile-specific QSettings if this has been explicitly requested:
+            if(!settings->value("qtdi/enableProfileSpecificSettings").toBool()) {
+                continue;
+            }
+            for(const QString& profile : *m_activeProfiles) {
+                if(profile == "default") {
+                    continue; //No need to create an extra QSettings for profile "default"
+                }
+                QSettings*& forProfile = m_profileSettings[{profile, settings->fileName()}];
+                if(!forProfile) {
+                    forProfile = settingsForProfile(settings, profile);
+                    if(m_SettingsWatcher) {
+                        m_SettingsWatcher->add(forProfile);
+                    }
+                    qCInfo(loggingCategory()).nospace() << "Lookup profile-specific configuration-entries in Settings-path " << forProfile->fileName();
+                }
+            }
+        }
+    }
+}
+
 bool StandardApplicationContext::canChangeActiveProfiles()
 {
     for(auto reg : registrations) {
@@ -1215,7 +1264,6 @@ bool StandardApplicationContext::publish(bool allowPartial)
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot publish ApplicationContext in different thread";
         return false;
     }
-
 
 
     descriptor_list allCreated;
@@ -1939,9 +1987,7 @@ detail::PlaceholderResolver *StandardApplicationContext::getResolver(const QStri
 QStringList StandardApplicationContext::configurationKeys(const QString &section) const
 {
     Collector<QSettings> collector;
-    for(auto reg : registrations) {
-        reg->subscribe(&collector);
-    }
+    collector.subscribeAll(registrations);
 
     QStringList orderedKeys;
     QSet<QString> keySet;
@@ -1966,9 +2012,13 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key, b
     }
 
     Collector<QSettings> collector;
-    for(auto reg : registrations) {
-        reg->subscribe(&collector);
+    //The profile-specific QSettings shall be searched before the others:
+    for(auto& entry : m_profileSettings) {
+        collector.collected.push_back(entry.second);
     }
+
+    collector.subscribeAll(registrations);
+
     QString searchKey = key;
     do {
         for(QSettings* settings : collector.collected) {
@@ -2015,13 +2065,6 @@ void StandardApplicationContext::onSettingsAdded(QSettings * settings)
     } else {
         profiles = splitList(profilesSetting.toString());
     }
-    if(!profiles.empty() && canChangeActiveProfiles()) {
-        Profiles profilesToAdd{profiles.begin(), profiles.end()};
-        if(!m_activeProfiles -> contains(profilesToAdd)) {
-            *m_activeProfiles += profilesToAdd;
-            emit activeProfilesChanged(*m_activeProfiles);
-        }
-    }
     if(!m_SettingsWatcher) {
         bool enabled = settings->value("qtdi/enableAutoRefresh").toBool();
         if(enabled) {
@@ -2030,6 +2073,14 @@ void StandardApplicationContext::onSettingsAdded(QSettings * settings)
             m_SettingsWatcher->setAutoRefreshMillis(settings->value("qtdi/autoRefreshMillis", detail::QSettingsWatcher::DEFAULT_REFRESH_MILLIS).toInt());
 
             qCInfo(loggingCategory()) << "Auto-refresh has been enabled.";
+        }
+    }
+    if(!profiles.empty() && canChangeActiveProfiles()) {
+        Profiles profilesToAdd{profiles.begin(), profiles.end()};
+        if(!m_activeProfiles -> contains(profilesToAdd)) {
+            *m_activeProfiles += profilesToAdd;
+            initSettingsForActiveProfiles();
+            emit activeProfilesChanged(*m_activeProfiles);
         }
     }
 }
@@ -2056,6 +2107,7 @@ void StandardApplicationContext::setActiveProfiles(const Profiles &profiles)
     }
     if(canChangeActiveProfiles() && *m_activeProfiles != profiles) {
         *m_activeProfiles = profiles;
+        initSettingsForActiveProfiles();
         emit activeProfilesChanged(profiles);
     }
 }
