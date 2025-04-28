@@ -121,6 +121,9 @@ Signals</h2></td></tr>
 <tr class="memitem:a61f32f28ebc21f907220ea219577b798" id="r_a61f32f28ebc21f907220ea219577b798"><td class="memItemLeft" align="right" valign="top"><a id="a61f32f28ebc21f907220ea219577b798" name="a61f32f28ebc21f907220ea219577b798"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>autoRefreshMillisChanged</b> (int)</td></tr>
 <tr class="separator:a61f32f28ebc21f907220ea219577b798"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac5ab2152d3c878728fbd1002acad4510" id="r_ac5ab2152d3c878728fbd1002acad4510"><td class="memItemLeft" align="right" valign="top"><a id="ac5ab2152d3c878728fbd1002acad4510" name="ac5ab2152d3c878728fbd1002acad4510"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>activeProfilesChanged</b> (const <a class="el" href="qapplicationcontext_8h.html#ae6c23817c171c31a11e310fd61c2f857">Profiles</a> &amp;)</td></tr>
+<tr class="separator:ac5ab2152d3c878728fbd1002acad4510"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header signals_classmcnepp_1_1qtdi_1_1_q_application_context"><td colspan="2" onclick="javascript:dynsection.toggleInherit('signals_classmcnepp_1_1qtdi_1_1_q_application_context')"><img src="closed.png" alt="-"/>&#160;Signals inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
 <tr class="memitem:a75153d41f99f713cdf05079870f8b3e8 inherit signals_classmcnepp_1_1qtdi_1_1_q_application_context" id="r_a75153d41f99f713cdf05079870f8b3e8"><td class="memItemLeft" align="right" valign="top">
 void&#160;</td><td class="memItemRight" valign="bottom"><b>publishedChanged</b> ()</td></tr>
@@ -172,6 +175,11 @@ This value will influence the behaiour of configuration-values created with mcne
 <tr class="memdesc:acb931f97e5e363a648e5314902908770"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determines the maximum delay for 'auto-refreshable' configuration-values. <br  />
 This value will influence the behaiour of configuration-values created with mcnepp::qtdi::autoRefresh(const Qstring&amp;).  <br /></td></tr>
 <tr class="separator:acb931f97e5e363a648e5314902908770"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2b13f5bafcad8e76f44d2e8f7098a135" id="r_a2b13f5bafcad8e76f44d2e8f7098a135"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2b13f5bafcad8e76f44d2e8f7098a135">setActiveProfiles</a> (const <a class="el" href="qapplicationcontext_8h.html#ae6c23817c171c31a11e310fd61c2f857">Profiles</a> &amp;profiles)</td></tr>
+<tr class="memdesc:a2b13f5bafcad8e76f44d2e8f7098a135"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the active Profiles. <br  />
+Invoking this method will overrule any profiles determined by the configuration-entry <code>"qtdi/activeProfiles"</code>. <br  />
+<b>Note:</b> Changing the active profiles is only possible when no profile-dependent Service has been published yet.  <br /></td></tr>
+<tr class="separator:a2b13f5bafcad8e76f44d2e8f7098a135"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae4b6887de6d62b6fe942efad8df1dce3" id="r_ae4b6887de6d62b6fe942efad8df1dce3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae4b6887de6d62b6fe942efad8df1dce3">autoRefreshEnabled</a> () const override</td></tr>
 <tr class="memdesc:ae4b6887de6d62b6fe942efad8df1dce3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Has auto-refresh been enabled? <br  />
 If enabled, it is possible to use mcnepp::qtdi::autoRefresh(const QString&amp;) to force automatic updates of service-properties, whenever the corresponding configuration-values is modified. <br  />
@@ -358,6 +366,9 @@ Properties</h2></td></tr>
 <tr class="memitem:a78415578f0a9874528ababd6728e9c07" id="r_a78415578f0a9874528ababd6728e9c07"><td class="memItemLeft" align="right" valign="top"><a id="a78415578f0a9874528ababd6728e9c07" name="a78415578f0a9874528ababd6728e9c07"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>autoRefreshMillis</b></td></tr>
 <tr class="separator:a78415578f0a9874528ababd6728e9c07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa163d64fc3ff5c0fdad29248e4953de3" id="r_aa163d64fc3ff5c0fdad29248e4953de3"><td class="memItemLeft" align="right" valign="top"><a id="aa163d64fc3ff5c0fdad29248e4953de3" name="aa163d64fc3ff5c0fdad29248e4953de3"></a>
+<a class="el" href="qapplicationcontext_8h.html#ae6c23817c171c31a11e310fd61c2f857">Profiles</a>&#160;</td><td class="memItemRight" valign="bottom"><b>activeProfiles</b></td></tr>
+<tr class="separator:aa163d64fc3ff5c0fdad29248e4953de3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td colspan="2" onclick="javascript:dynsection.toggleInherit('properties_classmcnepp_1_1qtdi_1_1_q_application_context')"><img src="closed.png" alt="-"/>&#160;Properties inherited from <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></td></tr>
 <tr class="memitem:ab9bee920351076344b92a8143b05da81 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context" id="r_ab9bee920351076344b92a8143b05da81"><td class="memItemLeft" align="right" valign="top">unsigned&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ab9bee920351076344b92a8143b05da81">published</a></td></tr>
 <tr class="memdesc:ab9bee920351076344b92a8143b05da81 inherit properties_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">How many services have been published? This property will initially yield <code>false</code>, until <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">publish(bool)</a> is invoked. <b>Note:</b> This property will <b>not</b> transition back to <code>0</code> upon destruction of this ApplicationContext!  <br /></td></tr>
@@ -1021,7 +1032,7 @@ template&lt;typename S &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000017">Deprecated</a></b></dt><dd>Use <a class="el" href="#a04ed0e326833ba1e76dc6a0ba3866cfe" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService(const Service&lt;S,Impl,scope&gt;&amp;, const QString&amp;,const Profiles&amp;)</a> instead. </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000019">Deprecated</a></b></dt><dd>Use <a class="el" href="#a04ed0e326833ba1e76dc6a0ba3866cfe" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService(const Service&lt;S,Impl,scope&gt;&amp;, const QString&amp;,const Profiles&amp;)</a> instead. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> if it could not be registered. </dd></dl>
 
 </div>
@@ -1113,7 +1124,7 @@ template&lt;typename S &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000016">Deprecated</a></b></dt><dd>Use <a class="el" href="#a04ed0e326833ba1e76dc6a0ba3866cfe" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService(const Service&lt;S,Impl,scope&gt;&amp;, const QString&amp;,const Profiles&amp;)</a> instead. </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000018">Deprecated</a></b></dt><dd>Use <a class="el" href="#a04ed0e326833ba1e76dc6a0ba3866cfe" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService(const Service&lt;S,Impl,scope&gt;&amp;, const QString&amp;,const Profiles&amp;)</a> instead. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> if it could not be registered. </dd></dl>
 
 </div>
@@ -1212,7 +1223,7 @@ template&lt;typename S , typename Impl , <a class="el" href="qapplicationcontext
   </table>
   </dd>
 </dl>
-<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000014">Deprecated</a></b></dt><dd>Use <a class="el" href="#a04ed0e326833ba1e76dc6a0ba3866cfe" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService(const Service&lt;S,Impl,scope&gt;&amp;, const QString&amp;,const Profiles&amp;)</a> instead. </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000016">Deprecated</a></b></dt><dd>Use <a class="el" href="#a04ed0e326833ba1e76dc6a0ba3866cfe" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService(const Service&lt;S,Impl,scope&gt;&amp;, const QString&amp;,const Profiles&amp;)</a> instead. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> if it could not be registered. </dd></dl>
 
 </div>
@@ -1330,7 +1341,7 @@ template&lt;typename S , typename Impl , typename B , <a class="el" href="qappli
   </table>
   </dd>
 </dl>
-<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000015">Deprecated</a></b></dt><dd>Use <a class="el" href="#a7508b2bd97d7cd93d0b1d40092a01755" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService(const Service&lt;S,Impl,scope&gt;&amp;,const ServiceRegistration&lt;B,ServiceScope::TEMPLATE&gt;&amp;,const QString&amp;,const Profiles&amp;)</a> instead. </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000017">Deprecated</a></b></dt><dd>Use <a class="el" href="#a7508b2bd97d7cd93d0b1d40092a01755" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">registerService(const Service&lt;S,Impl,scope&gt;&amp;,const ServiceRegistration&lt;B,ServiceScope::TEMPLATE&gt;&amp;,const QString&amp;,const Profiles&amp;)</a> instead. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> for the registered service, or an invalid <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> if it could not be registered. </dd></dl>
 
 </div>
@@ -1503,6 +1514,33 @@ The expression may contain one or more <em>placeholders</em> which will be resol
 <dl class="section return"><dt>Returns</dt><dd>a valid QVariant, or an invalid QVariant if the expression could not be parsed. </dd></dl>
 
 <p>Implements <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a7e3f3903656efb88360b9c2fba301475">mcnepp::qtdi::QApplicationContext</a>.</p>
+
+</div>
+</div>
+<a id="a2b13f5bafcad8e76f44d2e8f7098a135" name="a2b13f5bafcad8e76f44d2e8f7098a135"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2b13f5bafcad8e76f44d2e8f7098a135">&#9670;&#160;</a></span>setActiveProfiles()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void mcnepp::qtdi::StandardApplicationContext::setActiveProfiles </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="qapplicationcontext_8h.html#ae6c23817c171c31a11e310fd61c2f857">Profiles</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>profiles</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Sets the active Profiles. <br  />
+Invoking this method will overrule any profiles determined by the configuration-entry <code>"qtdi/activeProfiles"</code>. <br  />
+<b>Note:</b> Changing the active profiles is only possible when no profile-dependent Service has been published yet. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">profiles</td><td>the profiles to activate. Must not be empty. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
