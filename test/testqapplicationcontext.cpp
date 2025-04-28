@@ -51,14 +51,15 @@ void initInterface(Interface1* srv) {
     srv->init();
 }
 
-template<> struct service_traits<BaseService> : default_service_traits<BaseService> {
-    using initializer_type = service_initializer<&BaseService::initContext>;
+template<> struct service_traits<BaseService> : default_service_traits<BaseService,service_initializer<&BaseService::initContext>> {
+};
+
+template<> struct service_traits<BaseService2> : default_service_traits<BaseService2,service_initializer<&BaseService2::init>,ServiceInitializationPolicy::AFTER_PUBLICATION> {
 };
 
 
-template<> struct service_traits<Interface1> : default_service_traits<Interface1>  {
-    using initializer_type = service_initializer<initInterface>;
 
+template<> struct service_traits<Interface1> : default_service_traits<Interface1,service_initializer<initInterface>>  {
 };
 
 
@@ -1846,12 +1847,26 @@ void testWatchConfigurationFileChangeWithError() {
 
 
 
-    void testWithInit() {
-        auto reg = context->registerService(service<BaseService2>().withInit(&BaseService2::init));
+    void testInitAfterPublicationWithServiceTraits() {
+        int initBeforePublication = 0;
+        auto reg = context->registerService(service<BaseService2>());
+        reg.subscribe(this, [&initBeforePublication] (BaseService2* srv) { initBeforePublication = srv->initCalled;});
         QVERIFY(context->publish());
         RegistrationSlot<BaseService2> baseSlot{reg, this};
+        QCOMPARE(initBeforePublication, 0);
         QCOMPARE(baseSlot->initCalled, 1);
     }
+
+    void testInitAfterPublication() {
+        bool activeBeforePublication = false;
+        auto reg = context->registerService(service<QTimer>().withInit<ServiceInitializationPolicy::AFTER_PUBLICATION>(static_cast<void(QTimer::*)()>(&QTimer::start)));
+        reg.subscribe(this, [&activeBeforePublication] (QTimer* timer) { activeBeforePublication = timer->isActive();});
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> timerSlot{reg, this};
+        QVERIFY(!activeBeforePublication);
+        QVERIFY(timerSlot->isActive());
+    }
+
 
 
 
@@ -2652,21 +2667,41 @@ void testWatchConfigurationFileChangeWithError() {
 
     }
 
-    void testCardinalityNServiceWithRequiredName() {
-        auto reg1 = context->registerService(service<Interface1,BaseService>(), "base1");
+    void testInjectAllWithRequiredNames() {
+        context->registerService(service<Interface1,BaseService>(), "base1");
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
-        auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>("base2")));
+        auto reg3 = context->registerService(service<Interface1,BaseService>(), "base3");
+        auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>("base2", "base3")));
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
-        RegistrationSlot<Interface1> base1{reg1, this};
         RegistrationSlot<Interface1> base2{reg2, this};
+        RegistrationSlot<Interface1> base3{reg3, this};
         RegistrationSlot<CardinalityNService> service{reg, this};
-        QCOMPARE_NE(base1, base2);
-        QCOMPARE(service->my_bases.size(), 1);
+        QCOMPARE(service->my_bases.size(), 2);
+        QVERIFY(service->my_bases.contains(base2.last()));
+        QVERIFY(service->my_bases.contains(base3.last()));
 
         RegistrationSlot<Interface1> services{regs, this};
-        QCOMPARE(services.invocationCount(), 2);
-        QCOMPARE(service->my_bases[0], services.last());
+        QCOMPARE(services.invocationCount(), 3);
+
+    }
+
+    void testInjectAllWithRequiredRegistrations() {
+        context->registerService(service<Interface1,BaseService>(), "base1");
+        auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
+        auto reg3 = context->registerService(prototype<Interface1,BaseService>(), "base3");
+        auto reg = context->registerService(service<CardinalityNService>(injectAll(reg2, reg3)));
+        QVERIFY(context->publish());
+        auto regs = context->getRegistration<Interface1>();
+        RegistrationSlot<Interface1> base2{reg2, this};
+        RegistrationSlot<Interface1> base3{reg3, this};
+        RegistrationSlot<CardinalityNService> service{reg, this};
+        QCOMPARE(service->my_bases.size(), 2);
+        QVERIFY(service->my_bases.contains(base2.last()));
+        QVERIFY(service->my_bases.contains(base3.last()));
+
+        RegistrationSlot<Interface1> services{regs, this};
+        QCOMPARE(services.invocationCount(), 3);
 
     }
 

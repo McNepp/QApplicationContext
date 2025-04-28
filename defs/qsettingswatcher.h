@@ -31,8 +31,8 @@ public:
 
     void setAutoRefreshMillis(int newRefreshMillis);
 
-private:
     void add(QSettings* settings);
+private:
 
     void handleRemovedFile(QSettings*);
     void refreshFromSettings(QSettings* settings);

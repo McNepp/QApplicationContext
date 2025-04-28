@@ -79,7 +79,7 @@ We will soon see why this direct translation is usually not a good idea, but jus
 The above code has an obvious flaw: The `QNetworkAccessManager` is created outside the QApplicationContext. It will not be managed by the Context. Should another service need a `QNetworkAccessManager`,
 you would have to create another instance.
 
-We fix this by not providing the pointer to the `QNetworkAccessManager`, but instead using a kind of "placeholder" for it. This placeholder is the class-template `mcnepp::qtdi::Dependency`.
+We fix this by not providing the pointer to the `QNetworkAccessManager`, but instead using a kind of "proxy" for it. This proxy is of the opaque type `mcnepp::qtdi::Dependency`.
 We can create Dependencies by using one of the functions mcnepp::qtdi::inject(), mcnepp::qtdi::injectIfPresent() or mcnepp::qtdi::inject().
 
 You can think of `inject` as a request to the QApplicationContext: *If a service of this type has been registered, please provide it here!*.
@@ -413,7 +413,7 @@ Also, there are differences to mcnepp::qtdi::QApplicationContext::registerObject
 In our previous example, we have seen the dependency of our `RestPropFetcher` to a `QNetworkAccessManager`.  
 This constitutes a *mandatory dependency*: instantion of the `RestPropFetcher`will fail if no `QNetworkAccessManager`can be found.
 However, there are more ways to express a dependency-relation.  
-This is reflected by the enum-type `mcnepp::qtdi::Kind` and its enum-constants as listed below:
+This is reflected by the enum-type `mcnepp::qtdi::DependencyKind` and its enum-constants as listed below:
 
 
 ### MANDATORY
@@ -433,9 +433,13 @@ In case you have the ServiceRegistration for the dependency at hand, you may ski
 ### OPTIONAL
 A service that has an *optional dependency* to another service may be instantiated even when no matching other service can be found in the ApplicationContext.
 In that case, `nullptr` will be passed to the service's constructor.  
-Optional dependencies are specified the `Dependency` helper-template. Suppose it were possible to create our `RestPropFetcher` without a `QNetworkAccessManage`:
+Optional dependencies are specified using the function mcnepp::qtdi::injectIfPresent(). Suppose it were possible to create our `RestPropFetcher` without a `QNetworkAccessManage`:
 
     context->registerService(service<RestPropFetcher>(injectIfPresent<QNetworkAccessManager>()));
+
+When the Service is later created, the ApplicationContext will look for another Service of type `QNetworkAccessManager`. 
+If exactly one matching Service is found, it will be injected into the `RestPropFetcher`. Otherwise, `nullptr` will be injected.
+
 
 ### N (one-to-many)
 
@@ -648,6 +652,37 @@ If you want to register an alternative *Mock-Service* , this will be the necessa
 With everything else untouched, the application will behave exactly as before. The profile `"default"`will be active, and a %Service with implementation-type `RestPropFetcher` will be created.
 <br>However, if we change the *active profile* to "mock", an instance of implementation-type `MockPropFetcher` will be instantiated instead!
 
+### Profile-specific configuration-entries
+
+Sometimes, you may want to configure your Services differently, based on the *active profiles*.
+<br>One possible way of doing this has been shown above: you could register different Services for different profiles.
+<br>However, QApplicationContext offers a much easier way: the lookup of configuration-entries will automatically take into account the *active profiles*, preferring
+profile-specific entries of generic ones.
+<br>This is how it works:
+- For every QSettings-Object that has been registered, the configuration-entry `"qtdi/enableProfileSpecificSettings"` will be inspected. If that is `true`, then for each active profile, an additional QSettings-Object will be created internally.
+- The new QSettings will have the same QSettings::format() as the ones they are based on.
+- In case the QSettings::applicationName() is present, the new QSettings will have the same QSettings::organizationName() and QSettings::scope() as the original one.
+As its QSettings::applicationName(), it will get the concatenation of the original name with a dash and the name of the active profile.
+- Should no QSettings::applicationName() be present, the QSettings::fileName() will be used to construct a new QSettings-Object. Its fileName() will be comprised of the base-name with a dash and the name of the active profile, followed by the original suffix.
+
+Example: Suppose you are registering a QSettings with 
+
+    scope: UserScope
+    format: NativeFormat
+    organizationName: mycompany
+    applicationName: thesuperapp
+
+You set the *active profiles* to `{"default", "headless", "productive"}`.
+
+Suppose a configuration-entry `baseUrl` shall be resolved. It will now be looked up in the following sequence, until it has been resolved:
+
+1. `mycompany/thesuperapp-headless/baseUrl`
+2. `mycompany/thesuperapp-productive/baseUrl`
+3. `mycompany/thesuperapp/baseUrl`
+
+**Note:** The lookup-sequence will not change when remove `"default"` from the set of *active profiles*!
+
+
 ### Configuring the active profiles
 
 If the environment variable `QTDI_ACTIVE_PROFILES` is defined, its value will determine the *active profiles* of each newly constructed ApplicationContext.
@@ -659,6 +694,9 @@ If the environment variable `QTDI_ACTIVE_PROFILES` is defined, its value will de
 
 The value for the entry will be read, converted to a QStringList and appended to the ApplicationContext's *active profiles*.
 <br>If neither the environment variable `QTDI_ACTIVE_PROFILES` is defined nor an entry `"qtdi/activeProfiles"` found, the *active profile* will be "default".
+<br>You may also set the active profiles programmatically using mcnepp::qtdi::StandardApplicationContext::setActiveProfiles().
+<br>**Note:** The active profiles can be changed only as long as no profile-dependent services have been published!
+Any attempt at doing otherwise will fail and result in an error logged.
 
 
 ### Detection of ambiguous registrations
@@ -927,6 +965,8 @@ specified.
 
 The same *init-method* should be used for every service of a certain type. In order to achieve this, you need to specialize
 mcnepp::qtdi::service_traits for your service-type and declare a type-alias named `initializer_type`.
+<br>It is recommended to make use of the helper-template mcnepp::qtdi::default_service_traits for this purpose, which will declare the necessary
+type-aliases for you:
 
 A suitable type would be a callable `struct` with either one argument of the service-type, or with two arguments, the second being of type `QApplicationContext*`.
 
@@ -937,8 +977,7 @@ A suitable type would be a callable `struct` with either one argument of the ser
     };
     
     namespace mcnepp::qtdi {
-      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher> {
-         using initializer_type = RestPropFetcher_initializer;
+      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher,RestPropFetcher_initializer> {
       };
     }
 
@@ -952,8 +991,7 @@ Shouldn't we be able to get rid of the `struct RestPropFetcher_initializer` some
 That way, we can reference the member-function (almost) directly in our service_traits:
 
     namespace mcnepp::qtdi {
-      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher> {
-         using initializer_type = service_initializer<&RestPropFetcher::init>;
+      template<> struct service_traits<RestPropFetcher> : default_service_traits<RestPropFetcher,service_initializer<&RestPropFetcher::init>> {
       };
     }
 
@@ -977,8 +1015,7 @@ We would like to specify the use of the member-function `PropFetcher::init()` fo
 <br>Well, this is how it's done:
 
     namespace mcnepp::qtdi {
-      template<> struct service_traits<PropFetcher> : default_service_traits<RropFetcher> {
-         using initializer_type = service_initializer<&PropFetcher::init>;
+      template<> struct service_traits<PropFetcher> : default_service_traits<PropFetcher,service_initializer<&PropFetcher::init>> {
       };
     }
 
@@ -996,6 +1033,27 @@ There is also method that lets you specify an *init-method* without the need for
     context -> registerService(service<PropFetcherAggregator>(injectAll<RestPropFetcher>()).withInit(&PropFetcherAggregator::init));
 
 See mcnepp::qtdi::Service::withInit()
+
+
+### Changing the order of initialization
+
+Per default, publication of a Service is announced **after** the *init-method* has run.
+<br>However, there may be cases where you would like to subscribe to ServiceRegistrations and have the Subscription be invoked
+**before** the *init-method* has run.
+<br>In order to achieve this, there is the enumeration mcnepp::qtdi::ServiceInitializationPolicy.
+<br>You may specify a different ServiceInitializationPolicy via the service_traits.
+The following example will determine that Services of type PropFetcher will be announced **before** their method `PropFetcher::init`
+has run:
+
+    namespace mcnepp::qtdi {
+      template<> struct service_traits<PropFetcher> : default_service_traits<PropFetcher,service_initializer<&PropFetcher::init>,ServiceInitializationPolicy::AFTER_PUBLICATION> {
+      };
+    }
+
+Of course, a ServiceInitializationPolicy can also be supplied per registration, as shown here:
+
+    context -> registerService(service<PropFetcherAggregator>(injectAll<RestPropFetcher>()).withInit<ServiceInitializationPolicy::AFTER_PUBLICATION>(&PropFetcherAggregator::init));
+
 
 
 ## Resolving ambiguities
@@ -1017,8 +1075,8 @@ In order for this to work, several pre-conditions must be true:
 
 1. the constructor of the service must be accessible, i.e. declared `public`.
 2. The number of mandatory arguments must match the arguments provided via `QApplicationContext::registerService()`.
-3. For each `Dependency<T>` with `Kind::MANDATORY` or `Kind::OPTIONAL`, the argument-type must be `T*`.
-4. For each `Dependency<T>` with `Kind::N`, the argument-type must be `QList<T*>`.
+3. For each mandatory or optional dependency, the argument-type must be `T*`.
+4. For each dependency with cardinality N, the argument-type must be `QList<T*>`.
 
 If any of these conditions fails, then the invocation of `QApplicationContext::registerService()` will fail compilation.
 
@@ -1157,7 +1215,7 @@ We've also added a member-function `addPropFetcher(PropFetcher*)`, which we'll p
     context -> publish();
     
 
-1. No need to specify Dependency anymore. Therefore, we can use the simplified overload of QApplicationContext::registerService().
+1. No need to specify the dependency anymore. Therefore, we can use the simplified overload of QApplicationContext::registerService().
 2. Will cause all PropFetchers to be injected into PropFetcherAggregator.
 
 And that's all that is needed to get rid of any mandatory order of initialization of the modules A, B and C.

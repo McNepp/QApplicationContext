@@ -5,6 +5,8 @@
 #include <QUuid>
 #include <QRegularExpression>
 #include <QCoreApplication>
+#include <QFileInfo>
+#include <QDir>
 #include "standardapplicationcontext.h"
 #include "qsettingswatcher.h"
 
@@ -166,6 +168,14 @@ template<typename T> struct Collector : public detail::Subscription {
 
     Collector() {
         QObject::connect(this, &detail::Subscription::objectPublished, this, &Collector::collect);
+    }
+
+    template<typename Cont> auto subscribeAll(const Cont& container) ->
+        std::enable_if_t<std::conjunction_v<std::is_assignable<registration_handle_t&,decltype(*container.begin())>,std::is_assignable<registration_handle_t&,decltype(*container.end())>>,void>
+    {
+        for(auto& reg : container) {
+            reg->subscribe(this);
+        }
     }
 
     QList<T*> collected;
@@ -434,7 +444,7 @@ bool StandardApplicationContext::ProxyRegistrationImpl::add(
 
 bool StandardApplicationContext::ProxyRegistrationImpl::canAdd(
     DescriptorRegistration* reg) const {
-    return reg->scope() != ServiceScope::TEMPLATE && reg->matches(m_type) && reg->isActiveInProfile();
+    return reg->scope() != ServiceScope::TEMPLATE && reg->matches(m_type);
 }
 
 
@@ -741,14 +751,13 @@ Q_COREAPP_STARTUP_FUNCTION(registerAppInGlobalContext)
 StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext, QObject* parent) :
     QApplicationContext(parent),
     m_loggingCategory(loggingCategory),
-    m_injectedContext(delegatingContext)
+    m_injectedContext(delegatingContext),
+    m_activeProfiles{&defaultProfiles()}
 {
 
     if(qEnvironmentVariableIsSet("QTDI_ACTIVE_PROFILES")) {
         auto profiles = splitList(qEnvironmentVariable("QTDI_ACTIVE_PROFILES"));
         m_activeProfiles = new Profiles{profiles.begin(), profiles.end()};
-    } else {
-        m_activeProfiles = &defaultProfiles();
     }
 
     if(auto app = QCoreApplication::instance()) {
@@ -864,15 +873,20 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     const std::type_info& type = d.type;
 
     QList<DescriptorRegistration*> depRegs;
-
+    auto requiredNames = d.expression.split(',', Qt::SkipEmptyParts);
     for(auto pub : published) {
         if(pub->matches(type) && pub->scope() != ServiceScope::TEMPLATE) {
-            if(d.has_required_name()) {
-                auto byName = getActiveRegistrationByName(d.expression);
-                if(!byName || byName != pub) {
-                    continue;
+            if(!requiredNames.isEmpty()) {
+                for(auto& name : requiredNames) {
+                    auto byName = getActiveRegistrationByName(name);
+                    if(byName && byName == pub) {
+                        requiredNames.removeAll(name);
+                        goto use_dep;
+                    }
                 }
+                continue;
             }
+        use_dep:
             depRegs.push_back(pub);
         }
     }
@@ -908,7 +922,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
     case detail::PARENT_PLACEHOLDER_KIND:
         return {QVariant::fromValue(static_cast<QObject*>(m_injectedContext)), Status::ok};
 
-    case static_cast<int>(Kind::MANDATORY):
+    case static_cast<int>(DependencyKind::MANDATORY):
         if(depRegs.empty()) {
             if(allowPartial) {
                 qCWarning(loggingCategory()).noquote().nospace() << "Could not resolve " << d;
@@ -919,7 +933,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             }
 
         }
-    case static_cast<int>(Kind::OPTIONAL):
+    case static_cast<int>(DependencyKind::OPTIONAL):
         switch(depRegs.size()) {
         case 0:
             qCInfo(loggingCategory()).noquote().nospace() << "Skipped " << d;
@@ -932,7 +946,7 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
             qCCritical(loggingCategory()).noquote().nospace() << d << " is ambiguous";
             return {QVariant{}, Status::fatal};
         }
-    case static_cast<int>(Kind::N):
+    case static_cast<int>(DependencyKind::N):
         qCInfo(loggingCategory()).noquote().nospace() << "Resolved " << d << " with " << depRegs.size() << " objects.";
         {
             //Sort the dependencies by their index(), which is the order of registration:
@@ -1014,6 +1028,59 @@ void StandardApplicationContext::insertByName(const QString &name, DescriptorReg
             m_registeredProfiles.insert(profile);
         }
     }
+}
+
+QSettings* StandardApplicationContext::settingsForProfile(QSettings* settings, const QString& profile) {
+    QSettings* forProfile;
+    //If the applicationName is empty, we create a new QSettings using the fileName of the existing one:
+    if(settings -> applicationName().isEmpty()) {
+        QFileInfo info{settings -> fileName()};
+        QString withProfile = QDir{info.path()}.filePath(info.completeBaseName()+"-"+profile+"."+info.suffix());
+        forProfile = new QSettings{withProfile, settings->format(), m_injectedContext};
+    } else {
+        forProfile = new QSettings{settings->format(), settings->scope(), settings->organizationName(), settings->applicationName()+"-"+profile, m_injectedContext};
+    }
+    return forProfile;
+}
+
+void StandardApplicationContext::initSettingsForActiveProfiles() {
+    if(m_activeProfiles != &defaultProfiles()) {
+        Collector<QSettings> collector;
+        collector.subscribeAll(registrations);
+        for(QSettings* settings : collector.collected) {
+            //Only create profile-specific QSettings if this has been explicitly requested:
+            if(!settings->value("qtdi/enableProfileSpecificSettings").toBool()) {
+                continue;
+            }
+            for(const QString& profile : *m_activeProfiles) {
+                if(profile == "default") {
+                    continue; //No need to create an extra QSettings for profile "default"
+                }
+                QSettings*& forProfile = m_profileSettings[{profile, settings->fileName()}];
+                if(!forProfile) {
+                    forProfile = settingsForProfile(settings, profile);
+                    if(m_SettingsWatcher) {
+                        m_SettingsWatcher->add(forProfile);
+                    }
+                    qCInfo(loggingCategory()).nospace() << "Lookup profile-specific configuration-entries in Settings-path " << forProfile->fileName();
+                }
+            }
+        }
+    }
+}
+
+bool StandardApplicationContext::canChangeActiveProfiles()
+{
+    for(auto reg : registrations) {
+        if(reg->isPublished() &&!reg->registeredProfiles().empty()) {
+            qCWarning(loggingCategory()).nospace() << "Cannot change active profiles, as a profile-dependent Service has already been published: " << *reg;
+            return false;
+        }
+    }
+    if(m_activeProfiles == &defaultProfiles()) {
+        m_activeProfiles = new Profiles{};
+    }
+    return true;
 }
 
 
@@ -1199,7 +1266,6 @@ bool StandardApplicationContext::publish(bool allowPartial)
     }
 
 
-
     descriptor_list allCreated;
     descriptor_list toBePublished;
     descriptor_list needConfiguration;
@@ -1314,22 +1380,23 @@ bool StandardApplicationContext::publish(bool allowPartial)
     }
     while(!toBePublished.empty()) {
         auto reg = toBePublished.front();
-        auto initResult = init(reg, postProcessors);
-        switch(initResult) {
-        case Status::fatal:
+        QObject* target = reg->getObject();
+        if(!target) {
             qCCritical(loggingCategory()).nospace().noquote() << "Could not initialize " << *reg;
             return false;
-        case Status::fixable:
-            qCWarning(loggingCategory()).nospace().noquote() << "Could not initialize " << *reg;
-            validationResult = Status::fixable;
-            continue;
-
-        case Status::ok:
-            toBePublished.pop_front();
-            ++publishedCount;
-            reg->notifyPublished();
-            qCInfo(loggingCategory()).noquote().nospace() << "Published " << *reg;
         }
+        bool initialized = init(reg, ServiceInitializationPolicy::DEFAULT);
+        runPostProcessors(reg, postProcessors);
+        reg->notifyPublished();
+        if(!initialized) {
+            init(reg, ServiceInitializationPolicy::AFTER_PUBLICATION);
+        }
+        //If the service has no parent, make it a child of this ApplicationContext.
+        //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
+        setParentIfNotSet(target, m_injectedContext);
+        toBePublished.pop_front();
+        ++publishedCount;
+        qCInfo(loggingCategory()).noquote().nospace() << "Published " << *reg;
     }
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has published " << publishedCount << " objects";
     qCInfo(loggingCategory()).noquote().nospace() << "ApplicationContext has a total number of " << allCreated.size() << " published objects of which " << managed << " are managed.";
@@ -1840,11 +1907,21 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
     return Status::ok;
 }
 
-StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRegistration* reg, const QList<QApplicationContextPostProcessor*>& postProcessors) {
+bool StandardApplicationContext::init(DescriptorRegistration* reg, ServiceInitializationPolicy policy) {
     QObject* target = reg->getObject();
-    if(!target) {
-        return Status::fatal;
+
+    for(DescriptorRegistration* self = reg; self; self = self->base()) {
+        if(auto initMethod = self->descriptor().init_method; initMethod && self->descriptor().initialization_policy == policy) {
+            initMethod(target, m_injectedContext);
+            qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
+            return true;
+       }
     }
+    return false;
+}
+
+void StandardApplicationContext::runPostProcessors(DescriptorRegistration* reg, const QList<QApplicationContextPostProcessor*>& postProcessors) {
+    QObject* target = reg->getObject();
 
     for(auto processor : postProcessors) {
         if(processor != dynamic_cast<QApplicationContextPostProcessor*>(target)) {
@@ -1852,18 +1929,6 @@ StandardApplicationContext::Status StandardApplicationContext::init(DescriptorRe
             processor->process(reg, target, reg->resolvedProperties());
         }
     }
-
-    for(DescriptorRegistration* self = reg; self; self = self->base()) {
-        if(self->descriptor().init_method) {
-            self->descriptor().init_method(target, m_injectedContext);
-            qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
-            break;
-       }
-    }
-    //If the service has no parent, make it a child of this ApplicationContext.
-    //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
-    setParentIfNotSet(target, m_injectedContext);
-    return Status::ok;
 }
 
 
@@ -1922,9 +1987,7 @@ detail::PlaceholderResolver *StandardApplicationContext::getResolver(const QStri
 QStringList StandardApplicationContext::configurationKeys(const QString &section) const
 {
     Collector<QSettings> collector;
-    for(auto reg : registrations) {
-        reg->subscribe(&collector);
-    }
+    collector.subscribeAll(registrations);
 
     QStringList orderedKeys;
     QSet<QString> keySet;
@@ -1949,9 +2012,13 @@ QVariant StandardApplicationContext::getConfigurationValue(const QString& key, b
     }
 
     Collector<QSettings> collector;
-    for(auto reg : registrations) {
-        reg->subscribe(&collector);
+    //The profile-specific QSettings shall be searched before the others:
+    for(auto& entry : m_profileSettings) {
+        collector.collected.push_back(entry.second);
     }
+
+    collector.subscribeAll(registrations);
+
     QString searchKey = key;
     do {
         for(QSettings* settings : collector.collected) {
@@ -1998,13 +2065,6 @@ void StandardApplicationContext::onSettingsAdded(QSettings * settings)
     } else {
         profiles = splitList(profilesSetting.toString());
     }
-    if(!profiles.empty()) {
-        if(m_activeProfiles == &defaultProfiles()) {
-            m_activeProfiles = new Profiles{profiles.begin(), profiles.end()};
-        } else {
-            std::copy(profiles.begin(), profiles.end(), std::insert_iterator(*m_activeProfiles, m_activeProfiles->end()));
-        }
-    }
     if(!m_SettingsWatcher) {
         bool enabled = settings->value("qtdi/enableAutoRefresh").toBool();
         if(enabled) {
@@ -2013,6 +2073,14 @@ void StandardApplicationContext::onSettingsAdded(QSettings * settings)
             m_SettingsWatcher->setAutoRefreshMillis(settings->value("qtdi/autoRefreshMillis", detail::QSettingsWatcher::DEFAULT_REFRESH_MILLIS).toInt());
 
             qCInfo(loggingCategory()) << "Auto-refresh has been enabled.";
+        }
+    }
+    if(!profiles.empty() && canChangeActiveProfiles()) {
+        Profiles profilesToAdd{profiles.begin(), profiles.end()};
+        if(!m_activeProfiles -> contains(profilesToAdd)) {
+            *m_activeProfiles += profilesToAdd;
+            initSettingsForActiveProfiles();
+            emit activeProfilesChanged(*m_activeProfiles);
         }
     }
 }
@@ -2029,6 +2097,19 @@ void StandardApplicationContext::setAutoRefreshMillis(int newRefreshMillis)
         return;
     }
     m_SettingsWatcher->setAutoRefreshMillis(newRefreshMillis);
+}
+
+void StandardApplicationContext::setActiveProfiles(const Profiles &profiles)
+{
+    if(profiles.empty()) {
+        qCCritical(loggingCategory()).nospace() << "Cannot set the active profiles to an empty set";
+        return;
+    }
+    if(canChangeActiveProfiles() && *m_activeProfiles != profiles) {
+        *m_activeProfiles = profiles;
+        initSettingsForActiveProfiles();
+        emit activeProfilesChanged(profiles);
+    }
 }
 
 bool StandardApplicationContext::autoRefreshEnabled() const
