@@ -127,10 +127,10 @@ QString&#160;</td><td class="memItemRight" valign="bottom"><b>registeredName</b>
 <tr class="memitem:ac119ec89eb518318128526f7c1928f16" id="r_ac119ec89eb518318128526f7c1928f16"><td class="memItemLeft" align="right" valign="top"><a id="ac119ec89eb518318128526f7c1928f16" name="ac119ec89eb518318128526f7c1928f16"></a>
 <a class="el" href="qapplicationcontext_8h.html#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a>&#160;</td><td class="memItemRight" valign="bottom"><b>unwrap</b> () const</td></tr>
 <tr class="separator:ac119ec89eb518318128526f7c1928f16"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a501ab45b92a95b8a4afc15a2ab11327b" id="r_a501ab45b92a95b8a4afc15a2ab11327b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="qapplicationcontext_8h.html#ae6c23817c171c31a11e310fd61c2f857">Profiles</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a501ab45b92a95b8a4afc15a2ab11327b">registeredProfiles</a> () const</td></tr>
-<tr class="memdesc:a501ab45b92a95b8a4afc15a2ab11327b"><td class="mdescLeft">&#160;</td><td class="mdescRight">The profiles for which this Service was registered. <br  />
-No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration.  <br /></td></tr>
-<tr class="separator:a501ab45b92a95b8a4afc15a2ab11327b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9c8c9f359178ff7e5247de5e59f8d110" id="r_a9c8c9f359178ff7e5247de5e59f8d110"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html">Condition</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9c8c9f359178ff7e5247de5e59f8d110">registeredCondition</a> () const</td></tr>
+<tr class="memdesc:a9c8c9f359178ff7e5247de5e59f8d110"><td class="mdescLeft">&#160;</td><td class="mdescRight">The <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html" title="Makes conditional activation of Services possible.  An instance of this type is passed to QApplicatio...">Condition</a> for which this Service was registered. <br  />
+The default is <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#a64fb14d32b393321504799483a872b17" title="A Condition that is always met.  This is the default for QApplicationContext::registerService()....">Condition::always()</a>  <br /></td></tr>
+<tr class="separator:a9c8c9f359178ff7e5247de5e59f8d110"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a591fec32f36073e606f539eba46c8556" id="r_a591fec32f36073e606f539eba46c8556"><td class="memTemplParams" colspan="2">template&lt;typename U , <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> newScope = SCP&gt; </td></tr>
 <tr class="memitem:a591fec32f36073e606f539eba46c8556"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; U, newScope &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a591fec32f36073e606f539eba46c8556">as</a> () const &amp;</td></tr>
 <tr class="memdesc:a591fec32f36073e606f539eba46c8556"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attempts to cast this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a type. <br  />
@@ -229,7 +229,7 @@ class mcnepp::qtdi::ServiceRegistration&lt; S, SCP &gt;</div><p>A type-safe wrap
     <tr><td class="paramname">SCP</td><td>the ServiceScope. If this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> was obtained via QApplicationContext::registerService(service()), it will have ServiceScope::SINGLETON. <br  />
 If this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> was obtained via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5ddf9204ec6f0071793adb3c770bc3ab" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a>, it will have ServiceScope::EXTERNAL. <br  />
 If this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> was obtained via QApplicationContext::registerService(prototype()), it will have ServiceScope::PROTOTYPE. <br  />
-Otherwise, it will have ServiceScope::UNKNOWN. Instances of this class are being produces by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a04ed0e326833ba1e76dc6a0ba3866cfe" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5ddf9204ec6f0071793adb3c770bc3ab" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a>. </td></tr>
+Otherwise, it will have ServiceScope::UNKNOWN. Instances of this class are being produces by the public function-templates <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad080ee93de3b838e0f34d74253ae8fe8" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a> and <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5ddf9204ec6f0071793adb3c770bc3ab" title="Registers an object with this ApplicationContext. The object will immediately be published....">QApplicationContext::registerObject()</a>. </td></tr>
   </table>
   </dd>
 </dl>
@@ -365,8 +365,8 @@ If this function is successful, the <a class="el" href="structmcnepp_1_1qtdi_1_1
 
 </div>
 </div>
-<a id="a501ab45b92a95b8a4afc15a2ab11327b" name="a501ab45b92a95b8a4afc15a2ab11327b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a501ab45b92a95b8a4afc15a2ab11327b">&#9670;&#160;</a></span>registeredProfiles()</h2>
+<a id="a9c8c9f359178ff7e5247de5e59f8d110" name="a9c8c9f359178ff7e5247de5e59f8d110"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9c8c9f359178ff7e5247de5e59f8d110">&#9670;&#160;</a></span>registeredCondition()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -377,7 +377,7 @@ template&lt;typename S , <a class="el" href="qapplicationcontext_8h.html#a5429ea
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="qapplicationcontext_8h.html#ae6c23817c171c31a11e310fd61c2f857">Profiles</a> <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S, SCP &gt;::registeredProfiles </td>
+          <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html">Condition</a> <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">mcnepp::qtdi::ServiceRegistration</a>&lt; S, SCP &gt;::registeredCondition </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const</td>
@@ -390,9 +390,9 @@ template&lt;typename S , <a class="el" href="qapplicationcontext_8h.html#a5429ea
 </table>
 </div><div class="memdoc">
 
-<p>The profiles for which this Service was registered. <br  />
-No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration. </p>
-<dl class="section return"><dt>Returns</dt><dd>The (possibly empty) List of profiles for which this Service was registered. </dd></dl>
+<p>The <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html" title="Makes conditional activation of Services possible.  An instance of this type is passed to QApplicatio...">Condition</a> for which this Service was registered. <br  />
+The default is <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#a64fb14d32b393321504799483a872b17" title="A Condition that is always met.  This is the default for QApplicationContext::registerService()....">Condition::always()</a> </p>
+<dl class="section return"><dt>Returns</dt><dd>The <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html" title="Makes conditional activation of Services possible.  An instance of this type is passed to QApplicatio...">Condition</a> for which this Service was registered. </dd></dl>
 
 </div>
 </div>

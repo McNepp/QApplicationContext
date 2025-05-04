@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['requiredname_0',['requiredName',['../structmcnepp_1_1qtdi_1_1_dependency.html#aeeb3e70226d613c2d921429094828d13',1,'mcnepp::qtdi::Dependency']]]
+  ['config_0',['Config',['../classmcnepp_1_1qtdi_1_1_condition.html#ac874087b406eefed8461da5186b1b3dc',1,'mcnepp::qtdi::Condition']]]
 ];

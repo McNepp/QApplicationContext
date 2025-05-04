@@ -90,7 +90,7 @@ $(function(){ initResizable(false); });
 <h3><a id="index_a" name="index_a"></a>- a -</h3><ul>
 <li>activeProfiles()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a087e667e535be79c5c968f48bc031441">mcnepp::qtdi::QApplicationContext</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a091bb1b3dffb066be3d14e8c94443b87">mcnepp::qtdi::StandardApplicationContext</a></li>
 <li>advertiseAs()&#160;:&#160;<a class="el" href="structmcnepp_1_1qtdi_1_1_service.html#a0ebe286925cbbf4fc27ab6c5653ea992">mcnepp::qtdi::Service&lt; Srv, Impl, scope &gt;</a></li>
-<li>anyProfile()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a3dbbc5367f7fa3154b4857f2c701c397">mcnepp::qtdi::QApplicationContext</a></li>
+<li>always()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#a64fb14d32b393321504799483a872b17">mcnepp::qtdi::Condition</a></li>
 <li>applicationContext()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a4c4c71ac5e0fb82a2af9819abae7c121">mcnepp::qtdi::Registration&lt; S &gt;</a></li>
 <li>ApplicationContextImplBase()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_application_context_impl_base.html#a46016b025bb148087e10f4cacd7b12dd">mcnepp::qtdi::ApplicationContextImplBase&lt; C &gt;</a></li>
 <li>as()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a591fec32f36073e606f539eba46c8556">mcnepp::qtdi::ServiceRegistration&lt; S, SCP &gt;</a></li>
@@ -113,12 +113,13 @@ $(function(){ initResizable(false); });
 <li>delegateConnectSignals()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8d786fec477e3eaf0959a7ae6ff7188c">mcnepp::qtdi::QApplicationContext</a></li>
 <li>delegateGetRegistrationHandle()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a037a10e982936032db6ea24b2909e65f">mcnepp::qtdi::QApplicationContext</a></li>
 <li>delegateGetRegistrationHandles()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a3e656b4f8a4d21d82fa107470ae1de5b">mcnepp::qtdi::QApplicationContext</a></li>
-<li>delegateRegisterService()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a8cc931abe19bb9e88bfe69a2aef4bf0a">mcnepp::qtdi::QApplicationContext</a></li>
+<li>delegateRegisterService()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ae94c368f33e9f5903ea19868b3d26a6b">mcnepp::qtdi::QApplicationContext</a></li>
 </ul>
 
 
 <h3><a id="index_e" name="index_e"></a>- e -</h3><ul>
 <li>errorOccurred()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html#a82c021d347f913862ae31cb228214072">mcnepp::qtdi::QConfigurationWatcher</a></li>
+<li>exists()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html#a059279143879793e7a482be36dd1e34c">mcnepp::qtdi::Condition::ConfigHelper::Entry</a></li>
 </ul>
 
 
@@ -131,8 +132,14 @@ $(function(){ initResizable(false); });
 </ul>
 
 
+<h3><a id="index_h" name="index_h"></a>- h -</h3><ul>
+<li>hasProfiles()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#aea1544556b03331ab4e893af4ce0db49">mcnepp::qtdi::Condition</a></li>
+</ul>
+
+
 <h3><a id="index_i" name="index_i"></a>- i -</h3><ul>
 <li>instance()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abc1d419de6d4d3af4c38a8c5791edc4d">mcnepp::qtdi::QApplicationContext</a></li>
+<li>isAlways()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#a5c51a258cc68bb1d24b2b1930bd19684">mcnepp::qtdi::Condition</a></li>
 <li>isGlobalInstance()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aefb81ffc9c91512a6ae0ec84453f39fa">mcnepp::qtdi::QApplicationContext</a></li>
 <li>isValid()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a98e7db034be679d63391761aac500b8d">mcnepp::qtdi::Registration&lt; S &gt;</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#acceba2ac73751d2bfe14a4113a28050d">mcnepp::qtdi::Subscription</a></li>
 </ul>
@@ -144,14 +151,25 @@ $(function(){ initResizable(false); });
 
 
 <h3><a id="index_m" name="index_m"></a>- m -</h3><ul>
-<li>matches()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a4562640be6a8d1f377411c0ab912c34f">mcnepp::qtdi::Registration&lt; S &gt;</a></li>
+<li>matches()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html#a49eab26aadea5970a644f04599ae0a37">mcnepp::qtdi::Condition::ConfigHelper::Entry</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#ae92e26a4da9bd2dcabdb0438935637f8">mcnepp::qtdi::Condition</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a4562640be6a8d1f377411c0ab912c34f">mcnepp::qtdi::Registration&lt; S &gt;</a></li>
 </ul>
 
 
 <h3><a id="index_o" name="index_o"></a>- o -</h3><ul>
 <li>operator bool()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a00d602faaeba576319d7967fa2d057af">mcnepp::qtdi::Registration&lt; S &gt;</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#afb10e854b3c682aff3c8192d5d703ebd">mcnepp::qtdi::Subscription</a></li>
 <li>operator ServiceRegistration&lt; S, ServiceScope::UNKNOWN &gt;()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a68e0a2fec58351d04f8bc145ba60c4aa">mcnepp::qtdi::ServiceRegistration&lt; S, SCP &gt;</a></li>
+<li>operator!()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html#a28e1e05005803224847909e5a14de59a">mcnepp::qtdi::Condition::ConfigHelper::Entry</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#acac91ec71a6c2e261a886fa7a87672a8">mcnepp::qtdi::Condition</a></li>
+<li>operator!=()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html#a8f0b4e1eef0048ae020e3fe3dcb6fdc8">mcnepp::qtdi::Condition::ConfigHelper::Entry</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_profile_helper.html#aa3a647ff52dabefc67aba9e828f26240">mcnepp::qtdi::Condition::ProfileHelper</a></li>
+<li>operator&amp;()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_profile_helper.html#a516ebbbd374d1addeef6bcb9114f528e">mcnepp::qtdi::Condition::ProfileHelper</a></li>
+<li>operator&lt;()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html#a6e96f4cd0e99c1827c5949caff7baa24">mcnepp::qtdi::Condition::ConfigHelper::Entry</a></li>
 <li>operator&lt;&lt;()&#160;:&#160;<a class="el" href="structmcnepp_1_1qtdi_1_1_service.html#ab08828a9cae2e021ffc10ca3bc58b75e">mcnepp::qtdi::Service&lt; Srv, Impl, scope &gt;</a></li>
+<li>operator&lt;=()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html#acf3b382af69731f52216579ad302ef7f">mcnepp::qtdi::Condition::ConfigHelper::Entry</a></li>
+<li>operator==()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html#a9604f0f93e4b68195199e22c5d844965">mcnepp::qtdi::Condition::ConfigHelper::Entry</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_profile_helper.html#a063a1af8ebb53bd6920809f91dc43498">mcnepp::qtdi::Condition::ProfileHelper</a></li>
+<li>operator&gt;()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html#ad15bb0b0ac8c1c94ce89b43763510cbf">mcnepp::qtdi::Condition::ConfigHelper::Entry</a></li>
+<li>operator&gt;=()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html#abdf65b0d71743cef0f4dcc31537d7f94">mcnepp::qtdi::Condition::ConfigHelper::Entry</a></li>
+<li>operator[]()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper.html#a0f030efd41d2e5e2aadd9b76a102d727">mcnepp::qtdi::Condition::ConfigHelper</a></li>
+<li>operator^()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_profile_helper.html#a0a314f77c903595bc9c7fc7ddc8f1509">mcnepp::qtdi::Condition::ProfileHelper</a></li>
+<li>overlaps()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#a16b56c8710dcc26eb311054d7d2d4397">mcnepp::qtdi::Condition</a></li>
 </ul>
 
 
@@ -172,12 +190,12 @@ $(function(){ initResizable(false); });
 
 <h3><a id="index_r" name="index_r"></a>- r -</h3><ul>
 <li>registerAlias()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#af740c20f57c2c6a24ec31a5691fc5c40">mcnepp::qtdi::ServiceRegistration&lt; S, SCP &gt;</a></li>
-<li>registeredProfiles()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a501ab45b92a95b8a4afc15a2ab11327b">mcnepp::qtdi::ServiceRegistration&lt; S, SCP &gt;</a></li>
+<li>registeredCondition()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html#a9c8c9f359178ff7e5247de5e59f8d110">mcnepp::qtdi::ServiceRegistration&lt; S, SCP &gt;</a></li>
 <li>registeredServices()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html#adf288e98d737ef21543e3195a1312fa1">mcnepp::qtdi::ProxyRegistration&lt; S &gt;</a></li>
 <li>registerObject()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5ddf9204ec6f0071793adb3c770bc3ab">mcnepp::qtdi::QApplicationContext</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a5ddf9204ec6f0071793adb3c770bc3ab">mcnepp::qtdi::StandardApplicationContext</a></li>
 <li>registerPrototype()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ac6fcf7f68b82288b49ab48eea3c1e76e">mcnepp::qtdi::QApplicationContext</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ac6fcf7f68b82288b49ab48eea3c1e76e">mcnepp::qtdi::StandardApplicationContext</a></li>
-<li>registerService()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a04ed0e326833ba1e76dc6a0ba3866cfe">mcnepp::qtdi::QApplicationContext</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a04ed0e326833ba1e76dc6a0ba3866cfe">mcnepp::qtdi::StandardApplicationContext</a></li>
-<li>registerServiceHandle()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abaa48bd3c10220afdbcac861f5021c4c">mcnepp::qtdi::QApplicationContext</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ad506632688d94440ac2aee9d17b003a4">mcnepp::qtdi::StandardApplicationContext</a></li>
+<li>registerService()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad080ee93de3b838e0f34d74253ae8fe8">mcnepp::qtdi::QApplicationContext</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ad080ee93de3b838e0f34d74253ae8fe8">mcnepp::qtdi::StandardApplicationContext</a></li>
+<li>registerServiceHandle()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a0dd2c8f0fa2e0f074c32d6f7cd231189">mcnepp::qtdi::QApplicationContext</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a1bd151036cd718ab808319936634c67a">mcnepp::qtdi::StandardApplicationContext</a></li>
 <li>registerServiceTemplate()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a7a3bf1d2c58dc1e1aea7c4fb2599cf4e">mcnepp::qtdi::QApplicationContext</a></li>
 <li>resolveConfigValue()&#160;:&#160;<a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a7e3f3903656efb88360b9c2fba301475">mcnepp::qtdi::QApplicationContext</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a1a2b3e7978ec585d51da59c7e5a88339">mcnepp::qtdi::StandardApplicationContext</a></li>
 </ul>

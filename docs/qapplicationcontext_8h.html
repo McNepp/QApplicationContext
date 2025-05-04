@@ -108,11 +108,30 @@ $(function(){ initResizable(false); });
 <code>#include &lt;QPointer&gt;</code><br />
 <code>#include &lt;QMetaMethod&gt;</code><br />
 <code>#include &lt;QLoggingCategory&gt;</code><br />
+<code>#include &lt;QRegularExpression&gt;</code><br />
 </div>
 <p><a href="qapplicationcontext_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html">mcnepp::qtdi::Condition</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Makes conditional activation of Services possible. <br  />
+An instance of this type is passed to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad080ee93de3b838e0f34d74253ae8fe8" title="Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...">QApplicationContext::registerService()</a>. <br  />
+The default ist <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#a64fb14d32b393321504799483a872b17" title="A Condition that is always met.  This is the default for QApplicationContext::registerService()....">Condition::always()</a>.  <a href="classmcnepp_1_1qtdi_1_1_condition.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_profile_helper.html">mcnepp::qtdi::Condition::ProfileHelper</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">An intermediate type that is used to create Conditions based on active profiles. <br  />
+Can be used via the singleton <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#a2340c16c75c0aa0671a26c7110fa1ad3" title="The global ProfileHelper.  Allows you to create Profile-based Conditions. Examples:">Condition::Profile</a> <br  />
+Examples:  <a href="classmcnepp_1_1qtdi_1_1_condition_1_1_profile_helper.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper.html">mcnepp::qtdi::Condition::ConfigHelper</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">An intermediate type that is used to create Conditions based on configuration-entries. <br  />
+Can be used via the singleton <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#ac874087b406eefed8461da5186b1b3dc" title="The global ConfigHelper.  Allows you to create Configuration-based Conditions. Example:">Condition::Config</a> <br  />
+The only available operation is the subscript-operator, which selects a configuration-entry.  <a href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html">mcnepp::qtdi::Condition::ConfigHelper::Entry</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">An intermediate type that is used to create Conditions based on configuration-entries.  <a href="classmcnepp_1_1qtdi_1_1_condition_1_1_config_helper_1_1_entry.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">mcnepp::qtdi::Subscription</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">An opaque handle to a detail::Subscription. Instances of this class will be returned by <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#a281f12a7c18c6793c5924a73159ff1bb" title="Receive all published QObjects in a type-safe way. Connects to the publishedObjectsChanged signal and...">Registration::subscribe()</a>.<br  />
  The only thing you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html" title="An opaque handle to a detail::Subscription. Instances of this class will be returned by Registration:...">Subscription</a> is test for validity and <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html#a9f1f91cf61304e348c798b219fba7507" title="Cancels this Subscription.  Thread-safety: This function may only be called from the Thread that crea...">Subscription::cancel()</a>.  <a href="classmcnepp_1_1qtdi_1_1_subscription.html#details">More...</a><br /></td></tr>
@@ -250,10 +269,10 @@ If the handle actually points to a <a class="el" href="classmcnepp_1_1qtdi_1_1_p
 <tr class="memitem:ae09e67c55a69665975a9e2371e3d0a94" id="r_ae09e67c55a69665975a9e2371e3d0a94"><td class="memItemLeft" align="right" valign="top">QString&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae09e67c55a69665975a9e2371e3d0a94">mcnepp::qtdi::registeredName</a> (<a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a> handle)</td></tr>
 <tr class="memdesc:ae09e67c55a69665975a9e2371e3d0a94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the registeredName from a handle to a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>.  <br /></td></tr>
 <tr class="separator:ae09e67c55a69665975a9e2371e3d0a94"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af9ca29feabd6dedf77a23eb44e00ab3a" id="r_af9ca29feabd6dedf77a23eb44e00ab3a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#ae6c23817c171c31a11e310fd61c2f857">Profiles</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af9ca29feabd6dedf77a23eb44e00ab3a">mcnepp::qtdi::registeredProfiles</a> (<a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a> handle)</td></tr>
-<tr class="memdesc:af9ca29feabd6dedf77a23eb44e00ab3a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the profiles for which the Service was registered. <br  />
-No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration.  <br /></td></tr>
-<tr class="separator:af9ca29feabd6dedf77a23eb44e00ab3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a742e8aa8444176aabc427ce76bfd2601" id="r_a742e8aa8444176aabc427ce76bfd2601"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html">Condition</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a742e8aa8444176aabc427ce76bfd2601">mcnepp::qtdi::registeredCondition</a> (<a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a> handle)</td></tr>
+<tr class="memdesc:a742e8aa8444176aabc427ce76bfd2601"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains the <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html" title="Makes conditional activation of Services possible.  An instance of this type is passed to QApplicatio...">Condition</a> for which the Service was registered. <br  />
+The default is <a class="el" href="classmcnepp_1_1qtdi_1_1_condition.html#a64fb14d32b393321504799483a872b17" title="A Condition that is always met.  This is the default for QApplicationContext::registerService()....">Condition::always()</a>  <br /></td></tr>
+<tr class="separator:a742e8aa8444176aabc427ce76bfd2601"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7ba9e15cae5f876292acd7b671d56d36" id="r_a7ba9e15cae5f876292acd7b671d56d36"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7ba9e15cae5f876292acd7b671d56d36">mcnepp::qtdi::operator==</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &amp;sub1, const <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &amp;sub2)</td></tr>
 <tr class="memdesc:a7ba9e15cae5f876292acd7b671d56d36"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests two Subscriptions for equality.  <br /></td></tr>
 <tr class="separator:a7ba9e15cae5f876292acd7b671d56d36"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -2452,6 +2471,41 @@ template&lt;typename S , typename Impl  = S, typename... Dep&gt; </div>
 
 </div>
 </div>
+<a id="a742e8aa8444176aabc427ce76bfd2601" name="a742e8aa8444176aabc427ce76bfd2601"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a742e8aa8444176aabc427ce76bfd2601">&#9670;&#160;</a></span>registeredCondition()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">Condition mcnepp::qtdi::registeredCondition </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a></td>          <td class="paramname"><span class="paramname"><em>handle</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Obtains the Condition for which the Service was registered. <br  />
+The default is Condition::always() </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">handle</td><td>the handle to the ServiceRegistration. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>the Condition for which the Service was registered. </dd></dl>
+
+</div>
+</div>
 <a id="ae09e67c55a69665975a9e2371e3d0a94" name="ae09e67c55a69665975a9e2371e3d0a94"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae09e67c55a69665975a9e2371e3d0a94">&#9670;&#160;</a></span>registeredName()</h2>
 
@@ -2483,41 +2537,6 @@ template&lt;typename S , typename Impl  = S, typename... Dep&gt; </div>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>the name that this ServiceRegistration was registered with, or an empty String if the handle is not valid. </dd></dl>
-
-</div>
-</div>
-<a id="af9ca29feabd6dedf77a23eb44e00ab3a" name="af9ca29feabd6dedf77a23eb44e00ab3a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af9ca29feabd6dedf77a23eb44e00ab3a">&#9670;&#160;</a></span>registeredProfiles()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">Profiles mcnepp::qtdi::registeredProfiles </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a></td>          <td class="paramname"><span class="paramname"><em>handle</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">nodiscard</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Obtains the profiles for which the Service was registered. <br  />
-No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">handle</td><td>the handle to the ServiceRegistration. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>the (possibly empty) List of profiles for which the Service was registered. </dd></dl>
 
 </div>
 </div>
