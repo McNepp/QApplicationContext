@@ -130,10 +130,7 @@ Profiles& defaultProfiles() {
 }
 
 QString profilesAsString(const Profiles& profiles) {
-    if(profiles.empty()) {
-        return "";
-    }
-    QString result{" [profiles="};
+    QString result{"[profiles="};
     const char* del = "";
     for(const QString& str : profiles) {
         result += del;
@@ -143,6 +140,7 @@ QString profilesAsString(const Profiles& profiles) {
     result += "]";
     return result;
 }
+
 
 const QStringList splitList(const QString& str) {
     static QRegularExpression regEx{",\\s*"};
@@ -156,12 +154,6 @@ inline void setParentIfNotSet(QObject* obj, QObject* newParent) {
 }
 
 
-bool profilesOverlap(const Profiles& profiles1, const Profiles& profiles2) {
-    if(profiles1.empty() || profiles2.empty()) {
-        return true; //An empty list indicates "always active"
-    }
-    return profiles1.intersects(profiles2);
-}
 
 
 template<typename T> struct Collector : public detail::Subscription {
@@ -527,22 +519,14 @@ StandardApplicationContext::DescriptorRegistration::DescriptorRegistration(Descr
     m_name(name),
     m_index(index),
     m_context(context),
-    m_base(base)
+    m_base(base),
+    m_condition{Condition::always()}
 {
 }
 
 bool StandardApplicationContext::DescriptorRegistration::isActiveInProfile() const
 {
-    //If no profiles have been specified for this Registration, it is always active.
-    if(m_profiles.empty()) {
-        return true;
-    }
-    for(const QString& profile : m_context->activeProfiles()) {
-        if(m_profiles.find(profile) != m_profiles.end()) {
-            return true;
-        }
-    }
-    return false;
+    return m_condition.matches(m_context);
 }
 
 
@@ -559,7 +543,7 @@ StandardApplicationContext::ServiceRegistrationImpl::ServiceRegistrationImpl(Des
 
 
 void StandardApplicationContext::ServiceRegistrationImpl::print(QDebug out) const {
-    out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor() << profilesAsString(m_profiles);
+    out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor() << ' ' << m_condition;
 }
 
 void StandardApplicationContext::ServiceRegistrationImpl::serviceDestroyed(QObject *srv) {
@@ -846,23 +830,18 @@ void StandardApplicationContext::unpublish()
 
 StandardApplicationContext::DescriptorRegistration *StandardApplicationContext::getActiveRegistrationByName(const QString &name) const
 {
+    auto found = registrationsByName.find(name);
     DescriptorRegistration* reg = nullptr;
-    QString profile; //in the first loop-iteration, use the empty pseudo-profile, indicating that a registration is always active.
-
-    for(auto iter = m_activeProfiles->begin();; ++iter) {
-        if(auto found = registrationsByName.find({profile, name}); found != registrationsByName.end()) {
-            if(reg != found->second) {
+    if(found != registrationsByName.end()) {
+        for(auto candidate : found->second) {
+            if(candidate->registeredCondition().matches(const_cast<StandardApplicationContext*>(this))) {
                 if(reg) {
-                    qCCritical(loggingCategory()).noquote().nospace() << "Ambiguous registrations for name '" << name << "'" << profilesAsString(*m_activeProfiles) << ": " << *reg << " and " << *found->second;
+                    qCCritical(loggingCategory()).noquote().nospace() << "Ambiguous registrations for name '" << name << "'" << ": " << *reg << " and " << *candidate;
                     return nullptr;
                 }
-                reg = found->second;
+                reg = candidate;
             }
         }
-        if(iter == m_activeProfiles->end()) {
-            break;
-        }
-        profile = *iter;
     }
     return reg;
 }
@@ -988,7 +967,7 @@ QObject* StandardApplicationContext::obtainHandleFromApplicationThread(CreateHan
     QCoreApplication::postEvent(this, event);
     QDeadlineTimer timer{1000}; //Wait at most one second.
     while(!timer.hasExpired() && !result->has_value()) {
-         condition.wait(&mutex, timer);
+         m_condition.wait(&mutex, timer);
     }
     if(!result->has_value()) {
         qCCritical(loggingCategory()).noquote().nospace() << "Could not obtain handle from another thread in time";
@@ -1019,15 +998,7 @@ detail::ProxyRegistration *StandardApplicationContext::getRegistrationHandle(con
 
 void StandardApplicationContext::insertByName(const QString &name, DescriptorRegistration *reg)
 {
-    if(reg->m_profiles.empty()) {
-        registrationsByName.insert({{"", name}, reg});
-        m_registeredProfiles.insert("");
-    } else {
-        for(const QString& profile : reg -> m_profiles) {
-            registrationsByName.insert({{profile, name}, reg});
-            m_registeredProfiles.insert(profile);
-        }
-    }
+    registrationsByName[name].insert(reg);
 }
 
 QSettings* StandardApplicationContext::settingsForProfile(QSettings* settings, const QString& profile) {
@@ -1072,7 +1043,7 @@ void StandardApplicationContext::initSettingsForActiveProfiles() {
 bool StandardApplicationContext::canChangeActiveProfiles()
 {
     for(auto reg : registrations) {
-        if(reg->isPublished() &&!reg->registeredProfiles().empty()) {
+        if(reg->isPublished() && reg->registeredCondition().hasProfiles()) {
             qCWarning(loggingCategory()).nospace() << "Cannot change active profiles, as a profile-dependent Service has already been published: " << *reg;
             return false;
         }
@@ -1135,12 +1106,13 @@ void StandardApplicationContext::contextObjectDestroyed(DescriptorRegistration* 
 {
     qCInfo(loggingCategory()).noquote().nospace() << "Object for " << *objectRegistration << " has been destroyed externally";
 
-    for(auto iter = registrationsByName.begin(); iter != registrationsByName.end();) {
-        auto reg = iter->second;
-        if(reg == objectRegistration) {
-            iter = registrationsByName.erase(iter);
-        } else {
-            ++iter;
+    for(auto& regs : registrationsByName) {
+        for(auto iter = regs.second.begin(); iter != regs.second.end();) {
+            if(*iter == objectRegistration) {
+                iter = regs.second.erase(iter);
+            } else {
+                ++iter;
+            }
         }
     }
 
@@ -1269,32 +1241,34 @@ bool StandardApplicationContext::publish(bool allowPartial)
     descriptor_list allCreated;
     descriptor_list toBePublished;
     descriptor_list needConfiguration;
+    descriptor_list allRegistrations;
     Status validationResult = Status::ok;
     {
         QMutexLocker<QMutex> locker{&mutex};
+        allRegistrations = registrations;
+    }
 
-        std::unordered_set<QString> distinctNames;
-        for(auto reg : registrations) {
-            switch (reg->state()) {
-            case STATE_INIT:
-                if(!reg->isActiveInProfile()) {
-                    qCInfo(loggingCategory()).noquote().nospace() << "Service " << *reg << " is not active in" << profilesAsString(*m_activeProfiles);
-                    continue;
-                }
-                // getActiveRegistrationByName(name) yields nullptr if no registration under the supplied name exists, or if the registration is ambiguous.
-                // At this point, however - supplying a valid name - ambiguity must be the cause of the failure:
-                if(!getActiveRegistrationByName(reg->registeredName())) {
-                    return false;
-                }
-
-                toBePublished.push_back(reg);
-                break;
-            case STATE_NEEDS_CONFIGURATION:
-                needConfiguration.push_back(reg);
-                [[fallthrough]];
-            case STATE_PUBLISHED:
-                allCreated.push_back(reg);
+    std::unordered_set<QString> distinctNames;
+    for(auto reg : allRegistrations) {
+        switch (reg->state()) {
+        case STATE_INIT:
+            if(!reg->isActiveInProfile()) {
+                qCInfo(loggingCategory()).noquote().nospace() << "Service " << *reg << " is not active in " << profilesAsString(*m_activeProfiles);
+                continue;
             }
+            // getActiveRegistrationByName(name) yields nullptr if no registration under the supplied name exists, or if the registration is ambiguous.
+            // At this point, however - supplying a valid name - ambiguity must be the cause of the failure:
+            if(!getActiveRegistrationByName(reg->registeredName())) {
+                return false;
+            }
+
+            toBePublished.push_back(reg);
+            break;
+        case STATE_NEEDS_CONFIGURATION:
+            needConfiguration.push_back(reg);
+            [[fallthrough]];
+        case STATE_PUBLISHED:
+            allCreated.push_back(reg);
         }
     }
     if(toBePublished.empty() && needConfiguration.empty()) {
@@ -1305,7 +1279,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         return false;
     }
 
-    qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext" << profilesAsString(*m_activeProfiles) << " with " << toBePublished.size() << " unpublished Objects";
+    qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext " << profilesAsString(*m_activeProfiles) << " with " << toBePublished.size() << " unpublished Objects";
 
     //Move QSettings to the beginning, so that they will be available for configuration of other services:
     std::stable_sort(needConfiguration.begin(), needConfiguration.end(), [](const DescriptorRegistration* left, const DescriptorRegistration* right) { return left->provideConfig() && !right->provideConfig();});
@@ -1434,7 +1408,7 @@ QList<service_registration_handle_t> StandardApplicationContext::getRegistration
 
 
 
-service_registration_handle_t StandardApplicationContext::registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Profiles& profiles, QObject* baseObj)
+service_registration_handle_t StandardApplicationContext::registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Condition& condition, QObject* baseObj)
 {
     if(!detail::hasCurrentThreadAffinity(this)) {
         qCCritical(loggingCategory()).noquote().nospace() << "Cannot register service in different thread";
@@ -1453,8 +1427,8 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
                 qCCritical(loggingCategory()).noquote().nospace() << "Cannot register null-object for " << descriptor;
                 return nullptr;
             }
-            if(!profiles.empty()) {
-                qCCritical(loggingCategory()).noquote().nospace() << "Cannot specify" << profilesAsString(profiles) << " for external object " << descriptor;
+            if(!condition.isAlways()) {
+                qCCritical(loggingCategory()).noquote().nospace() << "Cannot specify" << condition << " for external object " << descriptor;
                 return nullptr;
             }
             if(objName.isEmpty()) {
@@ -1513,24 +1487,23 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
 
         case ServiceScope::TEMPLATE:
             if(!name.isEmpty()) {
-                for(auto& profile : m_registeredProfiles) {
-                    auto found = registrationsByName.find({profile, objName});
-                    if(found == registrationsByName.end()) {
-                        continue;
-                    }
-                    reg = found->second;
-                    //If the profiles do not overlap, we will create a new registration, as only one of the registrations will be active at a time.
-                    if(profilesOverlap(reg->m_profiles, profiles)) {
+                auto found = registrationsByName.find(objName);
+                if(found != registrationsByName.end()) {
+                    for(auto regForName : found->second) {
+                        reg = regForName;
                         //With isManaged() we test whether reg is also a ServiceRegistration (no ObjectRegistration)
                         //If we have a registration under the same name, we'll return it only if it has the same descriptor, config and profiles:
                         if(reg->isManaged()) {
-                            if(descriptor == reg->descriptor() && reg->config() == config && reg->m_profiles == profiles) {
+                            if(descriptor == reg->descriptor() && reg->config() == config && reg->m_condition == condition) {
                                 return reg;
                             }
                         }
-                        //Otherwise, we have a conflicting registration
-                        qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << " as '" << name << "'" << profilesAsString(profiles) << ". Has already been registered as " << *reg;
-                        return nullptr;
+                        if(reg->m_condition.overlaps(condition)) {
+                            //Otherwise, we have a conflicting registration
+                            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Service " << descriptor << " as '" << name << "'. Has already been registered as " << *reg;
+                            return nullptr;
+                        }
+                        //If the conditions do not overlap, we will create a new registration. We assume that only one of the registrations will be active at a time.
                     }
                 }
             } else {
@@ -1540,12 +1513,12 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
                     if(regist->isManaged() && regist->config() == config) {
                         switch(detail::match(descriptor, regist->descriptor())) {
                         case detail::DESCRIPTOR_IDENTICAL:
-                            if(regist->m_profiles == profiles) {
+                            if(regist->m_condition == condition) {
                                 return regist;
                             }
                             [[fallthrough]];
                         case detail::DESCRIPTOR_INTERSECTS:
-                            if(!profilesOverlap(regist->m_profiles, profiles)) {
+                            if(!regist->m_condition.overlaps(condition)) {
                                 continue;
                             }
                             //Otherwise, we have a conflicting registration
@@ -1622,7 +1595,7 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
             return nullptr;
         }
 
-        reg->m_profiles = profiles;
+        reg->m_condition = condition;
         insertByName(objName, reg);
 
         registrations.push_back(reg);
@@ -2049,7 +2022,7 @@ bool StandardApplicationContext::event(QEvent *event)
         auto createEvent = static_cast<CreateHandleEvent*>(event);
         QMutexLocker<QMutex> locker{&mutex};
         createEvent->createHandle();
-        condition.notify_all();
+        m_condition.notify_all();
         return true;
     }
     return QObject::event(event);

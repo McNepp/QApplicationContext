@@ -85,8 +85,8 @@ protected:
 
     }
 
-    service_registration_handle_t registerServiceHandle(const QString &name, const QApplicationContext::service_descriptor &descriptor, const QApplicationContext::service_config &config, ServiceScope scope, const Profiles& profiles, QObject *baseObject) override {
-        return QApplicationContext::delegateRegisterService(m_delegate, name, descriptor, config, scope, profiles, baseObject);
+    service_registration_handle_t registerServiceHandle(const QString &name, const QApplicationContext::service_descriptor &descriptor, const QApplicationContext::service_config &config, ServiceScope scope, const Condition& condition, QObject *baseObject) override {
+        return QApplicationContext::delegateRegisterService(m_delegate, name, descriptor, config, scope, condition, baseObject);
     }
 
     proxy_registration_handle_t getRegistrationHandle(const std::type_info &service_type, const QMetaObject *metaObject) const override {

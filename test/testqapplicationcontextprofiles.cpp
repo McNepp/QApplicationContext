@@ -106,7 +106,7 @@ private slots:
             activeProfiles = profiles;
         });
         configuration->setValue("qtdi/activeProfiles", QStringList{"unit-test"});
-        auto reg = context->registerService(service<BaseService>(), "base", {"default"});
+        auto reg = context->registerService(service<BaseService>(), "base", Condition::Profile == "default");
         QVERIFY(context->publish());
         //The only published Service depends on a profile. Thus, we cannot change the active profiles:
         ctx->setActiveProfiles(Profiles{"integration-test"});
@@ -176,6 +176,23 @@ private slots:
         QVERIFY(timerSlot->isSingleShot());
     }
 
+    void testProfileSpecificPropertyAsCondition() {
+        QSettings settings{QSettings::NativeFormat, QSettings::UserScope, "mcnepp", "qtditest"};
+        settings.setValue("qtdi/activeProfiles", "test");
+        {
+            QSettings profileSpecific{QSettings::NativeFormat, QSettings::UserScope, "mcnepp", "qtditest-test"};
+            profileSpecific.setValue("timer/singleShot", true);
+        } //QSettings goes out of scope but leaves persistent configuration-entries in place.
+
+        context->registerObject(&settings);
+
+        auto timerReg = context->registerService(service<QTimer>() << propValue("singleShot", "${timer/singleShot}"), "timer", Condition::Config["${timer/singleShot}"] == true);
+        RegistrationSlot<QTimer> timerSlot{timerReg, this};
+        QVERIFY(context->publish());
+        QVERIFY(timerSlot);
+        QVERIFY(timerSlot->isSingleShot());
+    }
+
     void testProfileSpecificPropertiesAutoRefresh() {
         QSettings settings{QSettings::NativeFormat, QSettings::UserScope, "mcnepp", "qtditest"};
         settings.setValue("timer/interval", 5000);
@@ -215,34 +232,75 @@ private slots:
     }
 
     void testCannotRegisterServiceForOverlappingProfiles() {
-        configuration->setValue("qtdi/activeProfiles", QStringList{"test", "default"});
-        context->registerObject(configuration.get());
-        auto defaultBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-default"), "base", {"default"});
+        auto defaultBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-default"), "base", Condition::Profile == "default");
         QVERIFY(defaultBaseReg);
-        QCOMPARE(defaultBaseReg.registeredProfiles(), Profiles{"default"});
-        // We deliberately supply a duplicate profile here. It should be silently pruned:
-        auto testBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-test"), "base", {"test", "test"});
+        // We deliberately supply a duplicate Profile here. It should be silently pruned:
+        auto testBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-test"), "base", Condition::Profile & Profiles{"test", "test"});
         QVERIFY(testBaseReg);
-        QCOMPARE(testBaseReg.registeredProfiles(), Profiles{"test"});
-        auto testBaseReg2 = context->registerService(service<BaseService>() << propValue("foo", "foo-test"), "base", {"test", "test"});
+        auto testBaseReg2 = context->registerService(service<BaseService>() << propValue("foo", "foo-test"), "base", Condition::Profile & Profiles{"test", "test"});
         QVERIFY(testBaseReg2);
         QCOMPARE(testBaseReg, testBaseReg2);
 
-        auto testDefaultBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-test-default"), "base", {"test", "default"});
-        QVERIFY(!testDefaultBaseReg);
+        auto testOverlappingProfileReg = context->registerService(service<BaseService>() << propValue("foo", "foo-test-default"), "base", Condition::Profile & Profiles{"test", "default"});
+        QVERIFY(!testOverlappingProfileReg);
+
+        auto testOverlappingNegatedProfileReg = context->registerService(service<BaseService>() << propValue("foo", "foo-test-default"), "base", Condition::Profile != "mock");
+        QVERIFY(!testOverlappingNegatedProfileReg);
+
     }
 
 
     void testRegisterServiceForDifferentProfiles() {
 
         auto commonBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-common"), "base");
+        QVERIFY(!commonBaseReg.registeredCondition().hasProfiles());
 
-        auto defaultBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-default"), "base-with-profile", {"default"});
+        auto defaultBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-default"), "base-with-profile", Condition::Profile == "default");
         QVERIFY(defaultBaseReg);
-        QCOMPARE(defaultBaseReg.registeredProfiles(), Profiles{"default"});
-        auto testBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-test"), "base-with-profile", {"test"});
+        QVERIFY(defaultBaseReg.registeredCondition().hasProfiles());
+        auto testBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-test"), "base-with-profile", Condition::Profile == "test");
         QVERIFY(testBaseReg);
-        QCOMPARE(testBaseReg.registeredProfiles(), Profiles{"test"});
+        QVERIFY(testBaseReg.registeredCondition().hasProfiles());
+        QCOMPARE_NE(defaultBaseReg, testBaseReg);
+
+        auto byName = context->getRegistration("base-with-profile");
+        QCOMPARE(byName, defaultBaseReg);
+
+        auto byType = context->getRegistration<BaseService>().registeredServices();
+
+        QCOMPARE(byType.size(), 3);
+        QVERIFY(byType.contains(commonBaseReg));
+        QVERIFY(byType.contains(defaultBaseReg));
+        QVERIFY(byType.contains(testBaseReg));
+
+        configuration->setValue("qtdi/activeProfiles", QStringList{"test"});
+        context->registerObject(configuration.get());
+
+        byName = context->getRegistration("base-with-profile");
+        QCOMPARE(byName, testBaseReg);
+
+
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> commonBaseSlot{commonBaseReg, this};
+        QVERIFY(commonBaseSlot.last());
+        QCOMPARE(commonBaseSlot->foo(), "foo-common");
+        RegistrationSlot<BaseService> defaultBaseSlot{defaultBaseReg, this};
+        QVERIFY(!defaultBaseSlot.last());
+        RegistrationSlot<BaseService> testBaseSlot{testBaseReg, this};
+        QVERIFY(testBaseSlot.last());
+        QCOMPARE(testBaseSlot->foo(), "foo-test");
+        QCOMPARE(testBaseSlot->objectName(), "base-with-profile");
+    }
+
+    void testRegisterServiceForProfileNotIn() {
+
+        auto commonBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-common"), "base");
+
+        auto defaultBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-default"), "base-with-profile", Condition::Profile != "test");
+        QVERIFY(defaultBaseReg);
+
+        auto testBaseReg = context->registerService(service<BaseService>() << propValue("foo", "foo-test"), "base-with-profile", Condition::Profile != "default");
+        QVERIFY(testBaseReg);
         QCOMPARE_NE(defaultBaseReg, testBaseReg);
 
         auto byName = context->getRegistration("base-with-profile");
@@ -275,12 +333,12 @@ private slots:
     }
 
     void testRegisterAnonymousProfileSpecific() {
-        auto defaultReg = context->registerService(service<Interface1,BaseService>(), "", {"default"});
+        auto defaultReg = context->registerService(service<Interface1,BaseService>(), "", Condition::Profile == "default");
         QVERIFY(defaultReg);
-        auto testReg = context->registerService(service<Interface1,BaseService>(), "", {"test"});
+        auto testReg = context->registerService(service<Interface1,BaseService>(), "", Condition::Profile == "test");
         QVERIFY(testReg);
         QCOMPARE_NE(defaultReg, testReg);
-        auto mockReg = context->registerService(service<BaseService>().advertiseAs<Interface1,TimerAware>(), "", {"mock"});
+        auto mockReg = context->registerService(service<BaseService>().advertiseAs<Interface1,TimerAware>(), "", Condition::Profile == "mock");
         QVERIFY(mockReg);
         QCOMPARE_NE(defaultReg, mockReg);
         QCOMPARE_NE(testReg, mockReg);
@@ -288,8 +346,8 @@ private slots:
 
     void testProfileSpecificDependency() {
 
-        context->registerService(service<Interface1,BaseService>(), "base-with-profile", {"default"});
-        context->registerService(service<Interface1,BaseService2>(), "base-with-profile", {"test"});
+        context->registerService(service<Interface1,BaseService>(), "base-with-profile", Condition::Profile == "default");
+        context->registerService(service<Interface1,BaseService2>(), "base-with-profile", Condition::Profile == "test");
 
         auto dependentReg = context->registerService(service<DependentService>(inject<Interface1>()));
 
@@ -304,8 +362,8 @@ private slots:
 
     void testProfileSpecificDependencies() {
         auto baseReg = context->registerService(service<Interface1,BaseService>(), "base");
-        context->registerService(service<Interface1,BaseService>(), "base-with-profile", {"default"});
-        auto testReg = context->registerService(service<Interface1,BaseService2>(), "base-with-profile", {"test"});
+        context->registerService(service<Interface1,BaseService>(), "base-with-profile", Condition::Profile == "default");
+        auto testReg = context->registerService(service<Interface1,BaseService2>(), "base-with-profile", Condition::Profile == "test");
 
         auto dependentReg = context->registerService(service<CardinalityNService>(injectAll<Interface1>()));
 
@@ -323,10 +381,25 @@ private slots:
         QVERIFY(dependentSlot->my_bases.contains(testSlot.last()));
     }
 
+    void testRegistrationNever() {
+        Condition always = Condition::always();
+        auto alwaysReg = context->registerService(service<Interface1,BaseService>(), "base", always);
+        QVERIFY(alwaysReg);
+        auto neverReg = context->registerService(service<Interface1,BaseService2>(), "base", !always);
+        QVERIFY(neverReg);
+
+        RegistrationSlot<Interface1> alwaysSlot{alwaysReg, this};
+        RegistrationSlot<Interface1> neverSlot{neverReg, this};
+        QVERIFY(context->publish());
+        QVERIFY(alwaysSlot);
+        QVERIFY(!neverSlot);
+    }
+
+
     void testAmbiguousRegistrationAtPublish() {
 
-        QVERIFY(context->registerService(service<Interface1,BaseService>(), "base-with-profile", {"default"}));
-        QVERIFY(context->registerService(service<Interface1,BaseService2>(), "base-with-profile", {"test"}));
+        QVERIFY(context->registerService(service<Interface1,BaseService>(), "base-with-profile", Condition::Profile == "default"));
+        QVERIFY(context->registerService(service<Interface1,BaseService2>(), "base-with-profile", Condition::Profile == "test"));
 
 
         configuration->setValue("qtdi/activeProfiles", QStringList{"test", "default"});
@@ -340,8 +413,8 @@ private slots:
 
     void testAmbiguousAlias() {
 
-        auto defaultReg = context->registerService(service<Interface1,BaseService>(), "base-with-profile-default", {"default"});
-        QVERIFY(context->registerService(service<Interface1,BaseService2>(), "base-with-profile-test", {"test"}));
+        auto defaultReg = context->registerService(service<Interface1,BaseService>(), "base-with-profile-default", Condition::Profile == "default");
+        QVERIFY(context->registerService(service<Interface1,BaseService2>(), "base-with-profile-test", Condition::Profile == "test"));
 
         configuration->setValue("qtdi/activeProfiles", QStringList{"test", "default"});
         context->registerObject(configuration.get());
@@ -351,9 +424,9 @@ private slots:
 
     void testAmbiguousProfileSpecificDependency() {
 
-        context->registerService(service<Interface1,BaseService>(), "base-with-profile", {"default"});
-        context->registerService(service<Interface1,BaseService2>(), "base-with-profile", {"test"});
-        context->registerService(service<Interface1,BaseService2>(), "base-with-two-profiles", {"test", "default"});
+        context->registerService(service<Interface1,BaseService>(), "base-with-profile", Condition::Profile == "default");
+        context->registerService(service<Interface1,BaseService2>(), "base-with-profile", Condition::Profile == "test");
+        context->registerService(service<Interface1,BaseService2>(), "base-with-two-profiles", Condition::Profile & Profiles{"test", "default"});
 
         auto dependentReg = context->registerService(service<DependentService>(inject<Interface1>()));
 
