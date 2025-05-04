@@ -605,7 +605,19 @@ You may convert this value to `ServiceRegistraton<PropFetcher,ServiceScope::SING
 using the member-function ServiceRegistration::as(). Conversions to other types will not succeed.
 
 
-## Profiles
+## Conditional Service-activation
+
+Sometimes, you may want to publish a %Service only if some configurable condition is met.
+<br>This can be achieved by passing an argument of type mcnepp::qtdi::Condition to QApplicationContext::registerService().
+<br>Currently, three different kinds of Conditions are available:
+
+1. **Unconditional**. mcnepp::qtdi::Condition::always() is the default.
+2. **Profile-based**. Every ApplicationContext has one or more mcnepp::qtdi::QApplicationContext::activeProfiles().
+You may set up Conditions that will be  met if a certain profile becomes active.
+3. **Configuration-based**. Tests for configuration-entries and their values. You may set up Conditions that will be met on existence of a
+configuration-entry, or test for equality, magnitude or regular expressions.
+
+### Profiles
 
 Every ApplicationContext has one or more mcnepp::qtdi::QApplicationContext::activeProfiles().
 
@@ -617,14 +629,29 @@ the %Service will be active always.
 
 ### Registering optional services
 
-With the help of Profiles, it becomes possible to register some some services that will be instantiated only if a certain profile is active.
-<br>For example, in addition to the existing service "hamburgWeather", you may register an additional `RestPropFetcher` named "munichWeather" that will be instantiated only if the profile `"bavaria"` is activated:
+With the help of Profiles, it becomes possible to register some some services that will be instantiated and published only if a certain profile is active.
+<br>For example, in addition to the existing service "hamburgWeather", you may register an additional `RestPropFetcher` named "munichWeather" that will be instantiated and published only if the profile `"bavaria"` is activated:
 
     context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher,QNetworkManagerAware>() << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"), "hamburgWeather");
     
     context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher,QNetworkManagerAware>() << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10870"), 
     "munichWeather",
-    {"bavaria"}); 
+    Condition::Profile == "bavaria");
+
+Instead of basing your decision on the *active profiles*, you may instead choose to use a configuration-entry.
+<br>Here, the second %Service will only be instantiated and published when your QSettings contain an entry `stations/bavaria`:
+
+    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher,QNetworkManagerAware>() << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=${stations/bavaria}"), 
+    "munichWeather",
+    Condition::Config["${stations/bavaria}"].exists());
+
+In the above example, only the *existance* of a configuration-entry `weather/bavaria` was checked.
+<br>However, you may also check for a specific *value*. The following example will only activate the %Service if there is a configuration-entry `stations/bavaria` with the value `10870`:
+
+    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()).advertiseAs<PropFetcher,QNetworkManagerAware>() << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=${stations/bavaria}"), 
+    "munichWeather",
+    Condition::Config["${stations/bavaria}"] == 10870);
+
 
 ### Registering alternative services
 
@@ -640,17 +667,39 @@ Let's recap the "normal" registration of a `RestPropFetcher`, advertised under t
 
 If you want to register an alternative *Mock-Service* , this will be the necessary code:
 
+    context -> registerService(service<PropFetcher,MockPropFetcher>(), "hamburgWeather", Condition::Profile == "mock"); // 1
+    
     context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()) << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"),
     "hamburgWeather",
-    {"default"}); // 1
-    
-    context -> registerService(service<PropFetcher,MockPropFetcher>(), "hamburgWeather", {"mock"}); // 2
+    Condition::Profile == "default"); // 2
 
-1. Added an explicit profile as the last argument to mcnepp::qtdi::QApplicationContext::registerService(). In this case, we use the default-profile.
-2. Registered a second service under the same name and advertised using the same interface. This is only possible because we are using a different profile `"mock"`.
+1. Registered a the Mock-service under the same name and advertised using the same interface as the real service. This is only possible because we are using a different profile `"mock"`.
+2. Added an explicit profile "default" as the last argument to the registration of the real service.
 
 With everything else untouched, the application will behave exactly as before. The profile `"default"`will be active, and a %Service with implementation-type `RestPropFetcher` will be created.
 <br>However, if we change the *active profile* to "mock", an instance of implementation-type `MockPropFetcher` will be instantiated instead!
+
+Instead of basing your decision on the *active profiles*, you may instead choose to use a configuration-entry.
+<br>In the following example, the `MockPropFetcher` will be instantiated and published if a configuration-entry `enableMock` exists and is set to `true`.
+<br>The `RestPropFetcher` will be instantiated and published if either no configuration-entry `enableMock` exists, or if it set to something else than `true`:
+
+    context -> registerService(service<PropFetcher,MockPropFetcher>(), "hamburgWeather", Condition::Config["${enableMock}"] == true);
+    
+    context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()) << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"),
+    "hamburgWeather",
+    Condition::Config["${enableMock}"] != true);
+
+If you look at the above code, you will notice that the Conditions are logically opposed. Instead of spelling out the condition twice, you can 
+declare it only once and use the `operator!` in order to negate it:
+
+    Condition isMock = Condition::Config["${enableMock}"] == true;
+    
+    context -> registerService(service<PropFetcher,MockPropFetcher>(), "hamburgWeather", isMock);
+    
+    context -> registerService(service<PropFetcher,RestPropFetcher>(inject<QNetworkAccessManager>()) << propValue("url", "https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"),
+    "hamburgWeather",
+    !isMock);
+
 
 ### Profile-specific configuration-entries
 
@@ -706,19 +755,19 @@ As stated before, profiles offer a way to register more than one service with th
 However, the set of profiles for which those services are registered must be *disjunct*. 
 Some examples of that will fail at registration-time:
 
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"default", "test"});
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"test"});
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", Condition::Profile & Profiles{"default", "test"});
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", Condition::Profile == "test");
 
 The second registration will fail because if "test" were set as the *active profile* in the ApplicationContext, both registration would be active, which is forbidden.
 <br>Note that the registration will fail even though for some other profile ("default", for example) there would be no amgiguity!
 
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"default", "test"});
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"test", "default"});
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", Condition::Profile & Profiles{"default", "test"});
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", Condition::Profile & Profiles{"test", "default"});
 
 The second registration will fail because the set of profiles is the same as for the first registration. The order of the profiles is irrelevant.
 
 
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"default", "test"});
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", Condition::Profile & Profiles{"default", "test"});
     context -> registerService(service<QNetworkAccessManager>(), "networkManager");
 
 The second registration will fail because it would be active for *any profile*. Thus, if "test" or "default" were set as the *active profile* in the ApplicationContext, 
@@ -729,8 +778,8 @@ both registrations would be active, which is forbidden.
 
 Some cases of ambiguity cannot be detected at registration-time. However, they will be caught when mcnepp::qtdi::QApplicationContext::publish() is invoked:
 
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"default"});
-    context -> registerService(service<QNetworkAccessManager>(), "networkManager", {"test"});
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", Condition::Profile == "default");
+    context -> registerService(service<QNetworkAccessManager>(), "networkManager", Condition::Profile == "test");
     context -> publish();
 
 

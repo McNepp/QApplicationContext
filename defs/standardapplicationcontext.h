@@ -142,7 +142,7 @@ public:
 
 protected:
 
-    virtual service_registration_handle_t registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Profiles& profiles, QObject* baseObj) override;
+    virtual service_registration_handle_t registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Condition& condition, QObject* baseObj) override;
 
     virtual service_registration_handle_t getRegistrationHandle(const QString& name) const override;
 
@@ -236,8 +236,8 @@ private:
             return m_context->registerAlias(this, alias);
         }
 
-        virtual Profiles registeredProfiles() const override {
-            return m_profiles;
+        virtual const Condition& registeredCondition() const override {
+            return m_condition;
         }
 
         bool matches(const std::type_info& type) const override {
@@ -294,7 +294,7 @@ private:
         unsigned const m_index;
         StandardApplicationContext* const m_context;
         DescriptorRegistration* const m_base;
-        Profiles m_profiles;
+        Condition m_condition;
     };
 
 
@@ -764,14 +764,13 @@ private:
         }
     };
 
-
     descriptor_list registrations;
 
-    std::unordered_map<ProfileAndName,DescriptorRegistration*,ProfileNameHash> registrationsByName;
+    std::unordered_map<QString,std::unordered_set<DescriptorRegistration*>> registrationsByName;
 
     mutable std::unordered_map<std::type_index,ProxyRegistrationImpl*> proxyRegistrationCache;
     mutable QMutex mutex;
-    mutable QWaitCondition condition;
+    mutable QWaitCondition m_condition;
     std::unordered_map<registration_handle_t,std::unordered_set<QString>> m_boundProperties;
     std::atomic<unsigned> nextIndex;
     const QLoggingCategory& m_loggingCategory;
@@ -779,7 +778,6 @@ private:
 
     detail::QSettingsWatcher* m_SettingsWatcher = nullptr;
     std::unordered_map<QString,QPointer<detail::PlaceholderResolver>> resolverCache;
-    Profiles m_registeredProfiles;
     Profiles* m_activeProfiles;
     std::unordered_map<ProfileAndName,QSettings*,ProfileNameHash> m_profileSettings;
 };

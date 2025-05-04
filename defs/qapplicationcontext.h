@@ -12,10 +12,12 @@
 #include <QPointer>
 #include <QMetaMethod>
 #include <QLoggingCategory>
+#include <QRegularExpression>
 
 namespace mcnepp::qtdi {
 
 class QApplicationContext;
+class Condition;
 
 namespace detail {
     class Registration;
@@ -817,11 +819,11 @@ public:
     [[nodiscard]] virtual ServiceScope scope() const = 0;
 
     /**
-     * @brief The profiles for which this %Service was registered.
-     * <br>No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration.
-     * @return The (possibly empty) List of profiles for which this %Service was registered.
+     * @brief The Condition for which this %Service was registered.
+     * <br>The default is Condition::always().
+     * @return The Condition for which this %Service was registered.
      */
-    [[nodiscard]] virtual Profiles registeredProfiles() const = 0;
+    [[nodiscard]] virtual const Condition& registeredCondition() const = 0;
 
 
     virtual const QMetaObject* serviceMetaObject() const override;
@@ -1117,6 +1119,333 @@ protected:
 
 
 ///
+/// \brief Makes conditional activation of Services possible.
+/// <br>An instance of this type is passed to QApplicationContext::registerService().
+/// <br>The default ist Condition::always().
+///
+class Condition final {
+public:
+
+    ///
+    /// \brief An intermediate type that is used to create Conditions based on active profiles.
+    /// <br>Can be used via the singleton Condition::Profile
+    /// <br>Examples:
+    ///
+    ///     context->registerService(service<QTimer>(), "timer", Condition::Profile == "test");
+    ///
+    ///     context->registerService(service<QTimer>(), "timer", Condition::Profile & Profiles{"default", "prod"});
+    ///
+     class ProfileHelper {
+         friend class Condition;
+     public:
+         ///
+         /// \brief Yields a Condition that tests for a specific profile.
+         /// <br>The condition will be met if the *active profiles* contain the supplied one.
+         /// \param profile the profile to test for
+         /// \return a Condition that tests for a specific profile.
+         ///
+         Condition operator ==(QAnyStringView profile) const;
+
+         ///
+         /// \brief Yields a Condition that tests for absence of a specific profile.
+         /// <br>The condition will be met if the *active profiles* do not contain the supplied one.
+         /// \param profile the profile to test for
+         /// \return a Condition that tests for absence of a specific profile.
+         ///
+        Condition operator !=(QAnyStringView profile) const;
+
+
+        /// \brief Yields a Condition that tests for a choice of profiles.
+        /// <br>The condition will be met if the *active profiles* contain at least one of the supplied ones.
+        /// \param profiles
+        /// \return a Condition that tests for a choice of profiles.
+        ///
+        Condition operator&(const Profiles& profiles) const;
+
+        /// \brief Yields a Condition that tests for a choice of profiles.
+        /// <br>The condition will be met if the *active profiles* contain at least one of the supplied ones.
+        /// \param profiles
+        /// \return a Condition that tests for a choice of profiles.
+        ///
+        Condition operator&(Profiles&& profiles) const;
+
+
+        /// \brief Yields a Condition that tests for absence of a choice of profiles.
+        /// <br>The condition will be met if the *active profiles* contain none of the supplied ones.
+        /// \param profiles
+        /// \return a Condition that tests for absence of a choice of profiles.
+        ///
+        Condition operator^(const Profiles& profiles) const;
+
+        /// \brief Yields a Condition that tests for absence of a choice of profiles.
+        /// <br>The condition will be met if the *active profiles* contain none of the supplied ones.
+        /// \param profiles
+        /// \return a Condition that tests for absence of a choice of profiles.
+        ///
+        Condition operator^(Profiles&& profiles) const;
+
+    private:
+        ProfileHelper() = default;
+        ProfileHelper(const ProfileHelper&) = delete;
+    };
+
+
+     ///
+     /// \brief The global ProfileHelper.
+     /// <br>Allows you to create Profile-based Conditions. Examples:
+     ///
+     ///     context->registerService(service<QTimer>(), "timer", Condition::Profile == "test");
+     ///
+     ///     context->registerService(service<QTimer>(), "timer", Condition::Profile & Profiles{"default", "prod"});
+     ///
+     static constexpr ProfileHelper Profile{};
+
+
+
+    ///
+    /// \brief An intermediate type that is used to create Conditions based on configuration-entries.
+    /// <br>Can be used via the singleton Condition::Config
+    /// <br>The only available operation is the subscript-operator, which selects a configuration-entry.
+    ///
+    class ConfigHelper final {
+        friend class Condition;
+        static constexpr int MATCH_TYPE_EQUALS = 0;
+        static constexpr int MATCH_TYPE_NOT_EQUALS = 1;
+        static constexpr int MATCH_TYPE_LESS = 2;
+        static constexpr int MATCH_TYPE_GREATER = 3;
+        static constexpr int MATCH_TYPE_LESS_OR_EQUAL = 4;
+        static constexpr int MATCH_TYPE_GREATER_OR_EQUAL = 5;
+
+        using predicate_t = std::function<bool(const QVariant&,const QVariant&)>;
+
+        friend class Matchers;
+
+    public:
+
+        ///
+        /// \brief An intermediate type that is used to create Conditions based on configuration-entries.
+        ///
+        class Entry final {
+            friend class ConfigHelper;
+        public:
+
+
+            ///
+            /// \brief Yields a Condition that is met if the configuration-entry is resolvable.
+            /// \return a Condition that is met if the configuration-entry is resolvable.
+            ///
+            Condition exists() const;
+
+            ///
+            /// \brief Yields a Condition that is met if the configuration-entry is not resolvable.
+            /// <br>Given a `Condition cond`, the expression `!cond` is equivalent to `!cond.exists()`.
+            /// \return a Condition that is met if the configuration-entry is not resolvable.
+            ///
+            Condition operator!() const;
+
+            ///
+            /// \brief Yields a Condition that is met if the configuration-entry is equal to a specific value.
+            /// \param refValue the value to test for.
+            /// \return a Condition that is met if the configuration-entry is resolvable and equals the supplied value.
+            ///
+            Condition operator ==(const QVariant& refValue) const;
+
+            ///
+            /// \brief Yields a Condition that is met if the configuration-entry is not equal to a specific value.
+            /// \param refValue the value to test for.
+            /// \return a Condition that is met if the configuration-entry is either not resolvable or does not equal the supplied value.
+            ///
+            Condition operator !=(const QVariant& refValue) const;
+
+            ///
+            /// \brief Yields a Condition that is met if the configuration-entry is less than a specific value.
+            /// <br>**Note:** An invalid (unresolvable) configuration-entry will never be less than anything!
+            /// \param refValue the value to test for.
+            /// \return a Condition that is met if the configuration-entry is resolvable and less than the supplied value.
+            ///
+            template<typename T,typename L=std::less<T>> Condition operator<(T&& refValue) const {
+                return Condition{matcherForConfigEntry(m_expression, QVariant::fromValue(std::forward<T>(refValue)), MATCH_TYPE_LESS, lessThan<T,L>())};
+            }
+
+
+            ///
+            /// \brief Yields a Condition that is met if the configuration-entry is less than or equal to a specific value.
+            /// <br>**Note:** An invalid (unresolvable) configuration-entry will never be less than anything!
+            /// \param refValue the value to test for.
+            /// \return a Condition that is met if the configuration-entry is resolvable and less than or equal to the supplied value.
+            ///
+            template<typename T,typename L=std::less<T>> Condition operator<=(T&& refValue) const {
+                return Condition{matcherForConfigEntry(m_expression, QVariant::fromValue(std::forward<T>(refValue)), MATCH_TYPE_LESS_OR_EQUAL, lessThan<T,L>())};
+            }
+
+            ///
+            /// \brief Yields a Condition that is met if the configuration-entry is greater than a specific value.
+            /// <br>**Note:** An invalid (unresolvable) configuration-entry will never be greater than anything!
+            /// \param refValue the value to test for.
+            /// \return a Condition that is met if the configuration-entry is resolvable and greater than the supplied value.
+            ///
+            template<typename T,typename L=std::less<T>> Condition operator>(T&& refValue) const {
+                return Condition{matcherForConfigEntry(m_expression, QVariant::fromValue(std::forward<T>(refValue)), MATCH_TYPE_GREATER, lessThan<T,L>())};
+            }
+
+            ///
+            /// \brief Yields a Condition that is met if the configuration-entry is greater than or equal to a specific value.
+            /// <br>**Note:** An invalid (unresolvable) configuration-entry will never be greater than anything!
+            /// \param refValue the value to test for.
+            /// \return a Condition that is met if the configuration-entry is resolvable and greater than or equal to the supplied value.
+            ///
+            template<typename T,typename L=std::less<T>> Condition operator>=(T&& refValue) const {
+                return Condition{matcherForConfigEntry(m_expression, QVariant::fromValue(std::forward<T>(refValue)), MATCH_TYPE_GREATER_OR_EQUAL, lessThan<T,L>())};
+            }
+
+
+            ///
+            /// \brief Yields a Condition that is met if the configuration-entry matches a regular expression.
+            /// \param regEx the expression to match.
+            /// \return a Condition that is met if the configuration-entry is resolvable and its string-representation matches the regEx.
+            ///
+            Condition matches(const QRegularExpression& regEx) const;
+
+            ///
+            /// \brief Yields a Condition that is met if the configuration-entry matches a regular expression.
+            /// \param regEx the String containing the expression to match.
+            /// \param options will be passed to QRegularExpression's constructor.
+            /// \return a Condition that is met if the configuration-entry is resolvable and its string-representation matches the regEx.
+            ///
+            Condition matches(const QString& regEx, QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption) const;
+
+
+
+        private:
+
+            template<typename T,typename L> static predicate_t lessThan() {
+                return [less=L{}](const QVariant& left, const QVariant& right) {
+                        return less(left.value<T>(), right.value<T>());
+                    };
+            }
+
+            explicit constexpr Entry(QAnyStringView expression) : m_expression{expression} {
+
+            }
+
+            QAnyStringView m_expression;
+        };
+
+        ///
+        /// \brief Selects a configuration-entry.
+        /// \param expression comprised of literal strings and *placeholders*.
+        /// \return a resolvable entry.
+        ///
+        constexpr Entry operator[](QAnyStringView expression) const {
+            return Entry{expression};
+        }
+    private:
+        ConfigHelper() = default;
+        ConfigHelper(const ConfigHelper&) = delete;
+    };
+
+    ///
+    /// \brief The global ConfigHelper.
+    /// <br>Allows you to create Configuration-based Conditions. Example:
+    ///
+    ///     context->registerService(service<QTimer>(), "timer", Condition::Config["${timer/singleShot}"] == true);
+    ///
+    static constexpr ConfigHelper Config{};
+
+
+    friend QDebug operator<<(QDebug out, const Condition& cond);
+
+    ///
+    /// \brief Is this Condition met?
+    /// \param context the ApplicationContext for which the Condition is evaluated.
+    /// \return `true` if this Condition was met.
+    ///
+    bool matches(QApplicationContext* context) const;
+
+    ///
+    /// \brief A Condition that is always met.
+    /// <br>This is the default for QApplicationContext::registerService().
+    /// <br>**Note:** Just like with any other Condition, this Condition can be negated.
+    /// However, that will result in the "Never" Condition which is of no apparent use.
+    /// \return A Condition that is always met.
+    ///
+    static Condition always();
+
+    ///
+    /// \brief Is this a Condition related to Profiles?
+    /// \return `true` if this is a Condition obtained via Condition::Profile.
+    ///
+    bool hasProfiles() const;
+
+
+    friend bool operator==(const Condition& left, const Condition& right);
+
+    friend bool operator!=(const Condition& left, const Condition& right);
+
+    ///
+    /// \brief Does this Condition overlap with another one?
+    /// <br>Two Service-registrations with the same name but different Conditions are permitted only
+    /// if those Conditions do not overlap().
+    /// <br>**Note:** Condition::always() overlaps with any other Condition!
+    /// \param other
+    /// \return `true` if this Condition overlaps with `other`.
+    ///
+    bool overlaps(const Condition& other) const;
+
+    ///
+    /// \brief Is this the "always" Condition?
+    /// \return `true` if this is the Condition obtained via always().
+    ///
+    bool isAlways() const;
+
+    ///
+    /// \brief Negates this Condition.
+    /// <br>Yields a Condition that *matches* whenever this Condition does not match.
+    /// \return a Condition that is the negation of this Condition.
+    ///
+    Condition operator!() const;
+
+
+
+private:
+
+    friend class Matchers;
+
+    class Matcher : public QSharedData {
+    public:
+        virtual ~Matcher() = default;
+
+        virtual bool matches(QApplicationContext*) const = 0;
+
+        virtual void print(QDebug out) const = 0;
+
+        virtual bool equals(const Matcher* other) const = 0;
+
+        virtual Matcher* otherwise() const = 0;
+
+        virtual bool hasProfiles() const {
+            return false;
+        }
+
+        virtual bool overlaps(const Matcher* other) const {
+            return equals(other);
+        }
+
+        virtual bool isAlways() const {
+            return false;
+        }
+    };
+
+    explicit Condition(Matcher* matcher) : m_data{matcher} {
+
+    }
+
+    static Matcher* matcherForConfigEntry(QAnyStringView expression, const QVariant& refValue, int matchType, ConfigHelper::predicate_t lessPredicate);
+
+    QExplicitlySharedDataPointer<Matcher> m_data;
+};
+
+///
 /// \brief Determines whether a handle to a Registration matches a type.
 /// \param handle the handle to the Registration.
 /// \tparam T the type to query.
@@ -1202,13 +1531,13 @@ template<typename T> [[nodiscard]] inline bool matches(registration_handle_t han
 }
 
 ///
-/// \brief Obtains the profiles for which the %Service was registered.
-/// <br>No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration.
+/// \brief Obtains the Condition for which the %Service was registered.
+/// <br>The default is Condition::always()
 /// \param handle the handle to the ServiceRegistration.
-/// \return the (possibly empty) List of profiles for which the %Service was registered.
+/// \return the Condition for which the %Service was registered.
 ///
-[[nodiscard]] inline Profiles registeredProfiles(service_registration_handle_t handle) {
-    return handle ? handle->registeredProfiles() : Profiles{};
+[[nodiscard]] inline Condition registeredCondition(service_registration_handle_t handle) {
+    return handle ? handle->registeredCondition() : Condition::always();
 }
 
 
@@ -1484,12 +1813,12 @@ public:
     }
 
     /**
-     * @brief The profiles for which this %Service was registered.
-     * <br>No profile will appear more than once in the returned List. The order of the returned profiles may be different from the order at registration.
-     * @return The (possibly empty) List of profiles for which this %Service was registered.
+     * @brief The Condition for which this %Service was registered.
+     * <br>The default is Condition::always()
+     * @return The Condition for which this %Service was registered.
      */
-    [[nodiscard]] Profiles registeredProfiles() const {
-        return mcnepp::qtdi::registeredProfiles(unwrap());
+    [[nodiscard]] Condition registeredCondition() const {
+        return mcnepp::qtdi::registeredCondition(unwrap());
     }
 
 
@@ -3524,6 +3853,8 @@ protected:
 };
 
 
+
+
 ///
 /// \brief A DI-Container for Qt-based applications.
 ///
@@ -3544,11 +3875,6 @@ public:
     /// \return  the global instance, or `nullptr` if no QApplicationContext is currently alive.
     ///
     [[nodiscard]] static QApplicationContext* instance();
-
-    /// \brief Denotes that the registration of a service will be active for any profile.
-    /// <br>This is the default-argument passed to registerService(const Service<S,Impl,scope>&, const QString&, const Profiles& profiles).
-    /// \return an instance of Profiles denoting any active profile.
-    [[nodiscard]] static const Profiles& anyProfile();
 
 
 
@@ -3596,14 +3922,14 @@ public:
     /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
-    /// \param profiles the list of profiles for which the service shall be active. If the List contains a profile more than once, the second occurrence will be silently ignored.
-    /// <br>If the service shall be active for all profiles, supply anyProfile()
+    /// \param condition determines whether the service will become active on publication.
+    /// <br>If the service shall be active unconditionally, supply Condition::always().
     /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName = {}, const Profiles& profiles = anyProfile()) -> ServiceRegistration<S,scope> {
-        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, profiles, nullptr));
+    template<typename S,typename Impl,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName = {}, const Condition& condition = Condition::always()) -> ServiceRegistration<S,scope> {
+        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, condition, nullptr));
     }
 
     ///
@@ -3617,10 +3943,10 @@ public:
     /// \param config the Configuration for the service.
     /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Profiles&) instead.
+    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Condition&) instead.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,ServiceScope scope> [[deprecated("Use registerService(const Service&,const QQString&,const Profiles&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
+    template<typename S,typename Impl,ServiceScope scope> [[deprecated("Use registerService(const Service&,const QQString&,const Condition&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
         return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, {}, nullptr));
     }
 
@@ -3641,19 +3967,19 @@ public:
     /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
     /// its constructor.
     /// \param templateRegistration the registration of the service-template that this service shall inherit from. Must be valid!
-    /// \param profiles the list of profiles for which the service shall be active. If the List contains a profile more than once, the second occurrence will be silently ignored.
-    /// <br>If the service shall be active for all profiles, supply anyProfile().
+    /// \param condition determines whether the service will become active on publication.
+    /// <br>If the service shall be active unconditionally, supply Condition::always().
     /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,typename B,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName = {}, const Profiles& profiles = anyProfile()) -> ServiceRegistration<S,scope> {
+    template<typename S,typename Impl,typename B,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName = {}, const Condition& condition = Condition::always()) -> ServiceRegistration<S,scope> {
         static_assert(std::is_base_of_v<B,Impl>, "Service-type does not extend type of Service-template.");
         if(!templateRegistration) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << serviceDeclaration.descriptor << " with name '" << objectName << "'. Invalid service-template";
             return ServiceRegistration<S,scope>{};
         }
-        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, profiles, templateRegistration.unwrap()));
+        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, condition, templateRegistration.unwrap()));
     }
 
 
@@ -3669,10 +3995,10 @@ public:
     /// \param templateRegistration the registration of the service-template that this service shall inherit from. Must be valid!
     /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&,const ServiceRegistration<B,ServiceScope::TEMPLATE>&,const QString&,const Profiles&) instead.
+    /// \deprecated Use registerService(const Service<S,Impl,scope>&,const ServiceRegistration<B,ServiceScope::TEMPLATE>&,const QString&,const Condition&) instead.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,typename B,ServiceScope scope> [[deprecated("Use Use registerService(const Service&,const ServiceRegistration<B,ServiceScope::TEMPLATE>&,const QString&,const Profiles&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
+    template<typename S,typename Impl,typename B,ServiceScope scope> [[deprecated("Use Use registerService(const Service&,const ServiceRegistration<B,ServiceScope::TEMPLATE>&,const QString&,const Condition&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
         static_assert(std::is_base_of_v<B,Impl>, "Service-type does not extend type of Service-template.");
         if(!templateRegistration) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << serviceDeclaration.descriptor << " with name '" << objectName << "'. Invalid service-template";
@@ -3710,10 +4036,10 @@ public:
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Profiles&) instead.
+    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Condition&) instead.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> [[deprecated("Use Use registerService(const Service&, const QString&,const Profiles&) instead")]] auto registerService(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::SINGLETON> {
+    template<typename S> [[deprecated("Use Use registerService(const Service&, const QString&,const Condition&) instead")]] auto registerService(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::SINGLETON> {
         return registerService(service<S>(), objectName, config);
     }
 
@@ -3740,10 +4066,10 @@ public:
     /// its constructor.
     /// \param config the Configuration for the service.
     /// \tparam S the service-type.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Profiles&) instead.
+    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Condition&) instead.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S> [[deprecated("Use Use registerService(const Service&, const QString&,const Profiles&) instead")]] auto registerPrototype(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::PROTOTYPE> {
+    template<typename S> [[deprecated("Use Use registerService(const Service&, const QString&,const Condition&) instead")]] auto registerPrototype(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::PROTOTYPE> {
         return registerService(prototype<S>(), objectName, config);
     }
 
@@ -3777,10 +4103,10 @@ public:
     /// \param config the Configuration for the service.
     /// <br>**Note:** Since a service-template may be used by services of types that are yet unknown, the properties supplied here cannot be validated.
     /// \tparam S the service-type.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Profiles&) instead.
+    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Condition&) instead.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S=QObject> [[deprecated("Use Use registerService(const Service&, const QString&,const Profiles&) instead")]] auto registerServiceTemplate(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
+    template<typename S=QObject> [[deprecated("Use Use registerService(const Service&, const QString&,const Condition&) instead")]] auto registerServiceTemplate(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
         return registerService(serviceTemplate<S>(), objectName, config);
     }
 
@@ -3814,7 +4140,7 @@ public:
         }
         std::unordered_set<std::type_index> ifaces;
         (ifaces.insert(typeid(S)), ..., ifaces.insert(typeid(IFaces)));
-        return ServiceRegistration<S,ServiceScope::EXTERNAL>::wrap(registerServiceHandle(objName, service_descriptor{ifaces, typeid(*obj), qObject->metaObject()}, service_config{}, ServiceScope::EXTERNAL, Profiles{}, qObject));
+        return ServiceRegistration<S,ServiceScope::EXTERNAL>::wrap(registerServiceHandle(objName, service_descriptor{ifaces, typeid(*obj), qObject->metaObject()}, service_config{}, ServiceScope::EXTERNAL, Condition::always(), qObject));
     }
 
     ///
@@ -4041,11 +4367,11 @@ protected:
     /// \param descriptor the descriptor of the service.
     /// \param config the configuration of the service.
     /// \param scope determines the service's lifeycle
-    /// \param profiles the list of profiles for which the service shall be active. If the service shall be active for all profiles, supply an empty List.
+    /// \param condition determines whether the service shall become active on publication.
     /// \param baseObject in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template.
     /// \return a Registration for the service, or `nullptr` if it could not be registered.
     ///
-    virtual service_registration_handle_t registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Profiles& profiles, QObject* baseObject) = 0;
+    virtual service_registration_handle_t registerServiceHandle(const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Condition& condition, QObject* baseObject) = 0;
 
 
     ///
@@ -4087,22 +4413,22 @@ protected:
 
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
-    /// <br>If you are implementing registerServiceHandle(const QString&, const service_descriptor&, const service_config&, ServiceScope, const Profiles&, QObject*) and want to delegate
+    /// <br>If you are implementing registerServiceHandle(const QString&, const service_descriptor&, const service_config&, ServiceScope, const Condition&, QObject*) and want to delegate
     /// to another implementation, access-rules will not allow you to invoke the function on another target.
-    /// \param appContext the target on which to invoke registerServiceHandle(const QString&, const service_descriptor&, const service_config&, ServiceScope, QObject*).
+    /// \param appContext the target on which to invoke registerServiceHandle(const QString&, const service_descriptor&, const service_config&, ServiceScope, const Condition&, QObject*).
     /// \param name the name of the registered service.
     /// \param descriptor describes the service.
     /// \param config configuration of the service.
     /// \param scope detemines the service's lifecyle.
-    /// \param profiles the list of profiles for which the service shall be active. If the service shall be active for all profiles, supply an empty List.
+    /// \param condition determines whether the service shall become active on publication.
     /// \param baseObj in case of ServiceScope::EXTERNAL the Object to be registered. Otherwise, the (optional) pointer to the registration of a service-template.
     /// \return the result of registerService(const QString&, service_descriptor*,const service_config&,ServiceScope,QObject*).
     ///
-    static service_registration_handle_t delegateRegisterService(QApplicationContext* appContext, const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Profiles& profiles, QObject* baseObj) {
+    static service_registration_handle_t delegateRegisterService(QApplicationContext* appContext, const QString& name, const service_descriptor& descriptor, const service_config& config, ServiceScope scope, const Condition& condition, QObject* baseObj) {
         if(!appContext) {
             return nullptr;
         }
-        return appContext->registerServiceHandle(name, descriptor, config, scope, profiles, baseObj);
+        return appContext->registerServiceHandle(name, descriptor, config, scope, condition, baseObj);
     }
 
 

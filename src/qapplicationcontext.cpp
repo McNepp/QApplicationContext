@@ -37,11 +37,6 @@ QApplicationContext* QApplicationContext::instance() {
     return theInstance.load();
 }
 
-const Profiles &QApplicationContext::anyProfile()
-{
-    static const Profiles emptyProfiles;
-    return emptyProfiles;
-}
 
 
 
@@ -264,5 +259,8 @@ QString demangle(const char* name) {
 #endif
 
 }
+
+
+// namespace detail
 
 }//mcnepp::qtdi
