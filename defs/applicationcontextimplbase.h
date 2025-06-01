@@ -30,8 +30,8 @@ public:
     QStringList configurationKeys(const QString &section = {}) const override {
         return m_delegate->configurationKeys(section);
     }
-    QVariant resolveConfigValue(const QString &expression) override {
-        return m_delegate->resolveConfigValue(expression);
+    QVariant resolveConfigValue(const QString &expression, const QString& group, QVariantMap& resolvedPlaceholders) override {
+        return m_delegate->resolveConfigValue(expression, group, resolvedPlaceholders);
     }
     bool publish(bool allowPartial = false) override {
         return m_delegate->publish(allowPartial);

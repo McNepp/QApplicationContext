@@ -23,7 +23,7 @@ public:
     explicit QSettingsWatcher(QApplicationContext* parent);
 
 
-    void addWatchedProperty(PlaceholderResolver* resolver, q_variant_converter_t variantConverter, const property_descriptor& propertyDescriptor, QObject* target, const service_config& config);
+    void addWatchedProperty(PlaceholderResolver* resolver, q_variant_converter_t variantConverter, const property_descriptor& propertyDescriptor, QObject* target, const QString& group, QVariantMap& resolvedProperties);
 
     QConfigurationWatcher* watchConfigValue(PlaceholderResolver* resolver);
 
@@ -45,6 +45,7 @@ private:
     QFileSystemWatcher* const m_SettingsFileWatcher;
     std::deque<QPointer<QConfigurationWatcher>> m_watched;
     std::unordered_map<QString,QPointer<QConfigurationWatcher>> m_watchedConfigValues;
+    QVariantMap m_resolvedProperties;
 };
 
 

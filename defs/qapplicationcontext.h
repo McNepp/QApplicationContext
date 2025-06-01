@@ -4269,9 +4269,16 @@ public:
     /// The special character-sequence asterisk-slash indicates that a value shall be resolved in a section and all its parent-sections:<br>
     /// `"* /network/hosts/${host}"` will be resolved with the configuration-entry `"name"` from the section `"network/hosts"`, or
     /// its parent sections.
+    /// \param group the config-group in which to look.
+    /// \param resolvedPlaceholders will consulted for looking up placeholders. It will also be filled with all placeholders that have been looked up.
     /// \return a valid QVariant, or an invalid QVariant if the expression could not be parsed.
     ///
-    [[nodiscard]] virtual QVariant resolveConfigValue(const QString& expression) = 0;
+    [[nodiscard]] virtual QVariant resolveConfigValue(const QString& expression, const QString& group, QVariantMap& resolvedPlaceholders) = 0;
+
+    QVariant resolveConfigValue(const QString& expression, const QString& group = {}) {
+        QVariantMap resolvedPlaceholders;
+        return resolveConfigValue(expression, group, resolvedPlaceholders);
+    }
 
 
 
@@ -4564,9 +4571,9 @@ public:
     /// \brief Processes each service published by an ApplicationContext.
     /// \param handle references the service-registration.
     /// \param service the service-instance
-    /// \param resolvedProperties the resolved properties for this service.
+    /// \param resolvedPlaceholders the resolved placeholders for this service.
     ///
-    virtual void process(service_registration_handle_t handle, QObject* service, const QVariantMap& resolvedProperties) = 0;
+    virtual void process(service_registration_handle_t handle, QObject* service, const QVariantMap& resolvedPlaceholders) = 0;
 
     virtual ~QApplicationContextPostProcessor() = default;
 };

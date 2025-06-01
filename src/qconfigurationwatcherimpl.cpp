@@ -2,18 +2,23 @@
 
 namespace mcnepp::qtdi::detail {
 
+
+
 QVariant QConfigurationWatcherImpl::currentValue() const
 {
     return m_lastValue;
 }
 
-QConfigurationWatcherImpl::QConfigurationWatcherImpl(PlaceholderResolver *resolver, const service_config& config, QApplicationContext *parent) :
+
+
+QConfigurationWatcherImpl::QConfigurationWatcherImpl(PlaceholderResolver *resolver, const QString& group, QVariantMap& additionalProperties, QApplicationContext *parent) :
     QConfigurationWatcher{parent},
     m_resolver{resolver},
     m_context{parent},
-    m_config{config}
+    m_group{group},
+    m_additionalProperties{additionalProperties}
 {
-    m_lastValue = m_resolver->resolve(parent, config);
+    m_lastValue = m_resolver->resolve(group, additionalProperties);
     if(!m_lastValue.isValid()) {
         emit errorOccurred();
     }
@@ -21,7 +26,8 @@ QConfigurationWatcherImpl::QConfigurationWatcherImpl(PlaceholderResolver *resolv
 
 void QConfigurationWatcherImpl::checkChange()
 {
-    QVariant currentVal = m_resolver->resolve(m_context, m_config);
+    m_resolver->clearPlaceholders(m_additionalProperties);
+    QVariant currentVal = m_resolver->resolve(m_group, m_additionalProperties);
     if(!currentVal.isValid()) {
         emit errorOccurred();
         return;

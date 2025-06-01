@@ -447,7 +447,7 @@ private slots:
         auto reg = context->registerService(service<QTimer>() << propValue("interval", "${timerInterval}"));
         QVERIFY(context->publish());
         RegistrationSlot<QTimer> slot{reg, this};
-        QCOMPARE(postProcessor.resolvedPropertiesMap[reg.unwrap()]["interval"], 4711);
+        QCOMPARE(postProcessor.resolvedPropertiesMap[reg.unwrap()]["timerInterval"], 4711);
 
         QCOMPARE(slot->interval(), 4711);
     }
