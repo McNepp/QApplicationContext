@@ -1188,6 +1188,19 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(timerSlot.invocationCount(), 2);
     }
 
+    void testConfigureConfigGroupAsPlaceholder() {
+        configuration->setValue("base1/id", 4711);
+        context->registerObject(configuration.get());
+        auto baseTemplate = context->registerService(serviceTemplate<BaseService>() << propValue("foo", "${id}-foo") << withGroup("${bases}"));
+        auto base1 = context->registerService(service<BaseService>() << placeholderValue("bases", "base1"), baseTemplate);
+
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> slot1{base1, this};
+
+        QCOMPARE(slot1->foo(), "4711-foo");
+    }
+
     void testBindServiceRegistrationToPropertyOfSelf() {
 
 

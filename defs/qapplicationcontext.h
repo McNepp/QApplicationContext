@@ -2763,11 +2763,12 @@ inline void withAutowire(detail::service_config& cfg) {
 /// \brief Sets the group for a service_config.
 /// <br>The usage of this function is analogous to that of *iostream-manipulators* from the standard-libray:
 ///
-///
 ///     context->registerService(service<MyService>() << withGroup("myServices") << propValue("objectName", "${myService}"));
 ///
-inline detail::service_config::config_modifier withGroup(const QString& name) {
-    return [name](detail::service_config& cfg) { cfg.group = name;};
+/// \param groupExpression the group to use. This expression may contain *placeholders*, which will be resolved against the configuration at the time
+/// the service is published.
+inline detail::service_config::config_modifier withGroup(const QString& groupExpression) {
+    return [groupExpression](detail::service_config& cfg) { cfg.group = groupExpression;};
 }
 
 

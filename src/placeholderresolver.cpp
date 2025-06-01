@@ -39,7 +39,12 @@ namespace mcnepp::qtdi::detail {
 
     struct PlaceholderResolver::placeholder_step : resolvable_step {
         virtual QVariant resolve(QApplicationContext* appContext, const QString& group, QVariantMap& resolvedPlaceholders) override {
-            QVariant resolved = appContext->getConfigurationValue(makeConfigPath(group, key), hasWildcard);
+            QVariant resolved;
+            if(group.isEmpty()) {
+                resolved = appContext->getConfigurationValue(key, hasWildcard);
+            } else {
+                resolved = appContext->getConfigurationValue(makeConfigPath(appContext->resolveConfigValue(group, {}, resolvedPlaceholders).toString(), key), hasWildcard);
+            }
             if(!resolved.isValid()) {
                 //If not found in ApplicationContext's configuration, look in the map of already resolved placeholders:
                 resolved = resolvedPlaceholders[key];

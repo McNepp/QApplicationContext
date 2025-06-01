@@ -120,6 +120,14 @@ private slots:
         QCOMPARE(cfg["sayit"], "world");
     }
 
+    void testResolveGroup() {
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, ${sayit}!", configResolver.get());
+        settings->setValue("sub/sayit", "world");
+        QVariantMap cfg;
+        cfg.insert("group", "sub");
+        QCOMPARE(resolver->resolve("${group}", cfg), "Hello, world!");
+    }
+
 
     void testResolveDefaultValue() {
         PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit:Hello, world!}", configResolver.get());
