@@ -9,14 +9,15 @@ class QConfigurationWatcherImpl : public QConfigurationWatcher {
 public:
     QVariant currentValue() const override;
 
-    QConfigurationWatcherImpl(PlaceholderResolver* resolver, const service_config& config, QApplicationContext* parent);
+    QConfigurationWatcherImpl(PlaceholderResolver* resolver, const QString& group, QVariantMap& additionalProperties, QApplicationContext* parent);
 
     void checkChange();
 
 private:
     PlaceholderResolver* const m_resolver;
     QApplicationContext* m_context;
-    service_config m_config;
+    QString m_group;
+    QVariantMap& m_additionalProperties;
     QVariant m_lastValue;
 };
 }

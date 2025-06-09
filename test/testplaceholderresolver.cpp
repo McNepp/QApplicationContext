@@ -47,115 +47,122 @@ private slots:
     }
 
     void testResolveLiteral() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, world!", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, world!", configResolver.get());
         QVERIFY(resolver);
         QVERIFY(!resolver->hasPlaceholders());
-        QCOMPARE(resolver->resolve(configResolver.get(), service_config{}), "Hello, world!");
+        QCOMPARE(resolver->resolve(), "Hello, world!");
         QVERIFY(configResolver->lookupKeys.isEmpty());
     }
 
     void testResolveSimplePlaceholder() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit}", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit}", configResolver.get());
         QVERIFY(resolver);
         QVERIFY(resolver->hasPlaceholders());
         settings->setValue("sayit", "Hello, world!");
-        QCOMPARE(resolver->resolve(configResolver.get(), service_config{}), "Hello, world!");
+        QCOMPARE(resolver->resolve(), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"sayit"});
     }
 
     void testResolvePlaceholderInSection() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("${test/sayit}", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("${test/sayit}", configResolver.get());
         QVERIFY(resolver);
         settings->setValue("test/sayit", "Hello, world!");
-        QCOMPARE(resolver->resolve(configResolver.get(), service_config{}), "Hello, world!");
+        QCOMPARE(resolver->resolve(), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"test/sayit"});
     }
 
     void testResolvePlaceholderInConfigSection() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit}", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit}", configResolver.get());
         QVERIFY(resolver);
         settings->setValue("test/sayit", "Hello, world!");
-        service_config cfg;
-        cfg.group="test";
-        QCOMPARE(resolver->resolve(configResolver.get(), cfg), "Hello, world!");
+        QCOMPARE(resolver->resolve("test"), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"test/sayit"});
     }
 
 
     void testResolvePlaceholderInSectionRecursive() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("${*/tests/test/sayit}", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("${*/tests/test/sayit}", configResolver.get());
         QVERIFY(resolver);
         settings->setValue("sayit", "Hello, world!");
-        QCOMPARE(resolver->resolve(configResolver.get(), service_config{}), "Hello, world!");
+        QCOMPARE(resolver->resolve(), "Hello, world!");
         QStringList expected{"tests/test/sayit", "tests/sayit", "sayit"};
         QCOMPARE(configResolver->lookupKeys, expected);
     }
 
     void testResolveEmbeddedPlaceholder() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, ${sayit}!", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, ${sayit}!", configResolver.get());
         QVERIFY(resolver);
         settings->setValue("sayit", "world");
-        QCOMPARE(resolver->resolve(configResolver.get(), service_config{}), "Hello, world!");
+        QCOMPARE(resolver->resolve(), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"sayit"});
     }
 
     void testResolveFromPrivateProperty() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, ${sayit}!", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, ${sayit}!", configResolver.get());
         QVERIFY(resolver);
-        service_config cfg;
-        cfg.properties.insert("sayit", placeholderValue("sayit", "world").second);
-        QCOMPARE(resolver->resolve(configResolver.get(), cfg), "Hello, world!");
+        QVariantMap cfg;
+        cfg.insert("sayit", "world");
+        QCOMPARE(resolver->resolve("", cfg), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"sayit"});
     }
 
 
     void testResolveRecursiveFromPrivateProperty() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, ${sayit}!", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, ${sayit}!", configResolver.get());
         QVERIFY(resolver);
 
         settings->setValue("text", "world");
-        service_config cfg;
-        cfg.properties.insert("sayit", placeholderValue("sayit", "${text}").second);
-        QCOMPARE(resolver->resolve(configResolver.get(), cfg), "Hello, world!");
-        QStringList expected{"sayit"};
+        QVariantMap cfg;
+        cfg.insert("sayit", "${text}");
+        QCOMPARE(resolver->resolve("", cfg), "Hello, world!");
+        QStringList expected{"sayit", "text"};
         QCOMPARE(configResolver->lookupKeys, expected);
+        QCOMPARE(cfg["sayit"], "world");
+    }
+
+    void testResolveGroup() {
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("Hello, ${sayit}!", configResolver.get());
+        settings->setValue("sub/sayit", "world");
+        QVariantMap cfg;
+        cfg.insert("group", "sub");
+        QCOMPARE(resolver->resolve("${group}", cfg), "Hello, world!");
     }
 
 
     void testResolveDefaultValue() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit:Hello, world!}", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit:Hello, world!}", configResolver.get());
         QVERIFY(resolver);
-        QCOMPARE(resolver->resolve(configResolver.get(), service_config{}), "Hello, world!");
+        QCOMPARE(resolver->resolve(), "Hello, world!");
         QCOMPARE(configResolver->lookupKeys, QStringList{"sayit"});
     }
 
     void testEscapeDollar() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("price: ${amount}\\$", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("price: ${amount}\\$", configResolver.get());
         QVERIFY(resolver);
         settings->setValue("amount", 42);
-        QCOMPARE(resolver->resolve(configResolver.get(), service_config{}), "price: 42$");
+        QCOMPARE(resolver->resolve(), "price: 42$");
     }
 
     void testEscapeOpeningBracket() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("$\\{placeholder}", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("$\\{placeholder}", configResolver.get());
         QVERIFY(resolver);
         QVERIFY(!resolver->hasPlaceholders());
-        QCOMPARE(resolver->resolve(configResolver.get(), service_config{}), "${placeholder}");
+        QCOMPARE(resolver->resolve(), "${placeholder}");
     }
 
 
     void testUnbalanced() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit", configResolver.get());
         QVERIFY(!resolver);
     }
 
     void testInvalidDollarInPlaceholder() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("${A dollar$}", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("${A dollar$}", configResolver.get());
         QVERIFY(!resolver);
     }
 
     void testInvalidWildcardInPlaceholder() {
-        PlaceholderResolver* resolver = PlaceholderResolver::parse("${*A dollar}", this);
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("${*A dollar}", configResolver.get());
         QVERIFY(!resolver);
     }
 

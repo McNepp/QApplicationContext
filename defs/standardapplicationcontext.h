@@ -43,6 +43,8 @@ class StandardApplicationContext final : public QApplicationContext
 
     class DescriptorRegistration;
 
+    class ServiceGroupRegistration;
+
     friend QApplicationContext* newDelegate(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext);
 
 signals:
@@ -131,7 +133,7 @@ public:
 
     virtual QConfigurationWatcher* watchConfigValue(const QString& expression) override;
 
-    virtual QVariant resolveConfigValue(const QString& expression) override;
+    virtual QVariant resolveConfigValue(const QString& expression, const QString& group, QVariantMap& resolvedPlaceholders) override;
 
 
     using QApplicationContext::registerObject;
@@ -157,7 +159,6 @@ private:
 
     bool registerAlias(service_registration_handle_t reg, const QString& alias);
 
-
     using descriptor_set = std::unordered_set<DescriptorRegistration*>;
 
     using descriptor_list = std::deque<DescriptorRegistration*>;
@@ -169,8 +170,6 @@ private:
     static constexpr int STATE_PUBLISHED = 3;
     //The state reported by a Service-Template
     static constexpr int STATE_IGNORE = 4;
-
-    static const QVariantMap EMPTY_MAP;
 
     class DescriptorRegistration : public detail::ServiceRegistration {
         friend class StandardApplicationContext;
@@ -193,13 +192,16 @@ private:
             return applicationContext()->loggingCategory();
         }
 
-        // For non-prototype services, this function returns the singleton, provided prepareService() has been invoked before.
-        // For prototypes, always returns nullptr.
+        // Returns the single service-object.
+        // If scope is one of SINGLETON or EXTERNAL, will return the service-object.
+        // Othwerise, will return nullptr
         virtual QObject* getObject() const = 0;
 
-        // For non-prototype services, this function is identical to getObject().
-        // For prototypes, it creates a new prototype-instance.
-        virtual QObject* obtainService(descriptor_list& created) = 0;
+        // Obtains the service(s).
+        // If scope is one of SINGLETON or EXTERNAL, will return the service-object.
+        // If scope is SERVICE_GROUP, will return multiple service-objects.
+        // If scope == PROTOTYPE, it will create a new prototype-instance for each invocation.
+        virtual QObjectList obtainServices(descriptor_list& created) = 0;
 
         virtual int state() const = 0;
 
@@ -209,11 +211,10 @@ private:
 
         bool isManaged() const {
             switch(scope()) {
-            case ServiceScope::PROTOTYPE:
-            case ServiceScope::SINGLETON:
-                return true;
-            default:
+            case ServiceScope::EXTERNAL:
                 return false;
+            default:
+                return true;
             }
         }
 
@@ -227,8 +228,14 @@ private:
             return m_descriptor;
         }
 
+        virtual const service_config& config() const final override {
+            return m_config;
+        }
 
-        virtual QStringList getBeanRefs() const = 0;
+
+        const QStringList& getBeanRefs() const  {
+            return m_beanRefsCache;
+        }
 
         virtual void notifyPublished() = 0;
 
@@ -263,22 +270,25 @@ private:
         }
 
 
-        DescriptorRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* context, QObject* parent);
+        DescriptorRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* context, QObject* parent);
 
-        DescriptorRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, StandardApplicationContext* parent) :
-        DescriptorRegistration{base, index, name, desc, parent, parent} {
+        DescriptorRegistration(DescriptorRegistration* base, unsigned index, const QString& name, const service_descriptor& desc, const service_config& config, StandardApplicationContext* parent) :
+        DescriptorRegistration{base, index, name, desc, config, parent, parent} {
 
         }
 
-        // For non-prototype services, this function will create the singleton.
-        // For prototypes, this function will simply store the dependencies for later use with obtainService().
+        // Prepares the service.
+        // If scope == SINGLETON, will create the service.
+        // If scope == SERVICE_GROUP, will create multiple services.
+        // If scope == PROTOTYPE, will store the dependencies for later use.
+        // Otherwise, does nothing.
         virtual bool prepareService(const QVariantList& dependencies, descriptor_list& created) = 0;
 
         virtual int unpublish() = 0;
 
-        virtual void resolveProperty(const QString& key, const QVariant& value) = 0;
-
-        virtual const QVariantMap& resolvedProperties() const = 0;
+        QVariantMap& resolvedPlaceholders() {
+            return m_resolvedPlaceholders;
+        }
 
         DescriptorRegistration* base() const {
             return m_base;
@@ -287,7 +297,6 @@ private:
         bool isActiveInProfile() const;
 
     protected:
-
         service_descriptor m_descriptor;
         QString m_name;
         std::vector<QPropertyNotifier> bindings;
@@ -295,6 +304,9 @@ private:
         StandardApplicationContext* const m_context;
         DescriptorRegistration* const m_base;
         Condition m_condition;
+        QVariantMap m_resolvedPlaceholders;
+        service_config m_config;
+        QStringList m_beanRefsCache;
     };
 
 
@@ -320,10 +332,6 @@ private:
         }
 
 
-        virtual const QVariantMap& resolvedProperties() const override {
-            return m_resolvedProperties;
-        }
-
 
         void notifyPublished() override {
             if(theService) {
@@ -340,8 +348,8 @@ private:
             return theService;
         }
 
-        virtual QObject* obtainService(descriptor_list&) override {
-            return theService;
+        virtual QObjectList obtainServices(descriptor_list&) override {
+            return theService ? QObjectList{theService} : QObjectList{};
         }
 
 
@@ -350,17 +358,6 @@ private:
 
         virtual void print(QDebug out) const override;
 
-        virtual const service_config& config() const override {
-            return m_config;
-        }
-
-        virtual void resolveProperty(const QString& key, const QVariant& value) override {
-            m_resolvedProperties.insert(key, value);
-        }
-
-
-
-        virtual QStringList getBeanRefs() const override;
 
 
 
@@ -388,12 +385,11 @@ private:
 
     private:
         QObject* theService;
-        service_config m_config;
         QMetaObject::Connection onDestroyed;
-        QVariantMap m_resolvedProperties;
         int m_state;
-        QStringList beanRefsCache;
     };
+
+
 
     class ServiceTemplateRegistration : public DescriptorRegistration {
 
@@ -431,30 +427,13 @@ private:
         }
 
 
-        virtual QObject* obtainService(descriptor_list&) override {
-            return nullptr;
+        virtual QObjectList obtainServices(descriptor_list&) override {
+            return {};
         }
 
 
 
         virtual void print(QDebug out) const override;
-
-        virtual const service_config& config() const override {
-            return m_config;
-        }
-
-
-        virtual void resolveProperty(const QString& key, const QVariant& value) override {
-            m_resolvedProperties.insert(key, value);
-        }
-
-
-        virtual const QVariantMap& resolvedProperties() const override {
-            return m_resolvedProperties;
-        }
-
-
-        virtual QStringList getBeanRefs() const override;
 
 
 
@@ -474,9 +453,6 @@ private:
 
 
     private:
-        service_config m_config;
-        QVariantMap m_resolvedProperties;
-        QStringList beanRefsCache;
         subscription_handle_t proxySubscription;
         descriptor_list derivedServices;
     };
@@ -506,21 +482,9 @@ private:
 
         virtual void print(QDebug out) const override;
 
-        virtual const service_config& config() const override {
-            return m_config;
-        }
-
-        virtual void resolveProperty(const QString&, const QVariant&) override {
-        }
-
-        virtual const QVariantMap& resolvedProperties() const override {
-            return EMPTY_MAP;
-        }
 
 
         virtual subscription_handle_t createBindingTo(const detail::source_property_descriptor& sourceProperty, registration_handle_t target, const detail::property_descriptor& targetProperty) override;
-
-        virtual QStringList getBeanRefs() const override;
 
 
 
@@ -535,14 +499,12 @@ private:
 
         virtual int unpublish() override;
 
-        virtual QObject* obtainService(descriptor_list&) override;
+        virtual QObjectList obtainServices(descriptor_list&) override;
 
         QVariantList m_dependencies;
 
 
     private:
-        service_config m_config;
-        QStringList beanRefsCache;
         subscription_handle_t proxySubscription;
     };
 
@@ -551,7 +513,7 @@ private:
         friend class StandardApplicationContext;
 
         ObjectRegistration(unsigned index, const QString& name, const service_descriptor& desc, QObject* obj, StandardApplicationContext* parent) :
-            DescriptorRegistration{nullptr, index, name, desc, parent},
+            DescriptorRegistration{nullptr, index, name, desc, service_config{}, parent},
             theObj(obj){
             //Do not connect the signal QObject::destroyed if obj is the ApplicationContext itself:
             if(obj != parent->m_injectedContext) {
@@ -575,24 +537,16 @@ private:
             return 0;
         }
 
-        virtual const QVariantMap& resolvedProperties() const override {
-            return EMPTY_MAP;
-        }
-
-
 
 
         virtual QObject* getObject() const override {
             return theObj;
         }
 
-        virtual QObject* obtainService(descriptor_list&) override {
-            return theObj;
+        virtual QObjectList obtainServices(descriptor_list&) override {
+            return QObjectList{theObj};
         }
 
-
-        virtual void resolveProperty(const QString&, const QVariant&) override {
-        }
 
 
 
@@ -601,26 +555,14 @@ private:
         }
 
 
-        virtual QStringList getBeanRefs() const override {
-            return QStringList{};
-        }
-
         virtual void print(QDebug out) const override;
 
-        virtual const service_config& config() const override {
-            return defaultConfig;
-        }
 
         virtual void onSubscription(subscription_handle_t subscription) override {
             emit subscription->objectPublished(theObj);
         }
 
 
-
-
-
-
-        static const service_config defaultConfig;
 
 
     private:
@@ -673,6 +615,8 @@ private:
             return applicationContext()->loggingCategory();
         }
 
+        QObjectList obtainServices(descriptor_list&);
+
 
         const std::type_info& m_type;
         const QMetaObject* m_meta;
@@ -714,7 +658,7 @@ private:
 
     static QVariant resolveDependency(const QVariant& arg, descriptor_list& created);
 
-    Status configure(DescriptorRegistration*, const service_config& config, QObject*, descriptor_list& toBePublished, bool allowPartial);
+    Status configure(DescriptorRegistration*, QVariantMap& resolvedPlaceholders, QObject*, descriptor_list& toBePublished, bool allowPartial);
 
     bool init(DescriptorRegistration*, ServiceInitializationPolicy);
 

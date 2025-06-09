@@ -82,12 +82,12 @@ void QSettingsWatcher::add(QSettings *settings) {
 
 void QSettingsWatcher::setPropertyValue(const property_descriptor &propertyDescriptor, QObject *target, const QVariant& value) {
     propertyDescriptor.setter(target, value);
-    qCInfo(m_context->loggingCategory()).nospace() << "Refreshed property '" << propertyDescriptor.name << "' of " << target << " with value " << value;
+    qCInfo(m_context->loggingCategory()).nospace().noquote() << "Refreshed property '" << propertyDescriptor.name << "' of " << target << " with value " << value;
 }
 
-void QSettingsWatcher::addWatchedProperty(PlaceholderResolver* resolver, q_variant_converter_t variantConverter, const property_descriptor& propertyDescriptor, QObject *target, const service_config& config)
+void QSettingsWatcher::addWatchedProperty(PlaceholderResolver* resolver, q_variant_converter_t variantConverter, const property_descriptor& propertyDescriptor, QObject *target, const QString& group, QVariantMap& additionalProperties)
 {
-    QConfigurationWatcher* watcher = new QConfigurationWatcherImpl{resolver, config, m_context};
+    QConfigurationWatcher* watcher = new QConfigurationWatcherImpl{resolver, group, additionalProperties, m_context};
 
     if(variantConverter) {
         connect(watcher, &QConfigurationWatcher::currentValueChanged, this, [this,propertyDescriptor,target,variantConverter](const QVariant& currentValue) {
@@ -119,7 +119,7 @@ QConfigurationWatcher *QSettingsWatcher::watchConfigValue(PlaceholderResolver *r
 
     auto& watcher = m_watchedConfigValues[resolver->expression()];
     if(!watcher) {
-        watcher = new QConfigurationWatcherImpl{resolver, service_config{}, m_context};
+        watcher = new QConfigurationWatcherImpl{resolver, {}, m_resolvedProperties, m_context};
         m_watched.push_back(watcher);
         qCInfo(m_context->loggingCategory()).noquote().nospace() << "Watching expression '" << resolver->expression() << "'";
     }

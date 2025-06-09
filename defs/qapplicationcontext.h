@@ -84,6 +84,8 @@ using subscription_handle_t = detail::Subscription*;
  * <tr><td>EXTERNAL</td><td>QApplicationContext::registerObject().</td><td>The service has been created externally.</td></tr>
  * <tr><td>TEMPLATE</td><td>QApplicationContext::registerService(serviceTemplate()).</td><td>No Instances will ever by created.<br>
  * The ServiceRegistration can be supplied as an additional parameter when registering other services.</td></tr>
+ * <tr><td>SERVICE_GROUP</td><td>QApplicationContext::registerService(serviceGroup() << service()).</td><td>The services belonging to the service-group will be instantiated on QApplicationContext::publish(bool).<br>
+ * Multiple references will be injected into every dependent service.</td></tr>
  * </table>
  */
 enum class ServiceScope {
@@ -91,7 +93,8 @@ enum class ServiceScope {
     SINGLETON,
     PROTOTYPE,
     EXTERNAL,
-    TEMPLATE
+    TEMPLATE,
+    SERVICE_GROUP
 };
 
 ///
@@ -177,9 +180,15 @@ template<> struct service_scope_traits<ServiceScope::PROTOTYPE> {
     static constexpr bool is_constructable = true;
 };
 
+template<> struct service_scope_traits<ServiceScope::SERVICE_GROUP> {
+    static constexpr bool is_binding_source = false;
+    static constexpr bool is_constructable = true;
+};
+
+
 // We cannot make use of service_scope_traits here, since we also want to test this at runtime:
 constexpr bool is_allowed_as_dependency(ServiceScope scope) {
-    return scope != ServiceScope::TEMPLATE;
+    return scope != ServiceScope::TEMPLATE && scope != ServiceScope::SERVICE_GROUP;
 }
 
 #ifdef __cpp_lib_remove_cvref
@@ -495,6 +504,7 @@ public:
 
 
     friend QDebug operator<<(QDebug out, const Registration& reg) {
+        QDebugStateSaver save{out};
         reg.print(out);
         return out;
     }
@@ -924,7 +934,6 @@ protected:
         DEFAULT,
         AUTO_REFRESH_EXPRESSION,
         SERVICE,
-        SERVICE_LIST,
         PRIVATE
     };
 
@@ -999,7 +1008,7 @@ protected:
 
 
         friend inline bool operator==(const service_config& left, const service_config& right) {
-            return left.properties == right.properties && left.group == right.group && left.autowire == right.autowire && left.autoRefresh == right.autoRefresh;
+            return left.properties == right.properties && left.group == right.group && left.autowire == right.autowire && left.autoRefresh == right.autoRefresh && left.serviceGroupPlaceholder == right.serviceGroupPlaceholder;
         }
 
 
@@ -1068,12 +1077,20 @@ protected:
         /// \brief Shall all properties be automatically refreshed?
         ///
         bool autoRefresh = false;
+
+        ///
+        /// \brief the name of the placeholder for service-groups.
+        ///
+        QString serviceGroupPlaceholder;
     };
 
     inline service_config merge_config(const service_config& first, const service_config& second) {
         service_config merged{first};
-        if(!second.group.isEmpty()) {
+        if(first.group.isEmpty()) {
             merged.group = second.group;
+        }
+        if(first.serviceGroupPlaceholder.isEmpty()) {
+            merged.serviceGroupPlaceholder = second.serviceGroupPlaceholder;
         }
         merged.autoRefresh |= second.autoRefresh;
         merged.autowire |= second.autowire;
@@ -2763,11 +2780,12 @@ inline void withAutowire(detail::service_config& cfg) {
 /// \brief Sets the group for a service_config.
 /// <br>The usage of this function is analogous to that of *iostream-manipulators* from the standard-libray:
 ///
-///
 ///     context->registerService(service<MyService>() << withGroup("myServices") << propValue("objectName", "${myService}"));
 ///
-inline detail::service_config::config_modifier withGroup(const QString& name) {
-    return [name](detail::service_config& cfg) { cfg.group = name;};
+/// \param groupExpression the group to use. This expression may contain *placeholders*, which will be resolved against the configuration at the time
+/// the service is published.
+inline detail::service_config::config_modifier withGroup(const QString& groupExpression) {
+    return [groupExpression](detail::service_config& cfg) { cfg.group = groupExpression;};
 }
 
 
@@ -2982,6 +3000,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
     return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter)}};
 }
 
+
 ///
 /// \deprecated Use mcnepp::qtdi::propValue() instead
 ///
@@ -2994,7 +3013,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]][[dep
 /// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
 /// \tparam S the service-type.
 /// \param propertySetter the member-function that will be invoked with a `QList<A*>`, comprising all service-instances that have been published for the
-/// suppolied ProxyRegistration.
+/// supplied ProxyRegistration.
 /// \param reg the registration for those services that will be injected into the configured service.
 /// \return a type-safe configuration for a service.
 ///
@@ -3008,7 +3027,29 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE_LIST, detail::adaptSetter<S>(propertySetter), nullptr}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter), nullptr}};
+}
+
+///
+/// \brief Creates a type-safe configuration-entry for a service.
+/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
+/// \tparam S the service-type.
+/// \param propertySetter the member-function that will be invoked with a `QList<A*>`, comprising all service-instances that have been published for the
+/// supplied Service-group.
+/// \param reg the registration for the Service-group whose services will be injected into the configured service.
+/// \return a type-safe configuration for a service.
+///
+template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propValue(R(S::*propertySetter)(L), const ServiceRegistration<A,ServiceScope::SERVICE_GROUP>& reg) -> std::enable_if_t<std::is_convertible_v<L,QList<A*>>,service_config_entry<S>>
+{
+    if(!propertySetter) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
+        return {".invalid", QVariant{}};
+    }
+    if(!reg) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
+        return {".invalid", QVariant{}};
+    }
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter), nullptr}};
 }
 
 ///
@@ -3082,6 +3123,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 [[nodiscard]]inline detail::service_config::entry_type placeholderValue(const QString& name, const QVariant& value) {
     return {name, detail::ConfigValue{value, detail::ConfigValueType::PRIVATE}};
 }
+
 
 ///
 /// \brief Creates a configuration-entry for a service.
@@ -3398,6 +3440,26 @@ struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
 };
 
 template <typename S>
+struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,ServiceScope::SERVICE_GROUP>> {
+    using type = S;
+
+    using arg_type = QList<S*>;
+
+    static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S,ServiceScope::SERVICE_GROUP>& dep) {
+        if(dep) {
+            return { typeid(S), static_cast<int>(Kind::N), dep.registeredName()};
+        }
+        return { typeid(S), INVALID_KIND };
+    }
+
+    static auto converter() {
+        return default_argument_converter<S,Kind::N>{};
+    }
+
+};
+
+
+template <typename S>
 struct dependency_helper<mcnepp::qtdi::ProxyRegistration<S>> {
     using type = S;
 
@@ -3585,7 +3647,11 @@ template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep
     return descriptor;
 }
 
+
 } // namespace detail
+
+
+
 
 
 ///
@@ -3607,6 +3673,7 @@ template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep
 /// \tparam scope the scope of the designated Service.
 ///
 template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN> struct Service {
+
     static_assert(std::is_base_of_v<QObject,Impl>, "Implementation-type must be a subclass of QObject");
 
     static_assert(std::is_base_of_v<Srv,Impl>, "Implementation-type must be a subclass of Service-type");
@@ -3620,6 +3687,10 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
         descriptor{std::move(descr)} {
     }
 
+    explicit Service(detail::service_descriptor&& descr, detail::service_config&& cfg) :
+        descriptor{std::move(descr)},
+        config{std::move(cfg)} {
+    }
 
     /**
      * @brief Specifies service-interfaces.
@@ -3640,7 +3711,7 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
         static_assert(sizeof...(IFaces) > 0, "At least one service-interface must be advertised.");
         //Check whether the Impl-type is derived from the service-interfaces (except for service-templates)
         if constexpr(scope != ServiceScope::TEMPLATE) {
-            static_assert((std::is_base_of_v<IFaces,Impl> && ... ), "Implementation-type does not implement all advertised interfaces");
+            static_assert(std::conjunction_v<std::is_base_of<IFaces,Impl>...>, "Implementation-type does not implement all advertised interfaces");
         }
         if constexpr(std::is_same_v<Srv,Impl>) {
             static_assert(detail::check_unique_types<Impl,IFaces...>(), "All advertised interfaces must be distinct");
@@ -3755,9 +3826,6 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
 };
 
 
-
-
-
 ///
 /// \brief Creates a Service with an explicit factory.
 /// \param factory the factory to use. Must be a *Callable* object, i.e. provide an `Impl* operator()` that accepts
@@ -3795,6 +3863,88 @@ template<typename F,typename Impl=typename F::service_type,typename...Dep> [[dep
 /// \return a Service-declaration
 template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Impl,ServiceScope::SINGLETON> service(Dep...dependencies) {
     return Service<S,Impl,ServiceScope::SINGLETON>{detail::make_descriptor<S,Impl,ServiceScope::SINGLETON>(typename service_traits<Impl>::factory_type{}, dependencies...)};
+}
+
+
+///
+/// \brief A type that allows creating Service-groups.
+/// <br>Instances of this type are used solely as temporaries, returned by mcnepp::qtdi::serviceGroup(QAnyStringView,QAnyStringView).
+///
+struct ServiceGroup {
+
+
+
+
+    ///
+    /// \brief Creates a strongly typed Service-group.
+    /// <br>The following example will register a Service-group with 3 services of type `QTimer`, for which the property `interval` will be set
+    /// to the values 1, 500 and 1000:
+    ///
+    ///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(&QTimer::setInterval, "${interval}"));
+    ///
+    /// <br>The following example will register a Service-group with multiple services of type `RESTService`.
+    /// The configuration-entry `urls` is expected to comprise a comma-separated list of values.
+    /// Each `RESTService` will be initialized with one of these values:
+    ///
+    ///     context->registerService(serviceGroup("url", "${urls}") << service<RESTService>(resolve("${url}")));
+    /// \tparam S the primary service-interface.
+    /// \tparam Impl the implementation-type of the service.
+    /// \param service the original service-declaration.
+    /// \return a Service-declaration for a Service-group.
+    template<typename S,typename Impl>  [[nodiscard]] Service<S,Impl,ServiceScope::SERVICE_GROUP> operator<<(Service<S,Impl,ServiceScope::SINGLETON>&& service)&& {
+        service.config.serviceGroupPlaceholder = placeholder.toString();
+        service.config.properties.insert(service.config.serviceGroupPlaceholder , detail::ConfigValue{groupExpression.toString(), detail::ConfigValueType::PRIVATE});
+        return Service<S,Impl,ServiceScope::SERVICE_GROUP>{std::move(service.descriptor), std::move(service.config)};
+    }
+
+    ///
+    /// \brief Creates a strongly typed Service-group.
+    /// <br>The following example will register a Service-group with 3 services of type `QTimer`, for which the property `interval` will be set
+    /// to the values 1, 500 and 1000:
+    ///
+    ///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(&QTimer::setInterval, "${interval}"));
+    ///
+    /// <br>The following example will register a Service-group with multiple services of type `RESTService`.
+    /// The configuration-entry `urls` is expected to comprise a comma-separated list of values.
+    /// Each `RESTService` will be initialized with one of these values:
+    ///
+    ///     context->registerService(serviceGroup("url", "${urls}") << service<RESTService>(resolve("${url}")));
+    /// \tparam S the primary service-interface.
+    /// \tparam Impl the implementation-type of the service.
+    /// \param service the original service-declaration.
+    /// \return a Service-declaration for a Service-group.
+    template<typename S,typename Impl>  [[nodiscard]] Service<S,Impl,ServiceScope::SERVICE_GROUP> operator<<(const Service<S,Impl,ServiceScope::SINGLETON>& service)&& {
+        detail::service_config cfg{service.config};
+        cfg.serviceGroupPlaceholder = placeholder.toString();
+        cfg.properties.insert(cfg.serviceGroupPlaceholder , detail::ConfigValue{groupExpression.toString(), detail::ConfigValueType::PRIVATE});
+        return Service<S,Impl,ServiceScope::SERVICE_GROUP>{detail::service_descriptor{service.descriptor}, std::move(cfg)};
+    }
+
+
+    QAnyStringView placeholder;
+    QAnyStringView groupExpression;
+};
+
+///
+/// \brief Creates a Service-group with the default service-factory.
+/// <br>For a Service-group to be useful, you must invoke mcnepp::qtdi::ServiceGroup::operator<<().
+/// <br>The following example will register a Service-group with 3 services of type `QTimer`, for which the property `interval` will be set
+/// to the values 1, 500 and 1000:
+///
+///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(&QTimer::setInterval, "${interval}"));
+///
+/// <br>The following example will register a Service-group with multiple services of type `RESTService`.
+/// The configuration-entry `urls` is expected to comprise a comma-separated list of values.
+/// Each `RESTService` will be initialized with one of these values:
+///
+///     context->registerService(serviceGroup("url", "${urls}") << service<RESTService>(resolve("${url}")));
+///
+///
+/// \param placeholder will be set to each of the values from the `groupExpression`.
+/// \param groupExpression shall be resolved to a comma-separated list of values.
+/// \return a ServiceGroup with the supplied placeholder and groupExpression.
+[[nodiscard]] inline ServiceGroup serviceGroup(QAnyStringView placeholder, QAnyStringView groupExpression) {
+    return {placeholder, groupExpression};
 }
 
 ///
@@ -3911,7 +4061,6 @@ public:
     using dependency_info = detail::dependency_info;
 
     ~QApplicationContext();
-
 
 
     ///
@@ -4269,9 +4418,16 @@ public:
     /// The special character-sequence asterisk-slash indicates that a value shall be resolved in a section and all its parent-sections:<br>
     /// `"* /network/hosts/${host}"` will be resolved with the configuration-entry `"name"` from the section `"network/hosts"`, or
     /// its parent sections.
+    /// \param group the config-group in which to look.
+    /// \param resolvedPlaceholders will consulted for looking up placeholders. It will also be filled with all placeholders that have been looked up.
     /// \return a valid QVariant, or an invalid QVariant if the expression could not be parsed.
     ///
-    [[nodiscard]] virtual QVariant resolveConfigValue(const QString& expression) = 0;
+    [[nodiscard]] virtual QVariant resolveConfigValue(const QString& expression, const QString& group, QVariantMap& resolvedPlaceholders) = 0;
+
+    QVariant resolveConfigValue(const QString& expression, const QString& group = {}) {
+        QVariantMap resolvedPlaceholders;
+        return resolveConfigValue(expression, group, resolvedPlaceholders);
+    }
 
 
 
@@ -4410,7 +4566,6 @@ protected:
      */
     [[nodiscard]] virtual QList<service_registration_handle_t> getRegistrationHandles() const = 0;
 
-
     ///
     /// \brief Allows you to invoke a protected virtual function on another target.
     /// <br>If you are implementing registerServiceHandle(const QString&, const service_descriptor&, const service_config&, ServiceScope, const Condition&, QObject*) and want to delegate
@@ -4430,7 +4585,6 @@ protected:
         }
         return appContext->registerServiceHandle(name, descriptor, config, scope, condition, baseObj);
     }
-
 
 
     ///
@@ -4564,9 +4718,9 @@ public:
     /// \brief Processes each service published by an ApplicationContext.
     /// \param handle references the service-registration.
     /// \param service the service-instance
-    /// \param resolvedProperties the resolved properties for this service.
+    /// \param resolvedPlaceholders the resolved placeholders for this service.
     ///
-    virtual void process(service_registration_handle_t handle, QObject* service, const QVariantMap& resolvedProperties) = 0;
+    virtual void process(service_registration_handle_t handle, QObject* service, const QVariantMap& resolvedPlaceholders) = 0;
 
     virtual ~QApplicationContextPostProcessor() = default;
 };
