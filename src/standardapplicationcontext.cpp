@@ -197,7 +197,6 @@ QStringList determineBeanRefs(const detail::service_config::map_type& properties
 
         case detail::ConfigValueType::AUTO_REFRESH_EXPRESSION:
         case detail::ConfigValueType::SERVICE:
-        case detail::ConfigValueType::SERVICE_LIST:
             continue;
         default:
 
@@ -425,6 +424,16 @@ StandardApplicationContext::ProxyRegistrationImpl::ProxyRegistrationImpl(const s
          add(reg);
     }
     proxySubscription->enableSignal();
+}
+
+QObjectList StandardApplicationContext::ProxyRegistrationImpl::obtainServices(descriptor_list& created) {
+    QObjectList result;
+    for(auto reg : m_context -> registrations) {
+        if(canAdd(reg)) {
+            result.append(reg->obtainServices(created));
+        }
+    }
+    return result;
 }
 
 QList<service_registration_handle_t> StandardApplicationContext::ProxyRegistrationImpl::registeredServices() const {
@@ -677,17 +686,17 @@ bool StandardApplicationContext::PrototypeRegistration::prepareService(const QVa
         return true;
 }
 
-QObject* StandardApplicationContext::PrototypeRegistration::obtainService(descriptor_list& created) {
+QObjectList StandardApplicationContext::PrototypeRegistration::obtainServices(descriptor_list& created) {
         std::unique_ptr<DescriptorRegistration> instanceReg{ new ServiceRegistrationImpl{base(), ++m_context->nextIndex, registeredName(), descriptor(), config(), m_context, this}};
         if(!instanceReg->prepareService(m_dependencies, created)) {
             qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
-            return nullptr;
+            return QObjectList{};
         }
         qCInfo(loggingCategory()).noquote().nospace() << "Created instance of " << *this;
 
         instanceReg->subscribe(proxySubscription);
         created.push_back(instanceReg.get());
-        return instanceReg.release()->getObject();
+        return instanceReg.release()->obtainServices(created);
 }
 
 void StandardApplicationContext::PrototypeRegistration::print(QDebug out) const {
@@ -712,7 +721,93 @@ void StandardApplicationContext::PrototypeRegistration::onSubscription(subscript
     }
 }
 
+class StandardApplicationContext::ServiceGroupRegistration : public DescriptorRegistration {
+    friend class StandardApplicationContext;
+    ServiceGroupRegistration(DescriptorRegistration* base, unsigned index, const QString &name, const service_descriptor &desc, const service_config &config, StandardApplicationContext *parent) :
+        DescriptorRegistration{base, index, name, desc, config, parent}
+    {
+        proxySubscription = new ProxySubscription{this, true};
+    }
 
+    virtual ServiceScope scope() const override {
+        return ServiceScope::SERVICE_GROUP;
+    }
+
+
+    void notifyPublished() override {
+        for(auto reg : serviceRegistrations) {
+            reg->notifyPublished();
+        }
+    }
+
+    virtual int state() const override {
+        return m_state;
+    }
+
+    virtual QObject* getObject() const override {
+        return nullptr;
+    }
+
+    virtual void print(QDebug out) const override {
+        out.nospace().noquote() << "Service-group [" << serviceRegistrations.size() << "] '" << registeredName() << "' with " << this->descriptor() << ' ' << m_condition;
+    }
+
+    virtual subscription_handle_t createBindingTo(const detail::source_property_descriptor&, registration_handle_t, const detail::property_descriptor&) override
+    {
+        qCCritical(loggingCategory()).noquote().nospace() << "Cannot create binding from " << *this;
+        return nullptr;
+    }
+
+    virtual bool prepareService(const QVariantList& dependencies, descriptor_list& created) override {
+        const QString namePattern{"%1:%2"};
+        QStringList services = splitList(m_context->resolveConfigValue(m_resolvedPlaceholders[m_config.serviceGroupPlaceholder].toString(), m_config.group, m_resolvedPlaceholders).toString());
+        if(services.empty()) {
+            qCWarning(loggingCategory()).nospace().noquote() << "Expression for Service-group placeholder '" << m_config.serviceGroupPlaceholder << "' resolved to an empty List";
+        } else {
+            for(const QString& service : services) {
+                std::unique_ptr<DescriptorRegistration> instanceReg{ new ServiceRegistrationImpl{base(), ++m_context->nextIndex, namePattern.arg(registeredName()).arg(service), descriptor(), config(), m_context, this}};
+                instanceReg->resolvedPlaceholders()[m_config.serviceGroupPlaceholder] = service;
+                if(!instanceReg->prepareService(dependencies, created)) {
+                    qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
+                    return false;
+                }
+                qCInfo(loggingCategory()).noquote().nospace() << "Created instance for " << *this << ": " << *instanceReg;
+
+                instanceReg->subscribe(proxySubscription);
+                created.push_back(instanceReg.get());
+                serviceRegistrations.push_back(instanceReg.release());
+            }
+        }
+        m_state = STATE_PUBLISHED;
+        return true;
+    }
+
+    virtual void onSubscription(subscription_handle_t subscription) override {
+        detail::connect(this, subscription);
+        TemporarySubscriptionProxy tempProxy{subscription};
+        //By subscribing to a TemporarySubscriptionProxy, we force existing objects to be signalled immediately, while not creating any new Connections:
+        for(auto reg : serviceRegistrations) {
+            reg->subscribe(&tempProxy);
+        }
+    }
+
+
+    virtual int unpublish() override {
+        return std::transform_reduce(serviceRegistrations.begin(), serviceRegistrations.end(), 0, std::plus<int>{}, std::mem_fn(&DescriptorRegistration::unpublish));
+    }
+
+    virtual QObjectList obtainServices(descriptor_list& created) override {
+        QObjectList result;
+        for(auto reg : serviceRegistrations) {
+            result.append(reg->obtainServices(created));
+        }
+        return result;
+    }
+
+    subscription_handle_t proxySubscription;
+    descriptor_list serviceRegistrations;
+    int m_state = STATE_INIT;
+};
 
 
 void registerAppInGlobalContext() {
@@ -1208,19 +1303,22 @@ QVariant StandardApplicationContext::resolveDependency(const QVariant &arg, desc
 {
     QObjectList objectList = arg.value<QObjectList>();
     if(!objectList.empty()) {
-        for(QObject*& ptr : objectList) {
-            if(auto proto = dynamic_cast<DescriptorRegistration*>(ptr)) {
-                ptr = proto->obtainService(created);
+        QObjectList resultList;
+        for(QObject* ptr : objectList) {
+            if(auto reg = dynamic_cast<DescriptorRegistration*>(ptr)) {
+                resultList.append(reg->obtainServices(created));
             }
         }
-        return QVariant::fromValue(objectList);
+        return QVariant::fromValue(resultList);
     }
-    if(auto proto = arg.value<DescriptorRegistration*>()) {
-        auto instance = proto->obtainService(created);
-        if(!instance) {
-            return QVariant{};
+    if(auto reg = arg.value<DescriptorRegistration*>()) {
+        auto instances = reg->obtainServices(created);
+        switch(reg->scope()) {
+        case ServiceScope::SERVICE_GROUP:
+            return QVariant::fromValue(instances);
+        default:
+            return instances.empty() ? QVariant{} : QVariant::fromValue(instances[0]);
         }
-        return QVariant::fromValue(instance);
     }
     return arg;
 }
@@ -1434,7 +1532,7 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
                 reg = getActiveRegistrationByName(objName);
                 //If we have a registration under the same name, we'll return it only if it's for the same object and it has the same descriptor:
                 if(reg) {
-                    if(!reg->isManaged() && reg->getObject() == baseObj && descriptor == reg->descriptor()) {
+                    if(reg->getObject() == baseObj && descriptor == reg->descriptor()) {
                         return reg;
                     }
                     //Otherwise, we have a conflicting registration
@@ -1445,8 +1543,7 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
             //For object-registrations, even if we supply an explicit name, we still have to loop over all registrations,
             //as we need to check whether the same object has been registered before.
             for(auto regist : registrations) {
-                //With isManaged() we test whether reg is also an ObjectRegistration (no ServiceRegistration)
-                if(!regist->isManaged() && baseObj == regist->getObject()) {
+                if(baseObj == regist->getObject()) {
                     //An identical anonymous registration is allowed:
                     if(descriptor == regist->descriptor() && objName.isEmpty()) {
                         return regist;
@@ -1463,6 +1560,11 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
 
             break;
 
+        case ServiceScope::SERVICE_GROUP:
+            if(config.serviceGroupPlaceholder.isEmpty() || !config.properties[config.serviceGroupPlaceholder].expression.isValid()) {
+                qCCritical(loggingCategory()).nospace().noquote() <<  "Cannot register Service-group for " << descriptor << " with no service-group-expression";
+                return nullptr;
+            }
         case ServiceScope::SINGLETON:
         case ServiceScope::PROTOTYPE:
             {
@@ -1576,6 +1678,9 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
             case ServiceScope::TEMPLATE:
                 reg = new ServiceTemplateRegistration{base, ++nextIndex, objName, descriptor, config, this};
                 break;
+            case ServiceScope::SERVICE_GROUP:
+                reg = new ServiceGroupRegistration{base, ++nextIndex, objName, descriptor, config, this};
+                break;
             default:
                 reg = nullptr;
                 break;
@@ -1672,10 +1777,19 @@ std::pair<StandardApplicationContext::Status,bool> StandardApplicationContext::r
             qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << key << "'";
             return {Status::fatal, false};
         }
-        QObject* bean = beanReg->obtainService(toBePublished);
-        qCInfo(loggingCategory()).nospace().noquote() << "Resolved reference '" << key << "' to " << bean;
-        value.setValue(bean);
-        return {Status::ok, true};
+        QObjectList beans = beanReg->obtainServices(toBePublished);
+        switch(beans.size()) {
+        case 1:
+            qCInfo(loggingCategory()).nospace().noquote() << "Resolved reference '" << key << "' to " << beans[0];
+            value.setValue(beans[0]);
+            return {Status::ok, true};
+        case 0:
+            qCWarning(loggingCategory()).nospace().noquote() << "Could not resolve reference '" << key << "'";
+            return { Status::fixable, false};
+        default:
+            qCritical(loggingCategory()).nospace().noquote() << "Reference '" << key << "' references multiple services";
+            return { Status::fatal, false};
+        }
     }
     return {Status::ok, false};
 
@@ -1742,14 +1856,21 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
             switch(cv.configType) {
             case detail::ConfigValueType::SERVICE:
                 if(auto srvReg = dynamic_cast<DescriptorRegistration*>(cv.expression.value<service_registration_handle_t>())) {
-                    resolvedValue.setValue(srvReg->obtainService(toBePublished));
+                    auto instances = srvReg->obtainServices(toBePublished);
+                    switch(srvReg->scope()) {
+                    case ServiceScope::SERVICE_GROUP:
+                        resolvedValue.setValue(instances);
+                        break;
+                    default:
+                        if(instances.size() != 1) {
+                            qCCritical(loggingCategory()).nospace().noquote() << "Could not resolve property '" << key << "' of " << *reg;
+                            return Status::fatal;
+                        }
+                        resolvedValue.setValue(instances[0]);
+                    }
                 }
-                break;
-            case detail::ConfigValueType::SERVICE_LIST:
-                if(auto proxyReg = cv.expression.value<proxy_registration_handle_t>()) {
-                    Collector<QObject> collector;
-                    proxyReg->subscribe(&collector);
-                    resolvedValue.setValue(collector.collected);
+                if(auto proxyReg = dynamic_cast<ProxyRegistrationImpl*>(cv.expression.value<proxy_registration_handle_t>())) {
+                    resolvedValue.setValue(proxyReg->obtainServices(toBePublished));
                 }
                 break;
 
@@ -1910,13 +2031,7 @@ bool StandardApplicationContext::validateResolvers(const service_descriptor& des
         QString asString;
         switch(cv.configType) {
         case detail::ConfigValueType::SERVICE:
-            if(!cv.expression.value<service_registration_handle_t>()) {
-                qCritical(loggingCategory()).nospace().noquote() << "Invalid value for property '" << key << "'";
-                return false;
-            }
-            continue;
-        case detail::ConfigValueType::SERVICE_LIST:
-            if(!cv.expression.value<proxy_registration_handle_t>()) {
+            if(!cv.expression.value<registration_handle_t>()) {
                 qCritical(loggingCategory()).nospace().noquote() << "Invalid value for property '" << key << "'";
                 return false;
             }

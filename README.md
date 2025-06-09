@@ -604,6 +604,34 @@ In order to advertise a `RestPropFetcher` as both a `PropFetcher` and a `QNetwor
 You may convert this value to `ServiceRegistraton<PropFetcher,ServiceScope::SINGLETON>` as well as `ServiceRegistration<QNetworkManagerAware,ServiceScope::SINGLETON>`,
 using the member-function ServiceRegistration::as(). Conversions to other types will not succeed.
 
+## Service-Groups
+
+A common usecase will include the creation of multiple, differently configured Services of the same type.
+<br>We have already seens this in the examples above when two instances of the type `RestPropFetcher` were registered with an ApplicationContext.
+<br>Let's recapitulate this:
+
+    context -> registerService(service<RestPropFetcher>(resolve("${baseUrl}?stationIds=${hamburgStationId}"), inject<QNetworkAccessManager>()), "hamburgWeather"); 
+    context -> registerService(service<RestPropFetcher>(resolve("${baseUrl}?stationIds=${berlinStationId}"), inject<QNetworkAccessManager>()), "berlinWeather"); 
+
+Obviously, in order to be flexible and allow for more than two `RestPropFetcher`s, you would propbably write a loop that fetches the available stationIds from the configuration:
+
+    QStringList stationsIds = context->getConfigurationValue("stationIds").toString().split(",");
+    for(const QString& stationId : stationIds) {
+      context -> registerService(service<RestPropFetcher>(resolve("${baseUrl}?stationIds=${" + stationId + "}"), inject<QNetworkAccessManager>()), "hamburgWeather"); 
+    }
+
+As you can see, this results in quite convoluted code.
+<br>Luckily, it can be expressed much more concisely using a *service-group*:
+
+    context -> registerService(serviceGroup("stationId, "${stationIds}") << service<RestPropFetcher>(resolve("${baseUrl}?stationIds=${stationId}"), inject<QNetworkAccessManager>()), "hamburgWeather"); 
+
+Two things are noteworthy:
+- Instead of mcnepp::qtdi::service(), you use mcnepp::qtdi::serviceGroup(QAnyStringView,QAnyStringView).
+- You specify a a placeholder named "stationId" and a resolvable expression "${stationIds}". 
+- Then, you specify which type of service the service-group shall publish.
+
+As a consequence, the corresponding configuration-entry "stationIds" will be looked up in the QSettings. It will be treated as a comma-separated list and split into several values.
+<br>Those values are then assigned one after another to the placeholder "stationId", which is put to use in resolving the complete URL for each instantiated %Service.
 
 ## Conditional Service-activation
 

@@ -43,6 +43,8 @@ class StandardApplicationContext final : public QApplicationContext
 
     class DescriptorRegistration;
 
+    class ServiceGroupRegistration;
+
     friend QApplicationContext* newDelegate(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext);
 
 signals:
@@ -157,7 +159,6 @@ private:
 
     bool registerAlias(service_registration_handle_t reg, const QString& alias);
 
-
     using descriptor_set = std::unordered_set<DescriptorRegistration*>;
 
     using descriptor_list = std::deque<DescriptorRegistration*>;
@@ -191,13 +192,16 @@ private:
             return applicationContext()->loggingCategory();
         }
 
-        // For non-prototype services, this function returns the singleton, provided prepareService() has been invoked before.
-        // For prototypes, always returns nullptr.
+        // Returns the single service-object.
+        // If scope is one of SINGLETON or EXTERNAL, will return the service-object.
+        // Othwerise, will return nullptr
         virtual QObject* getObject() const = 0;
 
-        // For non-prototype services, this function is identical to getObject().
-        // For prototypes, it creates a new prototype-instance.
-        virtual QObject* obtainService(descriptor_list& created) = 0;
+        // Obtains the service(s).
+        // If scope is one of SINGLETON or EXTERNAL, will return the service-object.
+        // If scope is SERVICE_GROUP, will return multiple service-objects.
+        // If scope == PROTOTYPE, it will create a new prototype-instance for each invocation.
+        virtual QObjectList obtainServices(descriptor_list& created) = 0;
 
         virtual int state() const = 0;
 
@@ -207,11 +211,10 @@ private:
 
         bool isManaged() const {
             switch(scope()) {
-            case ServiceScope::PROTOTYPE:
-            case ServiceScope::SINGLETON:
-                return true;
-            default:
+            case ServiceScope::EXTERNAL:
                 return false;
+            default:
+                return true;
             }
         }
 
@@ -274,8 +277,11 @@ private:
 
         }
 
-        // For non-prototype services, this function will create the singleton.
-        // For prototypes, this function will simply store the dependencies for later use with obtainService().
+        // Prepares the service.
+        // If scope == SINGLETON, will create the service.
+        // If scope == SERVICE_GROUP, will create multiple services.
+        // If scope == PROTOTYPE, will store the dependencies for later use.
+        // Otherwise, does nothing.
         virtual bool prepareService(const QVariantList& dependencies, descriptor_list& created) = 0;
 
         virtual int unpublish() = 0;
@@ -342,8 +348,8 @@ private:
             return theService;
         }
 
-        virtual QObject* obtainService(descriptor_list&) override {
-            return theService;
+        virtual QObjectList obtainServices(descriptor_list&) override {
+            return theService ? QObjectList{theService} : QObjectList{};
         }
 
 
@@ -383,6 +389,8 @@ private:
         int m_state;
     };
 
+
+
     class ServiceTemplateRegistration : public DescriptorRegistration {
 
         friend class StandardApplicationContext;
@@ -419,8 +427,8 @@ private:
         }
 
 
-        virtual QObject* obtainService(descriptor_list&) override {
-            return nullptr;
+        virtual QObjectList obtainServices(descriptor_list&) override {
+            return {};
         }
 
 
@@ -491,7 +499,7 @@ private:
 
         virtual int unpublish() override;
 
-        virtual QObject* obtainService(descriptor_list&) override;
+        virtual QObjectList obtainServices(descriptor_list&) override;
 
         QVariantList m_dependencies;
 
@@ -535,8 +543,8 @@ private:
             return theObj;
         }
 
-        virtual QObject* obtainService(descriptor_list&) override {
-            return theObj;
+        virtual QObjectList obtainServices(descriptor_list&) override {
+            return QObjectList{theObj};
         }
 
 
@@ -606,6 +614,8 @@ private:
         const QLoggingCategory& loggingCategory() const {
             return applicationContext()->loggingCategory();
         }
+
+        QObjectList obtainServices(descriptor_list&);
 
 
         const std::type_info& m_type;

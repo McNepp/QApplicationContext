@@ -2085,8 +2085,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto basesReg = context->getRegistration<Interface1>();
         BaseService base1;
         context->registerObject<Interface1>(&base1);
-        BaseService2 base2;
-        context->registerObject<Interface1>(&base2);
+        context->registerService(service<Interface1,BaseService2>());
 
         auto cardReg = context->registerService(service<CardinalityNService>() << propValue(&CardinalityNService::setBases, basesReg), "card");
 
@@ -2894,7 +2893,109 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(static_cast<BaseService*>(slotCard->my_bases[2])->objectName(), "base3");
     }
 
+    void testServiceGroupMissingExpression() {
+        auto reg = context->registerService(serviceGroup("", "") << service<Interface1,BaseService>());
+        QVERIFY(!reg);
+    }
 
+    void testServiceGroup() {
+        void (QTimer::*timerFunc)(int) = &QTimer::setInterval; //We need this intermediate variable because setTimer() has multiple overloads.
+        auto reg = context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(timerFunc, "${interval}"), "timerGroup");
+        QVERIFY(reg);
+        QCOMPARE(reg.unwrap()->scope(), ServiceScope::SERVICE_GROUP);
+
+        auto reg2 = context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(timerFunc, "${interval}"), "timerGroup");
+        QCOMPARE(reg2, reg);
+
+        auto regInvalid = context->registerService(serviceGroup("interval", "7,42") << service<QTimer>() << propValue(timerFunc, "${interval}"), "timerGroup");
+        QVERIFY(!regInvalid);
+
+        RegistrationSlot<QTimer> slot{reg, this};
+        QVERIFY(context->publish());
+        QCOMPARE(slot.size(), 3);
+        QCOMPARE(dynamic_cast<QObject*>(slot[0])->objectName(), "timerGroup:1");
+        QCOMPARE(dynamic_cast<QObject*>(slot[1])->objectName(), "timerGroup:500");
+        QCOMPARE(dynamic_cast<QObject*>(slot[2])->objectName(), "timerGroup:1000");
+        QCOMPARE(slot[0]->interval(), 1);
+        QCOMPARE(slot[1]->interval(), 500);
+        QCOMPARE(slot[2]->interval(), 1000);
+    }
+
+    void testServiceGroupResolveExpression() {
+        configuration->setValue("bases", "Hello,world,how are you?");
+        context->registerObject(configuration.get());
+        auto reg = context->registerService(serviceGroup("base", "${bases}") << service<Interface1,BaseService>() << propValue("foo", "${base}"), "baseGroup");
+        QVERIFY(reg);
+        QCOMPARE(reg.unwrap()->scope(), ServiceScope::SERVICE_GROUP);
+        RegistrationSlot<Interface1> slot{reg, this};
+        QVERIFY(context->publish());
+        QCOMPARE(slot.size(), 3);
+        QCOMPARE(dynamic_cast<QObject*>(slot[0])->objectName(), "baseGroup:Hello");
+        QCOMPARE(dynamic_cast<QObject*>(slot[1])->objectName(), "baseGroup:world");
+        QCOMPARE(dynamic_cast<QObject*>(slot[2])->objectName(), "baseGroup:how are you?");
+        QCOMPARE(slot[0]->foo(), "Hello");
+        QCOMPARE(slot[1]->foo(), "world");
+        QCOMPARE(slot[2]->foo(), "how are you?");
+    }
+
+    void testServiceGroupWithConfigGroup() {
+        configuration->setValue("helloBase/foo", "Hello");
+        configuration->setValue("worldBase/foo", "world");
+        context->registerObject(configuration.get());
+        auto reg = context->registerService(serviceGroup("base", "helloBase,worldBase") << service<Interface1,BaseService>() << propValue("foo", "${foo}") << withGroup("${base}"), "baseGroup");
+        QVERIFY(reg);
+        RegistrationSlot<Interface1> slot{reg, this};
+        QVERIFY(context->publish());
+        QCOMPARE(slot.size(), 2);
+        QCOMPARE(dynamic_cast<QObject*>(slot[0])->objectName(), "baseGroup:helloBase");
+        QCOMPARE(dynamic_cast<QObject*>(slot[1])->objectName(), "baseGroup:worldBase");
+        QCOMPARE(slot[0]->foo(), "Hello");
+        QCOMPARE(slot[1]->foo(), "world");
+    }
+
+    void testServiceGroupAsDependency() {
+        //This Service should not be injected as a dependency:
+        context->registerService(service<Interface1,BaseService>());
+        //Only the Services from this groups should be injected as a dependency:
+        auto reg = context->registerService(serviceGroup("base", "Hello,world") << service<Interface1,BaseService>() << propValue("foo", "${base}"));
+        QVERIFY(reg);
+        auto dependentReg = context->registerService(service<CardinalityNService>(reg));
+        RegistrationSlot<CardinalityNService> slot{dependentReg, this};
+        QVERIFY(context->publish());
+        QVERIFY(slot);
+        QCOMPARE(slot->my_bases.size(), 2);
+        QCOMPARE(slot->my_bases[0]->foo(), "Hello");
+        QCOMPARE(slot->my_bases[1]->foo(), "world");
+    }
+
+    void testEmptyServiceGroupAsDependency() {
+        //This Service should not be injected as a dependency:
+        context->registerService(service<Interface1,BaseService>());
+        //Only the Services from this group should be injected as a dependency:
+        auto reg = context->registerService(serviceGroup("base", "") << service<Interface1,BaseService>() << propValue("foo", "${base}"));
+        QVERIFY(reg);
+        auto dependentReg = context->registerService(service<CardinalityNService>(reg));
+        RegistrationSlot<CardinalityNService> slot{dependentReg, this};
+        QVERIFY(context->publish());
+        QVERIFY(slot);
+        QCOMPARE(slot->my_bases.size(), 0);
+    }
+
+
+    void testServiceGroupAsProperty() {
+        //This Service should not be injected as a dependency:
+        context->registerService(service<Interface1,BaseService>());
+        //Only the Services from this group should be injected as a dependency:
+        auto reg = context->registerService(serviceGroup("base", "Hello,world") << service<Interface1,BaseService>() << propValue("foo", "${base}"));
+        QVERIFY(reg);
+        auto dependentReg = context->registerService(service<CardinalityNService>() << propValue(&CardinalityNService::setBases, reg));
+        RegistrationSlot<CardinalityNService> slot{dependentReg, this};
+        QVERIFY(context->publish());
+        QVERIFY(slot);
+        QCOMPARE(slot->my_bases.size(), 2);
+        QCOMPARE(slot->my_bases[0]->foo(), "Hello");
+        QCOMPARE(slot->my_bases[1]->foo(), "world");
+    }
 
     void testPublishAdditionalServices() {
 
