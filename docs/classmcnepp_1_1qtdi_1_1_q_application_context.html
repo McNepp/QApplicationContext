@@ -112,7 +112,7 @@ Inheritance diagram for mcnepp::qtdi::QApplicationContext:</div>
  <div class="center">
   <img src="classmcnepp_1_1qtdi_1_1_q_application_context.png" usemap="#mcnepp::qtdi::QApplicationContext_map" alt=""/>
   <map id="mcnepp::qtdi::QApplicationContext_map" name="mcnepp::qtdi::QApplicationContext_map">
-<area href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext. Using this class is the &quot;canonical way&quot; of ..." alt="mcnepp::qtdi::StandardApplicationContext" shape="rect" coords="0,112,243,136"/>
+<area href="classmcnepp_1_1qtdi_1_1_standard_application_context.html" title="A ready-to use implementation of the QApplicationContext. Using this class is the &quot;canonical way&quot; of ..." alt="mcnepp::qtdi::StandardApplicationContext" shape="rect" coords="0,56,243,80"/>
   </map>
 </div></div>
 <table class="memberdecls">
@@ -243,10 +243,13 @@ The keys will be returned in the same order that the underlying QSettings yield 
 Keys that are present in more than one QSettings will be returned only once. <br  />
 In contrast to getConfigurationValue(const QString&amp;, bool), this function does not consider environment variables.  <br /></td></tr>
 <tr class="separator:a1750500fb6698e86b358138190f4c7c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7e3f3903656efb88360b9c2fba301475" id="r_a7e3f3903656efb88360b9c2fba301475"><td class="memItemLeft" align="right" valign="top">virtual QVariant&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7e3f3903656efb88360b9c2fba301475">resolveConfigValue</a> (const QString &amp;expression)=0</td></tr>
-<tr class="memdesc:a7e3f3903656efb88360b9c2fba301475"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves an expression. <br  />
+<tr class="memitem:a17349bba956a47ed92014e43a3c8c43d" id="r_a17349bba956a47ed92014e43a3c8c43d"><td class="memItemLeft" align="right" valign="top">virtual QVariant&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a17349bba956a47ed92014e43a3c8c43d">resolveConfigValue</a> (const QString &amp;expression, const QString &amp;group, QVariantMap &amp;resolvedPlaceholders)=0</td></tr>
+<tr class="memdesc:a17349bba956a47ed92014e43a3c8c43d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves an expression. <br  />
 <b>Thread-safety:</b> This function may be safely called from any thread.  <br /></td></tr>
-<tr class="separator:a7e3f3903656efb88360b9c2fba301475"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a17349bba956a47ed92014e43a3c8c43d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac8997863199da81960c2b79fe68b0ef2" id="r_ac8997863199da81960c2b79fe68b0ef2"><td class="memItemLeft" align="right" valign="top"><a id="ac8997863199da81960c2b79fe68b0ef2" name="ac8997863199da81960c2b79fe68b0ef2"></a>
+QVariant&#160;</td><td class="memItemRight" valign="bottom"><b>resolveConfigValue</b> (const QString &amp;expression, const QString &amp;group={})</td></tr>
+<tr class="separator:ac8997863199da81960c2b79fe68b0ef2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2229cdb9173e8e314b4ecb5bb27e7439" id="r_a2229cdb9173e8e314b4ecb5bb27e7439"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html">QConfigurationWatcher</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2229cdb9173e8e314b4ecb5bb27e7439">watchConfigValue</a> (const QString &amp;expression)=0</td></tr>
 <tr class="memdesc:a2229cdb9173e8e314b4ecb5bb27e7439"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtains a <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html" title="Watches a configuration-value.  Instances will be returned from QApplicationContext::watchConfigValue...">QConfigurationWatcher</a> for an expression. <br  />
 If <a class="el" href="#a499d2dc7da8a5fad3796bff55e8ec0c4" title="Has auto-refresh been enabled?  If enabled, you may use watchConfigValue(const QString&amp;) in order to ...">autoRefreshEnabled()</a> and the <code>expression</code> can be successfully parsed, this function returns an instance of <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html" title="Watches a configuration-value.  Instances will be returned from QApplicationContext::watchConfigValue...">QConfigurationWatcher</a>. <br  />
@@ -1822,8 +1825,8 @@ If you leave out the type-argument <code>S</code>, it will default to <code>QObj
 
 </div>
 </div>
-<a id="a7e3f3903656efb88360b9c2fba301475" name="a7e3f3903656efb88360b9c2fba301475"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7e3f3903656efb88360b9c2fba301475">&#9670;&#160;</a></span>resolveConfigValue()</h2>
+<a id="a17349bba956a47ed92014e43a3c8c43d" name="a17349bba956a47ed92014e43a3c8c43d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17349bba956a47ed92014e43a3c8c43d">&#9670;&#160;</a></span>resolveConfigValue()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1834,8 +1837,17 @@ If you leave out the type-argument <code>S</code>, it will default to <code>QObj
         <tr>
           <td class="memname">virtual QVariant mcnepp::qtdi::QApplicationContext::resolveConfigValue </td>
           <td>(</td>
-          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>expression</em></span></td><td>)</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>expression</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">QVariantMap &amp;</td>          <td class="paramname"><span class="paramname"><em>resolvedPlaceholders</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -1857,12 +1869,14 @@ The expression may contain one or more <em>placeholders</em> which will be resol
  <code>"${host}://${url}"</code> will be resolved with the result of the concatenation of the configuration-entry <code>"host"</code>, a colon and two slashes and the configuration-entry <code>"url"</code>.<br  />
  The special character-sequence asterisk-slash indicates that a value shall be resolved in a section and all its parent-sections:<br  />
  <code>"* /network/hosts/${host}"</code> will be resolved with the configuration-entry <code>"name"</code> from the section <code>"network/hosts"</code>, or its parent sections. </td></tr>
+    <tr><td class="paramname">group</td><td>the config-group in which to look. </td></tr>
+    <tr><td class="paramname">resolvedPlaceholders</td><td>will consulted for looking up placeholders. It will also be filled with all placeholders that have been looked up. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>a valid QVariant, or an invalid QVariant if the expression could not be parsed. </dd></dl>
 
-<p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a1a2b3e7978ec585d51da59c7e5a88339">mcnepp::qtdi::StandardApplicationContext</a>.</p>
+<p>Implemented in <a class="el" href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a7cb83ab61516d7f59279bb481fa5c15b">mcnepp::qtdi::StandardApplicationContext</a>.</p>
 
 </div>
 </div>

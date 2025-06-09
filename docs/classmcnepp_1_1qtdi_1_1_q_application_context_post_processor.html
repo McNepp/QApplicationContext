@@ -96,22 +96,22 @@ $(function(){ initResizable(false); });
 </div><!--header-->
 <div class="contents">
 
-<p>A mix-in interface for classes that may modify services before publication. The method <a class="el" href="#a42272c118a0410fff37c030a8260dec3" title="Processes each service published by an ApplicationContext.">process(service_registration_handle_t, QObject*,const QVariantMap&amp;)</a> will be invoked for each service after its properties have been set, but before an <em>init-method</em> is invoked.  
+<p>A mix-in interface for classes that may modify services before publication. The method <a class="el" href="#a418008a76c919bb8d42b51c7f483ad50" title="Processes each service published by an ApplicationContext.">process(service_registration_handle_t, QObject*,const QVariantMap&amp;)</a> will be invoked for each service after its properties have been set, but before an <em>init-method</em> is invoked.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a42272c118a0410fff37c030a8260dec3" id="r_a42272c118a0410fff37c030a8260dec3"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a42272c118a0410fff37c030a8260dec3">process</a> (<a class="el" href="qapplicationcontext_8h.html#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a> handle, QObject *<a class="el" href="qapplicationcontext_8h.html#a45251145dd09691a5b6ca160b1b3e6ac">service</a>, const QVariantMap &amp;resolvedProperties)=0</td></tr>
-<tr class="memdesc:a42272c118a0410fff37c030a8260dec3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Processes each service published by an ApplicationContext.  <br /></td></tr>
-<tr class="separator:a42272c118a0410fff37c030a8260dec3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a418008a76c919bb8d42b51c7f483ad50" id="r_a418008a76c919bb8d42b51c7f483ad50"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a418008a76c919bb8d42b51c7f483ad50">process</a> (<a class="el" href="qapplicationcontext_8h.html#ac0f1782be3128a539e69f84272844e02">service_registration_handle_t</a> handle, QObject *<a class="el" href="qapplicationcontext_8h.html#a45251145dd09691a5b6ca160b1b3e6ac">service</a>, const QVariantMap &amp;resolvedPlaceholders)=0</td></tr>
+<tr class="memdesc:a418008a76c919bb8d42b51c7f483ad50"><td class="mdescLeft">&#160;</td><td class="mdescRight">Processes each service published by an ApplicationContext.  <br /></td></tr>
+<tr class="separator:a418008a76c919bb8d42b51c7f483ad50"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>A mix-in interface for classes that may modify services before publication. The method <a class="el" href="#a42272c118a0410fff37c030a8260dec3" title="Processes each service published by an ApplicationContext.">process(service_registration_handle_t, QObject*,const QVariantMap&amp;)</a> will be invoked for each service after its properties have been set, but before an <em>init-method</em> is invoked. </p>
+<div class="textblock"><p>A mix-in interface for classes that may modify services before publication. The method <a class="el" href="#a418008a76c919bb8d42b51c7f483ad50" title="Processes each service published by an ApplicationContext.">process(service_registration_handle_t, QObject*,const QVariantMap&amp;)</a> will be invoked for each service after its properties have been set, but before an <em>init-method</em> is invoked. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a42272c118a0410fff37c030a8260dec3" name="a42272c118a0410fff37c030a8260dec3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a42272c118a0410fff37c030a8260dec3">&#9670;&#160;</a></span>process()</h2>
+<a id="a418008a76c919bb8d42b51c7f483ad50" name="a418008a76c919bb8d42b51c7f483ad50"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a418008a76c919bb8d42b51c7f483ad50">&#9670;&#160;</a></span>process()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -132,7 +132,7 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const QVariantMap &amp;</td>          <td class="paramname"><span class="paramname"><em>resolvedProperties</em></span>&#160;)</td>
+          <td class="paramtype">const QVariantMap &amp;</td>          <td class="paramname"><span class="paramname"><em>resolvedPlaceholders</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -147,7 +147,7 @@ Public Member Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">handle</td><td>references the service-registration. </td></tr>
     <tr><td class="paramname">service</td><td>the service-instance </td></tr>
-    <tr><td class="paramname">resolvedProperties</td><td>the resolved properties for this service. </td></tr>
+    <tr><td class="paramname">resolvedPlaceholders</td><td>the resolved placeholders for this service. </td></tr>
   </table>
   </dd>
 </dl>

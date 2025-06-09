@@ -112,7 +112,7 @@ Inheritance diagram for mcnepp::qtdi::StandardApplicationContext:</div>
  <div class="center">
   <img src="classmcnepp_1_1qtdi_1_1_standard_application_context.png" usemap="#mcnepp::qtdi::StandardApplicationContext_map" alt=""/>
   <map id="mcnepp::qtdi::StandardApplicationContext_map" name="mcnepp::qtdi::StandardApplicationContext_map">
-<area href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications." alt="mcnepp::qtdi::QApplicationContext" shape="rect" coords="0,56,243,80"/>
+<area href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications." alt="mcnepp::qtdi::QApplicationContext" shape="rect" coords="0,0,243,24"/>
   </map>
 </div></div>
 <table class="memberdecls">
@@ -197,10 +197,10 @@ If <a class="el" href="#ae4b6887de6d62b6fe942efad8df1dce3" title="Has auto-refre
 Using the Q_PROPERTY QConfigurationWatcher::currentValue(), you can then track the current configuration. <br  />
 <b>Thread-safety:</b> This function may be safely called from any thread. The returned <a class="el" href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html" title="Watches a configuration-value.  Instances will be returned from QApplicationContext::watchConfigValue...">QConfigurationWatcher</a>'s will have a <em>thread-affinity</em> to the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
 <tr class="separator:a76a208d4d6884856fd62c6db9b3f3f9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1a2b3e7978ec585d51da59c7e5a88339" id="r_a1a2b3e7978ec585d51da59c7e5a88339"><td class="memItemLeft" align="right" valign="top">virtual QVariant&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1a2b3e7978ec585d51da59c7e5a88339">resolveConfigValue</a> (const QString &amp;expression) override</td></tr>
-<tr class="memdesc:a1a2b3e7978ec585d51da59c7e5a88339"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves an expression. <br  />
+<tr class="memitem:a7cb83ab61516d7f59279bb481fa5c15b" id="r_a7cb83ab61516d7f59279bb481fa5c15b"><td class="memItemLeft" align="right" valign="top">virtual QVariant&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7cb83ab61516d7f59279bb481fa5c15b">resolveConfigValue</a> (const QString &amp;expression, const QString &amp;group, QVariantMap &amp;resolvedPlaceholders) override</td></tr>
+<tr class="memdesc:a7cb83ab61516d7f59279bb481fa5c15b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolves an expression. <br  />
 <b>Thread-safety:</b> This function may be safely called from any thread.  <br /></td></tr>
-<tr class="separator:a1a2b3e7978ec585d51da59c7e5a88339"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a7cb83ab61516d7f59279bb481fa5c15b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6473418ee5bae4340a8345acb3950c95" id="r_a6473418ee5bae4340a8345acb3950c95"><td class="memItemLeft" align="right" valign="top"><a id="a6473418ee5bae4340a8345acb3950c95" name="a6473418ee5bae4340a8345acb3950c95"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>event</b> (QEvent *event) override</td></tr>
 <tr class="separator:a6473418ee5bae4340a8345acb3950c95"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -328,6 +328,9 @@ The ServiceRegistrations have a type-argument <code>QObject</code>. You may want
 <tr class="memitem:aefb81ffc9c91512a6ae0ec84453f39fa inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context" id="r_aefb81ffc9c91512a6ae0ec84453f39fa"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#aefb81ffc9c91512a6ae0ec84453f39fa">isGlobalInstance</a> () const</td></tr>
 <tr class="memdesc:aefb81ffc9c91512a6ae0ec84453f39fa inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="mdescLeft">&#160;</td><td class="mdescRight">Is this the global instance?  <br /></td></tr>
 <tr class="separator:aefb81ffc9c91512a6ae0ec84453f39fa inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac8997863199da81960c2b79fe68b0ef2 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context" id="r_ac8997863199da81960c2b79fe68b0ef2"><td class="memItemLeft" align="right" valign="top">
+QVariant&#160;</td><td class="memItemRight" valign="bottom"><b>resolveConfigValue</b> (const QString &amp;expression, const QString &amp;group={})</td></tr>
+<tr class="separator:ac8997863199da81960c2b79fe68b0ef2 inherit pub_methods_classmcnepp_1_1qtdi_1_1_q_application_context"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
@@ -1469,8 +1472,8 @@ If the service shall be active unconditionally, supply <a class="el" href="class
 
 </div>
 </div>
-<a id="a1a2b3e7978ec585d51da59c7e5a88339" name="a1a2b3e7978ec585d51da59c7e5a88339"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1a2b3e7978ec585d51da59c7e5a88339">&#9670;&#160;</a></span>resolveConfigValue()</h2>
+<a id="a7cb83ab61516d7f59279bb481fa5c15b" name="a7cb83ab61516d7f59279bb481fa5c15b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7cb83ab61516d7f59279bb481fa5c15b">&#9670;&#160;</a></span>resolveConfigValue()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1481,8 +1484,17 @@ If the service shall be active unconditionally, supply <a class="el" href="class
         <tr>
           <td class="memname">virtual QVariant mcnepp::qtdi::StandardApplicationContext::resolveConfigValue </td>
           <td>(</td>
-          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>expression</em></span></td><td>)</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>expression</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>group</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">QVariantMap &amp;</td>          <td class="paramname"><span class="paramname"><em>resolvedPlaceholders</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -1504,12 +1516,14 @@ The expression may contain one or more <em>placeholders</em> which will be resol
  <code>"${host}://${url}"</code> will be resolved with the result of the concatenation of the configuration-entry <code>"host"</code>, a colon and two slashes and the configuration-entry <code>"url"</code>.<br  />
  The special character-sequence asterisk-slash indicates that a value shall be resolved in a section and all its parent-sections:<br  />
  <code>"* /network/hosts/${host}"</code> will be resolved with the configuration-entry <code>"name"</code> from the section <code>"network/hosts"</code>, or its parent sections. </td></tr>
+    <tr><td class="paramname">group</td><td>the config-group in which to look. </td></tr>
+    <tr><td class="paramname">resolvedPlaceholders</td><td>will consulted for looking up placeholders. It will also be filled with all placeholders that have been looked up. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>a valid QVariant, or an invalid QVariant if the expression could not be parsed. </dd></dl>
 
-<p>Implements <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a7e3f3903656efb88360b9c2fba301475">mcnepp::qtdi::QApplicationContext</a>.</p>
+<p>Implements <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a17349bba956a47ed92014e43a3c8c43d">mcnepp::qtdi::QApplicationContext</a>.</p>
 
 </div>
 </div>

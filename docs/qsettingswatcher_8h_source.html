@@ -117,7 +117,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    <span class="keyword">explicit</span> QSettingsWatcher(QApplicationContext* parent);</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span> </div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keywordtype">void</span> addWatchedProperty(PlaceholderResolver* resolver, q_variant_converter_t variantConverter, <span class="keyword">const</span> property_descriptor&amp; propertyDescriptor, QObject* target, <span class="keyword">const</span> service_config&amp; config);</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keywordtype">void</span> addWatchedProperty(PlaceholderResolver* resolver, q_variant_converter_t variantConverter, <span class="keyword">const</span> property_descriptor&amp; propertyDescriptor, QObject* target, <span class="keyword">const</span> QString&amp; group, QVariantMap&amp; resolvedProperties);</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    QConfigurationWatcher* watchConfigValue(PlaceholderResolver* resolver);</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
@@ -139,10 +139,11 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    QFileSystemWatcher* <span class="keyword">const</span> m_SettingsFileWatcher;</div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    std::deque&lt;QPointer&lt;QConfigurationWatcher&gt;&gt; m_watched;</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    std::unordered_map&lt;QString,QPointer&lt;QConfigurationWatcher&gt;&gt; m_watchedConfigValues;</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>};</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    QVariantMap m_resolvedProperties;</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>};</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>}</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>}</div>
 <div class="ttc" id="aqapplicationcontext_8h_html"><div class="ttname"><a href="qapplicationcontext_8h.html">qapplicationcontext.h</a></div><div class="ttdoc">Contains the class QApplicationContext and other related types and functions.</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

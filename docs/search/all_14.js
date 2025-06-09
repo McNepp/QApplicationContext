@@ -4,7 +4,7 @@ var searchData=
   ['with_20type_20safe_20setters_1',['Configuring services with type-safe &apos;setters&apos;',['../index.html#autotoc_md18',1,'']]],
   ['withautorefresh_2',['withAutoRefresh',['../qapplicationcontext_8h.html#a345509cae13489dd46cc5c75ba10dec6',1,'mcnepp::qtdi']]],
   ['withautowire_3',['withAutowire',['../qapplicationcontext_8h.html#a658a665f9b2b426543e566defd51e4ff',1,'mcnepp::qtdi']]],
-  ['withgroup_4',['withGroup',['../qapplicationcontext_8h.html#a64ec1392974a8374f34bfff59fc43a8e',1,'mcnepp::qtdi']]],
+  ['withgroup_4',['withGroup',['../qapplicationcontext_8h.html#ac25469797c975a8246962ce943144c57',1,'mcnepp::qtdi']]],
   ['withinit_5',['withInit',['../structmcnepp_1_1qtdi_1_1_service.html#a87a22d48165ace52ca130871ea4877fb',1,'mcnepp::qtdi::Service::withInit(I initializer) &amp;&amp;'],['../structmcnepp_1_1qtdi_1_1_service.html#af6fdc3c38813f23ca9a44caf7a14ac31',1,'mcnepp::qtdi::Service::withInit(I initializer) const &amp;']]],
   ['wrap_6',['wrap',['../classmcnepp_1_1qtdi_1_1_service_registration.html#a0f9678445bc2936fb7dd510331f7c302',1,'mcnepp::qtdi::ServiceRegistration::wrap()'],['../classmcnepp_1_1qtdi_1_1_proxy_registration.html#a1bfc50440aeeb7048a8ef1bda4df9e17',1,'mcnepp::qtdi::ProxyRegistration::wrap()']]]
 ];

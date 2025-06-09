@@ -12,6 +12,6 @@ var searchData=
   ['dependency_5finfo_9',['dependency_info',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a41a9694c1b68949bdd33dc2394591372',1,'mcnepp::qtdi::QApplicationContext']]],
   ['dependencykind_10',['DependencyKind',['../qapplicationcontext_8h.html#a3105526e127bde2871f257823d62db7b',1,'mcnepp::qtdi']]],
   ['deprecated_20list_11',['Deprecated List',['../deprecated.html',1,'']]],
-  ['detection_20of_20ambiguity_20at_20publication_12',['Detection of ambiguity at publication',['../index.html#autotoc_md35',1,'']]],
-  ['detection_20of_20ambiguous_20registrations_13',['Detection of ambiguous registrations',['../index.html#autotoc_md34',1,'']]]
+  ['detection_20of_20ambiguity_20at_20publication_12',['Detection of ambiguity at publication',['../index.html#autotoc_md36',1,'']]],
+  ['detection_20of_20ambiguous_20registrations_13',['Detection of ambiguous registrations',['../index.html#autotoc_md35',1,'']]]
 ];

@@ -6,6 +6,7 @@ var searchData=
   ['getregistrationhandle_3',['getRegistrationHandle',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a8dfd2e0474d2a52f71b38003ee818426',1,'mcnepp::qtdi::QApplicationContext::getRegistrationHandle(const std::type_info &amp;service_type, const QMetaObject *metaObject) const =0'],['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a3da238d296fe034a8056aa7a951cbc21',1,'mcnepp::qtdi::QApplicationContext::getRegistrationHandle(const QString &amp;name) const =0'],['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#a667bc723ab1e4b18e73dffd14947bbe7',1,'mcnepp::qtdi::StandardApplicationContext::getRegistrationHandle(const QString &amp;name) const override'],['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#ab5154d8cf190d922004451d5f503ebd6',1,'mcnepp::qtdi::StandardApplicationContext::getRegistrationHandle(const std::type_info &amp;service_type, const QMetaObject *metaObject) const override']]],
   ['getregistrationhandles_4',['getRegistrationHandles',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a805b17a76dde6d70f32d2a17d17bfd06',1,'mcnepp::qtdi::QApplicationContext::getRegistrationHandles()'],['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#abd65e56a08366eb1f9a14d999a23c646',1,'mcnepp::qtdi::StandardApplicationContext::getRegistrationHandles()']]],
   ['getregistrations_5',['getRegistrations',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#ada1a1701309d3cd8439845eaa472b60c',1,'mcnepp::qtdi::QApplicationContext']]],
-  ['global_20applicationcontext_6',['The global ApplicationContext',['../index.html#autotoc_md56',1,'']]],
-  ['group_7',['Specifying an explicit Group',['../index.html#autotoc_md15',1,'']]]
+  ['global_20applicationcontext_6',['The global ApplicationContext',['../index.html#autotoc_md57',1,'']]],
+  ['group_7',['Specifying an explicit Group',['../index.html#autotoc_md15',1,'']]],
+  ['groups_8',['Service-Groups',['../index.html#autotoc_md28',1,'']]]
 ];
