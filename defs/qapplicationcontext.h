@@ -2096,7 +2096,7 @@ template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, 
 /// \tparam T the type of the target.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, const char* targetProperty) {
+template<typename S,typename T,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, const Registration<T>& target, const char* targetProperty) {
     static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
     static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
@@ -2118,7 +2118,7 @@ template<typename S,typename T,ServiceScope scope> Subscription bind(const Servi
 /// \tparam SLT the type of the slot
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, Registration<T>& target, SLT setter) ->
+template<typename S,typename T,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, const Registration<T>& target, SLT setter) ->
 std::enable_if_t<detail::property_change_signal_traits<S,detail::simple_signal_t<S>,T,SLT>::is_compatible,Subscription> {
     static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
@@ -2158,7 +2158,7 @@ std::enable_if_t<detail::property_change_signal_traits<S,detail::simple_signal_t
 /// or a callable object taking two arguments, one of type `T*` and the second of the signal's argument-type.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename SIGN,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, SIGN signalFunction, Registration<T>& target, SLT func) ->
+template<typename S,typename T,typename SIGN,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, SIGN signalFunction, const Registration<T>& target, SLT func) ->
     std::enable_if_t<detail::property_change_signal_traits<S,SIGN,T,SLT>::is_compatible,Subscription> {
     static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
@@ -2191,7 +2191,7 @@ template<typename S,typename T,typename SIGN,typename SLT,ServiceScope scope> au
 /// \return a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service
 /// and the target-service.
 ///
-template<typename S,typename SIG,typename T,typename SLT> Subscription connectServices(Registration<S>& source, SIG sourceSignal, Registration<T>& target, SLT targetSlot, Qt::ConnectionType connectionType = Qt::AutoConnection) {
+template<typename S,typename SIG,typename T,typename SLT> Subscription connectServices(const Registration<S>& source, SIG sourceSignal, const Registration<T>& target, SLT targetSlot, Qt::ConnectionType connectionType = Qt::AutoConnection) {
     static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
     if(!source || !target) {
@@ -2221,7 +2221,7 @@ public:
     ServiceCombination& operator=(const ServiceCombination&) = delete;
     ServiceCombination& operator=(ServiceCombination&&) = delete;
 
-    explicit ServiceCombination(Registration<S>&... registrations) {
+    explicit ServiceCombination(const Registration<S>&... registrations) {
         if(!add(registrations...)) {
             qCCritical(defaultLoggingCategory()).noquote().nospace() << "Cannot combine invalid Registrations";
         }
@@ -2249,7 +2249,7 @@ public:
 
 private:
 
-    template<typename First,typename...Tail> bool add(Registration<First>& first, Registration<Tail>&... tail) {
+    template<typename First,typename...Tail> bool add(const Registration<First>& first, const Registration<Tail>&... tail) {
         if(!first) {
             return false;
         }
@@ -2273,7 +2273,7 @@ private:
 /// \param registrations the list of registrations. Must contain at least two entries. Curently, combining up to five services is supported.
 /// \return a ServiceCombination which can be subscribed.
 ///
-template<typename...S> std::enable_if_t<(sizeof...(S) > 1),ServiceCombination<S...>> combine(Registration<S>&...registrations) {
+template<typename...S> std::enable_if_t<(sizeof...(S) > 1),ServiceCombination<S...>> combine(const Registration<S>&...registrations) {
     return ServiceCombination<S...>{registrations...};
 }
 
@@ -3707,8 +3707,7 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
      * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
      * @return this Service.
      */
-    template<typename...IFaces> Service<Srv,Impl,scope>&& advertiseAs() && {
-        static_assert(sizeof...(IFaces) > 0, "At least one service-interface must be advertised.");
+    template<typename...IFaces> std::enable_if_t<(sizeof...(IFaces) > 0),Service<Srv,Impl,scope>>&& advertiseAs() && {
         //Check whether the Impl-type is derived from the service-interfaces (except for service-templates)
         if constexpr(scope != ServiceScope::TEMPLATE) {
             static_assert(std::conjunction_v<std::is_base_of<IFaces,Impl>...>, "Implementation-type does not implement all advertised interfaces");
@@ -3742,7 +3741,7 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
      * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
      * @return a Service with the advertised interfaces.
      */
-    template<typename...IFaces> [[nodiscard]] Service<Srv,Impl,scope> advertiseAs() const& {
+    template<typename...IFaces> [[nodiscard]] std::enable_if_t<(sizeof...(IFaces) > 0),Service<Srv,Impl,scope>> advertiseAs() const& {
         return Service<Srv,Impl,scope>{*this}.advertiseAs<IFaces...>();
     }
 
