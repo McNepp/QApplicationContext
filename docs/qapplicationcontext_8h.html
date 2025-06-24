@@ -146,11 +146,11 @@ Its most important operation is the type-safe function <code><a class="el" href=
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A type-safe wrapper for a detail::ServiceRegistration.  <a href="classmcnepp_1_1qtdi_1_1_service_registration.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">mcnepp::qtdi::ProxyRegistration&lt; S &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> that manages several ServiceRegistrations of the same type. You can do almost everything with a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> that you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>, except use it as a source for property-bindings using <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. Instances of this class are produced by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9c35f37337d77fdc0e19e160d48ba569" title="Obtains a ServiceRegistration for a name.  This function will look up Services by the names they were...">QApplicationContext::getRegistration()</a>;.  <a href="classmcnepp_1_1qtdi_1_1_proxy_registration.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> that manages several ServiceRegistrations of the same type. You can do almost everything with a <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html" title="A Registration that manages several ServiceRegistrations of the same type. You can do almost everythi...">ProxyRegistration</a> that you can do with a <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a>, except use it as a source for property-bindings using <a class="el" href="#a509d11533231a4606400bf0a5dd87adf" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. Instances of this class are produced by <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9c35f37337d77fdc0e19e160d48ba569" title="Obtains a ServiceRegistration for a name.  This function will look up Services by the names they were...">QApplicationContext::getRegistration()</a>;.  <a href="classmcnepp_1_1qtdi_1_1_proxy_registration.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html">mcnepp::qtdi::ServiceCombination&lt; S &gt;</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A combination of Services that can be subscribed. <br  />
-An instance of this type will be returned by <a class="el" href="#ae106d702aeec65e9720e7c19821aeed4" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a>. <br  />
+An instance of this type will be returned by <a class="el" href="#acb4ad42eaff551d32fe42b828b3a256c" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a>. <br  />
 This type is neither copyable nor moveable. <br  />
 It is meant to be treated solely as a temporary object, on which <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html#a392e36cf6961cfd0a6356f2441f4ac4c" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">ServiceCombination::subscribe()</a> shall be invoked.  <a href="classmcnepp_1_1qtdi_1_1_service_combination.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -286,40 +286,40 @@ template&lt;typename U &gt; </td></tr>
 <tr class="memitem:ac0f4ea8649c340bb702201de6b6c23ba"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ac0f4ea8649c340bb702201de6b6c23ba">mcnepp::qtdi::operator==</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;reg1, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S2 &gt; &amp;reg2)</td></tr>
 <tr class="memdesc:ac0f4ea8649c340bb702201de6b6c23ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests two Registrations for equality.  <br /></td></tr>
 <tr class="separator:ac0f4ea8649c340bb702201de6b6c23ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0f11a14df333d20850559efeee464e15" id="r_a0f11a14df333d20850559efeee464e15"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:a0f11a14df333d20850559efeee464e15"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a0f11a14df333d20850559efeee464e15">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, const char *sourceProperty, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, const char *targetProperty)</td></tr>
-<tr class="memdesc:a0f11a14df333d20850559efeee464e15"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a property from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
-All changes made to the source-property will be propagated to the target-property. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
+<tr class="memitem:a509d11533231a4606400bf0a5dd87adf" id="r_a509d11533231a4606400bf0a5dd87adf"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
+<tr class="memitem:a509d11533231a4606400bf0a5dd87adf"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a509d11533231a4606400bf0a5dd87adf">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, const char *sourceProperty, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, const char *targetProperty)</td></tr>
+<tr class="memdesc:a509d11533231a4606400bf0a5dd87adf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a property from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
+All changes made to the source-property will be propagated to the target-property. For each target-property, there can be only successful call to <a class="el" href="#a509d11533231a4606400bf0a5dd87adf" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function may only be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
-<tr class="separator:a0f11a14df333d20850559efeee464e15"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a75e7b1403cdd41b6d2792fb0b757c624" id="r_a75e7b1403cdd41b6d2792fb0b757c624"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename SLT , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:a75e7b1403cdd41b6d2792fb0b757c624"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a75e7b1403cdd41b6d2792fb0b757c624">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, const char *sourceProperty, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, SLT setter) -&gt; std::enable_if_t&lt; detail::property_change_signal_traits&lt; S, detail::simple_signal_t&lt; S &gt;, T, SLT &gt;::is_compatible, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;</td></tr>
-<tr class="memdesc:a75e7b1403cdd41b6d2792fb0b757c624"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
-All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
+<tr class="separator:a509d11533231a4606400bf0a5dd87adf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a61af2d75a2980e684c4678fc800b374f" id="r_a61af2d75a2980e684c4678fc800b374f"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename SLT , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
+<tr class="memitem:a61af2d75a2980e684c4678fc800b374f"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a61af2d75a2980e684c4678fc800b374f">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, const char *sourceProperty, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, SLT setter) -&gt; std::enable_if_t&lt; detail::property_change_signal_traits&lt; S, detail::simple_signal_t&lt; S &gt;, T, SLT &gt;::is_compatible, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;</td></tr>
+<tr class="memdesc:a61af2d75a2980e684c4678fc800b374f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a Setter from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
+All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="#a509d11533231a4606400bf0a5dd87adf" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function only may be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
-<tr class="separator:a75e7b1403cdd41b6d2792fb0b757c624"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afa6d4596a9412fb636b3a7dd485fa893" id="r_afa6d4596a9412fb636b3a7dd485fa893"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename SIGN , typename SLT , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
-<tr class="memitem:afa6d4596a9412fb636b3a7dd485fa893"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#afa6d4596a9412fb636b3a7dd485fa893">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, SIGN signalFunction, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, SLT func) -&gt; std::enable_if_t&lt; detail::property_change_signal_traits&lt; S, SIGN, T, SLT &gt;::is_compatible, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;</td></tr>
-<tr class="memdesc:afa6d4596a9412fb636b3a7dd485fa893"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a slot from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
+<tr class="separator:a61af2d75a2980e684c4678fc800b374f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abfc78c6cac0d6dc0eaeaf298df80c5cd" id="r_abfc78c6cac0d6dc0eaeaf298df80c5cd"><td class="memTemplParams" colspan="2">template&lt;typename S , typename T , typename SIGN , typename SLT , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
+<tr class="memitem:abfc78c6cac0d6dc0eaeaf298df80c5cd"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#abfc78c6cac0d6dc0eaeaf298df80c5cd">mcnepp::qtdi::bind</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;source, SIGN signalFunction, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, SLT func) -&gt; std::enable_if_t&lt; detail::property_change_signal_traits&lt; S, SIGN, T, SLT &gt;::is_compatible, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;</td></tr>
+<tr class="memdesc:abfc78c6cac0d6dc0eaeaf298df80c5cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Binds a property of one <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html" title="A type-safe wrapper for a detail::ServiceRegistration.">ServiceRegistration</a> to a slot from another <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
 This function identifies the source-property by the signal that is emitted when the property changes. The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding to a property of the source-service, according to <code>QMetaMethod::fromSignal(SI)</code>. <br  />
 If <code>SI</code> denotes a signal with no argument, then <code>F</code> must denote a pointer to a member-function of <code>T</code>, taking one argument. There will be no compile-time check whether the type of the source-property actually matches the type of the target-property! <br  />
 If <code>SI</code> denotes a signal with one argument, then <code>F</code> shall either denote a pointer to a member-function of <code>T</code>, taking one argument that is assignment-compatible with the signal's argument, or it shall denote a callable object that can be invoked with one argument of type <code>T*</code> and one argument of the signal's argument-type. <br  />
-All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
+All changes made to the source-property will be propagated to all Services represented by the target. For each target-property, there can be only successful call to <a class="el" href="#a509d11533231a4606400bf0a5dd87adf" title="Binds a property of one ServiceRegistration to a property from another Registration....">bind()</a>. <br  />
 <b>Thread-safety:</b> This function only may be called from the <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>'s thread.  <br /></td></tr>
-<tr class="separator:afa6d4596a9412fb636b3a7dd485fa893"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3af2e9ed942d0a2991ea109e3483c6b5" id="r_a3af2e9ed942d0a2991ea109e3483c6b5"><td class="memTemplParams" colspan="2">template&lt;typename S , typename SIG , typename T , typename SLT &gt; </td></tr>
-<tr class="memitem:a3af2e9ed942d0a2991ea109e3483c6b5"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a3af2e9ed942d0a2991ea109e3483c6b5">mcnepp::qtdi::connectServices</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;source, SIG sourceSignal, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, SLT targetSlot, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
-<tr class="memdesc:a3af2e9ed942d0a2991ea109e3483c6b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects a signal of one <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> to a slot of another service. <br  />
+<tr class="separator:abfc78c6cac0d6dc0eaeaf298df80c5cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2031c20f56867150da921e833f22a847" id="r_a2031c20f56867150da921e833f22a847"><td class="memTemplParams" colspan="2">template&lt;typename S , typename SIG , typename T , typename SLT &gt; </td></tr>
+<tr class="memitem:a2031c20f56867150da921e833f22a847"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a2031c20f56867150da921e833f22a847">mcnepp::qtdi::connectServices</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;source, SIG sourceSignal, const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;target, SLT targetSlot, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
+<tr class="memdesc:a2031c20f56867150da921e833f22a847"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connects a signal of one <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> to a slot of another service. <br  />
 This function is the ApplicationContext-aware equivalent to QObject::connect(). Instead of supplying the QObjects for source and target, you supply the Registrations instead. <br  />
 Whenever an instance of the source-service is published, it will subscribe to the publication of the target-service. Once the target-service is published, the connection of the sourceSignal with the targetSlot will take place. <br  />
 In case source and target represent the same <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>, the connection will still take place. <br  />
 <b>Thread-safety:</b> This function may only be called from the ApplicationContext's thread.  <br /></td></tr>
-<tr class="separator:a3af2e9ed942d0a2991ea109e3483c6b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae106d702aeec65e9720e7c19821aeed4" id="r_ae106d702aeec65e9720e7c19821aeed4"><td class="memTemplParams" colspan="2">template&lt;typename... S&gt; </td></tr>
-<tr class="memitem:ae106d702aeec65e9720e7c19821aeed4"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt;(sizeof...(S) &gt; 1), <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html">ServiceCombination</a>&lt; S... &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ae106d702aeec65e9720e7c19821aeed4">mcnepp::qtdi::combine</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;...registrations)</td></tr>
-<tr class="memdesc:ae106d702aeec65e9720e7c19821aeed4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Combines two ore more ServiceRegistrations. <br  />
+<tr class="separator:a2031c20f56867150da921e833f22a847"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acb4ad42eaff551d32fe42b828b3a256c" id="r_acb4ad42eaff551d32fe42b828b3a256c"><td class="memTemplParams" colspan="2">template&lt;typename... S&gt; </td></tr>
+<tr class="memitem:acb4ad42eaff551d32fe42b828b3a256c"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt;(sizeof...(S) &gt; 1), <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html">ServiceCombination</a>&lt; S... &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#acb4ad42eaff551d32fe42b828b3a256c">mcnepp::qtdi::combine</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;...registrations)</td></tr>
+<tr class="memdesc:acb4ad42eaff551d32fe42b828b3a256c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Combines two ore more ServiceRegistrations. <br  />
 This function returns a temporary object of type <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html" title="A combination of Services that can be subscribed.  An instance of this type will be returned by mcnep...">ServiceCombination</a>. The only thing you can do with it is invoke <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html#a392e36cf6961cfd0a6356f2441f4ac4c" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">ServiceCombination::subscribe()</a>.  <br /></td></tr>
-<tr class="separator:ae106d702aeec65e9720e7c19821aeed4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:acb4ad42eaff551d32fe42b828b3a256c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad04225f77359597ad260b6d5d3be60ee" id="r_ad04225f77359597ad260b6d5d3be60ee"><td class="memTemplParams" colspan="2">template&lt;typename S1 , typename S2 , typename F &gt; </td></tr>
 <tr class="memitem:ad04225f77359597ad260b6d5d3be60ee"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt; std::is_invocable_v&lt; F, S1 *, S2 * &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ad04225f77359597ad260b6d5d3be60ee">mcnepp::qtdi::subscribeToServices</a> (<a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S1 &gt; &amp;firstService, <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S2 &gt; &amp;secondService, QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection)</td></tr>
 <tr class="memdesc:ad04225f77359597ad260b6d5d3be60ee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subscribes to the publication of two services. <br  />
@@ -516,7 +516,7 @@ The following example will register a Service-group with 3 services of type <cod
 <tr class="memdesc:a1dc51a0152614fb643aaf888bf901eae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a Service-template with no dependencies and no constructor. <br  />
 The returned <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a> cannot be instantiated. It just serves as an additional parameter for registering other services. <br  />
 If you leave out the type-argument <code>Impl</code>, it will default to <code>QObject</code>. <br  />
-Should you want to ensure that every service derived from this service-template shall be advertised under a certain interface, use <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html#a0ebe286925cbbf4fc27ab6c5653ea992" title="Specifies service-interfaces.  You must specify at least one interface (or otherwise compilation will...">Service::advertiseAs()</a>.  <br /></td></tr>
+Should you want to ensure that every service derived from this service-template shall be advertised under a certain interface, use <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html#a03e7e64dc92e48ff4a382fe55428958e" title="Specifies service-interfaces.  You must specify at least one interface (or otherwise compilation will...">Service::advertiseAs()</a>.  <br /></td></tr>
 <tr class="separator:a1dc51a0152614fb643aaf888bf901eae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adc186b91799443993261a9c701e1312f" id="r_adc186b91799443993261a9c701e1312f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adc186b91799443993261a9c701e1312f">mcnepp::qtdi::newDelegate</a> (const QLoggingCategory &amp;<a class="el" href="#ad8f2bbaf5d705c9287fa8139b9037f15">loggingCategory</a>, <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html">QApplicationContext</a> *delegatingContext)</td></tr>
 <tr class="memdesc:adc186b91799443993261a9c701e1312f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates an ApplicationContext as a <em>delegate</em> for another context. <br  />
@@ -959,8 +959,8 @@ autoRefreshMillis=2000
 
 </div>
 </div>
-<a id="a0f11a14df333d20850559efeee464e15" name="a0f11a14df333d20850559efeee464e15"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0f11a14df333d20850559efeee464e15">&#9670;&#160;</a></span>bind() <span class="overload">[1/3]</span></h2>
+<a id="a509d11533231a4606400bf0a5dd87adf" name="a509d11533231a4606400bf0a5dd87adf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a509d11533231a4606400bf0a5dd87adf">&#9670;&#160;</a></span>bind() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -980,7 +980,7 @@ template&lt;typename S , typename T , ServiceScope scope&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1013,8 +1013,8 @@ All changes made to the source-property will be propagated to the target-propert
 
 </div>
 </div>
-<a id="a75e7b1403cdd41b6d2792fb0b757c624" name="a75e7b1403cdd41b6d2792fb0b757c624"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a75e7b1403cdd41b6d2792fb0b757c624">&#9670;&#160;</a></span>bind() <span class="overload">[2/3]</span></h2>
+<a id="a61af2d75a2980e684c4678fc800b374f" name="a61af2d75a2980e684c4678fc800b374f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a61af2d75a2980e684c4678fc800b374f">&#9670;&#160;</a></span>bind() <span class="overload">[2/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1034,7 +1034,7 @@ template&lt;typename S , typename T , typename SLT , ServiceScope scope&gt; </di
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1068,8 +1068,8 @@ All changes made to the source-property will be propagated to all Services repre
 
 </div>
 </div>
-<a id="afa6d4596a9412fb636b3a7dd485fa893" name="afa6d4596a9412fb636b3a7dd485fa893"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afa6d4596a9412fb636b3a7dd485fa893">&#9670;&#160;</a></span>bind() <span class="overload">[3/3]</span></h2>
+<a id="abfc78c6cac0d6dc0eaeaf298df80c5cd" name="abfc78c6cac0d6dc0eaeaf298df80c5cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abfc78c6cac0d6dc0eaeaf298df80c5cd">&#9670;&#160;</a></span>bind() <span class="overload">[3/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1089,7 +1089,7 @@ template&lt;typename S , typename T , typename SIGN , typename SLT , ServiceScop
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1128,8 +1128,8 @@ All changes made to the source-property will be propagated to all Services repre
 
 </div>
 </div>
-<a id="ae106d702aeec65e9720e7c19821aeed4" name="ae106d702aeec65e9720e7c19821aeed4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae106d702aeec65e9720e7c19821aeed4">&#9670;&#160;</a></span>combine()</h2>
+<a id="acb4ad42eaff551d32fe42b828b3a256c" name="acb4ad42eaff551d32fe42b828b3a256c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acb4ad42eaff551d32fe42b828b3a256c">&#9670;&#160;</a></span>combine()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1139,7 +1139,7 @@ template&lt;typename... S&gt; </div>
         <tr>
           <td class="memname">std::enable_if_t&lt;(sizeof...(S) &gt; 1), ServiceCombination&lt; S... &gt; &gt; mcnepp::qtdi::combine </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;...</td>          <td class="paramname"><span class="paramname"><em>registrations</em></span></td><td>)</td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;...</td>          <td class="paramname"><span class="paramname"><em>registrations</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -1306,8 +1306,8 @@ Should you want to specify a property-value starting with an ampersand, you must
 
 </div>
 </div>
-<a id="a3af2e9ed942d0a2991ea109e3483c6b5" name="a3af2e9ed942d0a2991ea109e3483c6b5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3af2e9ed942d0a2991ea109e3483c6b5">&#9670;&#160;</a></span>connectServices()</h2>
+<a id="a2031c20f56867150da921e833f22a847" name="a2031c20f56867150da921e833f22a847"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2031c20f56867150da921e833f22a847">&#9670;&#160;</a></span>connectServices()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1317,7 +1317,7 @@ template&lt;typename S , typename SIG , typename T , typename SLT &gt; </div>
         <tr>
           <td class="memname">Subscription mcnepp::qtdi::connectServices </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>source</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>source</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1327,7 +1327,7 @@ template&lt;typename S , typename SIG , typename T , typename SLT &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target</em></span>, </td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; T &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -3058,7 +3058,7 @@ In case first and second represent the same Registration, the connection will st
   </table>
   </dd>
 </dl>
-<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000001">Deprecated</a></b></dt><dd>Use <a class="el" href="#ae106d702aeec65e9720e7c19821aeed4" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a> instead </dd></dl>
+<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000001">Deprecated</a></b></dt><dd>Use <a class="el" href="#acb4ad42eaff551d32fe42b828b3a256c" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a> instead </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service and the target-service. </dd></dl>
 
 </div>

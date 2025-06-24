@@ -121,19 +121,19 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ad6ed612b5a02c9ea33c3102184ef7bc7" id="r_ad6ed612b5a02c9ea33c3102184ef7bc7"><td class="memItemLeft" align="right" valign="top"><a id="ad6ed612b5a02c9ea33c3102184ef7bc7" name="ad6ed612b5a02c9ea33c3102184ef7bc7"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Service</b> (detail::service_descriptor &amp;&amp;descr, detail::service_config &amp;&amp;cfg)</td></tr>
 <tr class="separator:ad6ed612b5a02c9ea33c3102184ef7bc7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0ebe286925cbbf4fc27ab6c5653ea992" id="r_a0ebe286925cbbf4fc27ab6c5653ea992"><td class="memTemplParams" colspan="2">template&lt;typename... IFaces&gt; </td></tr>
-<tr class="memitem:a0ebe286925cbbf4fc27ab6c5653ea992"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a0ebe286925cbbf4fc27ab6c5653ea992">advertiseAs</a> () &amp;&amp;</td></tr>
-<tr class="memdesc:a0ebe286925cbbf4fc27ab6c5653ea992"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies service-interfaces. <br  />
+<tr class="memitem:a03e7e64dc92e48ff4a382fe55428958e" id="r_a03e7e64dc92e48ff4a382fe55428958e"><td class="memTemplParams" colspan="2">template&lt;typename... IFaces&gt; </td></tr>
+<tr class="memitem:a03e7e64dc92e48ff4a382fe55428958e"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt;(sizeof...(IFaces) &gt; 0), <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &gt; &amp;&amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a03e7e64dc92e48ff4a382fe55428958e">advertiseAs</a> () &amp;&amp;</td></tr>
+<tr class="memdesc:a03e7e64dc92e48ff4a382fe55428958e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies service-interfaces. <br  />
 You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9c35f37337d77fdc0e19e160d48ba569" title="Obtains a ServiceRegistration for a name.  This function will look up Services by the names they were...">QApplicationContext::getRegistration()</a>. They will also be used to satisfy dependencies that other services may have to this one. <br  />
 This function may be invoked only on temporary instances. <br  />
 Compilation will fail if any of the following is true:  <br /></td></tr>
-<tr class="separator:a0ebe286925cbbf4fc27ab6c5653ea992"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afeb99e7f5bbcf3bc5c3dc15a555eb4c3" id="r_afeb99e7f5bbcf3bc5c3dc15a555eb4c3"><td class="memTemplParams" colspan="2">template&lt;typename... IFaces&gt; </td></tr>
-<tr class="memitem:afeb99e7f5bbcf3bc5c3dc15a555eb4c3"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#afeb99e7f5bbcf3bc5c3dc15a555eb4c3">advertiseAs</a> () const &amp;</td></tr>
-<tr class="memdesc:afeb99e7f5bbcf3bc5c3dc15a555eb4c3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies service-interfaces. <br  />
+<tr class="separator:a03e7e64dc92e48ff4a382fe55428958e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a85cbbf241dfd7c9be9df841fed95a91e" id="r_a85cbbf241dfd7c9be9df841fed95a91e"><td class="memTemplParams" colspan="2">template&lt;typename... IFaces&gt; </td></tr>
+<tr class="memitem:a85cbbf241dfd7c9be9df841fed95a91e"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt;(sizeof...(IFaces) &gt; 0), <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a85cbbf241dfd7c9be9df841fed95a91e">advertiseAs</a> () const &amp;</td></tr>
+<tr class="memdesc:a85cbbf241dfd7c9be9df841fed95a91e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies service-interfaces. <br  />
 You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9c35f37337d77fdc0e19e160d48ba569" title="Obtains a ServiceRegistration for a name.  This function will look up Services by the names they were...">QApplicationContext::getRegistration()</a>. They will also be used to satisfy dependencies that other services may have to this one. <br  />
 Compilation will fail if any of the following is true:  <br /></td></tr>
-<tr class="separator:afeb99e7f5bbcf3bc5c3dc15a555eb4c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a85cbbf241dfd7c9be9df841fed95a91e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a87a22d48165ace52ca130871ea4877fb" id="r_a87a22d48165ace52ca130871ea4877fb"><td class="memTemplParams" colspan="2">template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a> initializationPolicy = ServiceInitializationPolicy::DEFAULT, typename I &gt; </td></tr>
 <tr class="memitem:a87a22d48165ace52ca130871ea4877fb"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a87a22d48165ace52ca130871ea4877fb">withInit</a> (I initializer) &amp;&amp;</td></tr>
 <tr class="memdesc:a87a22d48165ace52ca130871ea4877fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies an <em>init-method</em> for this service. <br  />
@@ -180,8 +180,8 @@ The preferred way of creating Services is the function <a class="el" href="qappl
   </dd>
 </dl>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a0ebe286925cbbf4fc27ab6c5653ea992" name="a0ebe286925cbbf4fc27ab6c5653ea992"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0ebe286925cbbf4fc27ab6c5653ea992">&#9670;&#160;</a></span>advertiseAs() <span class="overload">[1/2]</span></h2>
+<a id="a03e7e64dc92e48ff4a382fe55428958e" name="a03e7e64dc92e48ff4a382fe55428958e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a03e7e64dc92e48ff4a382fe55428958e">&#9670;&#160;</a></span>advertiseAs() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -194,7 +194,7 @@ template&lt;typename... IFaces&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&amp; <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service</a>&lt; Srv, Impl, scope &gt;::advertiseAs </td>
+          <td class="memname">std::enable_if_t&lt;(sizeof...(IFaces) &gt; 0), <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &gt; &amp;&amp; <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service</a>&lt; Srv, Impl, scope &gt;::advertiseAs </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> &amp;&amp;</td>
@@ -226,8 +226,8 @@ Compilation will fail if any of the following is true: </p>
 
 </div>
 </div>
-<a id="afeb99e7f5bbcf3bc5c3dc15a555eb4c3" name="afeb99e7f5bbcf3bc5c3dc15a555eb4c3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afeb99e7f5bbcf3bc5c3dc15a555eb4c3">&#9670;&#160;</a></span>advertiseAs() <span class="overload">[2/2]</span></h2>
+<a id="a85cbbf241dfd7c9be9df841fed95a91e" name="a85cbbf241dfd7c9be9df841fed95a91e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a85cbbf241dfd7c9be9df841fed95a91e">&#9670;&#160;</a></span>advertiseAs() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -240,7 +240,7 @@ template&lt;typename... IFaces&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service</a>&lt; Srv, Impl, scope &gt;::advertiseAs </td>
+          <td class="memname">std::enable_if_t&lt;(sizeof...(IFaces) &gt; 0), <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &gt; <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service</a>&lt; Srv, Impl, scope &gt;::advertiseAs </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const &amp;</td>

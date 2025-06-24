@@ -7,7 +7,7 @@ var searchData=
   ['activation_4',['Conditional Service-activation',['../index.html#autotoc_md29',1,'']]],
   ['active_20profiles_5',['Configuring the active profiles',['../index.html#autotoc_md34',1,'']]],
   ['activeprofiles_6',['activeProfiles',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a087e667e535be79c5c968f48bc031441',1,'mcnepp::qtdi::QApplicationContext::activeProfiles()'],['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#a091bb1b3dffb066be3d14e8c94443b87',1,'mcnepp::qtdi::StandardApplicationContext::activeProfiles()']]],
-  ['advertiseas_7',['advertiseAs',['../structmcnepp_1_1qtdi_1_1_service.html#a0ebe286925cbbf4fc27ab6c5653ea992',1,'mcnepp::qtdi::Service::advertiseAs() &amp;&amp;'],['../structmcnepp_1_1qtdi_1_1_service.html#afeb99e7f5bbcf3bc5c3dc15a555eb4c3',1,'mcnepp::qtdi::Service::advertiseAs() const &amp;']]],
+  ['advertiseas_7',['advertiseAs',['../structmcnepp_1_1qtdi_1_1_service.html#a03e7e64dc92e48ff4a382fe55428958e',1,'mcnepp::qtdi::Service::advertiseAs() &amp;&amp;'],['../structmcnepp_1_1qtdi_1_1_service.html#a85cbbf241dfd7c9be9df841fed95a91e',1,'mcnepp::qtdi::Service::advertiseAs() const &amp;']]],
   ['after_20registration_8',['Subscribing to a service after registration',['../index.html#autotoc_md41',1,'']]],
   ['allowpartial_9',['Publish-mode (&apos;allowPartial&apos;)',['../index.html#autotoc_md54',1,'']]],
   ['allowpartial_20false_3a_10',['allowPartial = false:',['../index.html#autotoc_md55',1,'']]],

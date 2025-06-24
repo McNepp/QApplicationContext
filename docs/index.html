@@ -683,13 +683,13 @@ timerReg.subscribe(cleaner, [cleaner](QTimer* timer) {
   };
 });
 </pre><p>That looks pretty ugly, right? <br  />
-Luckily, the function <a class="el" href="qapplicationcontext_8h.html#a3af2e9ed942d0a2991ea109e3483c6b5" title="Connects a signal of one Service to a slot of another service.  This function is the ApplicationConte...">mcnepp::qtdi::connectServices()</a> hides all that ugly boilerplate code from us: </p><pre class="fragment">connectServices(timerReg, &amp;QTimer::timeout, cleanerReg, &amp;Cleaner::clean);
+Luckily, the function <a class="el" href="qapplicationcontext_8h.html#a2031c20f56867150da921e833f22a847" title="Connects a signal of one Service to a slot of another service.  This function is the ApplicationConte...">mcnepp::qtdi::connectServices()</a> hides all that ugly boilerplate code from us: </p><pre class="fragment">connectServices(timerReg, &amp;QTimer::timeout, cleanerReg, &amp;Cleaner::clean);
 </pre><p>As you will have notices, this looks almost exactly like the original example with the pointers-to-QObjects.</p>
 <h1><a class="anchor" id="autotoc_md39"></a>
 Binding source-properties to target-properties of other members of the ApplicationContext</h1>
 <p>In the preceeding example, we used a reference to another member for the purpose of <b>initializing</b> a Q_PROPERTY.</p>
 <p>However, we might also want to <b>bind</b> a target-service's property to the corresponding source-property of another service.</p>
-<p>This can be achieved using the function <a class="el" href="qapplicationcontext_8h.html#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">mcnepp::qtdi::bind()</a> like this: </p><pre class="fragment">QTimer timer1;
+<p>This can be achieved using the function <a class="el" href="qapplicationcontext_8h.html#a509d11533231a4606400bf0a5dd87adf" title="Binds a property of one ServiceRegistration to a property from another Registration....">mcnepp::qtdi::bind()</a> like this: </p><pre class="fragment">QTimer timer1;
 
 auto reg1 = context -&gt; registerObject(&amp;timer1, "timer1"); // 1
 
@@ -743,7 +743,7 @@ registration.subscribe(this, [](PropFetcher* fetcher) { qInfo() &lt;&lt; "I got 
 Subscribing to multiple Services</h2>
 <p>As shown above, the method Registration::subscribe() is the way to go if you want to get a hold on a published service.</p>
 <p>But what if you would like to do something with more than one Service?</p>
-<p>Use <a class="el" href="qapplicationcontext_8h.html#ae106d702aeec65e9720e7c19821aeed4" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a>, followed by <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html#a392e36cf6961cfd0a6356f2441f4ac4c" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">mcnepp::qtdi::ServiceCombination::subscribe()</a>.</p>
+<p>Use <a class="el" href="qapplicationcontext_8h.html#acb4ad42eaff551d32fe42b828b3a256c" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a>, followed by <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html#a392e36cf6961cfd0a6356f2441f4ac4c" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">mcnepp::qtdi::ServiceCombination::subscribe()</a>.</p>
 <p>The following example combines one service of type <code>PropFetcher</code> and one <code>QTimer</code> and invokes a member-function <code>fetch</code> with both arguments: </p><pre class="fragment">auto propFetcherRegistration = context -&gt; registerService(service&lt;PropFetcher,RestPropFetcher&gt;(inject&lt;QNetworkAccessManager&gt;()) &lt;&lt; propValue("url", "${weatherUrl}${hamburgStationId}"), "hamburgWeather"); 
 auto timerRegistration = context-&gt;getRegistration&lt;QTime&gt;();
 combine(propFetcherRegistration, timerRegistration).subscribe(this, [this](PropFetcher* fetcher, QTimer* timer) 
@@ -1002,7 +1002,7 @@ Multi-threading</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html#afacf8c2137a7b568249532a14f53a33f" title="Connects a service with another service from the same QApplicationContext. Whenever a service of the ...">mcnepp::qtdi::Registration::autowire()</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return an invalid Subscription.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><a class="el" href="qapplicationcontext_8h.html#a0f11a14df333d20850559efeee464e15" title="Binds a property of one ServiceRegistration to a property from another Registration....">mcnepp::qtdi::bind()</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return an invalid Subscription.    </td></tr>
+<td class="markdownTableBodyNone"><a class="el" href="qapplicationcontext_8h.html#a509d11533231a4606400bf0a5dd87adf" title="Binds a property of one ServiceRegistration to a property from another Registration....">mcnepp::qtdi::bind()</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">Invocation from another thread will log a diagnostic and return an invalid Subscription.    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689" title="Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...">mcnepp::qtdi::QApplicationContext::publish(bool)</a>   </td><td class="markdownTableBodyNone">only the ApplicationContext's   </td><td class="markdownTableBodyNone">All published services will live in the ApplicationContext's thread.   </td></tr>
 </table>
