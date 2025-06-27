@@ -2683,6 +2683,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerService(service<Interface1,BaseService>(), "base1");
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
         auto reg3 = context->registerService(service<Interface1,BaseService>(), "base3");
+        auto reg4 = context->registerService(service<Interface1,BaseService>(), "base4");
         auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>("base2", "base3")));
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
@@ -2694,7 +2695,7 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(service->my_bases.contains(base3.last()));
 
         RegistrationSlot<Interface1> services{regs, this};
-        QCOMPARE(services.invocationCount(), 3);
+        QCOMPARE(services.invocationCount(), 4);
 
     }
 
