@@ -242,6 +242,10 @@ public:
         m_dependency = base;
     }
 
+    Interface1* dependency() const {
+        return m_dependency;
+    }
+
     Interface1* m_dependency;
     Address m_address;
     const QString m_url;

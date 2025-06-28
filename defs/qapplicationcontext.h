@@ -1131,6 +1131,46 @@ protected:
         ///
         QString requiredName;
     };
+
+    ///
+    /// \brief Specifies a dependency on another Service.
+    /// The dependency shall be resolved by invoking an "accessor" function that
+    /// accepts a pointer to the Service of type S and yields a pointer to an Object of type R.
+    ///
+    template<typename S,typename R> struct ComputedDependency : Dependency <S,Kind::MANDATORY> {
+        std::function<R(S*)> dependencyAccessor;
+    };
+
+    template<typename S,typename F,typename R=void> struct computed_dependency_traits : std::false_type {
+
+    };
+
+    template<typename S,typename F> struct computed_dependency_traits<S,F,std::void_t<std::invoke_result_t<F,S*>>> : std::true_type {
+        using dependency_type=std::invoke_result_t<F,S*>;
+
+        static auto accessor(F func) {
+            return func;
+        }
+    };
+
+    template<typename S,typename R> struct computed_dependency_traits<S,R(S::*)(),void> : std::true_type {
+        using dependency_type=R;
+
+        static auto accessor(R(S::*func)()) {
+            return std::mem_fn(func);
+        }
+    };
+
+    template<typename S,typename R> struct computed_dependency_traits<S,R(S::*)() const,void> : std::true_type {
+     using dependency_type=R;
+
+
+     static auto accessor(R(S::*func)() const) {
+         return std::mem_fn(func);
+     }
+};
+
+
 }// end namespace detail
 
 
@@ -2500,6 +2540,27 @@ template<typename S> [[deprecated("Instead, inject the registration directly int
 }
 
 
+///
+/// \brief Injects a *computed* Dependency.
+/// <br>The dependency will be obtained from another, previously registered service by means of an "accessor" function.
+/// <br>**Note:** The dependency will be obtained from the providing service **before** its properties have been configured,
+/// and also **before** the init-method of the providing service has run.
+/// <br>In other words: you should only inject computed dependencies that are fully initialized in the providing service's constructor.
+/// \param registration the Registration of the Service that provides the computed dependency.
+/// \param accessor will be used to obtain the dependency from the service.
+/// \tparam S the service-type of the dependency.
+/// \tparam F the type of the accessor function. Must be either a callable that accepts a pointer to S, or a pointer to a member-function of S.
+/// \return an opaque Object representing the Dependency.
+///
+template<typename S,typename F,ServiceScope scope> auto inject(const ServiceRegistration<S,scope>& registration, F accessor) ->
+std::enable_if_t<detail::is_allowed_as_dependency(scope) && detail::computed_dependency_traits<S,F>::value,detail::ComputedDependency<S,typename detail::computed_dependency_traits<S,F>::dependency_type>> {
+    //ServiceScope could be UNKNOWN statically, which passes the check, but TEMPLATE at runtime:
+    if(!registration || !detail::is_allowed_as_dependency(registration.unwrap() -> scope())) {
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject ServiceRegistration " << registration;
+        return {".invalid", nullptr};
+    }
+    return detail::ComputedDependency<S,typename detail::computed_dependency_traits<S,F>::dependency_type>{registration.registeredName(), detail::computed_dependency_traits<S,F>::accessor(accessor)};
+}
 
 
 
@@ -2994,7 +3055,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
         return {".invalid", QVariant{}};
     }
     if(!reg || !detail::is_allowed_as_dependency(reg.unwrap() -> scope())) {
-        qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
+        qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject ServiceRegistration " << reg;
         return {".invalid", QVariant{}};
     }
     return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter)}};
@@ -3397,7 +3458,7 @@ struct dependency_helper {
         return { typeid(S), VALUE_KIND, "", QVariant::fromValue(dep) };
     }
 
-    static auto converter() {
+    static auto converter(S) {
         return &convert;
     }
 
@@ -3413,7 +3474,7 @@ struct dependency_helper<Dependency<S,kind>> {
         return { typeid(S), static_cast<int>(kind), dep.requiredName };
     }
 
-    static auto converter() {
+    static auto converter(const Dependency<S,kind>&) {
         return default_argument_converter<S,kind>{};
     }
 };
@@ -3433,7 +3494,7 @@ struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
         return { typeid(S), INVALID_KIND, dep.registeredName() };
     }
 
-    static auto converter() {
+    static auto converter(const mcnepp::qtdi::ServiceRegistration<S,scope>&) {
         return default_argument_converter<S,Kind::MANDATORY>{};
     }
 
@@ -3452,7 +3513,7 @@ struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,ServiceScope::SERVI
         return { typeid(S), INVALID_KIND };
     }
 
-    static auto converter() {
+    static auto converter(const mcnepp::qtdi::ServiceRegistration<S,ServiceScope::SERVICE_GROUP>& ) {
         return default_argument_converter<S,Kind::N>{};
     }
 
@@ -3472,7 +3533,7 @@ struct dependency_helper<mcnepp::qtdi::ProxyRegistration<S>> {
         return { typeid(S), INVALID_KIND };
     }
 
-    static auto converter() {
+    static auto converter(const mcnepp::qtdi::ProxyRegistration<S>& ) {
         return default_argument_converter<S,Kind::N>{};
     }
 
@@ -3490,8 +3551,27 @@ struct dependency_helper<Resolvable<S>> {
         return { typeid(S), RESOLVABLE_KIND, dep.expression, dep.defaultValue, dep.variantConverter };
     }
 
-    static auto converter() {
+    static auto converter(const Resolvable<S>&) {
         return &dependency_helper<S>::convert;
+    }
+};
+
+template <typename S,typename R>
+struct dependency_helper<ComputedDependency<S,R>> {
+
+    using arg_type = R;
+
+    static dependency_info info(const ComputedDependency<S,R>& dep) {
+        if(!dep.dependencyAccessor) {
+            return { typeid(S), INVALID_KIND };
+        }
+        return { typeid(S), static_cast<int>(Kind::MANDATORY), dep.requiredName };
+    }
+
+    static auto converter(const ComputedDependency<S,R>& dep) {
+        return [accessor=dep.dependencyAccessor](const QVariant& var) {
+            return accessor(dynamic_cast<S*>(var.value<QObject*>()));
+        };
     }
 };
 
@@ -3508,7 +3588,7 @@ struct dependency_helper<ParentPlaceholder> {
         return { typeid(QObject*), PARENT_PLACEHOLDER_KIND};
     }
 
-    static auto converter() {
+    static auto converter(const ParentPlaceholder&) {
         return &dependency_helper<QObject*>::convert;
     }
 
@@ -3642,7 +3722,7 @@ template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep
     }
     (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
     if constexpr(detail::service_scope_traits<scope>::is_constructable) {
-        descriptor.constructor = service_creator<Impl>(factory, detail::dependency_helper<Dep>::converter()...);
+        descriptor.constructor = service_creator<Impl>(factory, detail::dependency_helper<Dep>::converter(deps)...);
     }
     return descriptor;
 }
