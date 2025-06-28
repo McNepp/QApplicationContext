@@ -346,6 +346,13 @@ Should there not be exactly one Service of the service-type available, the insta
 <tr class="memdesc:a5e2eb0c88667e95e34ebbc7e77c7a96c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a mandatory Dependency on a <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a>. <br  />
 <b>Note:</b> You do not need to use <a class="el" href="#a5e2eb0c88667e95e34ebbc7e77c7a96c" title="Injects a mandatory Dependency on a Registration.  Note: You do not need to use inject(const Registra...">inject(const Registration&lt;S&gt;&amp; registration)</a> at all! Rather, you can pass the <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html" title="A type-safe wrapper for a detail::Registration.  This is a non-instantiable base-class....">Registration</a> directly to the <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>'s constructor.  <br /></td></tr>
 <tr class="separator:a5e2eb0c88667e95e34ebbc7e77c7a96c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abafa6cc9d59b8534137fcbaeecab777e" id="r_abafa6cc9d59b8534137fcbaeecab777e"><td class="memTemplParams" colspan="2">template&lt;typename S , typename F , <a class="el" href="#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope&gt; </td></tr>
+<tr class="memitem:abafa6cc9d59b8534137fcbaeecab777e"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#abafa6cc9d59b8534137fcbaeecab777e">mcnepp::qtdi::inject</a> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;registration, F accessor) -&gt; std::enable_if_t&lt; detail::is_allowed_as_dependency(scope) &amp;&amp;detail::computed_dependency_traits&lt; S, F &gt;::value, detail::ComputedDependency&lt; S, typename detail::computed_dependency_traits&lt; S, F &gt;::dependency_type &gt; &gt;</td></tr>
+<tr class="memdesc:abafa6cc9d59b8534137fcbaeecab777e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects a <em>computed</em> Dependency. <br  />
+The dependency will be obtained from another, previously registered service by means of an "accessor" function. <br  />
+<b>Note:</b> The dependency will be obtained from the providing service <b>before</b> its properties have been configured, and also <b>before</b> the init-method of the providing service has run. <br  />
+In other words: you should only inject computed dependencies that are fully initialized in the providing service's constructor.  <br /></td></tr>
+<tr class="separator:abafa6cc9d59b8534137fcbaeecab777e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a62777d7ae6b38c128de21de31f22ac5a" id="r_a62777d7ae6b38c128de21de31f22ac5a"><td class="memTemplParams" colspan="2">template&lt;typename S &gt; </td></tr>
 <tr class="memitem:a62777d7ae6b38c128de21de31f22ac5a"><td class="memTemplItemLeft" align="right" valign="top">constexpr <a class="el" href="#a5b04fa60e417c01aff57377715036970">Dependency</a>&lt; S, DependencyKind::OPTIONAL &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a62777d7ae6b38c128de21de31f22ac5a">mcnepp::qtdi::injectIfPresent</a> (const QString &amp;requiredName={})</td></tr>
 <tr class="memdesc:a62777d7ae6b38c128de21de31f22ac5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Injects an optional Dependency. <br  />
@@ -1536,7 +1543,7 @@ template&lt;typename S , typename R , typename A , typename L &gt; </div>
 </div>
 </div>
 <a id="a7f1f15461634592926ae1efd11f50ea6" name="a7f1f15461634592926ae1efd11f50ea6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7f1f15461634592926ae1efd11f50ea6">&#9670;&#160;</a></span>inject() <span class="overload">[1/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a7f1f15461634592926ae1efd11f50ea6">&#9670;&#160;</a></span>inject() <span class="overload">[1/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1587,7 +1594,7 @@ Should there not be exactly one Service of the service-type available, the insta
 </div>
 </div>
 <a id="a5e2eb0c88667e95e34ebbc7e77c7a96c" name="a5e2eb0c88667e95e34ebbc7e77c7a96c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5e2eb0c88667e95e34ebbc7e77c7a96c">&#9670;&#160;</a></span>inject() <span class="overload">[2/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e2eb0c88667e95e34ebbc7e77c7a96c">&#9670;&#160;</a></span>inject() <span class="overload">[2/3]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1627,6 +1634,49 @@ template&lt;typename S &gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>a mandatory Dependency on the supplied registration. </dd></dl>
 <dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000002">Deprecated</a></b></dt><dd>You can simply pass the Registration directly to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a>. </dd></dl>
+
+</div>
+</div>
+<a id="abafa6cc9d59b8534137fcbaeecab777e" name="abafa6cc9d59b8534137fcbaeecab777e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abafa6cc9d59b8534137fcbaeecab777e">&#9670;&#160;</a></span>inject() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename S , typename F , ServiceScope scope&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">auto mcnepp::qtdi::inject </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; S, scope &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>registration</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">F</td>          <td class="paramname"><span class="paramname"><em>accessor</em></span>&#160;) -&gt; std::enable_if_t&lt;detail::is_allowed_as_dependency(scope) &amp;&amp; detail::computed_dependency_traits&lt;S,F&gt;::value,detail::ComputedDependency&lt;S,typename detail::computed_dependency_traits&lt;S,F&gt;::dependency_type&gt;&gt; </td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Injects a <em>computed</em> Dependency. <br  />
+The dependency will be obtained from another, previously registered service by means of an "accessor" function. <br  />
+<b>Note:</b> The dependency will be obtained from the providing service <b>before</b> its properties have been configured, and also <b>before</b> the init-method of the providing service has run. <br  />
+In other words: you should only inject computed dependencies that are fully initialized in the providing service's constructor. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">registration</td><td>the Registration of the Service that provides the computed dependency. </td></tr>
+    <tr><td class="paramname">accessor</td><td>will be used to obtain the dependency from the service. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">S</td><td>the service-type of the dependency. </td></tr>
+    <tr><td class="paramname">F</td><td>the type of the accessor function. Must be either a callable that accepts a pointer to S, or a pointer to a member-function of S. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>an opaque Object representing the Dependency. </dd></dl>
 
 </div>
 </div>

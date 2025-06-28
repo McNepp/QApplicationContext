@@ -1,7 +1,7 @@
 var searchData=
 [
   ['watchconfigvalue_0',['watchConfigValue',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a2229cdb9173e8e314b4ecb5bb27e7439',1,'mcnepp::qtdi::QApplicationContext::watchConfigValue()'],['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#a76a208d4d6884856fd62c6db9b3f3f9b',1,'mcnepp::qtdi::StandardApplicationContext::watchConfigValue()']]],
-  ['with_20type_20safe_20setters_1',['Configuring services with type-safe &apos;setters&apos;',['../index.html#autotoc_md18',1,'']]],
+  ['with_20type_20safe_20setters_1',['Configuring services with type-safe &apos;setters&apos;',['../index.html#autotoc_md19',1,'']]],
   ['withautorefresh_2',['withAutoRefresh',['../qapplicationcontext_8h.html#a345509cae13489dd46cc5c75ba10dec6',1,'mcnepp::qtdi']]],
   ['withautowire_3',['withAutowire',['../qapplicationcontext_8h.html#a658a665f9b2b426543e566defd51e4ff',1,'mcnepp::qtdi']]],
   ['withgroup_4',['withGroup',['../qapplicationcontext_8h.html#ac25469797c975a8246962ce943144c57',1,'mcnepp::qtdi']]],
