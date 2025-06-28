@@ -112,7 +112,7 @@ Whenever we want to express a dependency for a Service and we have the correspon
     context -> registerService(service<RestPropFetcher>(QString{"https://dwd.api.proxy.bund.dev/v30/stationOverviewExtended?stationIds=10147"), networkRegistration}, "hamburgWeather"); // 3
 
 
-## Parent-Child relation
+## Injecting a parent
 
 In the preceding example, the class `RestPropFetcher` was introduced which had the following constructor:
 
@@ -128,6 +128,26 @@ If not, **it will set itself as the service's parent** using QObject::setParent(
     context->registerService(service<RestPropFetcher>(QString{"https://whatever"}, inject<QNetworkAccessManager>(), injectParent()));
 
 This will cause the ApplicationContext to inject itself into the constructor as the parent.
+
+## Injecting computed dependencies
+
+In the previous example, we injected another %Service - the QNetworkAccessManager into a dependent %Service.
+<br>Another possibility we have is to inject a *computed dependency*, i.e. a dependency that is obtained by applying an *accessor function* to another %Service.
+<br>There is an overload of mcnepp::qtdi::inject() that allows to specify such an *accessor function*.
+<br>Suppose we had the following %Service:
+
+    class NetworkTools : public QObject {
+        public:
+          QNetworkAccessManager* getManager();
+    // Other stuff...
+            
+    };
+
+With the above declaration, our ApplicationContext could be populated like this:
+
+    auto networkToolsReg = context->registerService(service<NetworkTools>(), "networkTool");
+    context->registerService(service<RestPropFetcher>(QString{"https://whatever"}, inject(networkToolsReg, &NetworkTools::getManager)), "hamburgWeather");
+
 
 
 ## Externalized Configuration {#externalized-configuration}
@@ -160,7 +180,7 @@ Whenever a *placeholder* shall be looked up, the ApplicationContext will search 
 -# The environment, for a variable corresponding to the *placeholder*.
 -# The instances of `QSettings` that have been registered in the ApplicationContext.
 
-### Configuring values of non-String types
+### Injecting values of non-String types
 
 With mcnepp::qtdi::resolve(), you can also process arguments of types other than `QString`.
 You just need to specify the template-argument explicitly, or pass a default-value to be used when the expression cannot be resolved.

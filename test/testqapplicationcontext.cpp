@@ -68,7 +68,6 @@ template<> struct service_traits<Interface1> : default_service_traits<Interface1
 
 namespace mcnepp::qtditest {
 
-
 class IExtendedApplicationContext : public QApplicationContext {
 public:
     using QApplicationContext::QApplicationContext;
@@ -2683,6 +2682,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerService(service<Interface1,BaseService>(), "base1");
         auto reg2 = context->registerService(service<Interface1,BaseService2>(), "base2");
         auto reg3 = context->registerService(service<Interface1,BaseService>(), "base3");
+        auto reg4 = context->registerService(service<Interface1,BaseService>(), "base4");
         auto reg = context->registerService(service<CardinalityNService>(injectAll<Interface1>("base2", "base3")));
         QVERIFY(context->publish());
         auto regs = context->getRegistration<Interface1>();
@@ -2694,7 +2694,7 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(service->my_bases.contains(base3.last()));
 
         RegistrationSlot<Interface1> services{regs, this};
-        QCOMPARE(services.invocationCount(), 3);
+        QCOMPARE(services.invocationCount(), 4);
 
     }
 
@@ -2996,6 +2996,43 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(slot->my_bases[0]->foo(), "Hello");
         QCOMPARE(slot->my_bases[1]->foo(), "world");
     }
+
+    void testInjectComputedService() {
+        auto baseReg = context->registerService(service<Interface1,BaseService>());
+        auto depReg1 = context->registerService(service<DependentService>(baseReg) , "dep1");
+        auto depReg2 = context->registerService(service<DependentService>(inject(depReg1, [](DependentService* dep) { return dep->m_dependency;})), "dep2");
+        auto depReg3 = context->registerService(service<DependentService>(inject(depReg1, &DependentService::dependency)), "dep3");
+        RegistrationSlot<Interface1> baseSlot{baseReg, this};
+        RegistrationSlot<DependentService> depSlot1{depReg1, this};
+        RegistrationSlot<DependentService> depSlot2{depReg2, this};
+        RegistrationSlot<DependentService> depSlot3{depReg3, this};
+        QVERIFY(context->publish());
+        QCOMPARE(depSlot1->dependency(), baseSlot.last());
+        QCOMPARE(depSlot2->dependency(), baseSlot.last());
+        QCOMPARE(depSlot3->dependency(), baseSlot.last());
+    }
+
+
+
+    void testInjectComputedStringBeforeProperties() {
+       auto baseReg = context->registerService(service<Interface1,BaseService>() << propValue(&BaseService::setFoo, "Mickey Mouse"));
+       auto depReg1 = context->registerService(service<DependentService>(Address{}, inject(baseReg, &Interface1::foo), baseReg) , "dep1");
+       RegistrationSlot<Interface1> baseSlot{baseReg, this};
+       RegistrationSlot<DependentService> depSlot1{depReg1, this};
+       QVERIFY(context->publish());
+        // The computed dependency will be injected before BaseService::setFoo("Mickey Mouse") has been invoked:
+       QCOMPARE(depSlot1->m_url, "BaseService");
+    }
+
+    void testInjectInvalidComputedDependencyFails() {
+        auto depReg = context->registerService(service<DependentService>(inject(ServiceRegistration<DependentService,ServiceScope::SINGLETON>{}, &DependentService::dependency)), "dep2");
+        QVERIFY(!depReg);
+        ServiceRegistration<DependentService,ServiceScope::UNKNOWN> templateReg = context->registerService(serviceTemplate<DependentService>() , "dep1");
+        // A service-template cannot serve as the provider for a computed dependency:
+        depReg = context->registerService(service<DependentService>(inject(templateReg, &DependentService::dependency)), "dep3");
+        QVERIFY(!depReg);
+    }
+
 
     void testPublishAdditionalServices() {
 

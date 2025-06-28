@@ -944,20 +944,20 @@ std::pair<QVariant,StandardApplicationContext::Status> StandardApplicationContex
 
     QList<DescriptorRegistration*> depRegs;
     auto requiredNames = d.expression.split(',', Qt::SkipEmptyParts);
-    for(auto pub : published) {
-        if(pub->matches(type) && pub->scope() != ServiceScope::TEMPLATE) {
-            if(!requiredNames.isEmpty()) {
-                for(auto& name : requiredNames) {
-                    auto byName = getActiveRegistrationByName(name);
-                    if(byName && byName == pub) {
-                        requiredNames.removeAll(name);
-                        goto use_dep;
-                    }
+    if(!requiredNames.isEmpty()) {
+        for(const auto& name : requiredNames) {
+            auto byName = getActiveRegistrationByName(name);
+            if(byName && byName->matches(type) && byName->scope() != ServiceScope::TEMPLATE) {
+                if(std::find(published.begin(), published.end(), byName) != published.end()) {
+                    depRegs.push_back(byName);
                 }
-                continue;
             }
-        use_dep:
-            depRegs.push_back(pub);
+        }
+    } else {
+        for(auto pub : published) {
+            if(pub->matches(type) && pub->scope() != ServiceScope::TEMPLATE) {
+                depRegs.push_back(pub);
+            }
         }
     }
 
