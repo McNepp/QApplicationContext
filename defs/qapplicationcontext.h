@@ -768,8 +768,6 @@ protected:
         }, m_connectionType);
     }
 
-    void notify(const QObjectList& objs);
-
 
 
 private:
@@ -3627,26 +3625,26 @@ template<typename T,typename First, typename...Tail> constexpr std::pair<bool,co
 
 
 
-template <typename T,typename F> constructor_t service_creator(F factory) {
+template <typename F> constructor_t service_creator(F factory) {
     return [factory](const QVariantList&) {
         return factory();
     };
 }
 
-template <typename T, typename F, typename D1> constructor_t service_creator(F factory, D1 conv1) {
+template <typename F, typename D1> constructor_t service_creator(F factory, D1 conv1) {
         return [factory,conv1](const QVariantList &dependencies) {
         return factory(conv1(dependencies[0]));
         };
     }
 
-template <typename T,typename F, typename D1, typename D2>
+template <typename F, typename D1, typename D2>
     constructor_t service_creator(F factory, D1 conv1, D2 conv2) {
         return [factory,conv1,conv2](const QVariantList &dependencies) {
             return factory(conv1(dependencies[0]), conv2(dependencies[1]));
         };
     }
 
-template <typename T,typename F, typename D1, typename D2, typename D3>
+template <typename F, typename D1, typename D2, typename D3>
     constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3) {
         return [factory,conv1,conv2,conv3](const QVariantList &dependencies) {
                 return factory(
@@ -3656,7 +3654,7 @@ template <typename T,typename F, typename D1, typename D2, typename D3>
         };
     }
 
-template <typename T,typename F, typename D1, typename D2, typename D3, typename D4>
+template <typename F, typename D1, typename D2, typename D3, typename D4>
     constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4) {
         return [factory,conv1,conv2,conv3,conv4](const QVariantList &dependencies) {
                 return factory(
@@ -3667,7 +3665,7 @@ template <typename T,typename F, typename D1, typename D2, typename D3, typename
         };
     }
 
-template <typename T,typename F, typename D1, typename D2, typename D3, typename D4, typename D5>
+template <typename F, typename D1, typename D2, typename D3, typename D4, typename D5>
     constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5) {
         return [factory,conv1,conv2,conv3,conv4,conv5](const QVariantList &dependencies) {
                 return factory(conv1(dependencies[0]),
@@ -3678,7 +3676,7 @@ template <typename T,typename F, typename D1, typename D2, typename D3, typename
     };
     }
 
-template <typename T,typename F, typename D1, typename D2, typename D3, typename D4, typename D5, typename D6>
+template <typename F, typename D1, typename D2, typename D3, typename D4, typename D5, typename D6>
 constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5, D6 conv6) {
         return [factory,conv1,conv2,conv3,conv4,conv5,conv6](const QVariantList &dependencies) {
                 return factory(conv1(dependencies[0]),
@@ -3722,7 +3720,7 @@ template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep
     }
     (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
     if constexpr(detail::service_scope_traits<scope>::is_constructable) {
-        descriptor.constructor = service_creator<Impl>(factory, detail::dependency_helper<Dep>::converter(deps)...);
+        descriptor.constructor = service_creator(factory, detail::dependency_helper<Dep>::converter(deps)...);
     }
     return descriptor;
 }
