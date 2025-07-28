@@ -684,67 +684,6 @@ private:
     QList<QMetaObject::Connection> connections;
 };
 
-template<typename F,typename...S> struct notifier;
-
-template<typename F,typename S1,typename S2> struct notifier<F,S1,S2> {
-    F callable;
-
-    void operator()(const QObjectList& objs) {
-        if(S1* s = dynamic_cast<S1*>(objs[0])) {
-            if(S2* t = dynamic_cast<S2*>(objs[1])) {
-                callable(s, t);
-            }
-        }
-    }
-};
-
-template<typename F,typename S1,typename S2,typename S3> struct notifier<F,S1,S2,S3> {
-    F callable;
-
-    void operator()(const QObjectList& objs) {
-        if(S1* s = dynamic_cast<S1*>(objs[0])) {
-            if(S2* t = dynamic_cast<S2*>(objs[1])) {
-                if(S3* u = dynamic_cast<S3*>(objs[2])) {
-                    callable(s, t, u);
-                }
-            }
-        }
-    }
-};
-
-template<typename F,typename S1,typename S2,typename S3,typename S4> struct notifier<F,S1,S2,S3,S4> {
-    F callable;
-
-    void operator()(const QObjectList& objs) {
-        if(S1* s = dynamic_cast<S1*>(objs[0])) {
-            if(S2* t = dynamic_cast<S2*>(objs[1])) {
-                if(S3* u = dynamic_cast<S3*>(objs[2])) {
-                    if(S4* w = dynamic_cast<S4*>(objs[3])) {
-                        callable(s, t, u, w);
-                    }
-                }
-            }
-        }
-    }
-};
-
-template<typename F,typename S1,typename S2,typename S3,typename S4,typename S5> struct notifier<F,S1,S2,S3,S4,S5> {
-    F callable;
-
-    void operator()(const QObjectList& objs) {
-        if(S1* s = dynamic_cast<S1*>(objs[0])) {
-            if(S2* t = dynamic_cast<S2*>(objs[1])) {
-                if(S3* u = dynamic_cast<S3*>(objs[2])) {
-                    if(S4* w = dynamic_cast<S4*>(objs[3])) {
-                        if(S5* x = dynamic_cast<S5*>(objs[4])) {
-                            callable(s, t, u, w, x);
-                        }
-                    }
-                }
-            }
-        }
-    }
-};
 
 template<typename F,typename...S> class CombiningSubscription : public MultiServiceSubscription {
 public:
@@ -752,30 +691,33 @@ public:
     CombiningSubscription(const target_list_t& targets, QObject* context, F callable, Qt::ConnectionType connectionType) :
         MultiServiceSubscription{targets, context},
         m_context{context},
-        m_notifier{callable},
+        m_callable{callable},
         m_connectionType{connectionType} {
     }
 
 protected:
 
     virtual MultiServiceSubscription* newChild(const target_list_t& targets) override {
-        return new CombiningSubscription<F,S...>{targets, m_context, m_notifier.callable, m_connectionType};
+        return new CombiningSubscription<F,S...>{targets, m_context, m_callable, m_connectionType};
     }
 
     virtual QMetaObject::Connection connectObjectsPublished() override {
         return connect(this, &MultiServiceSubscription::objectsPublished, m_context, [this](const QObjectList& objs) {
-            m_notifier(objs);
+            call(std::index_sequence_for<S...>{}, objs);
         }, m_connectionType);
     }
 
-    void notify(const QObjectList& objs);
 
 
 
 private:
 
+    template<std::size_t...Indices> void call(std::index_sequence<Indices...>,const QObjectList& objs) {
+        m_callable(dynamic_cast<S*>(objs[Indices])...);
+    }
+
     QObject* m_context;
-    notifier<F,S...> m_notifier;
+    F m_callable;
     Qt::ConnectionType m_connectionType;
 };
 
@@ -3625,69 +3567,30 @@ template<typename T,typename First, typename...Tail> constexpr std::pair<bool,co
 }
 
 
+template<typename F,typename...Converters> struct service_creator_impl {
+    F factory;
+
+    std::tuple<Converters...> converters;
+
+    template<std::size_t...Indices> auto call(std::index_sequence<Indices...>, const QVariantList& dependencies) const {
+        return factory(std::get<Indices>(converters)(dependencies[Indices])...);
+    }
+
+    auto operator()(const QVariantList& dependencies) const {
+        return call(std::index_sequence_for<Converters...>{}, dependencies);
+    }
+
+};
 
 
-template <typename T,typename F> constructor_t service_creator(F factory) {
+template<typename F,typename...Converters> auto service_creator(F factory, Converters&&...converters) {
+    return service_creator_impl<F,Converters...>{factory, std::make_tuple(converters...)};
+}
+
+template <typename F> constructor_t service_creator(F factory) {
     return [factory](const QVariantList&) {
         return factory();
     };
-}
-
-template <typename T, typename F, typename D1> constructor_t service_creator(F factory, D1 conv1) {
-        return [factory,conv1](const QVariantList &dependencies) {
-        return factory(conv1(dependencies[0]));
-        };
-    }
-
-template <typename T,typename F, typename D1, typename D2>
-    constructor_t service_creator(F factory, D1 conv1, D2 conv2) {
-        return [factory,conv1,conv2](const QVariantList &dependencies) {
-            return factory(conv1(dependencies[0]), conv2(dependencies[1]));
-        };
-    }
-
-template <typename T,typename F, typename D1, typename D2, typename D3>
-    constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3) {
-        return [factory,conv1,conv2,conv3](const QVariantList &dependencies) {
-                return factory(
-                        conv1(dependencies[0]),
-                        conv2(dependencies[1]),
-                        conv3(dependencies[2]));
-        };
-    }
-
-template <typename T,typename F, typename D1, typename D2, typename D3, typename D4>
-    constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4) {
-        return [factory,conv1,conv2,conv3,conv4](const QVariantList &dependencies) {
-                return factory(
-                        conv1(dependencies[0]),
-                        conv2(dependencies[1]),
-                        conv3(dependencies[2]),
-                        conv4(dependencies[3]));
-        };
-    }
-
-template <typename T,typename F, typename D1, typename D2, typename D3, typename D4, typename D5>
-    constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5) {
-        return [factory,conv1,conv2,conv3,conv4,conv5](const QVariantList &dependencies) {
-                return factory(conv1(dependencies[0]),
-                        conv2(dependencies[1]),
-                        conv3(dependencies[2]),
-                        conv4(dependencies[3]),
-                        conv5(dependencies[4]));
-    };
-    }
-
-template <typename T,typename F, typename D1, typename D2, typename D3, typename D4, typename D5, typename D6>
-constructor_t service_creator(F factory, D1 conv1, D2 conv2, D3 conv3, D4 conv4, D5 conv5, D6 conv6) {
-        return [factory,conv1,conv2,conv3,conv4,conv5,conv6](const QVariantList &dependencies) {
-                return factory(conv1(dependencies[0]),
-                                            conv2(dependencies[1]),
-                                            conv3(dependencies[2]),
-                                            conv4(dependencies[3]),
-                                            conv5(dependencies[4]),
-                                            conv6(dependencies[5]));
-                };
 }
 
 
@@ -3722,7 +3625,7 @@ template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep
     }
     (descriptor.dependencies.push_back(detail::dependency_helper<Dep>::info(deps)), ...);
     if constexpr(detail::service_scope_traits<scope>::is_constructable) {
-        descriptor.constructor = service_creator<Impl>(factory, detail::dependency_helper<Dep>::converter(deps)...);
+        descriptor.constructor = service_creator(factory, detail::dependency_helper<Dep>::converter(deps)...);
     }
     return descriptor;
 }
