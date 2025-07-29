@@ -21,6 +21,8 @@ public:
 
     bool hasPlaceholders() const;
 
+    bool hasPlaceholder(const QString&) const;
+
     void clearPlaceholders(QVariantMap& resolvedPlaceholders) const;
 
     static PlaceholderResolver* parse(const QString& placeholderString, QApplicationContext* parent);

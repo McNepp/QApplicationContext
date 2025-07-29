@@ -2153,8 +2153,8 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(protoSlot[1]->foo(), "the foo");
         QCOMPARE(protoSlot[0]->parent(), dependentSlot.last());
         QCOMPARE(protoSlot[1]->parent(), dependentSlot2.last());
-        QVERIFY(dependentSlot->m_dependency);
-        QVERIFY(dependentSlot2->m_dependency);
+        QCOMPARE(dependentSlot->m_dependency, protoSlot[0]);
+        QCOMPARE(dependentSlot2->m_dependency, protoSlot[1]);
         QCOMPARE_NE(dependentSlot->m_dependency, dependentSlot2->m_dependency);
     }
 
@@ -2954,10 +2954,18 @@ void testWatchConfigurationFileChangeWithError() {
     }
 
     void testServiceGroupAsDependency() {
+        QFile file{"testapplicationtext.ini"};
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("bases=Hello,world");
+        file.close();
+        QSettings settings{file.fileName(), QSettings::IniFormat};
+
+        context->registerObject(&settings);
+
         //This Service should not be injected as a dependency:
         context->registerService(service<Interface1,BaseService>());
         //Only the Services from this groups should be injected as a dependency:
-        auto reg = context->registerService(serviceGroup("base", "Hello,world") << service<Interface1,BaseService>() << propValue("foo", "${base}"));
+        auto reg = context->registerService(serviceGroup("fooValue", "${bases}") << service<Interface1,DerivedService>(resolve("${fooValue}")));
         QVERIFY(reg);
         auto dependentReg = context->registerService(service<CardinalityNService>(reg));
         RegistrationSlot<CardinalityNService> slot{dependentReg, this};
@@ -2966,6 +2974,29 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(slot->my_bases.size(), 2);
         QCOMPARE(slot->my_bases[0]->foo(), "Hello");
         QCOMPARE(slot->my_bases[1]->foo(), "world");
+        file.remove();
+    }
+
+    void testServiceGroupAllAsDependency() {
+        QFile file{"testapplicationtext.ini"};
+        QVERIFY(file.open(QIODeviceBase::WriteOnly | QIODeviceBase::Text | QIODeviceBase::Truncate));
+        file.write("bases=Hello,world");
+        file.close();
+        QSettings settings{file.fileName(), QSettings::IniFormat};
+
+        context->registerObject(&settings);
+
+        context->registerService(service<Interface1,BaseService>() << propValue("foo", "First"));
+        context->registerService(serviceGroup("fooValue", "${bases}") << service<Interface1,DerivedService>(resolve("${fooValue}")));
+        auto dependentReg = context->registerService(service<CardinalityNService>(injectAll<Interface1>()));
+        RegistrationSlot<CardinalityNService> slot{dependentReg, this};
+        QVERIFY(context->publish());
+        QVERIFY(slot);
+        QCOMPARE(slot->my_bases.size(), 3);
+        QCOMPARE(slot->my_bases[0]->foo(), "First");
+        QCOMPARE(slot->my_bases[1]->foo(), "Hello");
+        QCOMPARE(slot->my_bases[2]->foo(), "world");
+        file.remove();
     }
 
     void testEmptyServiceGroupAsDependency() {
