@@ -325,6 +325,19 @@ private slots:
         QCOMPARE(slot->dependency(), context.get());
     }
 
+    [[deprecated]] void testDeprecatedConfiguration() {
+        QTimer timer;
+        context->registerObject(&timer, "timer");
+        auto reg = context->registerService(service<BaseService>(), "service", config({entry(&BaseService::setFoo, "Hello"),
+                                                                                      entry(&BaseService::setTimer, "&timer")}));
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> slot{reg, this};
+        QVERIFY(slot.last());
+        QCOMPARE(slot->foo(), "Hello");
+        QCOMPARE(slot->timer(), &timer);
+    }
+
 
 
 

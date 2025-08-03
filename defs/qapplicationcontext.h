@@ -2954,8 +2954,8 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
 ///
 /// \deprecated Use mcnepp::qtdi::propValue() instead
 ///
-template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]][[deprecated("Use propValue() instead")]] service_config_entry<S> entry(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
-    return propValue(propertySetter, expression, converter);
+template<typename S,typename R,typename A> [[nodiscard]][[deprecated("Use propValue() instead")]] service_config_entry<S> entry(R(S::*propertySetter)(A), const QString& expression) {
+    return propValue(propertySetter, expression);
 }
 
 ///
@@ -4078,7 +4078,7 @@ public:
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
     template<typename S,typename Impl,ServiceScope scope> [[deprecated("Use registerService(const Service&,const QQString&,const Condition&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
-        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, {}, nullptr));
+        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, Condition::always(), nullptr));
     }
 
 
@@ -4135,7 +4135,7 @@ public:
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << serviceDeclaration.descriptor << " with name '" << objectName << "'. Invalid service-template";
             return ServiceRegistration<S,scope>{};
         }
-        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, {}, templateRegistration.unwrap()));
+        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, Condition::always(), templateRegistration.unwrap()));
     }
 
 
