@@ -824,9 +824,9 @@ Now, if you advertise a service under more than one interface, an ambiguity coul
 In order to fix this error, you should specify an initializer_type in the service_traits of the service's <em>implementation-type</em>.</p>
 <h2><a class="anchor" id="autotoc_md47"></a>
 Specifying initializers per Registration</h2>
-<p>There is also method that lets you specify an <em>init-method</em> without the need for a specialization of <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">mcnepp::qtdi::service_traits</a>. <br  />
+<p>There is also a way that lets you specify an <em>init-method</em> without the need for a specialization of <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">mcnepp::qtdi::service_traits</a>. <br  />
 This will register only one specific service with the supplied <em>init-method</em>: </p><pre class="fragment">context -&gt; registerService(service&lt;PropFetcherAggregator&gt;(injectAll&lt;RestPropFetcher&gt;()).withInit(&amp;PropFetcherAggregator::init));
-</pre><p>See <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html#a87a22d48165ace52ca130871ea4877fb" title="Specifies an init-method for this service.  This overrides the init-method that is deduced from the i...">mcnepp::qtdi::Service::withInit()</a></p>
+</pre><p>You supply a reference to a member-function of the service's implementation-type. In case your init-method expects additional argumenty, you may those additional arguments to <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html#afe4d308561dc3f2c51e7433396c3eea1" title="Specifies an init-method for this service.  This overrides the init-method that is deduced from the i...">mcnepp::qtdi::Service::withInit()</a>.</p>
 <h2><a class="anchor" id="autotoc_md48"></a>
 Changing the order of initialization</h2>
 <p>Per default, publication of a Service is announced <b>after</b> the <em>init-method</em> has run. <br  />

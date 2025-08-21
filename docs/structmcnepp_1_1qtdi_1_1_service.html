@@ -134,22 +134,22 @@ Compilation will fail if any of the following is true:  <br /></td></tr>
 You must specify at least one interface (or otherwise compilation will fail). These interfaces will be available for lookup via <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a9c35f37337d77fdc0e19e160d48ba569" title="Obtains a ServiceRegistration for a name.  This function will look up Services by the names they were...">QApplicationContext::getRegistration()</a>. They will also be used to satisfy dependencies that other services may have to this one. <br  />
 Compilation will fail if any of the following is true:  <br /></td></tr>
 <tr class="separator:a85cbbf241dfd7c9be9df841fed95a91e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a87a22d48165ace52ca130871ea4877fb" id="r_a87a22d48165ace52ca130871ea4877fb"><td class="memTemplParams" colspan="2">template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a> initializationPolicy = ServiceInitializationPolicy::DEFAULT, typename I &gt; </td></tr>
-<tr class="memitem:a87a22d48165ace52ca130871ea4877fb"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a87a22d48165ace52ca130871ea4877fb">withInit</a> (I initializer) &amp;&amp;</td></tr>
-<tr class="memdesc:a87a22d48165ace52ca130871ea4877fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies an <em>init-method</em> for this service. <br  />
+<tr class="memitem:afe4d308561dc3f2c51e7433396c3eea1" id="r_afe4d308561dc3f2c51e7433396c3eea1"><td class="memTemplParams" colspan="2">template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a> initializationPolicy = ServiceInitializationPolicy::DEFAULT, typename I , typename... Args&gt; </td></tr>
+<tr class="memitem:afe4d308561dc3f2c51e7433396c3eea1"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#afe4d308561dc3f2c51e7433396c3eea1">withInit</a> (I initializer, Args &amp;&amp;...args) &amp;&amp;</td></tr>
+<tr class="memdesc:afe4d308561dc3f2c51e7433396c3eea1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies an <em>init-method</em> for this service. <br  />
 This overrides the init-method that is deduced from the <code>initializer_type</code> of the service's <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">service_traits</a>. The init-method will be used for this service-instance only. <br  />
 The initializer must one of:  <br /></td></tr>
-<tr class="separator:a87a22d48165ace52ca130871ea4877fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af6fdc3c38813f23ca9a44caf7a14ac31" id="r_af6fdc3c38813f23ca9a44caf7a14ac31"><td class="memTemplParams" colspan="2">template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a> initializationPolicy = ServiceInitializationPolicy::DEFAULT, typename I &gt; </td></tr>
-<tr class="memitem:af6fdc3c38813f23ca9a44caf7a14ac31"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#af6fdc3c38813f23ca9a44caf7a14ac31">withInit</a> (I initializer) const &amp;</td></tr>
-<tr class="memdesc:af6fdc3c38813f23ca9a44caf7a14ac31"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies an <em>init-method</em> for this service. <br  />
+<tr class="separator:afe4d308561dc3f2c51e7433396c3eea1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a51f11755a39a56e613c3d78eb3bd099a" id="r_a51f11755a39a56e613c3d78eb3bd099a"><td class="memTemplParams" colspan="2">template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a> initializationPolicy = ServiceInitializationPolicy::DEFAULT, typename I , typename... Args&gt; </td></tr>
+<tr class="memitem:a51f11755a39a56e613c3d78eb3bd099a"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a51f11755a39a56e613c3d78eb3bd099a">withInit</a> (I initializer, Args &amp;&amp;...args) const &amp;</td></tr>
+<tr class="memdesc:a51f11755a39a56e613c3d78eb3bd099a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies an <em>init-method</em> for this service. <br  />
 This overrides the init-method that is deduced from the <code>initializer_type</code> of the service's <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">service_traits</a>. The init-method will be used for this service-instance only. <br  />
 The initializer must one of:  <br /></td></tr>
-<tr class="separator:af6fdc3c38813f23ca9a44caf7a14ac31"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab08828a9cae2e021ffc10ca3bc58b75e" id="r_ab08828a9cae2e021ffc10ca3bc58b75e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab08828a9cae2e021ffc10ca3bc58b75e">operator&lt;&lt;</a> (const service_config_entry&lt; Impl &gt; &amp;<a class="el" href="qapplicationcontext_8h.html#a9d4f50592427143dffe1904aca6b520e">entry</a>)</td></tr>
+<tr class="separator:a51f11755a39a56e613c3d78eb3bd099a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab08828a9cae2e021ffc10ca3bc58b75e" id="r_ab08828a9cae2e021ffc10ca3bc58b75e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab08828a9cae2e021ffc10ca3bc58b75e">operator&lt;&lt;</a> (const service_config_entry&lt; Impl &gt; &amp;<a class="el" href="qapplicationcontext_8h.html#a1a4270c7ef1dee210374e1fecee217dc">entry</a>)</td></tr>
 <tr class="memdesc:ab08828a9cae2e021ffc10ca3bc58b75e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a type-safe configuration-entry to this <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>.  <br /></td></tr>
 <tr class="separator:ab08828a9cae2e021ffc10ca3bc58b75e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a09433522dbf342d999d935f8124f4dbc" id="r_a09433522dbf342d999d935f8124f4dbc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a09433522dbf342d999d935f8124f4dbc">operator&lt;&lt;</a> (const detail::service_config::entry_type &amp;<a class="el" href="qapplicationcontext_8h.html#a9d4f50592427143dffe1904aca6b520e">entry</a>)</td></tr>
+<tr class="memitem:a09433522dbf342d999d935f8124f4dbc" id="r_a09433522dbf342d999d935f8124f4dbc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a09433522dbf342d999d935f8124f4dbc">operator&lt;&lt;</a> (const detail::service_config::entry_type &amp;<a class="el" href="qapplicationcontext_8h.html#a1a4270c7ef1dee210374e1fecee217dc">entry</a>)</td></tr>
 <tr class="memdesc:a09433522dbf342d999d935f8124f4dbc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds an untyped configuration-entry to this <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html" title="Describes a service by its interface and implementation. Compilation will fail if either Srv is not a...">Service</a>.  <br /></td></tr>
 <tr class="separator:a09433522dbf342d999d935f8124f4dbc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1c9aee211dad576ddbf5a2f9da388ee7" id="r_a1c9aee211dad576ddbf5a2f9da388ee7"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1c9aee211dad576ddbf5a2f9da388ee7">operator&lt;&lt;</a> (const detail::service_config::config_modifier modifier)</td></tr>
@@ -379,15 +379,15 @@ template&lt;typename Srv , typename Impl  = Srv, <a class="el" href="qapplicatio
 
 </div>
 </div>
-<a id="a87a22d48165ace52ca130871ea4877fb" name="a87a22d48165ace52ca130871ea4877fb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a87a22d48165ace52ca130871ea4877fb">&#9670;&#160;</a></span>withInit() <span class="overload">[1/2]</span></h2>
+<a id="afe4d308561dc3f2c51e7433396c3eea1" name="afe4d308561dc3f2c51e7433396c3eea1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afe4d308561dc3f2c51e7433396c3eea1">&#9670;&#160;</a></span>withInit() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
 template&lt;typename Srv , typename Impl  = Srv, <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope = ServiceScope::UNKNOWN&gt; </div>
 <div class="memtemplate">
-template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a> initializationPolicy = ServiceInitializationPolicy::DEFAULT, typename I &gt; </div>
+template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a> initializationPolicy = ServiceInitializationPolicy::DEFAULT, typename I , typename... Args&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
@@ -395,8 +395,12 @@ template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80
         <tr>
           <td class="memname"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; &amp;&amp; <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service</a>&lt; Srv, Impl, scope &gt;::withInit </td>
           <td>(</td>
-          <td class="paramtype">I</td>          <td class="paramname"><span class="paramname"><em>initializer</em></span></td><td>)</td>
-          <td> &amp;&amp;</td>
+          <td class="paramtype">I</td>          <td class="paramname"><span class="paramname"><em>initializer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Args &amp;&amp;...</td>          <td class="paramname"><span class="paramname"><em>args</em></span>&#160;) &amp;&amp;</td>
         </tr>
       </table>
   </td>
@@ -410,10 +414,10 @@ template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80
 This overrides the init-method that is deduced from the <code>initializer_type</code> of the service's <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">service_traits</a>. The init-method will be used for this service-instance only. <br  />
 The initializer must one of: </p>
 <ul>
-<li>a callable object with one argument of a pointer to the service's implementation-type</li>
-<li>a callable object with two arguments, the first being a pointer to the service's implementation type, and the second being a pointer to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.</li>
-<li>a member-function of the service's implementation-type with no arguments.</li>
-<li>a member-function of the service's implementation-type with one argument of pointer to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.</li>
+<li>a callable object with the first argument being a pointer to the service's implementation-type and further arguments that match the supplied args.</li>
+<li>a callable object with the first argument being a pointer to the service's implementation type, the second being a pointer to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> and further arguments that match the supplied args.</li>
+<li>a member-function of the service's implementation-type with arguments that match the supplied args.</li>
+<li>a member-function of the service's implementation-type with the first argument being a pointer to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> and further arguments that match the supplied args.</li>
 </ul>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
@@ -425,6 +429,7 @@ The initializer must one of: </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">initializer</td><td>Will be invoked after all properties have been set and before the signal for the publication is emitted. </td></tr>
+    <tr><td class="paramname">args</td><td>further arguments that will be bound to the invocation. </td></tr>
   </table>
   </dd>
 </dl>
@@ -432,15 +437,15 @@ The initializer must one of: </p>
 
 </div>
 </div>
-<a id="af6fdc3c38813f23ca9a44caf7a14ac31" name="af6fdc3c38813f23ca9a44caf7a14ac31"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af6fdc3c38813f23ca9a44caf7a14ac31">&#9670;&#160;</a></span>withInit() <span class="overload">[2/2]</span></h2>
+<a id="a51f11755a39a56e613c3d78eb3bd099a" name="a51f11755a39a56e613c3d78eb3bd099a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a51f11755a39a56e613c3d78eb3bd099a">&#9670;&#160;</a></span>withInit() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
 template&lt;typename Srv , typename Impl  = Srv, <a class="el" href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">ServiceScope</a> scope = ServiceScope::UNKNOWN&gt; </div>
 <div class="memtemplate">
-template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a> initializationPolicy = ServiceInitializationPolicy::DEFAULT, typename I &gt; </div>
+template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80ae65e3d8866de">ServiceInitializationPolicy</a> initializationPolicy = ServiceInitializationPolicy::DEFAULT, typename I , typename... Args&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
@@ -448,8 +453,12 @@ template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80
         <tr>
           <td class="memname"><a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">Service</a>&lt; Srv, Impl, scope &gt; <a class="el" href="structmcnepp_1_1qtdi_1_1_service.html">mcnepp::qtdi::Service</a>&lt; Srv, Impl, scope &gt;::withInit </td>
           <td>(</td>
-          <td class="paramtype">I</td>          <td class="paramname"><span class="paramname"><em>initializer</em></span></td><td>)</td>
-          <td> const &amp;</td>
+          <td class="paramtype">I</td>          <td class="paramname"><span class="paramname"><em>initializer</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Args &amp;&amp;...</td>          <td class="paramname"><span class="paramname"><em>args</em></span>&#160;) const &amp;</td>
         </tr>
       </table>
   </td>
@@ -463,10 +472,10 @@ template&lt;<a class="el" href="qapplicationcontext_8h.html#ab3333f19593fc561a80
 This overrides the init-method that is deduced from the <code>initializer_type</code> of the service's <a class="el" href="structmcnepp_1_1qtdi_1_1service__traits.html" title="The traits for services.  Every specialization of this template must provide at least the following d...">service_traits</a>. The init-method will be used for this service-instance only. <br  />
 The initializer must one of: </p>
 <ul>
-<li>a callable object with one argument of a pointer to the service's implementation-type</li>
-<li>a callable object with two arguments, the first being a pointer to the service's implementation type, and the second being a pointer to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.</li>
-<li>a member-function of the service's implementation-type with no arguments.</li>
-<li>a member-function of the service's implementation-type with one argument of pointer to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a>.</li>
+<li>a callable object with the first argument being a pointer to the service's implementation-type and further arguments that match the supplied args.</li>
+<li>a callable object with the first argument being a pointer to the service's implementation type, the second being a pointer to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> and further arguments that match the supplied args.</li>
+<li>a member-function of the service's implementation-type with arguments that match the supplied args.</li>
+<li>a member-function of the service's implementation-type with the first argument being a pointer to <a class="el" href="classmcnepp_1_1qtdi_1_1_q_application_context.html" title="A DI-Container for Qt-based applications.">QApplicationContext</a> and further arguments that match the supplied args.</li>
 </ul>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
@@ -478,6 +487,7 @@ The initializer must one of: </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">initializer</td><td>Will be invoked after all properties have been set and before the signal for the publication is emitted. </td></tr>
+    <tr><td class="paramname">args</td><td>further arguments that will be bound to the invocation. </td></tr>
   </table>
   </dd>
 </dl>

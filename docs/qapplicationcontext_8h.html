@@ -436,9 +436,9 @@ The resulting service_config_entry can then be passed to <a class="el" href="#a4
 <tr class="memdesc:a6e44b952e342b3aa3c663f485dae55be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
 The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
 <tr class="separator:a6e44b952e342b3aa3c663f485dae55be"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9d4f50592427143dffe1904aca6b520e" id="r_a9d4f50592427143dffe1904aca6b520e"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename C  = typename detail::variant_converter_traits&lt;detail::remove_cvref_t&lt;A&gt;&gt;::type&gt; </td></tr>
-<tr class="memitem:a9d4f50592427143dffe1904aca6b520e"><td class="memTemplItemLeft" align="right" valign="top">service_config_entry&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9d4f50592427143dffe1904aca6b520e">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(A), const QString &amp;expression, C converter=C{})</td></tr>
-<tr class="separator:a9d4f50592427143dffe1904aca6b520e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1a4270c7ef1dee210374e1fecee217dc" id="r_a1a4270c7ef1dee210374e1fecee217dc"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A &gt; </td></tr>
+<tr class="memitem:a1a4270c7ef1dee210374e1fecee217dc"><td class="memTemplItemLeft" align="right" valign="top">service_config_entry&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a1a4270c7ef1dee210374e1fecee217dc">mcnepp::qtdi::entry</a> (R(S::*propertySetter)(A), const QString &amp;expression)</td></tr>
+<tr class="separator:a1a4270c7ef1dee210374e1fecee217dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a20aed505168263eece7cbf60b3b729c7" id="r_a20aed505168263eece7cbf60b3b729c7"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A &gt; </td></tr>
 <tr class="memitem:a20aed505168263eece7cbf60b3b729c7"><td class="memTemplItemLeft" align="right" valign="top">service_config_entry&lt; S &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a20aed505168263eece7cbf60b3b729c7">mcnepp::qtdi::propValue</a> (R(S::*propertySetter)(A), A value)</td></tr>
 <tr class="memdesc:a20aed505168263eece7cbf60b3b729c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
@@ -1473,13 +1473,13 @@ template&lt;typename S , typename R , typename A &gt; </div>
 
 </div>
 </div>
-<a id="a9d4f50592427143dffe1904aca6b520e" name="a9d4f50592427143dffe1904aca6b520e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9d4f50592427143dffe1904aca6b520e">&#9670;&#160;</a></span>entry() <span class="overload">[4/5]</span></h2>
+<a id="a1a4270c7ef1dee210374e1fecee217dc" name="a1a4270c7ef1dee210374e1fecee217dc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1a4270c7ef1dee210374e1fecee217dc">&#9670;&#160;</a></span>entry() <span class="overload">[4/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename S , typename R , typename A , typename C  = typename detail::variant_converter_traits&lt;detail::remove_cvref_t&lt;A&gt;&gt;::type&gt; </div>
+template&lt;typename S , typename R , typename A &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
@@ -1492,12 +1492,7 @@ template&lt;typename S , typename R , typename A , typename C  = typename detail
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>expression</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">C</td>          <td class="paramname"><span class="paramname"><em>converter</em></span><span class="paramdefsep"> = </span><span class="paramdefval">C{}</span>&#160;)</td>
+          <td class="paramtype">const QString &amp;</td>          <td class="paramname"><span class="paramname"><em>expression</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
