@@ -1892,7 +1892,13 @@ void testWatchConfigurationFileChangeWithError() {
         QVERIFY(timerSlot->isActive());
     }
 
-
+    void testInitWithArg() {
+        auto reg = context->registerService(service<QTimer>().withInit(static_cast<void(QTimer::*)(int)>(&QTimer::start), 3141));
+        QVERIFY(context->publish());
+        RegistrationSlot<QTimer> timerSlot{reg, this};
+        QVERIFY(timerSlot->isActive());
+        QCOMPARE(timerSlot->interval(), 3141);
+    }
 
 
     void testAmbiguousMandatoryDependency() {

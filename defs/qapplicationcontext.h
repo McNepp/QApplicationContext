@@ -3216,7 +3216,7 @@ template<typename S> [[nodiscard]][[deprecated("Use mcnepp::qtdi::service() << p
 namespace detail {
 
 
-template<typename S,typename F> static auto adaptInitializer(F func, std::nullptr_t) -> std::enable_if_t<std::is_invocable_v<F,S*,QApplicationContext*>,q_init_t> {
+template<typename S,typename F> static auto adaptInitializer(F func) -> std::enable_if_t<std::is_invocable_v<F,S*,QApplicationContext*>,q_init_t> {
     return [func](QObject* target,QApplicationContext* context) {
         if(auto ptr =dynamic_cast<S*>(target)) {
             func(ptr, context);
@@ -3224,8 +3224,8 @@ template<typename S,typename F> static auto adaptInitializer(F func, std::nullpt
 
 }
 
-template<typename S,typename F> static auto adaptInitializer(F func, std::nullptr_t) -> std::enable_if_t<std::is_invocable_v<F,S*>,q_init_t> {
-    return [func](QObject* target,QApplicationContext*) {
+template<typename S,typename F,typename...Args> static auto adaptInitializer(F func, Args&&...args) -> std::enable_if_t<std::is_invocable_v<F,S*,Args...>,q_init_t> {
+    return [func=std::bind(func, std::placeholders::_1, std::forward<Args>(args)...)](QObject* target,QApplicationContext*) {
         if(auto ptr =dynamic_cast<S*>(target)) {
             func(ptr);
         }};
@@ -3233,35 +3233,30 @@ template<typename S,typename F> static auto adaptInitializer(F func, std::nullpt
 }
 
 
-template<typename S,typename R> static q_init_t adaptInitializer(R (S::*init)(QApplicationContext*), std::nullptr_t) {
+template<typename S,typename R> static q_init_t adaptInitializer(R (S::*init)(QApplicationContext*)) {
     if(!init) {
         return nullptr;
     }
-    return adaptInitializer<S>(std::mem_fn(init), nullptr);
+    return adaptInitializer<S>(std::mem_fn(init));
 }
 
-template<typename S,typename R> static q_init_t adaptInitializer(R (S::*init)(), std::nullptr_t) {
+template<typename S,typename R,typename...Args> static q_init_t adaptInitializer(R (S::*init)(Args&&...), Args&&...args) {
     if(!init) {
         return nullptr;
     }
-    return adaptInitializer<S>(std::mem_fn(init), nullptr);
+    return adaptInitializer<S>(std::mem_fn(init), std::forward<Args>(args)...);
 }
 
 
-template<typename S,auto func> static q_init_t adaptInitializer(service_initializer<func> initializer, std::nullptr_t) {
-    return adaptInitializer<S>(initializer.value(), nullptr);
+template<typename S,auto func> static q_init_t adaptInitializer(service_initializer<func> initializer) {
+    return adaptInitializer<S>(initializer.value());
 }
 
-//SFINAE fallback for everything that is not a callable:
-template<typename S,typename F> static q_init_t adaptInitializer(F func,int*) {
-    static_assert(std::is_same_v<F,std::nullptr_t>, "Type must be a callable object or a function or a member-function with either zero arguments or one argument of type QApplicationContext*");
-    return func;
+template<typename S> static q_init_t adaptInitializer(std::nullptr_t) {
+    return nullptr;
 }
 
 
-template<typename S,typename F> static q_init_t adaptInitializer(F func=F{}) {
-    return adaptInitializer<S>(func, nullptr);
-}
 
 
 
@@ -3734,19 +3729,20 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
      * The init-method will be used for this service-instance only.
      * <br>The initializer must one of:
      *
-     * - a callable object with one argument of a pointer to the service's implementation-type
-     * - a callable object with two arguments, the first being a pointer to the service's implementation type, and the second being a pointer to QApplicationContext.
-     * - a member-function of the service's implementation-type with no arguments.
-     * - a member-function of the service's implementation-type with one argument of pointer to QApplicationContext.
+     * - a callable object with the first argument being a pointer to the service's implementation-type and further arguments that match the supplied args.
+     * - a callable object with the first argument being a pointer to the service's implementation type, the second being a pointer to QApplicationContext and further arguments that match the supplied args.
+     * - a member-function of the service's implementation-type with arguments that match the supplied args.
+     * - a member-function of the service's implementation-type with the first argument being a pointer to QApplicationContext and further arguments that match the supplied args.
      *
      * @tparam I the type of the initializer.
      * @tparam initializationPolicy determines whether the *init-method* will be invoked before or after the service has been published.
      * @param initializer Will be invoked after all properties have been set and before the signal for the publication is emitted.
+     * @param args further arguments that will be bound to the invocation.
      * @return this instance
      */
-    template<ServiceInitializationPolicy initializationPolicy = ServiceInitializationPolicy::DEFAULT,typename I> Service<Srv,Impl,scope>&& withInit(I initializer) && {
+    template<ServiceInitializationPolicy initializationPolicy = ServiceInitializationPolicy::DEFAULT,typename I,typename...Args> Service<Srv,Impl,scope>&& withInit(I initializer, Args&&...args) && {
         descriptor.initialization_policy = initializationPolicy;
-        descriptor.init_method = detail::adaptInitializer<Impl>(initializer);
+        descriptor.init_method = detail::adaptInitializer<Impl>(initializer, std::forward<Args>(args)...);
         return std::move(*this);
     }
 
@@ -3756,18 +3752,19 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
      * The init-method will be used for this service-instance only.
      * <br>The initializer must one of:
      *
-     * - a callable object with one argument of a pointer to the service's implementation-type
-     * - a callable object with two arguments, the first being a pointer to the service's implementation type, and the second being a pointer to QApplicationContext.
-     * - a member-function of the service's implementation-type with no arguments.
-     * - a member-function of the service's implementation-type with one argument of pointer to QApplicationContext.
+     * - a callable object with the first argument being a pointer to the service's implementation-type and further arguments that match the supplied args.
+     * - a callable object with the first argument being a pointer to the service's implementation type, the second being a pointer to QApplicationContext and further arguments that match the supplied args.
+     * - a member-function of the service's implementation-type with arguments that match the supplied args.
+     * - a member-function of the service's implementation-type with the first argument being a pointer to QApplicationContext and further arguments that match the supplied args.
      *
      * @tparam I the type of the initializer.
      * @tparam initializationPolicy determines whether the *init-method* will be invoked before or after the service has been published.
      * @param initializer Will be invoked after all properties have been set and before the signal for the publication is emitted.
+     * @param args further arguments that will be bound to the invocation.
      * @return a service with the supplied initializer.
      */
-    template<ServiceInitializationPolicy initializationPolicy = ServiceInitializationPolicy::DEFAULT,typename I> Service<Srv,Impl,scope> withInit(I initializer) const& {
-        return Service<Srv,Impl,scope>{*this}.withInit<initializationPolicy>(initializer);
+    template<ServiceInitializationPolicy initializationPolicy = ServiceInitializationPolicy::DEFAULT,typename I,typename...Args> Service<Srv,Impl,scope> withInit(I initializer, Args&&...args) const& {
+        return Service<Srv,Impl,scope>{*this}.withInit<initializationPolicy>(initializer, std::forward<Args>(args)...);
     }
 
     ///
