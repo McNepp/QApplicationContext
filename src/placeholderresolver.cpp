@@ -97,6 +97,18 @@ namespace mcnepp::qtdi::detail {
         return false;
     }
 
+    bool PlaceholderResolver::hasPlaceholder(const QString& placeholder) const
+    {
+        if(!placeholder.isEmpty()) {
+            for(auto& resolvable : m_steps) {
+                if(placeholder == resolvable->placeholder()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     void PlaceholderResolver::clearPlaceholders(QVariantMap& resolvedPlaceholders) const
     {
         for(auto& resolvable : m_steps) {

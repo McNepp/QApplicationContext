@@ -1124,12 +1124,13 @@ In that case, compilation will fail with a corresponding diganostic.
 
 ### Specifying initializers per Registration
 
-There is also method that lets you specify an *init-method* without the need for a specialization of mcnepp::qtdi::service_traits.
+There is also a way that lets you specify an *init-method* without the need for a specialization of mcnepp::qtdi::service_traits.
 <br>This will register only one specific service with the supplied *init-method*:
 
     context -> registerService(service<PropFetcherAggregator>(injectAll<RestPropFetcher>()).withInit(&PropFetcherAggregator::init));
 
-See mcnepp::qtdi::Service::withInit()
+You supply a reference to a member-function of the service's implementation-type. In case your init-method expects additional argumenty,
+you may those additional arguments to mcnepp::qtdi::Service::withInit(). 
 
 
 ### Changing the order of initialization

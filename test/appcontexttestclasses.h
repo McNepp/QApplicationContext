@@ -118,7 +118,11 @@ private:
 
 
 class DerivedService : public BaseService {
-
+public:
+    DerivedService() = default;
+    explicit DerivedService(const QString& foo) {
+        setFoo(foo);
+    }
 };
 
 

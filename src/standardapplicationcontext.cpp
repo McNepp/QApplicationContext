@@ -566,7 +566,10 @@ StandardApplicationContext::ServiceRegistrationImpl::ServiceRegistrationImpl(Des
 
 
 void StandardApplicationContext::ServiceRegistrationImpl::print(QDebug out) const {
-    out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor() << ' ' << m_condition;
+    out.nospace().noquote() << "Service '" << registeredName() << "' with " << this->descriptor();
+    if(!m_condition.isAlways())  {
+        out << ' ' << m_condition;
+    }
 }
 
 void StandardApplicationContext::ServiceRegistrationImpl::serviceDestroyed(QObject *srv) {
@@ -760,18 +763,43 @@ class StandardApplicationContext::ServiceGroupRegistration : public DescriptorRe
 
     virtual bool prepareService(const QVariantList& dependencies, descriptor_list& created) override {
         const QString namePattern{"%1:%2"};
-        QStringList services = splitList(m_context->resolveConfigValue(m_resolvedPlaceholders[m_config.serviceGroupPlaceholder].toString(), m_config.group, m_resolvedPlaceholders).toString());
+        QStringList services;
+        auto groupExpression = m_resolvedPlaceholders[m_config.serviceGroupPlaceholder];
+        if(groupExpression.typeId() == QMetaType::QString) {
+            groupExpression = m_context->resolveConfigValue(groupExpression.toString(), m_config.group, m_resolvedPlaceholders);
+        }
+        if(groupExpression.typeId() == QMetaType::QStringList) {
+            services = groupExpression.toStringList();
+        } else {
+            services = splitList(groupExpression.toString());
+        }
         if(services.empty()) {
             qCWarning(loggingCategory()).nospace().noquote() << "Expression for Service-group placeholder '" << m_config.serviceGroupPlaceholder << "' resolved to an empty List";
         } else {
+
             for(const QString& service : services) {
                 std::unique_ptr<DescriptorRegistration> instanceReg{ new ServiceRegistrationImpl{base(), ++m_context->nextIndex, namePattern.arg(registeredName()).arg(service), descriptor(), config(), m_context, this}};
+                QVariantList serviceDependencies{dependencies};
+                // Even though the service-group's dependencies have already been resolved,
+                // some of them have quite likely a reference to the service-group's placeholder.
+                // Such a dependency needs to be re-evaluated:
                 instanceReg->resolvedPlaceholders()[m_config.serviceGroupPlaceholder] = service;
-                if(!instanceReg->prepareService(dependencies, created)) {
-                    qCCritical(loggingCategory()).noquote().nospace() << "Could not create instancef of " << *this;
+                auto iter = serviceDependencies.begin();
+                for(const auto& dep_info : m_descriptor.dependencies) {
+                    switch(dep_info.kind) {
+                    case detail::RESOLVABLE_KIND:
+                        detail::PlaceholderResolver* resolver = m_context->getResolver(dep_info.expression);
+                        if(resolver && resolver->hasPlaceholder(m_config.serviceGroupPlaceholder)) {
+                            *iter = resolver->resolve(m_config.group, instanceReg->resolvedPlaceholders());
+                        }
+                    }
+                    ++iter;
+                }
+                if(!instanceReg->prepareService(serviceDependencies, created)) {
+                    qCCritical(loggingCategory()).noquote().nospace() << "Could not create member of service-group " << *this << " with '" << m_config.serviceGroupPlaceholder << "' = "  << service;
                     return false;
                 }
-                qCInfo(loggingCategory()).noquote().nospace() << "Created instance for " << *this << ": " << *instanceReg;
+                qCInfo(loggingCategory()).noquote().nospace() << "Created member of service-group " << *this << " with '" << m_config.serviceGroupPlaceholder << "' = "  << service;
 
                 instanceReg->subscribe(proxySubscription);
                 created.push_back(instanceReg.get());
