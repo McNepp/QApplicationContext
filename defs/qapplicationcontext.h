@@ -280,18 +280,17 @@ signals:
 };
 
 
+template<typename T,typename M=const QMetaObject*> struct meta_type_traits {
+    static constexpr std::nullptr_t getMetaObject() {
+        return nullptr;
+    }
+};
 
-template<typename S> constexpr auto getMetaObject(S*) -> decltype(&S::staticMetaObject) {
-    return &S::staticMetaObject;
-}
-
-inline constexpr std::nullptr_t getMetaObject(void*) {
-    return nullptr;
-}
-
-template<typename S> constexpr const QMetaObject* getMetaObject() {
-    return getMetaObject(static_cast<S*>(nullptr));
-}
+template<typename T> struct meta_type_traits<T,decltype(&T::staticMetaObject)> {
+    static constexpr const QMetaObject* getMetaObject() {
+        return &T::staticMetaObject;
+    }
+};
 
 using q_setter_t = std::function<void(QObject*,QVariant)>;
 
@@ -303,12 +302,14 @@ struct service_descriptor;
 
 
 
-template<typename T> auto hasQVariantSupport(T* ptr) -> decltype(QVariant{*ptr});
+template<typename T,typename=QVariant> struct has_qvariant_support : std::false_type {
 
-void hasQVariantSupport(void*);
+};
 
+template<typename T> struct has_qvariant_support<T,decltype(QVariant{std::declval<T>()})> : std::true_type {
 
-template<typename T> constexpr bool has_qvariant_support = std::is_same_v<decltype(hasQVariantSupport(static_cast<T*>(nullptr))),QVariant>;
+};
+
 
 inline void convertVariant(QVariant& var, q_variant_converter_t converter) {
     if(converter) {
@@ -326,7 +327,7 @@ template<typename T> struct default_string_converter {
 
 
 
-template<typename T,bool=has_qvariant_support<T> || std::is_convertible_v<T,QObject*>> struct variant_converter_traits;
+template<typename T,bool=std::disjunction_v<has_qvariant_support<T>,std::is_convertible<T,QObject*>>> struct variant_converter_traits;
 
 
 template<typename T> struct variant_converter_traits<T,true> {
@@ -4304,7 +4305,7 @@ public:
     ///
     template<typename S> [[nodiscard]] ProxyRegistration<S> getRegistration() const {
         static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
-        return ProxyRegistration<S>::wrap(getRegistrationHandle(typeid(S), detail::getMetaObject<S>()));
+        return ProxyRegistration<S>::wrap(getRegistrationHandle(typeid(S), detail::meta_type_traits<S>::getMetaObject()));
     }
 
     /**
