@@ -99,7 +99,7 @@ public:
         return m_appContext;
     }
 
-signals:
+Q_SIGNALS:
     void timerChanged(QTimer*);
 
     void fooChanged(const QString&);
@@ -149,7 +149,7 @@ public:
     BaseService *dependency() const;
     void setDependency(BaseService *newDependency);
 
-signals:
+Q_SIGNALS:
     void dependencyChanged();
 };
 
@@ -184,7 +184,7 @@ public:
 
     int initCalled = 0;
     BaseService2* m_reference;
-signals:
+Q_SIGNALS:
     void referenceChanged();
 };
 
@@ -221,7 +221,7 @@ public:
         return m_dependencies.empty() ? nullptr : m_dependencies[0];
     }
 
-signals:
+Q_SIGNALS:
     void dependencyChanged(QObject*);
 
 public:

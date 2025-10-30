@@ -274,7 +274,7 @@ protected:
 
     }
 
-signals:
+Q_SIGNALS:
 
     void objectPublished(QObject*);
 };
@@ -523,7 +523,7 @@ public:
         return subscription;
     }
 
-signals:
+Q_SIGNALS:
 
     ///
     /// \brief Signals when a service has been published.
@@ -613,7 +613,7 @@ public:
 
     using target_list_t = QList<registration_handle_t>;
 
-signals:
+Q_SIGNALS:
     void objectsPublished(const QObjectList&);
 
 protected:
@@ -3967,7 +3967,7 @@ public:
     ///
     virtual QVariant currentValue() const = 0;
 
-signals:
+Q_SIGNALS:
     ///
     /// \brief the underlying configuration has changed.
     ///
@@ -4470,7 +4470,7 @@ public:
 
 
 
-signals:
+Q_SIGNALS:
 
     ///
     /// \brief Signals that the published() property has changed.
