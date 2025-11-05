@@ -955,50 +955,12 @@ protected:
         }
 
 
-        ///
-        /// \brief Applies a *modifier* to this configuration.
-        /// <br>Usage is analogous to *iostream-manipulator*. Example:
-        ///
-        ///        service<MyService>() << withAutowire;
-        ///
-        /// \param modifier will be applied to this instance.
-        /// \return `this` instance.
-        /// \see mcnepp::qtdi::withAutowire(service_config&)
-        /// \see mcnepp::qtdi::withAutoRefresh(service_config&)
-        /// \see mcnepp::qtdi::withGroup(const QString&)
-        /// \deprecated Use Service::operator<<(detail::service_config::config_modifier)
-        ///
-        [[deprecated("Use Service::operator<<(config_modifier)")]] service_config& operator<<(config_modifier modifier) {
-            modifier(*this);
-            return *this;
-        }
-
-
-        ///
-        /// \brief Adds an entry to this service_config.
-        /// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::propValue(), mcnepp::qtdi::placeholderValue() or mcnepp::qtdi::autoRefresh().
-        /// \return `this` instance.
-        /// \deprecated Use Service::operator<<(const detail::service_config::entry_type&)
-        ///
-        [[deprecated("Use Service::operator<<(const detail::service_config::entry_type&)")]] service_config& operator<<(const service_config::entry_type& entry) {
-            properties.insert(entry.first, entry.second);
-            return *this;
-        }
 
 
 
 
 
-        ///
-        /// \brief Adds a type-safe entry to a service_config.
-        /// \param cfg the config to which the entry will be added.
-        /// \param entry an entry that was created by one of the overloads of mcnepp::qtdi::propValue(), mcnepp::qtdi::placeholderValue() or mcnepp::qtdi::autoRefresh().
-        /// \deprecated This operator is not needed anymore if you use Service::operator<<(const service_config_entry<Impl>&).
-        /// \return the `cfg`
-        template<typename S> [[deprecated]][[nodiscard]] service_config& operator<<(const service_config_entry_t<S>& entry) {
-            properties.insert(entry.name, entry.value);
-            return *this;
-        }
+
 
         ///
         /// \brief The keys and corresponding values.
@@ -2260,30 +2222,7 @@ template<typename...S> std::enable_if_t<(sizeof...(S) > 1),ServiceCombination<S.
     return ServiceCombination<S...>{registrations...};
 }
 
-///
-/// \brief Subscribes to the publication of two services.
-/// <br>This is a convenience-function equivalent to the following code:
-///
-///     firstService.subscribe(context, [&secondService,callable,connectionType](S1* source) {
-///          secondService.subscribe(context, [source,callable](S2* target) { callable(source, target); }, connectionType);
-///     }, connectionType);
-///
-/// <br>In case first and second represent the same Registration, the connection will still take place.
-/// \param firstService the first registration.
-/// \param secondService the second registration.
-/// \param context the context for the subscription
-/// \param callable will be invoked with two services.
-/// \param connectionType
-/// \tparam S1 the type of the first service.
-/// \tparam S2 the type of the second service.
-/// \tparam F must be a callable type, as if it had the signature `F(S* source, T* target)`.
-/// \deprecated Use mcnepp::qtdi::combine() instead
-/// \return a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service
-/// and the target-service.
-///
-template<typename S1,typename S2,typename F> [[deprecated("Use combine() instead")]] std::enable_if_t<std::is_invocable_v<F,S1*,S2*>,Subscription> subscribeToServices(Registration<S1>& firstService, Registration<S2>& secondService, QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
-    return combine(firstService, secondService).subscribe(context, callable, connectionType);
-}
+
 
 
 
@@ -2466,21 +2405,7 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,DependencyKind::MANDAT
     return Dependency<S,DependencyKind::MANDATORY>{requiredName};
 }
 
-///
-/// \brief Injects a mandatory Dependency on a Registration.
-/// <br><b>Note:</b> You do not need to use inject(const Registration<S>& registration) at all! Rather, you can pass the Registration
-/// directly to the Service's constructor.
-/// \param registration the Registration of the dependency.
-/// \tparam S the service-type of the dependency.
-/// \return a mandatory Dependency on the supplied registration.
-/// \deprecated You can simply pass the Registration directly to mcnepp::qtdi::service().
-///
-template<typename S> [[deprecated("Instead, inject the registration directly into mcnepp::qtdi::service()")]][[nodiscard]] constexpr Dependency<S,DependencyKind::MANDATORY> inject(const Registration<S>& registration) {
-    if(auto srv = asService(registration.unwrap())) {
-        return Dependency<S,DependencyKind::MANDATORY>{registeredName(srv)};
-    }
-    return Dependency<S,DependencyKind::MANDATORY>{};
-}
+
 
 
 ///
@@ -2536,19 +2461,7 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,DependencyKind::OPTION
     return Dependency<S,DependencyKind::OPTIONAL>{requiredName};
 }
 
-///
-/// \brief Injects an optional Dependency on a Registration.
-/// \param registration the Registration of the dependency.
-/// \tparam S the service-type of the dependency.
-/// \return an optional Dependency on the supplied registration.
-/// \deprecated Use injectIfPresent(const QString&) instead.
-///
-template<typename S> [[deprecated("Use injectIfPresent(const QString&) instead")]][[nodiscard]] constexpr Dependency<S,DependencyKind::OPTIONAL> injectIfPresent(const Registration<S>& registration) {
-    if(auto srv = asService(registration.unwrap())) {
-        return Dependency<S,DependencyKind::OPTIONAL>{registeredName(srv)};
-    }
-    return Dependency<S,DependencyKind::OPTIONAL>{};
-}
+
 
 
 
@@ -2793,75 +2706,6 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 }
 
 
-///
-/// \brief Makes a service_config and populates it with properties.
-/// <br>The service must have a Q_PROPERTY for every key contained in `properties`.<br>
-/// Example:
-///
-///     `config({{"interval", 42}});`
-/// will set the Q_PROPERTY `interval` to the value 42.
-/// ### Non-property placeholder-values
-/// A key that starts with a dot is considered to denote a *placeholder-value*, and no attempt will be made to set a corresponding Q_PROPERTY
-/// on the Service.<br>
-/// There are two ways of putting such placeholder-values to use:<br>
-/// Either, you may evaluate them via a `QApplicationContextPostProcessor`.<br>
-/// Or, you can use them in conjunction with a *service-template*.
-/// Suppose, for example, you have a class `RestService` with a Q_PROPERTY `url`.
-/// You want to construct this URL by using the same pattern for every service of type `RestService`.
-/// However, one part of the URL will be unique for each Service.
-/// This is how you would do this:
-///
-///     auto restServiceTemplate = context -> registerService<RestService>(serviceTemplate<RestService>(), "restTemplate", config({{"url", "https://myserver/rest/${path}"}}));
-///
-/// Now, whenever you register a concrete RestService, you must supply the `templateReg` as an additional argument.
-/// Also, you must specify the value for `${path}` as a *placeholder-value*:
-///
-///     context -> registerService(service<RestService>(), restServiceTemplate, "temperatureService", config({{".path", "temperature"}}));
-///
-/// ### Placeholders
-/// Values may contain *placeholders*, indicated by the syntax `${placeholder}`. Such a placeholder will be looked
-/// up via `QApplicationContext::getConfigurationValue(const QString&,bool)`.<br>
-/// Example:
-///
-///     config({{"interval", "${timerInterval}"}});
-/// will set the Q_PROPERTY `interval` to the value configured with the name `timerInterval`.
-/// <br>Should you want to specify a property-value containg the character-sequence "${", you must escape this with the backslash.
-/// ### Lookup in sub-sections
-/// Every key will be looked up in the provided section, as specified by the `group` argument, unless the key itself starts with a forward slash,
-/// which denotes the root-section.
-///
-/// A special syntax is available for forcing a key to be looked up in parent-sections if it cannot be resolved in the provided section:
-///
-/// Insert */ right after the opening sequence of the placeholder.
-///
-///     //Unfortunately, Doxygen cannot deal with the character-sequence "asterisk followed by slash" correctly in code-blocks.
-///     //Thus, in the following example, we put a space between the asterisk and the slash:
-///     config({{"interval", "${* /timerInterval}"}}) << withGroup("timers");
-///
-/// The key "timerInterval" will first be searched in the section "timers". If it cannot be found, it will be searched in the root-section.
-///
-/// ### Service-references
-/// If a value starts with an ampersand, the property will be resolved with a registered service of that name.
-/// Example:
-///
-///     config({{"dataProvider", "&dataProviderService"}});
-/// will set the Q_PROPERTY `dataProvider` to the service that was registered under the name `dataProviderService`.
-/// <br>Should you want to specify a property-value starting with an ampersand, you must escape this with the backslash.
-/// \param properties the keys and value to be applied as Q_PROPERTYs.
-/// \deprecated The preferred way of configuring a serivce is to use mcnepp::qtdi::service(), followed by adding entries using the left-shift operator.
-/// \return the service_config.
-[[nodiscard]][[deprecated("Use service() << propValue(...)")]] inline detail::service_config config(std::initializer_list<std::pair<QString,QVariant>> properties) {
-    detail::service_config cfg;
-    for(auto& entry : properties) {
-        if(entry.first.startsWith('.')) {
-            cfg.properties.insert(entry.first.sliced(1), detail::ConfigValue{entry.second, detail::ConfigValueType::PRIVATE});
-        } else {
-            cfg.properties.insert(entry.first, detail::ConfigValue{entry.second, detail::ConfigValueType::DEFAULT});
-        }
-
-    }
-    return cfg;
-}
 
 
 
@@ -2869,44 +2713,7 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 
 
 
-///
-/// Makes a default service_config.
-/// <br>The returned service_config can then be further modified, before it gets passed to QApplicationContext::registerService().
-/// <br>Modification is done in a fashion similar to *iostreams*, i.e. by using the overloaded `operator <<`.
-/// <br>You add a configuration-entry like this:
-///
-///     config() << propValue("url", "http://mcnepp.com");
-///
-/// The above line assumes that the service-class has a writable Q_PROPERTY named "url".
-/// Instead of relying on the Q_PROPERTY, you could also use a type-safe variant of the above.
-/// Suppose the service-class `MyRestService` offers a *setter-method* for the Url:
-///
-/// config() << propValue(&MyRestService::setUrl, "http://mcnepp.com");
-///
-/// Several configuration-entries can be chained conveniently:
-///
-///     config() << propValue("url", "http://mcnepp.com") << propValue("objectName", "${dataProvider}");
-///
-/// The second configuration-entry shows the use of a *placeholder*: the token within the curly brackets will
-/// be looked up from the ApplicationContext's QSettings.
-///
-/// You can also specify the group within the QSettings from where the configuration-entries shall be resolved:
-///
-///     config() << withGroup("dataProviders") << propValue("url", "http://mcnepp.com") << propValue("objectName", "${dataProvider}");
-///
-/// If you want to enable *autowiring* for a service-registration, you can use mcnepp::qtdi::withAutowire(service_config&) like this:
-///
-///     config() << withGroup("dataProviders") << withAutowire << propValue("url", "http://mcnepp.com") << propValue("objectName", "${dataProvider}");
-///
-/// And finally, should you want to enable *auto-refresh* on all configuration-entries, you can use mcnepp::qtdi::withAutoRefresh(service_config&) like this:
-///
-///     config() << withGroup("dataProviders") << withAutoRefresh << propValue("url", "http://mcnepp.com") << propValue("objectName", "${dataProvider}");
-///
-/// \deprecated Use mcnepp::qtdi::service() instead
-/// \return the service_config.
-[[deprecated("Use service() instead")]][[nodiscard]] inline detail::service_config config() {
-    return detail::service_config{};
-}
+
 
 
 
@@ -2952,12 +2759,7 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
     return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter()}};
 }
 
-///
-/// \deprecated Use mcnepp::qtdi::propValue() instead
-///
-template<typename S,typename R,typename A> [[nodiscard]][[deprecated("Use propValue() instead")]] service_config_entry<S> entry(R(S::*propertySetter)(A), const QString& expression) {
-    return propValue(propertySetter, expression);
-}
+
 
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
@@ -2976,12 +2778,7 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
     return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(value), detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter)}};
 }
 
-///
-/// \deprecated Use mcnepp::qtdi::propValue() instead
-///
-template<typename S,typename R,typename A> [[nodiscard]][[deprecated("Use propValue() instead")]] service_config_entry<S> entry(R(S::*propertySetter)(A), A value) {
-    return propValue(propertySetter, value);
-}
+
 
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
@@ -3005,12 +2802,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
 }
 
 
-///
-/// \deprecated Use mcnepp::qtdi::propValue() instead
-///
-template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]][[deprecated("Use propValue() instead")]] auto entry(R(S::*propertySetter)(A*), const ServiceRegistration<A,scope>& reg) -> std::enable_if_t<detail::is_allowed_as_dependency(scope),service_config_entry<S>> {
-    return propValue(propertySetter, reg);
-}
+
 
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
@@ -3056,12 +2848,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
     return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter), nullptr}};
 }
 
-///
-/// \deprecated Use mcnepp::qtdi::propValue() instead
-///
-template<typename S,typename R,typename A,typename L> [[nodiscard]][[deprecated("Use propValue() instead")]] auto entry(R(S::*propertySetter)(L), const ProxyRegistration<A>& reg) -> std::enable_if_t<std::is_convertible_v<L,QList<A*>>,service_config_entry<S>> {
-    return propValue(propertySetter, reg);
-}
+
 
 
 ///
@@ -3129,22 +2916,6 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 }
 
 
-///
-/// \brief Creates a configuration-entry for a service.
-/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
-/// \param name the name of the property to be configured. **Note:** this name must refer to a Q_PROPERTY of the service-type!
-/// The only exception is a *placeholder-value*, i.e. a configuration-entry that shall not be resolved automatically.
-/// In that case, the name must start with a dot.
-/// \param value will be used as the property's value.
-/// \deprecated Use mcnepp::qtdi::propValue() or mcnepp::qtdi::placeholderValue() instead
-/// \return a configuration for a service.
-///
-[[nodiscard]][[deprecated("Use propValue() or placeholderValue() instead")]] inline detail::service_config::entry_type entry(const QString& name, const QVariant& value) {
-    if(name.startsWith('.')) {
-        return {name.sliced(1), detail::ConfigValue{value, detail::ConfigValueType::PRIVATE}};
-    }
-    return {name, detail::ConfigValue{value, detail::ConfigValueType::DEFAULT}};
-}
 
 
 ///
@@ -3185,32 +2956,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 
 
 
-///
-/// \brief Create a type-safe service-configuration.
-/// <br>A type-safe entry can be created by invoking mcnepp::qtdi::propValue() with a member-function as its first argument.
-/// For example:
-///
-///     context->registerService<QQTimer>("timer", config({propValue(&QTimer::setInterval, 1000), propValue(&QTimer::singleShot, "true")}));
-///
-/// Note that is possible to mix type-safe configuration-entries with Q_PROPERTY-based configuration-entries:
-///
-///     context->registerService<QQTimer>("timer", config({propValue(&QTimer::setInterval, 1000)}) << propValue("singleShot", "true"));
-///
-/// However, there is a caveat: Even though the above service-registrations are *logically equivalent*, they are *technically different*.
-/// Thus, executing the second registration after the first one will not be considered *idempotent*.
-/// This means that the second registration will fail (i.e. return an invalid ServiceRegistration).
-///
-/// \param entries the list of key/value-pairs that will be used to configure a Service of type `<S>`.
-/// \deprecated The preferred way of configuring a service is to use mcnepp::qtdi::service(), followed by adding entries using the left-shift operator.
-/// \return a type-safe service-configuration.
-///
-template<typename S> [[nodiscard]][[deprecated("Use mcnepp::qtdi::service() << propValue(...)")]] detail::service_config config(std::initializer_list<service_config_entry<S>> entries) {
-    detail::service_config cfg;
-    for(auto& entry : entries) {
-        cfg.properties.insert(entry.name, entry.value);
-    }
-    return cfg;
-}
+
 
 
 
@@ -3823,15 +3569,7 @@ template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nod
     return Service<Impl,Impl,ServiceScope::SINGLETON>{detail::make_descriptor<Impl,Impl,ServiceScope::SINGLETON>(factory, dependencies...)};
 }
 
-///
-/// \brief Creates a Service with an explicit factory.
-/// <br>This function has been supplanted by service().
-/// \deprecated Use mcnepp::qtdi::service() instead
-/// \return a Service that will use the provided factory.
-/// \see service()
-template<typename F,typename Impl=typename F::service_type,typename...Dep> [[deprecated("Use service<F,Impl,Dep...>() instead")]] [[nodiscard]] Service<Impl,Impl,ServiceScope::SINGLETON> serviceFactory(F factory, Dep...dependencies) {
-    return service<F,Impl,Dep...>(factory, dependencies...);
-}
+
 
 
 
@@ -4061,23 +3799,6 @@ public:
         return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, condition, nullptr));
     }
 
-    ///
-    /// \brief Registers a service with this ApplicationContext.
-    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
-    /// \param serviceDeclaration comprises the services's primary advertised interface, its implementation-type and its dependencies to be injected
-    /// via its constructor.
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \param config the Configuration for the service.
-    /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
-    /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Condition&) instead.
-    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
-    ///
-    template<typename S,typename Impl,ServiceScope scope> [[deprecated("Use registerService(const Service&,const QQString&,const Condition&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
-        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, Condition::always(), nullptr));
-    }
 
 
 
@@ -4112,29 +3833,7 @@ public:
     }
 
 
-    ///
-    /// \brief Registers a service with this ApplicationContext.
-    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
-    /// \param serviceDeclaration comprises the services's primary advertised interface, its implementation-type and its dependencies to be injected
-    /// via its constructor.
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \param config the Configuration for the service.
-    /// \param templateRegistration the registration of the service-template that this service shall inherit from. Must be valid!
-    /// \tparam S the service-type. Constitutes the Service's primary advertised interface.
-    /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&,const ServiceRegistration<B,ServiceScope::TEMPLATE>&,const QString&,const Condition&) instead.
-    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
-    ///
-    template<typename S,typename Impl,typename B,ServiceScope scope> [[deprecated("Use Use registerService(const Service&,const ServiceRegistration<B,ServiceScope::TEMPLATE>&,const QString&,const Condition&) instead")]] auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName, const service_config& config) -> ServiceRegistration<S,scope> {
-        static_assert(std::is_base_of_v<B,Impl>, "Service-type does not extend type of Service-template.");
-        if(!templateRegistration) {
-            qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << serviceDeclaration.descriptor << " with name '" << objectName << "'. Invalid service-template";
-            return ServiceRegistration<S,scope>{};
-        }
-        return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, detail::merge_config(serviceDeclaration.config, config), scope, Condition::always(), templateRegistration.unwrap()));
-    }
+
 
 
 
@@ -4156,21 +3855,7 @@ public:
         return registerService(service<S>(), objectName);
     }
 
-    ///
-    /// \brief Registers a service with no dependencies with this ApplicationContext.
-    /// This is a convenience-function equivalent to `registerService(service<S>(), objectName, config)`.
-    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \param config the Configuration for the service.
-    /// \tparam S the service-type.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Condition&) instead.
-    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
-    ///
-    template<typename S> [[deprecated("Use Use registerService(const Service&, const QString&,const Condition&) instead")]] auto registerService(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::SINGLETON> {
-        return registerService(service<S>(), objectName, config);
-    }
+
 
     ///
     /// \brief Registers a service-prototype with no dependencies with this ApplicationContext.
@@ -4186,21 +3871,7 @@ public:
         return registerService(prototype<S>(), objectName);
     }
 
-    ///
-    /// \brief Registers a service-prototype with no dependencies with this ApplicationContext.
-    /// This is a convenience-function equivalent to `registerService(prototype<S>(), objectName, config)`.
-    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// \param config the Configuration for the service.
-    /// \tparam S the service-type.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Condition&) instead.
-    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
-    ///
-    template<typename S> [[deprecated("Use Use registerService(const Service&, const QString&,const Condition&) instead")]] auto registerPrototype(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::PROTOTYPE> {
-        return registerService(prototype<S>(), objectName, config);
-    }
+
 
 
 
@@ -4221,23 +3892,7 @@ public:
         return registerService(serviceTemplate<S>(), objectName);
     }
 
-    ///
-    /// \brief Registers a service-template with no dependencies with this ApplicationContext.
-    /// This is a convenience-function equivalent to `registerService(serviceTemplate<S>(), objectName, config)`.
-    /// <br>**Thread-safety:** This function may only be called from the ApplicationContext's thread.
-    /// \param objectName the name that the service shall have. If empty, a name will be auto-generated.
-    /// The instantiated service will get this name as its QObject::objectName(), if it does not set a name itself in
-    /// its constructor.
-    /// <br>If you leave out the type-argument `S`, it will default to `QObject`.
-    /// \param config the Configuration for the service.
-    /// <br>**Note:** Since a service-template may be used by services of types that are yet unknown, the properties supplied here cannot be validated.
-    /// \tparam S the service-type.
-    /// \deprecated Use registerService(const Service<S,Impl,scope>&, const QString&,const Condition&) instead.
-    /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
-    ///
-    template<typename S=QObject> [[deprecated("Use Use registerService(const Service&, const QString&,const Condition&) instead")]] auto registerServiceTemplate(const QString& objectName, const service_config& config) -> ServiceRegistration<S,ServiceScope::TEMPLATE> {
-        return registerService(serviceTemplate<S>(), objectName, config);
-    }
+
 
     ///
     /// \brief Registers an object with this ApplicationContext.
