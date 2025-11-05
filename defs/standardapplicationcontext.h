@@ -47,7 +47,7 @@ class StandardApplicationContext final : public QApplicationContext
 
     friend QApplicationContext* newDelegate(const QLoggingCategory& loggingCategory, QApplicationContext* delegatingContext);
 
-signals:
+Q_SIGNALS:
 
     void autoRefreshMillisChanged(int);
 
@@ -737,7 +737,7 @@ public:
     static const QMetaMethod& notifySlot();
 
 
-private slots:
+private Q_SLOTS:
     void notify();
 private:
     QMetaProperty m_sourceProp;

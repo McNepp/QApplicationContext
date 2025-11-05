@@ -14,7 +14,7 @@ class QSettingsWatcher : public QObject {
 
     Q_PROPERTY(int autoRefreshMillis READ autoRefreshMillis WRITE setAutoRefreshMillis NOTIFY autoRefreshMillisChanged)
 
-signals:
+Q_SIGNALS:
     void autoRefreshMillisChanged(int);
 
 public:
