@@ -401,23 +401,12 @@ template<typename T> struct qvariant_cast<QList<T*>> {
 
 
 
-template<typename S,typename A,typename R> static q_setter_t adaptSetter(R (S::*setter)(A)) {
-    if(!setter) {
-        return nullptr;
-    }
-    using arg_type = detail::remove_cvref_t<A>;
-    return [setter](QObject* obj,QVariant arg) {
-        if(S* ptr = dynamic_cast<S*>(obj)) {
-            (ptr->*setter)(qvariant_cast<arg_type>{}(arg));
-        }
-    };
-}
 
-template<typename S,typename A,typename F> static std::enable_if_t<std::is_invocable_v<F,S*,A>,q_setter_t> adaptSetter(F func) {
+template<typename S,typename A,typename F> std::enable_if_t<std::is_invocable_v<F,S*,A>,q_setter_t> adaptSetter(F func) {
     using arg_type = detail::remove_cvref_t<A>;
     return [func](QObject* obj,QVariant arg) {
         if(S* ptr = dynamic_cast<S*>(obj)) {
-            func(ptr, qvariant_cast<arg_type>{}(arg));
+            std::invoke(func,ptr, qvariant_cast<arg_type>{}(arg));
         }
     };
 }
@@ -1045,36 +1034,6 @@ protected:
     template<typename S,typename R> struct ComputedDependency : Dependency <S,Kind::MANDATORY> {
         std::function<R(S*)> dependencyAccessor;
     };
-
-    template<typename S,typename F,typename R=void> struct computed_dependency_traits : std::false_type {
-
-    };
-
-    template<typename S,typename F> struct computed_dependency_traits<S,F,std::void_t<std::invoke_result_t<F,S*>>> : std::true_type {
-        using dependency_type=std::invoke_result_t<F,S*>;
-
-        static auto accessor(F func) {
-            return func;
-        }
-    };
-
-    template<typename S,typename R> struct computed_dependency_traits<S,R(S::*)(),void> : std::true_type {
-        using dependency_type=R;
-
-        static auto accessor(R(S::*func)()) {
-            return std::mem_fn(func);
-        }
-    };
-
-    template<typename S,typename R> struct computed_dependency_traits<S,R(S::*)() const,void> : std::true_type {
-     using dependency_type=R;
-
-
-     static auto accessor(R(S::*func)() const) {
-         return std::mem_fn(func);
-     }
-};
-
 
 }// end namespace detail
 
@@ -2421,13 +2380,14 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,DependencyKind::MANDAT
 /// \return an opaque Object representing the Dependency.
 ///
 template<typename S,typename F,ServiceScope scope> auto inject(const ServiceRegistration<S,scope>& registration, F accessor) ->
-std::enable_if_t<detail::is_allowed_as_dependency(scope) && detail::computed_dependency_traits<S,F>::value,detail::ComputedDependency<S,typename detail::computed_dependency_traits<S,F>::dependency_type>> {
+std::enable_if_t<detail::is_allowed_as_dependency(scope) && std::is_invocable_v<F,S*>,detail::ComputedDependency<S,std::invoke_result_t<F,S*>>> {
     //ServiceScope could be UNKNOWN statically, which passes the check, but TEMPLATE at runtime:
     if(!registration || !detail::is_allowed_as_dependency(registration.unwrap() -> scope())) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject ServiceRegistration " << registration;
         return {".invalid", nullptr};
     }
-    return detail::ComputedDependency<S,typename detail::computed_dependency_traits<S,F>::dependency_type>{registration.registeredName(), detail::computed_dependency_traits<S,F>::accessor(accessor)};
+    auto f = [accessor](S* srv) { return std::invoke(accessor, srv);};
+    return detail::ComputedDependency<S,typename std::invoke_result_t<F,S*>>{registration.registeredName(), f};
 }
 
 
@@ -2738,7 +2698,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propVal
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
 }
 
 ///
@@ -2756,7 +2716,7 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter()}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter()}};
 }
 
 
@@ -2775,7 +2735,7 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(value), detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(value), detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter)}};
 }
 
 
@@ -2798,7 +2758,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject ServiceRegistration " << reg;
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S,A*>(propertySetter)}};
 }
 
 
@@ -2823,7 +2783,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter), nullptr}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S,L>(propertySetter), nullptr}};
 }
 
 ///
@@ -2845,7 +2805,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter), nullptr}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S,L>(propertySetter), nullptr}};
 }
 
 
@@ -2886,7 +2846,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
 }
 
 
@@ -2966,7 +2926,7 @@ namespace detail {
 template<typename S,typename F> static auto adaptInitializer(F func) -> std::enable_if_t<std::is_invocable_v<F,S*,QApplicationContext*>,q_init_t> {
     return [func](QObject* target,QApplicationContext* context) {
         if(auto ptr =dynamic_cast<S*>(target)) {
-            func(ptr, context);
+            std::invoke(func, ptr, context);
         }};
 
 }
@@ -2974,25 +2934,13 @@ template<typename S,typename F> static auto adaptInitializer(F func) -> std::ena
 template<typename S,typename F,typename...Args> static auto adaptInitializer(F func, Args&&...args) -> std::enable_if_t<std::is_invocable_v<F,S*,Args...>,q_init_t> {
     return [func=std::bind(func, std::placeholders::_1, std::forward<Args>(args)...)](QObject* target,QApplicationContext*) {
         if(auto ptr =dynamic_cast<S*>(target)) {
-            func(ptr);
+            std::invoke(func, ptr);
         }};
 
 }
 
 
-template<typename S,typename R> static q_init_t adaptInitializer(R (S::*init)(QApplicationContext*)) {
-    if(!init) {
-        return nullptr;
-    }
-    return adaptInitializer<S>(std::mem_fn(init));
-}
 
-template<typename S,typename R,typename...Args> static q_init_t adaptInitializer(R (S::*init)(Args&&...), Args&&...args) {
-    if(!init) {
-        return nullptr;
-    }
-    return adaptInitializer<S>(std::mem_fn(init), std::forward<Args>(args)...);
-}
 
 
 template<typename S,auto func> static q_init_t adaptInitializer(service_initializer<func> initializer) {
