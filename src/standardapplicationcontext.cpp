@@ -1421,7 +1421,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         }
 
         if(!reg->prepareService(dependencies, needConfiguration)) {
-            qCCritical(loggingCategory()).nospace().noquote() << "Could not create service " << *reg;
+            qCCritical(loggingCategory()).nospace().noquote() << "Could not create Service " << *reg;
             return false;
         }
 
@@ -1430,7 +1430,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
             needConfiguration.push_back(reg);
             [[fallthrough]];
         case STATE_PUBLISHED:
-            qCInfo(loggingCategory()).nospace().noquote() << "Created service " << *reg;
+            qCInfo(loggingCategory()).nospace().noquote() << "Created Service '" << reg->registeredName() << "'";
             [[fallthrough]];
         default:
             allCreated.push_back(reg);
@@ -1455,7 +1455,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
             continue;
 
         case Status::ok:
-            qCInfo(loggingCategory()).noquote().nospace() << "Configured " << *reg;
+            qCInfo(loggingCategory()).noquote().nospace() << "Configured Service '" << reg->registeredName() << "'";
             toBePublished.push_back(reg);
         }
     }
@@ -1954,7 +1954,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 }
                 propertyDescriptor = detail::propertySetter(targetProperty);
             }
-            qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of " << *reg << " to value " << resolvedValue;
+            qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of Service '" << reg->registeredName() << "' to value " << resolvedValue;
             usedProperties.insert(key);
 
             if(isAutoRefreshProperty && resolver) {
@@ -1997,7 +1997,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                     propValue.setValue(candidate->getObject());
                 }
                 if(!propValue.isValid()) {
-                    qCInfo(loggingCategory()).nospace().noquote() << "Could not autowire property '" << prop.name()  << "' of " << *reg;
+                    qCInfo(loggingCategory()).nospace().noquote() << "Could not autowire property '" << prop.name()  << "' of Service '" << reg->registeredName() << "'";
                     continue;
                 }
 
@@ -2031,7 +2031,7 @@ bool StandardApplicationContext::init(DescriptorRegistration* reg, ServiceInitia
     for(DescriptorRegistration* self = reg; self; self = self->base()) {
         if(auto initMethod = self->descriptor().init_method; initMethod && self->descriptor().initialization_policy == policy) {
             initMethod(target, m_injectedContext);
-            qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of " << *reg;
+            qCInfo(loggingCategory()).nospace().noquote() << "Invoked init-method of Service '" << reg->registeredName() << "'";
             return true;
        }
     }
