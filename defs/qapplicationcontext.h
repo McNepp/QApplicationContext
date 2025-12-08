@@ -2618,8 +2618,6 @@ inline void withAutoRefresh(detail::service_config& cfg) {
 /// - Properties will be resolved using the registered QSettings: If a matching configuration-entry
 /// can be found in the section specified by mcnepp::qtdi::withGroup(const QString&), this entry's value will be injected.<br>
 /// Otherwise, if a matching configuration-entry can be found in the section matching the %Service's registered name, that entry's value will be injected.
-/// - If a configuration-entry has been found for a property that starts with an ampersand, this is treated as a *service-ref*: A matching %Service will be looked up
-/// by this name.
 /// - Properties for which no configuration-entry can be found will be injected if a matching service
 /// has been registered under the name of the property is present.<br>Otherwise, if exactly one service of the property's type
 /// has been registered, that will be injected.
@@ -2636,16 +2634,12 @@ inline void withAutoRefresh(detail::service_config& cfg) {
 ///
 ///     [ping]
 ///     timeout=5000
-///     networkManager=&networkAccess
 ///
 /// Then, with the following code, the `PingService` will be auto-wired:
 ///
 ///     context->registerService(service<QSettings>("context.ini", QSettings::IniFormat));
-///     context->registerService<QNetworkAccessManager>("networkAccess");
+///     context->registerService<QNetworkAccessManager>("networkManager");
 ///     context->registerService(service<PingService>() << withAutowire, "ping");
-///
-/// Note that in this particular case, we could actually remove the line `networkManager=&networkAccess` from the INI-File, and everything would still be auto-wired.
-/// The reason is that there is exactly one %Service of type QNetworkAccessManager registered, so that can be unambiguously found!
 ///
 ///
 inline void withAutowire(detail::service_config& cfg) {

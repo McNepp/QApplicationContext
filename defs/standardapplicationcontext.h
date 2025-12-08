@@ -233,10 +233,6 @@ private:
         }
 
 
-        const QStringList& getBeanRefs() const  {
-            return m_beanRefsCache;
-        }
-
         virtual void notifyPublished() = 0;
 
         virtual bool registerAlias(const QString& alias) override {
@@ -306,7 +302,6 @@ private:
         Condition m_condition;
         QVariantMap m_resolvedPlaceholders;
         service_config m_config;
-        QStringList m_beanRefsCache;
     };
 
 
@@ -663,8 +658,6 @@ private:
     bool init(DescriptorRegistration*, ServiceInitializationPolicy);
 
     void runPostProcessors(DescriptorRegistration*, const QList<QApplicationContextPostProcessor*>& postProcessors);
-
-    std::pair<Status,bool> resolveBeanRef(QVariant& value, descriptor_list& toBePublished, bool allowPartial);
 
     DescriptorRegistration* findAutowiringCandidate(service_registration_handle_t, const QMetaProperty&);
 

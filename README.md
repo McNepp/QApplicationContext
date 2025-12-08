@@ -351,8 +351,6 @@ Only if there are other services depending on it will a new instance be created 
 Every instance of a service-protoype that gets injected into a dependent service will be made a QObject-child of the dependent service.
 In other words, the dependent service becomes the *owner* of the prototype-instance.
 
-The same is true for *references to other members*: if a protoype is referenced via the ampersand-syntax, the instance of that prototype will be made a child of the service that references it.
-
 ## Service-templates {#service-templates}
 
 A service-template is a recipe for configuring a service without actually registering a concrete service.
@@ -868,27 +866,16 @@ However, we could introduce a Q_PROPERTY like this:
       void summaryChanged();
     };
 
-And here's how this property will be automatically set to the ApplicationContext's `PropFetcherAggregator`. Note the ampersand as the first character of the property-value,
-which makes this a *named reference to another member*:
+And here's how this property will be automatically set to the ApplicationContext's `PropFetcherAggregator`:
 
 
-    context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator");
+    auto aggregatorReg = context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator");
     
     context -> registerService(service<PropFetcher,RestPropFetcher(inject<QNetworkAccessManager>())
       << propValue("url", "${weatherUrl}${hamburgStationId}")
-      << propValue("summary", "&propFetcherAggregator"), 
+      << propValue(&PropFetcher::setSummary, aggregatorReg), 
     "hamburgWeather");
 
-By the way, if you prefer a more type-safe way of expressing a relation with another service, here is a slightly different form of configuration,
-using member-function-pointers and service-registrations. The effect will be exactly the same, though:
-
-
-    auto propFetcherReg = context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator");
-    
-    context -> registerService(service<PropFetcher,RestPropFetcher(inject<QNetworkAccessManager>())
-      << propValue("url", "${weatherUrl}${hamburgStationId}")
-      << propValue(&PropFetcher::setSummary, propFetcherReg),
-      "hamburgWeather");
 
 
 ## Connecting Signals of Services to Slots
