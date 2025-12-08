@@ -293,7 +293,161 @@ template<typename T> struct meta_type_traits<T,decltype(&T::staticMetaObject)> {
     }
 };
 
-using q_setter_t = std::function<void(QObject*,QVariant)>;
+template<typename T> struct qvariant_cast {
+    T operator()(const QVariant& v) const {
+        return v.value<T>();
+    }
+};
+
+template<typename T> struct qvariant_cast<QList<T*>> {
+    QList<T*> operator()(const QVariant& v) const {
+        return convertQList<T>(v.value<QObjectList>());
+    }
+};
+
+template<typename T,typename=void> struct is_equality_comparable : public std::false_type {
+
+};
+
+template<typename T> struct is_equality_comparable<T,std::enable_if_t<std::is_convertible_v<decltype(std::declval<T>() == std::declval<T>()),bool>>> : public std::true_type {
+
+};
+
+
+///
+/// \brief A type-erased wrapper for a `function(QObject*,const QVariant&)`.
+/// We would have loved to simply use std::function<void(QObject*,const QVariant&)>.
+/// However, that one lacks an equality operator, which we need if we want to store
+/// information per member-function.
+/// <br>The equality operator will only detect equivalence reliably
+/// for instances constructed from function-pointers, member-function-pointers or QPropertys.
+/// <br>For other instances, it will yield `true` only if the compared instances are identical.
+///
+class q_setter_t {
+
+    struct Invoker : public QSharedData {
+        virtual ~Invoker() = default;
+        virtual void invoke(QObject*, const QVariant&) const = 0;
+        virtual bool equals(const Invoker* other) const  = 0;
+    };
+
+    template<typename F> struct UntypedInvoker : Invoker {
+        F callable;
+
+        UntypedInvoker(F func) : callable{func} {
+
+        }
+
+        virtual void invoke(QObject* target, const QVariant& arg) const override {
+            std::invoke(callable, target, arg);
+        }
+
+        virtual bool equals(const Invoker* other) const override {
+            if(this == other) {
+                return true;
+            }
+            if constexpr(is_equality_comparable<F>::value) {
+                if(auto t = dynamic_cast<const UntypedInvoker*>(other)) {
+                    return callable == t->callable;
+                }
+            }
+            return false;
+        }
+    };
+
+    template<typename S,typename A,typename F> struct TypedInvoker : Invoker {
+        F callable;
+
+        TypedInvoker(F func) : callable{func} {
+
+        }
+
+        virtual void invoke(QObject* target, const QVariant& arg) const override {
+            if(auto srv = dynamic_cast<S*>(target)) {
+                std::invoke(callable, srv, qvariant_cast<remove_cvref_t<A>>{}(arg));
+            }
+        }
+
+        virtual bool equals(const Invoker* other) const override {
+            if(this == other) {
+                return true;
+            }
+            if constexpr(is_equality_comparable<F>::value) {
+                if(auto t = dynamic_cast<const TypedInvoker*>(other)) {
+                    return callable == t->callable;
+                }
+            }
+            return false;
+        }
+    };
+
+
+    struct QPropertyInvoker;
+
+public:
+    q_setter_t(std::nullptr_t = nullptr) {
+
+    }
+
+    explicit q_setter_t(const QMetaProperty& property);
+
+    template<typename F,std::enable_if_t<std::is_invocable_v<F,QObject*,QVariant>,int> = 0> explicit q_setter_t(F callable) :
+        m_impl{new UntypedInvoker<F>{callable}}{
+    }
+
+    void operator()(QObject* target, const QVariant& arg) const {
+        m_impl->invoke(target, arg);
+    }
+
+    explicit operator bool() const {
+        return m_impl != nullptr;
+    }
+
+
+
+    bool operator==(const q_setter_t& other) const {
+        if(&other == this) {
+            return true;
+        }
+        if(*this) {
+            return other && m_impl->equals(other.m_impl.get());
+        }
+        return !other;
+    }
+
+    bool operator!=(const q_setter_t& other) const {
+        return !(*this == other);
+    }
+
+    template<typename S,typename A,typename F> static q_setter_t create(F callable) {
+        return q_setter_t{new TypedInvoker<S,A,F>{callable}};
+    }
+
+
+
+private:
+    explicit q_setter_t(Invoker* impl) : m_impl{impl}
+    {}
+
+    QExplicitlySharedDataPointer<Invoker> m_impl;
+};
+
+template<typename S,typename A,typename F> std::enable_if_t<std::is_invocable_v<F,S*,A>,q_setter_t> adaptSetter(F callable) {
+    return q_setter_t::create<S,A>(callable);
+}
+
+///
+/// \brief Yields hash code for q_setter_t, for internal use only.
+/// We don't put this hash into namespace std, as it would be considered "degenerate":
+/// all default-constructed q_setters yield
+/// the same hash code, as do all value-initialized q_setters.
+/// However, this would only be a disadvantage with very large collections,
+/// which we do not have.
+///
+[[nodiscard]] inline std::size_t hashCode(const q_setter_t& setter) {
+        return setter ? 1 : 0;
+}
+
 
 using q_init_t = std::function<void(QObject*,QApplicationContext*)>;
 
@@ -439,6 +593,10 @@ struct property_descriptor {
     q_setter_t setter;
 };
 
+inline bool operator==(const property_descriptor& left, const property_descriptor& right) {
+    return left.name == right.name && left.setter == right.setter;
+}
+
 ///
 /// \brief Describes the property of the source.
 /// <br>A property may be identifier either by its name, or by its signalMethod.
@@ -452,6 +610,8 @@ struct source_property_descriptor {
 inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
     if(!descriptor.name.isEmpty()) {
         out.noquote().nospace() << "property '" << descriptor.name << "'";
+    } else {
+        out.noquote().nospace() << "Unknown property";
     }
     return out;
 }
@@ -468,29 +628,10 @@ inline QDebug operator << (QDebug out, const source_property_descriptor& descrip
 
 
 
-template<typename T> struct qvariant_cast {
-    T operator()(const QVariant& v) const {
-        return v.value<T>();
-    }
-};
-
-template<typename T> struct qvariant_cast<QList<T*>> {
-    QList<T*> operator()(const QVariant& v) const {
-        return convertQList<T>(v.value<QObjectList>());
-    }
-};
 
 
 
 
-template<typename S,typename A,typename F> std::enable_if_t<std::is_invocable_v<F,S*,A>,q_setter_t> adaptSetter(F func) {
-    using arg_type = detail::remove_cvref_t<A>;
-    return [func](QObject* obj,QVariant arg) {
-        if(S* ptr = dynamic_cast<S*>(obj)) {
-            std::invoke(func,ptr, qvariant_cast<arg_type>{}(arg));
-        }
-    };
-}
 
 
 
@@ -886,18 +1027,14 @@ protected:
 
 
 ///
-/// \brief Generates a unique name of a property.
+/// \brief Generates a unique name for an object.
 /// \param binaryData if not `nullptr`, will be translated into a hexadecimal representation.
 /// \return a String comprising a representation of the supplied binary data.
 ///
-    QString uniquePropertyName(const void* binaryData, std::size_t);
+    QString uniqueName(const void* binaryData = nullptr, std::size_t = 0);
 
-    template<typename F> QString uniqueName(F func) {
-        if constexpr(std::disjunction_v<std::is_pointer<F>,std::is_member_function_pointer<F>>) {
-            return uniquePropertyName(&func, sizeof func);
-        } else {
-            return uniquePropertyName(nullptr, 0);
-        }
+    template<typename T> QString uniqueName(const T* func) {
+        return uniqueName(static_cast<const void*>(func), sizeof(T));
     }
 
 
@@ -920,7 +1057,7 @@ protected:
     struct ConfigValue {
         QVariant expression;
         ConfigValueType configType = ConfigValueType::DEFAULT;
-        q_setter_t propertySetter = nullptr;
+        property_descriptor propertyDescriptor;
         q_variant_converter_t variantConverter = nullptr;
     };
 
@@ -2078,7 +2215,7 @@ template<typename S,typename T,ServiceScope scope,typename R,typename A> Subscri
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
-    return Subscription{detail::bind(source.unwrap(), {detail::getPropertyByName(source.serviceMetaObject(), sourceProperty)}, target.unwrap(), {detail::uniqueName(setter).toLatin1(), detail::adaptSetter<T,A>(setter)})};
+    return Subscription{detail::bind(source.unwrap(), {detail::getPropertyByName(source.serviceMetaObject(), sourceProperty)}, target.unwrap(), {"", detail::adaptSetter<T,A>(setter)})};
 }
 
 
@@ -2111,13 +2248,12 @@ template<typename A,typename S,typename T,ServiceScope scope,typename SLT> auto 
 
     if(signalFunction) {
         auto signalProperty = detail::getPropertyBySignal(QMetaMethod::fromSignal(signalFunction));
-        return Subscription{detail::bind(source.unwrap(), {signalProperty}, target.unwrap(), {detail::uniqueName(func).toLatin1(), detail::adaptSetter<T,A>(func)})};
+        return Subscription{detail::bind(source.unwrap(), {signalProperty}, target.unwrap(), {"", detail::adaptSetter<T,A>(func)})};
     }
 
     qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to " << target;
     return Subscription{};
 }
-
 
 
 ///
@@ -2145,7 +2281,7 @@ template<typename S,typename T,typename A,typename SLT,ServiceScope scope> auto 
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to " << target;
         return Subscription{};
     }
-    return Subscription{detail::bind(source.unwrap(), {{}, detail::adaptBindableGetter(bindable)}, target.unwrap(), {detail::uniqueName(func).toLatin1(), detail::adaptSetter<T,A>(func)})};
+    return Subscription{detail::bind(source.unwrap(), {{}, detail::adaptBindableGetter(bindable)}, target.unwrap(), {"", detail::adaptSetter<T,A>(func)})};
 }
 
 
@@ -2761,8 +2897,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolve
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
-
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::adaptVariantConverter(converter)}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, {"",detail::adaptSetter<S,A>(propertySetter)}, detail::adaptVariantConverter(converter)}};
 }
 
 
@@ -2785,7 +2920,7 @@ template<typename S,typename R,typename A> [[nodiscard]] auto resolveProp(R(S::*
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<A>::defaultConverter()}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, {"",detail::adaptSetter<S,A>(propertySetter)}, detail::variant_converter_traits<A>::defaultConverter()}};
 }
 
 
@@ -2805,7 +2940,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propVal
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue<detail::remove_cvref_t<A>>(value), detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter)}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue<detail::remove_cvref_t<A>>(value), detail::ConfigValueType::DEFAULT, {"",detail::adaptSetter<S,A>(propertySetter)}}};
 }
 
 
@@ -2828,7 +2963,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject ServiceRegistration " << reg;
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S,A*>(propertySetter)}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, {"",detail::adaptSetter<S,A*>(propertySetter)}}};
 }
 
 
@@ -2843,7 +2978,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
 /// \param reg the registration for those services that will be injected into the configured service.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propValue(R(S::*propertySetter)(L), const ProxyRegistration<A>& reg) -> std::enable_if_t<std::is_convertible_v<L,QList<A*>>,service_config_entry<S>>
+template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propValue(R(S::*propertySetter)(L), const ProxyRegistration<A>& reg) -> std::enable_if_t<std::is_convertible_v<QList<A*>,L>,service_config_entry<S>>
 {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
@@ -2853,7 +2988,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S,L>(propertySetter), nullptr}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, {"",detail::adaptSetter<S,QList<A*>>(propertySetter)}, nullptr}};
 }
 
 ///
@@ -2865,7 +3000,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// \param reg the registration for the Service-group whose services will be injected into the configured service.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propValue(R(S::*propertySetter)(L), const ServiceRegistration<A,ServiceScope::SERVICE_GROUP>& reg) -> std::enable_if_t<std::is_convertible_v<L,QList<A*>>,service_config_entry<S>>
+template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propValue(R(S::*propertySetter)(L), const ServiceRegistration<A,ServiceScope::SERVICE_GROUP>& reg) -> std::enable_if_t<std::is_convertible_v<QList<A*>,L>,service_config_entry<S>>
 {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
@@ -2875,7 +3010,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S,L>(propertySetter), nullptr}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, {"",detail::adaptSetter<S,QList<A*>>(propertySetter)}, nullptr}};
 }
 
 
@@ -2916,12 +3051,12 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 ///
 template<typename S,typename R,typename A> [[nodiscard]] auto autoRefresh(R(S::*propertySetter)(A), const QString& expression)
 -> std::enable_if_t<detail::variant_converter_traits<A>::is_convertible,service_config_entry<S>> {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<A>::defaultConverter()}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, {"",detail::adaptSetter<S,A>(propertySetter)}, detail::variant_converter_traits<A>::defaultConverter()}};
 }
 
 template<typename S,typename R,typename A,typename C> [[nodiscard]] auto autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter)
--> std::enable_if_t<detail::is_string_converter_v<A,C>,service_config_entry<S>> {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S,A>(propertySetter), detail::adaptVariantConverter(converter)}};
+-> std::enable_if_t<detail::is_string_converter<A,C>::value,service_config_entry<S>> {
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, {"", detail::adaptSetter<S,A>(propertySetter)}, detail::adaptVariantConverter(converter)}};
 }
 
 
@@ -2934,7 +3069,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto autoRef
 /// \return a configuration for a service.
 ///
 [[nodiscard]]inline detail::service_config::entry_type propValue(const QString& name, const QVariant& value) {
-    return {name, detail::ConfigValue{value, detail::ConfigValueType::DEFAULT}};
+    return {name, detail::ConfigValue{value, detail::ConfigValueType::DEFAULT, {name.toLatin1(), nullptr}}};
 }
 
 ///
@@ -2983,7 +3118,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto autoRef
 /// \param expression a String, possibly containing one or more placeholders.
 /// \return an  entry that will ensure that the expression will be re-evaluated when the underlying QSettings changes.
 [[nodiscard]] inline detail::service_config::entry_type autoRefresh(const QString& name, const QString& expression) {
-    return {name, detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, nullptr, nullptr}};
+    return {name, detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, {name.toLatin1(), nullptr}, nullptr}};
 }
 
 
@@ -4457,6 +4592,14 @@ namespace std {
             return typeHasher(info.type) ^ info.kind;
         }
         hash<type_index> typeHasher;
+    };
+
+
+    template<> struct hash<mcnepp::qtdi::detail::property_descriptor> {
+        std::size_t operator()(const mcnepp::qtdi::detail::property_descriptor& descriptor) const {
+            return nameHasher(descriptor.name) ^ hashCode(descriptor.setter);
+        }
+        hash<QByteArray> nameHasher;
     };
 
 
