@@ -9,6 +9,7 @@
 #include <QDir>
 #include "standardapplicationcontext.h"
 #include "qsettingswatcher.h"
+#include "qpropertycache.h"
 
 
 
@@ -157,10 +158,6 @@ private:
 };
 
 
-inline detail::property_descriptor propertySetter(const QMetaProperty& property) {
-    return {property.name(), [property](QObject* target, QVariant value) {property.write(target, value);}};
-}
-
 
 
 
@@ -170,6 +167,7 @@ void convertVariant(QVariant& var, q_variant_converter_t converter) {
         var = converter(var.toString());
     }
 }
+
 
 }
 
@@ -299,7 +297,7 @@ public:
 
 
     MultiServiceSubscription* newChild(const MultiServiceSubscription::target_list_t& targets) override {
-        return new BindableInjector{targets, m_sourceDescriptor, m_setter, m_loggingCategory, this};
+        return new BindableInjector{targets, m_sourceDescriptor, m_targetDescriptor, m_loggingCategory, m_propertyCache, this};
     }
 
     void cancel() override {
@@ -310,11 +308,23 @@ public:
         MultiServiceSubscription::cancel();
     }
 
-    BindableInjector(const MultiServiceSubscription::target_list_t& targets, const detail::source_property_descriptor& sourceDescriptor, const detail::property_descriptor& setter, const QLoggingCategory& loggingCategory, QObject* parent) :
+    BindableInjector(const MultiServiceSubscription::target_list_t& targets, const detail::source_property_descriptor& sourceDescriptor, const detail::property_descriptor& targetDescriptor, const QLoggingCategory& loggingCategory, detail::QPropertyCache* propertyCache, QObject* parent) :
         MultiServiceSubscription(targets, parent),
         m_sourceDescriptor(sourceDescriptor),
-        m_setter(setter),
-        m_loggingCategory(loggingCategory)    {
+        m_targetDescriptor(targetDescriptor),
+        m_setter{targetDescriptor.setter},
+        m_loggingCategory(loggingCategory),
+        m_propertyCache{propertyCache}
+    {
+        if(targetDescriptor.name.isEmpty()) {
+            m_setter = detail::q_setter_t{[this](QObject* target, const QVariant& arg) {
+                m_propertyCache->setProperty(m_targetDescriptor, target, arg);
+                //Once we have determined a name, we can switch to the original setter:
+                if(!m_targetDescriptor.name.isEmpty()) {
+                   m_setter = m_targetDescriptor.setter;
+                }
+            }};
+        }
     }
 
 
@@ -325,19 +335,20 @@ private:
         auto source = objs[0];
         auto target = objs[1];
         std::unique_ptr<detail::BindableHelper> sourceBindable{m_sourceDescriptor.bindable(source)};
-        if(sourceBindable->subscribe(target, m_setter.setter)) {
+        if(sourceBindable->subscribe(target, m_setter)) {
             bindings.push_back(sourceBindable.release());
-            qCDebug(m_loggingCategory).nospace().noquote() << "Bound property " << m_sourceDescriptor << " of " << source << " to " << m_setter << " of " << target;
+            qCDebug(m_loggingCategory).nospace().noquote() << "Bound property " << m_sourceDescriptor << " of " << source << " to " << m_targetDescriptor << " of " << target;
         } else {
-            qCWarning(m_loggingCategory()).nospace().noquote() << "Could not bind property " << m_sourceDescriptor << " of " << source << " to " << m_setter << " of " << target;
+            qCWarning(m_loggingCategory()).nospace().noquote() << "Could not bind property " << m_sourceDescriptor << " of " << source << " to " << m_targetDescriptor << " of " << target;
         }
     }
 
     detail::source_property_descriptor m_sourceDescriptor;
-    detail::property_descriptor m_setter;
+    detail::property_descriptor m_targetDescriptor;
+    detail::q_setter_t m_setter;
     std::vector<detail::q_bindable_helper_t> bindings;
     const QLoggingCategory& m_loggingCategory;
-
+    detail::QPropertyCache* const m_propertyCache;
 };
 
 
@@ -541,14 +552,14 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourceProperty.name() << "' of " << *this << " to " << setter << " of " << *target << " with incompatible types";
             return nullptr;
         }
-        setter = detail::propertySetter(targetProp);
+        setter.setter = detail::q_setter_t{targetProp};
     }
-    if(!m_context->registerBoundProperty(target, setter.name)) {
+    if(!m_context->registerBoundProperty(target, setter)) {
         qCCritical(loggingCategory()).noquote().nospace() << setter << " has already been bound to " << *target;
         return nullptr;
     }
 
-    subscription_handle_t subscription = new BindableInjector{QList<registration_handle_t>{target}, {sourceProperty, bindable}, setter, loggingCategory(), target};
+    subscription_handle_t subscription = new BindableInjector{QList<registration_handle_t>{target}, {sourceProperty, bindable}, setter, loggingCategory(), m_context->m_propertyCache, target};
     qCInfo(loggingCategory()).noquote().nospace() << "Created Subscription for binding property '" << sourceProperty.name() << "' of " << *this << " to " << setter << " of " << *target;
     return subscribe(subscription);
 }
@@ -879,7 +890,8 @@ StandardApplicationContext::StandardApplicationContext(const QLoggingCategory& l
     QApplicationContext(parent),
     m_loggingCategory(loggingCategory),
     m_injectedContext(delegatingContext),
-    m_activeProfiles{&defaultProfiles()}
+    m_activeProfiles{&defaultProfiles()},
+    m_propertyCache{new detail::QPropertyCache{this}}
 {
 
     if(qEnvironmentVariableIsSet("QTDI_ACTIVE_PROFILES")) {
@@ -1669,8 +1681,8 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
                 const service_config::map_type* props = &config.properties;
                 for(DescriptorRegistration* handle = base;;handle = handle->base() ){
                     for(const auto& entry : props->asKeyValueRange()) {
-                        if(entry.second.configType != detail::ConfigValueType::PRIVATE && !entry.second.propertySetter && descriptor.meta_object->indexOfProperty(entry.first.toLatin1()) < 0) {
-                            qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << entry.first << "'";
+                        if(entry.second.configType != detail::ConfigValueType::PRIVATE && !entry.second.propertyDescriptor.setter && descriptor.meta_object->indexOfProperty(entry.second.propertyDescriptor.name) < 0) {
+                            qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << entry.second.propertyDescriptor.name << "'";
                             return nullptr;
                         }
                     }
@@ -1812,10 +1824,12 @@ StandardApplicationContext::DescriptorRegistration* StandardApplicationContext::
     return candidate;
 }
 
-bool StandardApplicationContext::registerBoundProperty(registration_handle_t target, const char *propName)
+bool StandardApplicationContext::registerBoundProperty(registration_handle_t target, const detail::property_descriptor& descriptor)
 {
-    return m_boundProperties[target].insert(propName).second;
+    return m_boundProperties[target].insert(descriptor).second;
 }
+
+
 
 
 StandardApplicationContext::Status StandardApplicationContext::configure(DescriptorRegistration* reg, QVariantMap& resolvedPlaceholders, QObject* target, descriptor_list& toBePublished, bool allowPartial) {
@@ -1887,33 +1901,31 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
             if(!resolvedValue.isValid()) {
                 return Status::fatal;
             }
-            detail::property_descriptor propertyDescriptor;
-            if(cv.propertySetter) {
-                cv.propertySetter(target, resolvedValue);
-                propertyDescriptor.setter = cv.propertySetter;
-                propertyDescriptor.name = key.toLatin1();
+            detail::property_descriptor propertyDescriptor = cv.propertyDescriptor;
+            if(propertyDescriptor.setter) {
+                m_propertyCache->setProperty(propertyDescriptor, target, resolvedValue);
             } else {
-                auto targetProperty = detail::getPropertyByName(metaObject, key.toLatin1());
+                auto targetProperty = detail::getPropertyByName(metaObject, propertyDescriptor.name);
                 if(!targetProperty.isValid() || !targetProperty.isWritable()) {
                     //Refering to a non-existing Q_PROPERTY by name is always non-fixable:
-                    qCCritical(loggingCategory()).nospace().noquote() << "Could not find writable property " << key << " of '" << metaObject->className() << "'";
+                    qCCritical(loggingCategory()).nospace().noquote() << "Could not find writable property " << propertyDescriptor.name << " of '" << metaObject->className() << "'";
                     return Status::fatal;
                 }
                 if(!targetProperty.write(target, resolvedValue)) {
                     //An error while setting a Q_PROPERTY is always non-fixable:
-                    qCCritical(loggingCategory()).nospace().noquote() << "Could not set property '" << key << "' of " << *reg << " to value " << resolvedValue;
+                    qCCritical(loggingCategory()).nospace().noquote() << "Could not set property '" << propertyDescriptor.name << "' of " << *reg << " to value " << resolvedValue;
                     return Status::fatal;
                 }
-                propertyDescriptor = detail::propertySetter(targetProperty);
+                propertyDescriptor.setter = detail::q_setter_t{targetProperty};
             }
-            qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << key << "' of Service '" << reg->registeredName() << "' to value " << resolvedValue;
-            usedProperties.insert(key);
+            qCDebug(loggingCategory()).nospace().noquote() << "Set property '" << propertyDescriptor.name << "' of Service '" << reg->registeredName() << "' to value " << resolvedValue;
+            usedProperties.insert(propertyDescriptor.name);
 
             if(isAutoRefreshProperty && resolver) {
                 if(autoRefreshEnabled()) {
                     m_SettingsWatcher->addWatchedProperty(resolver, cv.variantConverter, propertyDescriptor, target, config.group, resolvedPlaceholders);
                 } else {
-                    qCWarning(loggingCategory()).nospace() << "Cannot watch property '" << key << "' of " << target << ", as auto-refresh has not been enabled.";
+                    qCWarning(loggingCategory()).nospace() << "Cannot watch property '" << propertyDescriptor.name << "' of " << target << ", as auto-refresh has not been enabled.";
                 }
             }
 
