@@ -1165,10 +1165,10 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testConfigurePrivatePropertyAsQObjectInServiceTemplate() {
         QTimer timer;
-        context->registerObject(&timer, "timer");
+        auto timerReg = context->registerObject(&timer, "timer");
         auto srvTemplate = context->registerService(serviceTemplate() << propValue("foo", "${id}-foo"));
 
-        auto timerTemplate = context->registerService(serviceTemplate().advertiseAs<TimerAware>() << propValue("timer", "&timer"), srvTemplate, "timerAware");
+        auto timerTemplate = context->registerService(serviceTemplate<TimerAware,QObject>() << propValue(&TimerAware::setTimer, timerReg), srvTemplate, "timerAware");
 
         auto base1 = context->registerService(service<BaseService>() << placeholderValue("id", 4711), timerTemplate, "base1");
         auto base2 = context->registerService(service<BaseService>() << placeholderValue("id", 3141), timerTemplate, "base2");
@@ -1176,9 +1176,9 @@ void testWatchConfigurationFileChangeWithError() {
 
         RegistrationSlot<BaseService> slot1{base1, this};
         RegistrationSlot<BaseService> slot2{base2, this};
-        auto timerReg = context->getRegistration<TimerAware>();
-        QCOMPARE(timerReg.registeredServices().size(), 2);
-        RegistrationSlot<TimerAware> timerSlot{timerReg, this};
+        auto timerAwareReg = context->getRegistration<TimerAware>();
+        QCOMPARE(timerAwareReg.registeredServices().size(), 2);
+        RegistrationSlot<TimerAware> timerAwareSlot{timerAwareReg, this};
         QVERIFY(slot1);
         QVERIFY(slot2);
 
@@ -1186,7 +1186,7 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(slot1->timer(), &timer);
         QCOMPARE(slot2->foo(), "3141-foo");
         QCOMPARE(slot2->timer(), &timer);
-        QCOMPARE(timerSlot.invocationCount(), 2);
+        QCOMPARE(timerAwareSlot.invocationCount(), 2);
     }
 
     void testConfigureConfigGroupAsPlaceholder() {
@@ -2082,6 +2082,18 @@ void testWatchConfigurationFileChangeWithError() {
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService> baseSlot{baseReg, this};
+        QVERIFY(baseSlot.last());
+        RegistrationSlot<QTimer> timerSlot{timerReg, this};
+        QVERIFY(timerSlot.last());
+        QCOMPARE(baseSlot->timer(), timerSlot.last());
+    }
+
+    void testStronglyTypedServiceConfigurationViaInterface() {
+        auto timerReg = context->registerService<QTimer>();
+        auto baseReg = context->registerService(service<TimerAware,BaseService>() << propValue(&TimerAware::setTimer, timerReg), "base");
+
+        QVERIFY(context->publish());
+        RegistrationSlot<TimerAware> baseSlot{baseReg, this};
         QVERIFY(baseSlot.last());
         RegistrationSlot<QTimer> timerSlot{timerReg, this};
         QVERIFY(timerSlot.last());

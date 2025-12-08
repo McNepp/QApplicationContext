@@ -42,6 +42,8 @@ public:
 
     virtual QTimer* timer() const = 0;
 
+    virtual void setTimer(QTimer*) = 0;
+
 };
 
 
@@ -83,7 +85,7 @@ public:
     QTimer* m_timer;
     int initCalled;
     QTimer *timer() const override;
-    void setTimer(QTimer *newTimer);
+    void setTimer(QTimer *newTimer) override;
     CyclicDependency *dependency() const;
     QObject* const m_InitialParent;
 

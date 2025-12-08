@@ -3349,7 +3349,7 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
 
     static_assert(std::is_base_of_v<QObject,Impl>, "Implementation-type must be a subclass of QObject");
 
-    static_assert(std::is_base_of_v<Srv,Impl>, "Implementation-type must be a subclass of Service-type");
+    static_assert(std::is_base_of_v<Srv,Impl> || scope == ServiceScope::TEMPLATE, "Implementation-type must be a subclass of Service-type");
 
     using service_type = Srv;
 
@@ -3462,6 +3462,7 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
         return Service<Srv,Impl,scope>{*this}.withInit<initializationPolicy>(initializer, std::forward<Args>(args)...);
     }
 
+
     ///
     /// \brief Adds a type-safe configuration-entry to this Service.
     /// \param entry will be added to the configuration.
@@ -3471,6 +3472,18 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
         config.properties.insert(entry.name, entry.value);
         return *this;
     }
+
+    ///
+    /// \brief Adds a type-safe configuration-entry to this Service.
+    /// \param entry will be added to the configuration.
+    /// \return this Service.
+    /// \note this function needs to be declared as a function-template. Otherwise, a duplicate function error would occur in case `Impl` and `Srv` denote the same type.
+    ///
+    template<typename T> auto operator<<(const service_config_entry<T>& entry) -> std::enable_if_t<std::is_same_v<T,Srv>,Service<Srv,Impl,scope>&> {
+        config.properties.insert(entry.name, entry.value);
+        return *this;
+    }
+
 
     ///
     /// \brief Adds an untyped configuration-entry to this Service.
@@ -3627,13 +3640,14 @@ template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Imp
 /// \brief Creates a Service-template with no dependencies and no constructor.
 /// <br>The returned Service cannot be instantiated. It just serves as an additional parameter
 /// for registering other services.
-/// <br>If you leave out the type-argument `Impl`, it will default to `QObject`.
+/// <br>If you leave out the type-argument `S` or `Impl`, it will default to `QObject`.
 /// <br>Should you want to ensure that every service derived from this service-template shall be advertised under
 /// a certain interface, use Service::advertiseAs().
-/// \tparam Impl the implementation-type of the service.
+/// \tparam S the Service-interface of the template.
+/// \tparam Impl the implementation-type of the template.
 /// \return a Service that cannot be instantiated.
-template<typename Impl=QObject>  [[nodiscard]] Service<Impl,Impl,ServiceScope::TEMPLATE> serviceTemplate() {
-    return Service<Impl,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<Impl,Impl,ServiceScope::TEMPLATE>(nullptr)};
+template<typename S=QObject,typename Impl=S>  [[nodiscard]] Service<S,Impl,ServiceScope::TEMPLATE> serviceTemplate() {
+    return Service<S,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<S,Impl,ServiceScope::TEMPLATE>(nullptr)};
 }
 
 ///
