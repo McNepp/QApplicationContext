@@ -2670,9 +2670,6 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 
 
 
-
-
-
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
 /// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
@@ -2683,7 +2680,7 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 /// \param converter specifies a converter that constructs an argument of type `A` from a QString.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propValue(R(S::*propertySetter)(A), const QString& expression, C converter) ->
+template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression, C converter) ->
     std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,A>,service_config_entry<S>>
 
 {
@@ -2695,6 +2692,10 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propVal
     return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
 }
 
+
+
+
+
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
 /// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
@@ -2704,7 +2705,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propVal
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> propValue(R(S::*propertySetter)(A), const QString& expression) {
+template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> resolveProp(R(S::*propertySetter)(A), const QString& expression) {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
@@ -2723,13 +2724,14 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
 /// \param value will be set when the service is being configured.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> propValue(R(S::*propertySetter)(A), A value) {
+template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propValue(R(S::*propertySetter)(A), C value) ->
+    std::enable_if_t<std::is_convertible_v<C,A>,service_config_entry<S>> {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(value), detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue<detail::remove_cvref_t<A>>(value), detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter)}};
 }
 
 
@@ -2810,7 +2812,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
 /// <br>In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:
 ///
-///     context->registerService(service<QTimer>() << propValue(&QTimer::setInterval, "${timerInterval}"), "timer");
+///     context->registerService(service<QTimer>() << resolveProp(&QTimer::setInterval, "${timerInterval}"), "timer");
 ///
 /// The member-function will be initialized from the value of the configuration-key `"timerInterval"` as it
 /// is in the moment the timer is instantiated.
@@ -2823,7 +2825,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// expression `"${timerInterval}"` will be re-evaluated and the member-function of the timer will be updated accordingly.
 /// <br>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
 ///
-///     context->registerService(service<QTimer>() << withAutoRefresh << propValue(&QObject::setObjectName, "theTimer") << propValue("interval", &QTimer::setInterval, "${timerInterval}"), "timer");
+///     context->registerService(service<QTimer>() << withAutoRefresh << propValue(&QObject::setObjectName, "theTimer") << resolveProp(&QTimer::setInterval, "${timerInterval}"), "timer");
 ///
 /// **Note:** Auto-refreshing an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
 /// by putting a configuration-entry into one of the QSettings-objects registered with the context:
@@ -2877,7 +2879,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 /// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
 /// <br>In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:
 ///
-///     context->registerService(service<QTimer>() << propValue("interval", "${timerInterval}"), "timer");
+///     context->registerService(service<QTimer>() << resolveProp("interval", "${timerInterval}"), "timer");
 ///
 /// The Q_PROPERTY QTimer::interval will be initialized from the value of the configuration-key `"timerInterval"` as it
 /// is in the moment the timer is instantiated.
@@ -2890,7 +2892,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 /// expression `"${timerInterval}"` will be re-evaluated and the Q_PROPERTY of the timer will be updated accordingly.
 /// <br>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
 ///
-///     context->registerService(service<QTimer>() << withAutoRefresh << propValue("objectName", "theTimer") << propValue("interval", "${timerInterval}"), "timer");
+///     context->registerService(service<QTimer>() << withAutoRefresh << propValue("objectName", "theTimer") << resolveProp("interval", "${timerInterval}"), "timer");
 ///
 /// **Note:** Auto-refreshing an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
 /// by putting a configuration-entry into one of the QSettings-objects registered with the context:
@@ -3553,7 +3555,7 @@ struct ServiceGroup {
     /// <br>The following example will register a Service-group with 3 services of type `QTimer`, for which the property `interval` will be set
     /// to the values 1, 500 and 1000:
     ///
-    ///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(&QTimer::setInterval, "${interval}"));
+    ///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << resolveProp(&QTimer::setInterval, "${interval}"));
     ///
     /// <br>The following example will register a Service-group with multiple services of type `RESTService`.
     /// The configuration-entry `urls` is expected to comprise a comma-separated list of values.
@@ -3575,7 +3577,7 @@ struct ServiceGroup {
     /// <br>The following example will register a Service-group with 3 services of type `QTimer`, for which the property `interval` will be set
     /// to the values 1, 500 and 1000:
     ///
-    ///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(&QTimer::setInterval, "${interval}"));
+    ///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << resolveProp(&QTimer::setInterval, "${interval}"));
     ///
     /// <br>The following example will register a Service-group with multiple services of type `RESTService`.
     /// The configuration-entry `urls` is expected to comprise a comma-separated list of values.
@@ -3604,7 +3606,7 @@ struct ServiceGroup {
 /// <br>The following example will register a Service-group with 3 services of type `QTimer`, for which the property `interval` will be set
 /// to the values 1, 500 and 1000:
 ///
-///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(&QTimer::setInterval, "${interval}"));
+///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << resolveProp(&QTimer::setInterval, "${interval}"));
 ///
 /// <br>The following example will register a Service-group with multiple services of type `RESTService`.
 /// The configuration-entry `urls` is expected to comprise a comma-separated list of values.

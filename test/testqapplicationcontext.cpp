@@ -1664,7 +1664,7 @@ void testWatchConfigurationFileChangeWithError() {
         configuration->setValue("host", "localhost");
         context->registerObject(configuration.get());
         // Use default-converter:
-        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()) << propValue(&DependentService::setAddress, "${host}"), "dep");
+        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()) << resolveProp(&DependentService::setAddress, "${host}"), "dep");
         RegistrationSlot<DependentService> srv{reg, this};
         QVERIFY(context->publish());
         QCOMPARE(srv->address(), Address{"localhost"});
@@ -1675,7 +1675,7 @@ void testWatchConfigurationFileChangeWithError() {
         configuration->setValue("host", "localhost");
         context->registerObject(configuration.get());
         // Use custom-converter:
-        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()) << propValue(&DependentService::setAddress, "${host}", addressConverter), "dep");
+        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()) << resolveProp(&DependentService::setAddress, "${host}", addressConverter), "dep");
         RegistrationSlot<DependentService> srv{reg, this};
         QVERIFY(context->publish());
         QCOMPARE(srv->address(), Address{"127.0.0.1"});
@@ -2820,14 +2820,14 @@ void testWatchConfigurationFileChangeWithError() {
 
     void testServiceGroup() {
         void (QTimer::*timerFunc)(int) = &QTimer::setInterval; //We need this intermediate variable because setTimer() has multiple overloads.
-        auto reg = context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(timerFunc, "${interval}"), "timerGroup");
+        auto reg = context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << resolveProp(timerFunc, "${interval}"), "timerGroup");
         QVERIFY(reg);
         QCOMPARE(reg.unwrap()->scope(), ServiceScope::SERVICE_GROUP);
 
-        auto reg2 = context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(timerFunc, "${interval}"), "timerGroup");
+        auto reg2 = context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << resolveProp(timerFunc, "${interval}"), "timerGroup");
         QCOMPARE(reg2, reg);
 
-        auto regInvalid = context->registerService(serviceGroup("interval", "7,42") << service<QTimer>() << propValue(timerFunc, "${interval}"), "timerGroup");
+        auto regInvalid = context->registerService(serviceGroup("interval", "7,42") << service<QTimer>() << resolveProp(timerFunc, "${interval}"), "timerGroup");
         QVERIFY(!regInvalid);
 
         RegistrationSlot<QTimer> slot{reg, this};
