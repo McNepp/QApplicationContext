@@ -274,13 +274,13 @@ Now, the "url" cannot be injected into the constructor. Rather, it must be set e
 In order to achieve this, we must add configuration-entries to the service. 
 We use the left-shift operator `<<` for this, as shown below:
 
-    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()) << propValue("url", "${baseUrl}?stationIds=${hamburgStationId}") << propValue("connectionTimeout", "${connectionTimeout:5000}"), "hamburgWeather");
-    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()) << propValue("url", "${baseUrl}?stationIds=${berlinStationId}") << propValue("connectionTimeout", "${connectionTimeout:5000}"), "berlinWeather"); 
+    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()) << resolveProp("url", "${baseUrl}?stationIds=${hamburgStationId}") << resolveProp("connectionTimeout", "${connectionTimeout:5000}"), "hamburgWeather");
+    context -> registerService(service<RestPropFetcher>(inject<QNetworkAccessManager>()) << resolveProp("url", "${baseUrl}?stationIds=${berlinStationId}") << resolveProp("connectionTimeout", "${connectionTimeout:5000}"), "berlinWeather"); 
 
 As you can see, the code has changed quite significantly: instead of supplying the Url as a constructor-argument, you pass in the key/value-pairs for configuring
 the service's url and connectionTimeouts as Q_PROPERTYs.
 
-**Note:** Every mcnepp::qtdi::propValue() supplied to mcnepp::qtdi::QApplicationContext::registerService() will be considered a potential `Q_PROPERTY` of the target-service. mcnepp::qtdi::QApplicationContext::publish() will fail if no such property can be
+**Note:** Everything supplied via mcnepp::qtdi::propValue(const QString& name, const QVariant& value) to mcnepp::qtdi::QApplicationContext::registerService() will be considered a potential `Q_PROPERTY` of the target-service. mcnepp::qtdi::QApplicationContext::publish() will fail if no such property can be
 found.  
 However, if you use mcnepp::qtdi::placeholderValue() instead, it will still be resolved via QSettings, but no attempt will be made to access a matching Q_PROPERTY.
 Such *placeholder-value* may be passed to a mcnepp::qtdi::QApplicationContextPostProcessor (see section [Tweaking services](#tweaking-services) below).
@@ -292,7 +292,7 @@ Also, *placeholder-value* can be very useful in conjunction with [Service-templa
 In the previous paragraph, you could see how Q_PROPERTYs of the services were initialized using the property-names.
 <br>Now, we will show arbitrary service-properties can be configured, even if no Q_PROPERTY has been declared.
 <br>Instead of using the property-name, we'll reference the member-function that sets the value.
-<br>We use one of the various overloads of mcnepp::qtdi::propValue() in order to create a type-safe configuration-entry.
+<br>We use one of the various overloads of mcnepp::qtdi::propValue() and mcnepp::qtdi::resolveProp() in order to create a type-safe configuration-entry.
 <br>Here is an example setting the `transferTimeout` of a QNetworkAccessManager. This property is not declared with the Q_PROEPRTY macro,
 thus, it cannot be set using the QMetaType-system:
 
@@ -300,12 +300,12 @@ thus, it cannot be set using the QMetaType-system:
 
 <br>Using *setters* can, of course, be combined with resolving configuration-values:
 
-    context -> registerService(service<QNetworkAccessManager>() << propValue(&QNetworkAccessManager::setTransferTimeout, "${transferTimeout}"), "networkManager"); 
+    context -> registerService(service<QNetworkAccessManager>() << resolveProp(&QNetworkAccessManager::setTransferTimeout, "${transferTimeout}"), "networkManager"); 
 
 
 ### Auto-refreshable configuration-values
 
-If you configure a Q_PROPERTY using mcnepp::qtdi::propValue(), the property of the Service-Object will be set 
+If you configure a Q_PROPERTY using mcnepp::qtdi::propValue() or mcnepp::qtdi::resolveProp(), the property of the Service-Object will be set 
 exactly once, immediately after creation, right before any [service-initializers](#service-initializers) may be invoked. After that, the service will be published.
 <br>There may be times, however, when you want a property to be refreshed automatically every time the value in the corresponding QSettings-object changeds.
 <br>This can be achieved by using mcnepp::qtdi::autoRefresh(const QString&,const QString&).
@@ -350,8 +350,6 @@ Only if there are other services depending on it will a new instance be created 
 
 Every instance of a service-protoype that gets injected into a dependent service will be made a QObject-child of the dependent service.
 In other words, the dependent service becomes the *owner* of the prototype-instance.
-
-The same is true for *references to other members*: if a protoype is referenced via the ampersand-syntax, the instance of that prototype will be made a child of the service that references it.
 
 ## Service-templates {#service-templates}
 
@@ -868,27 +866,16 @@ However, we could introduce a Q_PROPERTY like this:
       void summaryChanged();
     };
 
-And here's how this property will be automatically set to the ApplicationContext's `PropFetcherAggregator`. Note the ampersand as the first character of the property-value,
-which makes this a *named reference to another member*:
+And here's how this property will be automatically set to the ApplicationContext's `PropFetcherAggregator`:
 
 
-    context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator");
+    auto aggregatorReg = context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator");
     
     context -> registerService(service<PropFetcher,RestPropFetcher(inject<QNetworkAccessManager>())
       << propValue("url", "${weatherUrl}${hamburgStationId}")
-      << propValue("summary", "&propFetcherAggregator"), 
+      << propValue(&PropFetcher::setSummary, aggregatorReg), 
     "hamburgWeather");
 
-By the way, if you prefer a more type-safe way of expressing a relation with another service, here is a slightly different form of configuration,
-using member-function-pointers and service-registrations. The effect will be exactly the same, though:
-
-
-    auto propFetcherReg = context -> registerService(service<PropFetcherAggregator>(injectAll<PropFetcher>()), "propFetcherAggregator");
-    
-    context -> registerService(service<PropFetcher,RestPropFetcher(inject<QNetworkAccessManager>())
-      << propValue("url", "${weatherUrl}${hamburgStationId}")
-      << propValue(&PropFetcher::setSummary, propFetcherReg),
-      "hamburgWeather");
 
 
 ## Connecting Signals of Services to Slots

@@ -401,23 +401,12 @@ template<typename T> struct qvariant_cast<QList<T*>> {
 
 
 
-template<typename S,typename A,typename R> static q_setter_t adaptSetter(R (S::*setter)(A)) {
-    if(!setter) {
-        return nullptr;
-    }
-    using arg_type = detail::remove_cvref_t<A>;
-    return [setter](QObject* obj,QVariant arg) {
-        if(S* ptr = dynamic_cast<S*>(obj)) {
-            (ptr->*setter)(qvariant_cast<arg_type>{}(arg));
-        }
-    };
-}
 
-template<typename S,typename A,typename F> static std::enable_if_t<std::is_invocable_v<F,S*,A>,q_setter_t> adaptSetter(F func) {
+template<typename S,typename A,typename F> std::enable_if_t<std::is_invocable_v<F,S*,A>,q_setter_t> adaptSetter(F func) {
     using arg_type = detail::remove_cvref_t<A>;
     return [func](QObject* obj,QVariant arg) {
         if(S* ptr = dynamic_cast<S*>(obj)) {
-            func(ptr, qvariant_cast<arg_type>{}(arg));
+            std::invoke(func,ptr, qvariant_cast<arg_type>{}(arg));
         }
     };
 }
@@ -1045,36 +1034,6 @@ protected:
     template<typename S,typename R> struct ComputedDependency : Dependency <S,Kind::MANDATORY> {
         std::function<R(S*)> dependencyAccessor;
     };
-
-    template<typename S,typename F,typename R=void> struct computed_dependency_traits : std::false_type {
-
-    };
-
-    template<typename S,typename F> struct computed_dependency_traits<S,F,std::void_t<std::invoke_result_t<F,S*>>> : std::true_type {
-        using dependency_type=std::invoke_result_t<F,S*>;
-
-        static auto accessor(F func) {
-            return func;
-        }
-    };
-
-    template<typename S,typename R> struct computed_dependency_traits<S,R(S::*)(),void> : std::true_type {
-        using dependency_type=R;
-
-        static auto accessor(R(S::*func)()) {
-            return std::mem_fn(func);
-        }
-    };
-
-    template<typename S,typename R> struct computed_dependency_traits<S,R(S::*)() const,void> : std::true_type {
-     using dependency_type=R;
-
-
-     static auto accessor(R(S::*func)() const) {
-         return std::mem_fn(func);
-     }
-};
-
 
 }// end namespace detail
 
@@ -2421,13 +2380,14 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,DependencyKind::MANDAT
 /// \return an opaque Object representing the Dependency.
 ///
 template<typename S,typename F,ServiceScope scope> auto inject(const ServiceRegistration<S,scope>& registration, F accessor) ->
-std::enable_if_t<detail::is_allowed_as_dependency(scope) && detail::computed_dependency_traits<S,F>::value,detail::ComputedDependency<S,typename detail::computed_dependency_traits<S,F>::dependency_type>> {
+std::enable_if_t<detail::is_allowed_as_dependency(scope) && std::is_invocable_v<F,S*>,detail::ComputedDependency<S,std::invoke_result_t<F,S*>>> {
     //ServiceScope could be UNKNOWN statically, which passes the check, but TEMPLATE at runtime:
     if(!registration || !detail::is_allowed_as_dependency(registration.unwrap() -> scope())) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject ServiceRegistration " << registration;
         return {".invalid", nullptr};
     }
-    return detail::ComputedDependency<S,typename detail::computed_dependency_traits<S,F>::dependency_type>{registration.registeredName(), detail::computed_dependency_traits<S,F>::accessor(accessor)};
+    auto f = [accessor](S* srv) { return std::invoke(accessor, srv);};
+    return detail::ComputedDependency<S,typename std::invoke_result_t<F,S*>>{registration.registeredName(), f};
 }
 
 
@@ -2658,8 +2618,6 @@ inline void withAutoRefresh(detail::service_config& cfg) {
 /// - Properties will be resolved using the registered QSettings: If a matching configuration-entry
 /// can be found in the section specified by mcnepp::qtdi::withGroup(const QString&), this entry's value will be injected.<br>
 /// Otherwise, if a matching configuration-entry can be found in the section matching the %Service's registered name, that entry's value will be injected.
-/// - If a configuration-entry has been found for a property that starts with an ampersand, this is treated as a *service-ref*: A matching %Service will be looked up
-/// by this name.
 /// - Properties for which no configuration-entry can be found will be injected if a matching service
 /// has been registered under the name of the property is present.<br>Otherwise, if exactly one service of the property's type
 /// has been registered, that will be injected.
@@ -2676,16 +2634,12 @@ inline void withAutoRefresh(detail::service_config& cfg) {
 ///
 ///     [ping]
 ///     timeout=5000
-///     networkManager=&networkAccess
 ///
 /// Then, with the following code, the `PingService` will be auto-wired:
 ///
 ///     context->registerService(service<QSettings>("context.ini", QSettings::IniFormat));
-///     context->registerService<QNetworkAccessManager>("networkAccess");
+///     context->registerService<QNetworkAccessManager>("networkManager");
 ///     context->registerService(service<PingService>() << withAutowire, "ping");
-///
-/// Note that in this particular case, we could actually remove the line `networkManager=&networkAccess` from the INI-File, and everything would still be auto-wired.
-/// The reason is that there is exactly one %Service of type QNetworkAccessManager registered, so that can be unambiguously found!
 ///
 ///
 inline void withAutowire(detail::service_config& cfg) {
@@ -2716,9 +2670,6 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 
 
 
-
-
-
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
 /// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
@@ -2729,7 +2680,7 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 /// \param converter specifies a converter that constructs an argument of type `A` from a QString.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propValue(R(S::*propertySetter)(A), const QString& expression, C converter) ->
+template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression, C converter) ->
     std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,A>,service_config_entry<S>>
 
 {
@@ -2738,8 +2689,12 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propVal
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
 }
+
+
+
+
 
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
@@ -2750,13 +2705,13 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propVal
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> propValue(R(S::*propertySetter)(A), const QString& expression) {
+template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> resolveProp(R(S::*propertySetter)(A), const QString& expression) {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter()}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter()}};
 }
 
 
@@ -2769,13 +2724,14 @@ template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S>
 /// \param value will be set when the service is being configured.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> propValue(R(S::*propertySetter)(A), A value) {
+template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propValue(R(S::*propertySetter)(A), C value) ->
+    std::enable_if_t<std::is_convertible_v<C,A>,service_config_entry<S>> {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(value), detail::ConfigValueType::DEFAULT, detail::adaptSetter<S>(propertySetter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue<detail::remove_cvref_t<A>>(value), detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter)}};
 }
 
 
@@ -2798,7 +2754,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject ServiceRegistration " << reg;
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S,A*>(propertySetter)}};
 }
 
 
@@ -2823,7 +2779,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter), nullptr}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S,L>(propertySetter), nullptr}};
 }
 
 ///
@@ -2845,7 +2801,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S>(propertySetter), nullptr}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, detail::adaptSetter<S,L>(propertySetter), nullptr}};
 }
 
 
@@ -2856,7 +2812,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
 /// <br>In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:
 ///
-///     context->registerService(service<QTimer>() << propValue(&QTimer::setInterval, "${timerInterval}"), "timer");
+///     context->registerService(service<QTimer>() << resolveProp(&QTimer::setInterval, "${timerInterval}"), "timer");
 ///
 /// The member-function will be initialized from the value of the configuration-key `"timerInterval"` as it
 /// is in the moment the timer is instantiated.
@@ -2869,7 +2825,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// expression `"${timerInterval}"` will be re-evaluated and the member-function of the timer will be updated accordingly.
 /// <br>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
 ///
-///     context->registerService(service<QTimer>() << withAutoRefresh << propValue(&QObject::setObjectName, "theTimer") << propValue("interval", &QTimer::setInterval, "${timerInterval}"), "timer");
+///     context->registerService(service<QTimer>() << withAutoRefresh << propValue(&QObject::setObjectName, "theTimer") << resolveProp(&QTimer::setInterval, "${timerInterval}"), "timer");
 ///
 /// **Note:** Auto-refreshing an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
 /// by putting a configuration-entry into one of the QSettings-objects registered with the context:
@@ -2886,7 +2842,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
 }
 
 
@@ -2923,7 +2879,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 /// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
 /// <br>In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:
 ///
-///     context->registerService(service<QTimer>() << propValue("interval", "${timerInterval}"), "timer");
+///     context->registerService(service<QTimer>() << resolveProp("interval", "${timerInterval}"), "timer");
 ///
 /// The Q_PROPERTY QTimer::interval will be initialized from the value of the configuration-key `"timerInterval"` as it
 /// is in the moment the timer is instantiated.
@@ -2936,7 +2892,7 @@ template<typename S,typename R,typename A,typename C=typename detail::variant_co
 /// expression `"${timerInterval}"` will be re-evaluated and the Q_PROPERTY of the timer will be updated accordingly.
 /// <br>In case all properties for one service shall be auto-refreshed, there is a more concise way of specifying it:
 ///
-///     context->registerService(service<QTimer>() << withAutoRefresh << propValue("objectName", "theTimer") << propValue("interval", "${timerInterval}"), "timer");
+///     context->registerService(service<QTimer>() << withAutoRefresh << propValue("objectName", "theTimer") << resolveProp("interval", "${timerInterval}"), "timer");
 ///
 /// **Note:** Auto-refreshing an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
 /// by putting a configuration-entry into one of the QSettings-objects registered with the context:
@@ -2966,7 +2922,7 @@ namespace detail {
 template<typename S,typename F> static auto adaptInitializer(F func) -> std::enable_if_t<std::is_invocable_v<F,S*,QApplicationContext*>,q_init_t> {
     return [func](QObject* target,QApplicationContext* context) {
         if(auto ptr =dynamic_cast<S*>(target)) {
-            func(ptr, context);
+            std::invoke(func, ptr, context);
         }};
 
 }
@@ -2974,25 +2930,13 @@ template<typename S,typename F> static auto adaptInitializer(F func) -> std::ena
 template<typename S,typename F,typename...Args> static auto adaptInitializer(F func, Args&&...args) -> std::enable_if_t<std::is_invocable_v<F,S*,Args...>,q_init_t> {
     return [func=std::bind(func, std::placeholders::_1, std::forward<Args>(args)...)](QObject* target,QApplicationContext*) {
         if(auto ptr =dynamic_cast<S*>(target)) {
-            func(ptr);
+            std::invoke(func, ptr);
         }};
 
 }
 
 
-template<typename S,typename R> static q_init_t adaptInitializer(R (S::*init)(QApplicationContext*)) {
-    if(!init) {
-        return nullptr;
-    }
-    return adaptInitializer<S>(std::mem_fn(init));
-}
 
-template<typename S,typename R,typename...Args> static q_init_t adaptInitializer(R (S::*init)(Args&&...), Args&&...args) {
-    if(!init) {
-        return nullptr;
-    }
-    return adaptInitializer<S>(std::mem_fn(init), std::forward<Args>(args)...);
-}
 
 
 template<typename S,auto func> static q_init_t adaptInitializer(service_initializer<func> initializer) {
@@ -3401,7 +3345,7 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
 
     static_assert(std::is_base_of_v<QObject,Impl>, "Implementation-type must be a subclass of QObject");
 
-    static_assert(std::is_base_of_v<Srv,Impl>, "Implementation-type must be a subclass of Service-type");
+    static_assert(std::is_base_of_v<Srv,Impl> || scope == ServiceScope::TEMPLATE, "Implementation-type must be a subclass of Service-type");
 
     using service_type = Srv;
 
@@ -3514,6 +3458,7 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
         return Service<Srv,Impl,scope>{*this}.withInit<initializationPolicy>(initializer, std::forward<Args>(args)...);
     }
 
+
     ///
     /// \brief Adds a type-safe configuration-entry to this Service.
     /// \param entry will be added to the configuration.
@@ -3523,6 +3468,18 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
         config.properties.insert(entry.name, entry.value);
         return *this;
     }
+
+    ///
+    /// \brief Adds a type-safe configuration-entry to this Service.
+    /// \param entry will be added to the configuration.
+    /// \return this Service.
+    /// \note this function needs to be declared as a function-template. Otherwise, a duplicate function error would occur in case `Impl` and `Srv` denote the same type.
+    ///
+    template<typename T> auto operator<<(const service_config_entry<T>& entry) -> std::enable_if_t<std::is_same_v<T,Srv>,Service<Srv,Impl,scope>&> {
+        config.properties.insert(entry.name, entry.value);
+        return *this;
+    }
+
 
     ///
     /// \brief Adds an untyped configuration-entry to this Service.
@@ -3598,7 +3555,7 @@ struct ServiceGroup {
     /// <br>The following example will register a Service-group with 3 services of type `QTimer`, for which the property `interval` will be set
     /// to the values 1, 500 and 1000:
     ///
-    ///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(&QTimer::setInterval, "${interval}"));
+    ///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << resolveProp(&QTimer::setInterval, "${interval}"));
     ///
     /// <br>The following example will register a Service-group with multiple services of type `RESTService`.
     /// The configuration-entry `urls` is expected to comprise a comma-separated list of values.
@@ -3620,7 +3577,7 @@ struct ServiceGroup {
     /// <br>The following example will register a Service-group with 3 services of type `QTimer`, for which the property `interval` will be set
     /// to the values 1, 500 and 1000:
     ///
-    ///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(&QTimer::setInterval, "${interval}"));
+    ///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << resolveProp(&QTimer::setInterval, "${interval}"));
     ///
     /// <br>The following example will register a Service-group with multiple services of type `RESTService`.
     /// The configuration-entry `urls` is expected to comprise a comma-separated list of values.
@@ -3649,7 +3606,7 @@ struct ServiceGroup {
 /// <br>The following example will register a Service-group with 3 services of type `QTimer`, for which the property `interval` will be set
 /// to the values 1, 500 and 1000:
 ///
-///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << propValue(&QTimer::setInterval, "${interval}"));
+///     context->registerService(serviceGroup("interval", "1,500,1000") << service<QTimer>() << resolveProp(&QTimer::setInterval, "${interval}"));
 ///
 /// <br>The following example will register a Service-group with multiple services of type `RESTService`.
 /// The configuration-entry `urls` is expected to comprise a comma-separated list of values.
@@ -3679,13 +3636,14 @@ template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Imp
 /// \brief Creates a Service-template with no dependencies and no constructor.
 /// <br>The returned Service cannot be instantiated. It just serves as an additional parameter
 /// for registering other services.
-/// <br>If you leave out the type-argument `Impl`, it will default to `QObject`.
+/// <br>If you leave out the type-argument `S` or `Impl`, it will default to `QObject`.
 /// <br>Should you want to ensure that every service derived from this service-template shall be advertised under
 /// a certain interface, use Service::advertiseAs().
-/// \tparam Impl the implementation-type of the service.
+/// \tparam S the Service-interface of the template.
+/// \tparam Impl the implementation-type of the template.
 /// \return a Service that cannot be instantiated.
-template<typename Impl=QObject>  [[nodiscard]] Service<Impl,Impl,ServiceScope::TEMPLATE> serviceTemplate() {
-    return Service<Impl,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<Impl,Impl,ServiceScope::TEMPLATE>(nullptr)};
+template<typename S=QObject,typename Impl=S>  [[nodiscard]] Service<S,Impl,ServiceScope::TEMPLATE> serviceTemplate() {
+    return Service<S,Impl,ServiceScope::TEMPLATE>{detail::make_descriptor<S,Impl,ServiceScope::TEMPLATE>(nullptr)};
 }
 
 ///
