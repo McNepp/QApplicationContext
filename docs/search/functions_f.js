@@ -3,7 +3,7 @@ var searchData=
   ['service_0',['service',['../qapplicationcontext_8h.html#a45251145dd09691a5b6ca160b1b3e6ac',1,'mcnepp::qtdi::service(F factory, Dep...dependencies) -&gt; std::enable_if_t&lt; std::is_invocable_v&lt; F, typename detail::dependency_helper&lt; Dep &gt;::arg_type... &gt;, Service&lt; Impl, Impl, ServiceScope::SINGLETON &gt; &gt;'],['../qapplicationcontext_8h.html#a07ae03c57a4c371f2f24659088813670',1,'mcnepp::qtdi::service(Dep...dependencies)']]],
   ['servicegroup_1',['serviceGroup',['../qapplicationcontext_8h.html#a195dbb254edcd9348e4cb2fc2699a62e',1,'mcnepp::qtdi']]],
   ['servicemetaobject_2',['serviceMetaObject',['../qapplicationcontext_8h.html#a4d48e0805aa7f293c0b050534a8c6e9e',1,'mcnepp::qtdi']]],
-  ['servicetemplate_3',['serviceTemplate',['../qapplicationcontext_8h.html#a1dc51a0152614fb643aaf888bf901eae',1,'mcnepp::qtdi']]],
+  ['servicetemplate_3',['serviceTemplate',['../qapplicationcontext_8h.html#a2090616f5bfb718c2c9b78e800a5ece6',1,'mcnepp::qtdi']]],
   ['setactiveprofiles_4',['setActiveProfiles',['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#a2b13f5bafcad8e76f44d2e8f7098a135',1,'mcnepp::qtdi::StandardApplicationContext']]],
   ['setasglobalinstance_5',['setAsGlobalInstance',['../classmcnepp_1_1qtdi_1_1_application_context_impl_base.html#a6a6c8fb99bdd6161ebbd1c5d2d9903d8',1,'mcnepp::qtdi::ApplicationContextImplBase::setAsGlobalInstance()'],['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a48d05ea4afd4a19a96098546d654b358',1,'mcnepp::qtdi::QApplicationContext::setAsGlobalInstance()']]],
   ['setautorefreshmillis_6',['setAutoRefreshMillis',['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#acb931f97e5e363a648e5314902908770',1,'mcnepp::qtdi::StandardApplicationContext']]],

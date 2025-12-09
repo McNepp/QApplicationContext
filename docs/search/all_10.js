@@ -34,7 +34,7 @@ var searchData=
   ['services_20vs_20un_20managed_20objects_31',['Managed Services vs. Un-managed Objects',['../index.html#autotoc_md19',1,'']]],
   ['services_20with_20type_20safe_20setters_32',['Configuring services with type-safe &apos;setters&apos;',['../index.html#autotoc_md15',1,'']]],
   ['servicescope_33',['ServiceScope',['../qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded',1,'mcnepp::qtdi']]],
-  ['servicetemplate_34',['serviceTemplate',['../qapplicationcontext_8h.html#a1dc51a0152614fb643aaf888bf901eae',1,'mcnepp::qtdi']]],
+  ['servicetemplate_34',['serviceTemplate',['../qapplicationcontext_8h.html#a2090616f5bfb718c2c9b78e800a5ece6',1,'mcnepp::qtdi']]],
   ['setactiveprofiles_35',['setActiveProfiles',['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#a2b13f5bafcad8e76f44d2e8f7098a135',1,'mcnepp::qtdi::StandardApplicationContext']]],
   ['setasglobalinstance_36',['setAsGlobalInstance',['../classmcnepp_1_1qtdi_1_1_application_context_impl_base.html#a6a6c8fb99bdd6161ebbd1c5d2d9903d8',1,'mcnepp::qtdi::ApplicationContextImplBase::setAsGlobalInstance()'],['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a48d05ea4afd4a19a96098546d654b358',1,'mcnepp::qtdi::QApplicationContext::setAsGlobalInstance()']]],
   ['setautorefreshmillis_37',['setAutoRefreshMillis',['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#acb931f97e5e363a648e5314902908770',1,'mcnepp::qtdi::StandardApplicationContext']]],
