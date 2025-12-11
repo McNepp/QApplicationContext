@@ -76,12 +76,12 @@ int match(const service_descriptor& left, const service_descriptor& right) {
 }
 
 
-BindingProxy::BindingProxy(QMetaProperty sourceProp, QObject* source, const detail::property_descriptor& setter, QObject* target) : QObject(source),
+BindingProxy::BindingProxy(QMetaProperty sourceProp, QObject* source, q_setter_t setter, QObject* target) : QObject(source),
     m_sourceProp(sourceProp),
     m_source(source),
     m_target(target),
     m_setter(setter) {
-
+    connect(m_source, sourceProp.notifySignal(), this, notifySlot());
 }
 
 const QMetaMethod &BindingProxy::notifySlot()
@@ -92,8 +92,71 @@ const QMetaMethod &BindingProxy::notifySlot()
 
 void BindingProxy::notify()
 {
-    m_setter.setter(m_target, m_sourceProp.read(m_source));
+    m_setter(m_target, m_sourceProp.read(m_source));
 }
+
+
+class BindablePropertyHelper : public BindableHelper {
+public:
+    BindablePropertyHelper(const QMetaProperty& prop, QObject* source) :
+        m_prop{prop},
+        m_source{source},
+        m_bindable{prop.bindable(source)} {
+
+    }
+
+
+    virtual bool subscribe(QObject* target, q_setter_t setter) override {
+        setter(target, get_value());
+        m_bindings.push_back(m_bindable.addNotifier([target,setter,this] { setter(target, get_value());}));
+        return true;
+    }
+private:
+    QVariant get_value() const {
+        return m_prop.read(m_source);
+    }
+
+    QMetaProperty m_prop;
+    QObject* const m_source;
+    QUntypedBindable m_bindable;
+    std::vector<QPropertyNotifier> m_bindings;
+};
+
+class NonBindablePropertyHelper : public BindableHelper {
+public:
+    NonBindablePropertyHelper(const QMetaProperty& prop, QObject* source) :
+        m_prop{prop},
+        m_source{source} {
+    }
+
+    virtual bool subscribe(QObject* target, q_setter_t setter) override {
+        setter(target, get_value());
+        if(!m_prop.hasNotifySignal()) {
+            return false;
+        }
+        proxies.push_back(new BindingProxy{m_prop, m_source, setter, target});
+        return true;
+    }
+
+    ~NonBindablePropertyHelper() {
+        for(auto& proxy : proxies) {
+            if(proxy) {
+                delete proxy.get();
+            }
+        }
+    }
+
+private:
+
+    QVariant get_value() const {
+        return m_prop.read(m_source);
+    }
+
+
+    QMetaProperty m_prop;
+    QObject* const m_source;
+    QList<QPointer<BindingProxy>> proxies;
+};
 
 
 inline detail::property_descriptor propertySetter(const QMetaProperty& property) {
@@ -102,10 +165,6 @@ inline detail::property_descriptor propertySetter(const QMetaProperty& property)
 
 
 
-
-bool isBindable(const QMetaProperty& sourceProperty) {
-    return sourceProperty.hasNotifySignal() || sourceProperty.isBindable();
-}
 
 
 void convertVariant(QVariant& var, q_variant_converter_t converter) {
@@ -229,9 +288,7 @@ QString makeName(const std::type_index& type) {
 
 
 
-
-
-class PropertyInjector : public detail::MultiServiceSubscription {
+class BindableInjector : public detail::MultiServiceSubscription {
 public:
 
 
@@ -239,26 +296,23 @@ public:
 
     QMetaObject::Connection connectObjectsPublished() override
     {
-        return connect(this, &detail::MultiServiceSubscription::objectsPublished, this, &PropertyInjector::notify);
+        return connect(this, &detail::MultiServiceSubscription::objectsPublished, this, &BindableInjector::notify);
     }
 
 
     MultiServiceSubscription* newChild(const MultiServiceSubscription::target_list_t& targets) override {
-        return new PropertyInjector{targets, m_sourceProperty, m_setter, m_loggingCategory, this};
+        return new BindableInjector{targets, m_sourceDescriptor, m_setter, m_loggingCategory, this};
     }
 
     void cancel() override {
-        for(auto& conn : connections) {
-            QObject::disconnect(conn);
-        }
         //QPropertyNotifier will remove the binding in its destructor:
         bindings.clear();
         MultiServiceSubscription::cancel();
     }
 
-    PropertyInjector(const MultiServiceSubscription::target_list_t& targets, const QMetaProperty& sourceProperty, const detail::property_descriptor& setter, const QLoggingCategory& loggingCategory, QObject* parent) :
+    BindableInjector(const MultiServiceSubscription::target_list_t& targets, const detail::source_property_descriptor& sourceDescriptor, const detail::property_descriptor& setter, const QLoggingCategory& loggingCategory, QObject* parent) :
         MultiServiceSubscription(targets, parent),
-        m_sourceProperty(sourceProperty),
+        m_sourceDescriptor(sourceDescriptor),
         m_setter(setter),
         m_loggingCategory(loggingCategory)    {
     }
@@ -270,36 +324,21 @@ private:
     void notify(const QObjectList& objs) {
         auto source = objs[0];
         auto target = objs[1];
-        m_setter.setter(target, m_sourceProperty.read(source));
-        if(m_sourceProperty.hasNotifySignal()) {
-            detail::BindingProxy* proxy = new detail::BindingProxy{m_sourceProperty, source, m_setter, target};
-            auto connection = QObject::connect(source, m_sourceProperty.notifySignal(), proxy, detail::BindingProxy::notifySlot());
-            qCDebug(m_loggingCategory).nospace().noquote() << "Bound property '" << m_sourceProperty.name() << "' of " << source << " to " << m_setter <<" of " << target;
-            connections.push_back(std::move(connection));
-            return;
+        detail::q_bindable_helper_t sourceBindable{m_sourceDescriptor.bindable(source)};
+        if(sourceBindable->subscribe(target, m_setter.setter)) {
+            bindings.push_back(sourceBindable);
+            qCDebug(m_loggingCategory).nospace().noquote() << "Bound property " << m_sourceDescriptor << " of " << source << " to " << m_setter << " of " << target;
+        } else {
+            qCWarning(m_loggingCategory()).nospace().noquote() << "Could not bind property " << m_sourceDescriptor << " of " << source << " to " << m_setter << " of " << target;
         }
-        if(m_sourceProperty.isBindable()) {
-            auto sourceBindable = m_sourceProperty.bindable(source);
-            auto notifier = sourceBindable.addNotifier([this,source,target]{
-                m_setter.setter(target, m_sourceProperty.read(source));
-            });
-            qCDebug(m_loggingCategory).nospace().noquote() << "Bound property '" << m_sourceProperty.name() << "' of " << source << " to " << m_setter << " of " << target;
-            bindings.push_back(std::move(notifier));
-            return;
-        }
-        qCWarning(m_loggingCategory).nospace().noquote() << "Could not bind property '" << m_sourceProperty.name() << "' of " << source << " to " << m_setter << " of " << target;
-
     }
 
-    QMetaProperty m_sourceProperty;
+    detail::source_property_descriptor m_sourceDescriptor;
     detail::property_descriptor m_setter;
-    std::vector<QPropertyNotifier> bindings;
-    std::vector<QMetaObject::Connection> connections;
+    std::vector<detail::q_bindable_helper_t> bindings;
     const QLoggingCategory& m_loggingCategory;
 
 };
-
-
 
 
 
@@ -464,16 +503,27 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
     }
 
     detail::property_descriptor setter = targetProperty;
-    auto sourceProperty = getProperty(this, sourcePropertyDescriptor);
-    if(!sourceProperty.isValid()) {
-        qCCritical(loggingCategory()).noquote().nospace() << sourcePropertyDescriptor << " not found for " << *this;
-        return nullptr;
 
-    }
 
-    if(this == target && sourceProperty.name() == setter.name) {
-        qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourceProperty.name() << "' of " << *this << " to self";
-        return nullptr;
+    const QMetaProperty& sourceProperty = sourcePropertyDescriptor.sourceProperty;
+
+    auto bindable = sourcePropertyDescriptor.bindable;
+    if(!bindable) {
+        if(!sourceProperty.isValid()) {
+            qCCritical(loggingCategory()).noquote().nospace() << sourcePropertyDescriptor << " not found for " << *this;
+            return nullptr;
+        }
+
+        if(this == target && sourceProperty.name() == setter.name) {
+            qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourceProperty.name() << "' of " << *this << " to self";
+            return nullptr;
+        }
+
+        if(sourceProperty.isBindable()) {
+            bindable = [sourceProperty](QObject* source) { return std::make_shared<detail::BindablePropertyHelper>(sourceProperty, source);};
+        } else {
+            bindable = [sourceProperty](QObject* source) { return std::make_shared<detail::NonBindablePropertyHelper>(sourceProperty, source);};
+        }
     }
 
     if(target->applicationContext() != applicationContext()) {
@@ -481,16 +531,13 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         return nullptr;
     }
 
-    if(!detail::isBindable(sourceProperty)) {
-        qCWarning(loggingCategory()).noquote().nospace() << "Property '" << sourceProperty.name() << "' in " << *this << " is not bindable";
-    }
     if(!setter.setter) {
-        auto targetProp = getProperty(target, {setter.name});
+        auto targetProp = detail::getPropertyByName(target->serviceMetaObject(), setter.name);
         if(!targetProp.isValid() || !targetProp.isWritable()) {
             qCCritical(loggingCategory()).noquote().nospace() << setter << " is not a writable property for " << *target;
             return nullptr;
         }
-        if(!QMetaType::canConvert(sourceProperty.metaType(), targetProp.metaType())) {
+        if(sourceProperty.isValid() && !QMetaType::canConvert(sourceProperty.metaType(), targetProp.metaType())) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot bind property '" << sourceProperty.name() << "' of " << *this << " to " << setter << " of " << *target << " with incompatible types";
             return nullptr;
         }
@@ -501,7 +548,7 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         return nullptr;
     }
 
-    auto subscription = new PropertyInjector{QList<registration_handle_t>{target}, sourceProperty, setter, loggingCategory(), target};
+    subscription_handle_t subscription = new BindableInjector{QList<registration_handle_t>{target}, {sourceProperty, bindable}, setter, loggingCategory(), target};
     qCInfo(loggingCategory()).noquote().nospace() << "Created Subscription for binding property '" << sourceProperty.name() << "' of " << *this << " to " << setter << " of " << *target;
     return subscribe(subscription);
 }
@@ -1165,23 +1212,7 @@ bool StandardApplicationContext::registerAlias(service_registration_handle_t reg
 
 }
 
-QMetaProperty StandardApplicationContext::getProperty(registration_handle_t reg, const detail::source_property_descriptor& sourceProperty) {
-    if(auto meta = reg->serviceMetaObject()) {
-        if(sourceProperty.name.isEmpty()) {
-            if(sourceProperty.signalMethod.isValid()) {
-                for(int index = 0; index < meta->propertyCount(); ++index) {
-                    auto prop = meta->property(index);
-                    if(prop.hasNotifySignal() && prop.notifySignal() == sourceProperty.signalMethod) {
-                        return prop;
-                    }
-                }
-            }
-        } else {
-            return meta->property(meta->indexOfProperty(sourceProperty.name));
-        }
-    }
-    return QMetaProperty{};
-}
+
 
 
 
@@ -1862,7 +1893,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 propertyDescriptor.setter = cv.propertySetter;
                 propertyDescriptor.name = key.toLatin1();
             } else {
-                auto targetProperty = metaObject->property(metaObject->indexOfProperty(key.toLatin1()));
+                auto targetProperty = detail::getPropertyByName(metaObject, key.toLatin1());
                 if(!targetProperty.isValid() || !targetProperty.isWritable()) {
                     //Refering to a non-existing Q_PROPERTY by name is always non-fixable:
                     qCCritical(loggingCategory()).nospace().noquote() << "Could not find writable property " << key << " of '" << metaObject->className() << "'";

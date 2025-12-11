@@ -622,9 +622,6 @@ private:
 
 
 
-    static QMetaProperty getProperty(registration_handle_t reg, const detail::source_property_descriptor& sourceProperty);
-
-
 
 
     enum class Status {
@@ -725,7 +722,7 @@ class BindingProxy : public QObject {
     Q_OBJECT
 
 public:
-    BindingProxy(QMetaProperty sourceProp, QObject* source, const detail::property_descriptor& setter, QObject* target);
+    BindingProxy(QMetaProperty sourceProp, QObject* source, q_setter_t setter, QObject* target);
 
     static const QMetaMethod& notifySlot();
 
@@ -736,7 +733,7 @@ private:
     QMetaProperty m_sourceProp;
     QObject* m_source;
     QObject* m_target;
-    detail::property_descriptor m_setter;
+    q_setter_t m_setter;
 };
 }
 
