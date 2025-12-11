@@ -13,6 +13,7 @@
 #include <QMetaMethod>
 #include <QLoggingCategory>
 #include <QRegularExpression>
+#include <QBindable>
 
 namespace mcnepp::qtdi {
 
@@ -300,6 +301,82 @@ using q_variant_converter_t = std::function<QVariant(const QString&)>;
 
 struct service_descriptor;
 
+QMetaProperty getPropertyBySignal(const QMetaMethod& signalMethod);
+
+QMetaProperty getPropertyByName(const QMetaObject*, const char*);
+
+///
+/// \brief A type-erased class that helps to retrieve values from an QBindable in a generic way.
+/// \note I would have loved to simply use QUntypedBindable. However, that offers no functionaliy to retrieve
+/// the binding's value!
+///
+class q_bindable_helper {
+public:
+
+    template<typename F> std::enable_if_t<std::is_invocable_v<F>,QPropertyNotifier> addNotifier(F func) {
+        if(m_impl) {
+            return m_impl->get_bindable().addNotifier(func);
+        }
+        return {};
+    }
+
+    QVariant operator()() const {
+        return m_impl->get_value();
+    }
+
+    template<typename T> explicit q_bindable_helper(const QBindable<T>& bindable) :
+        m_impl{new TypedImpl<T>{bindable}} {
+
+    }
+
+    explicit operator bool() const {
+        return m_impl != nullptr;
+    }
+
+    q_bindable_helper(std::nullptr_t = nullptr) {
+
+    }
+
+private:
+    struct Impl : public QSharedData {
+        virtual QUntypedBindable& get_bindable() = 0;
+        virtual QVariant get_value() const = 0;
+        virtual ~Impl() = default;
+    };
+
+    template<typename T> struct TypedImpl : Impl {
+        TypedImpl(const QBindable<T>& bindable) : m_bindable{bindable} {
+
+        }
+
+        virtual QUntypedBindable& get_bindable() override {
+            return m_bindable;
+        }
+
+        virtual QVariant get_value() const override {
+            return QVariant::fromValue(m_bindable.value());
+        }
+
+        QBindable<T> m_bindable;
+    };
+
+    QExplicitlySharedDataPointer<Impl> m_impl;
+};
+
+using q_bindable_getter_t = std::function<q_bindable_helper(QObject*)>;
+
+template<typename S,typename A> q_bindable_getter_t adaptBindableGetter(QBindable<A>(S::*func)()) {
+    if(!func) {
+        return nullptr;
+    }
+    return [func](QObject* obj) -> q_bindable_helper {
+        if(S* srv = dynamic_cast<S*>(obj)) {
+            return q_bindable_helper{std::invoke(func, srv)};
+        }
+        return nullptr;
+    };
+}
+
 
 
 template<typename T,typename=QVariant> struct has_qvariant_support : std::false_type {
@@ -384,8 +461,8 @@ struct property_descriptor {
 /// In the latter case, the name will be empty.
 ///
 struct source_property_descriptor {
-    QByteArray name;
-    QMetaMethod signalMethod;
+    QMetaProperty sourceProperty;
+    q_bindable_getter_t bindable;
 };
 
 inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
@@ -396,13 +473,13 @@ inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
 }
 
 inline QDebug operator << (QDebug out, const source_property_descriptor& descriptor) {
-    if(!descriptor.name.isEmpty()) {
-        return out.noquote().nospace() << "property '" << descriptor.name << "'";
+    if(descriptor.sourceProperty.isValid()) {
+        return out.noquote().nospace() << "property '" << descriptor.sourceProperty.name() << "'";
     }
-    if(descriptor.signalMethod.isValid()) {
-        return out.noquote().nospace() << "property '" << descriptor.signalMethod.name() << "'";
+    if(descriptor.bindable) {
+        return out << "Unknown property";
     }
-    return out;
+    return out << "Invalid property";
 }
 
 
@@ -431,40 +508,7 @@ template<typename S,typename A,typename F> std::enable_if_t<std::is_invocable_v<
     };
 }
 
-template<typename S> using simple_signal_t = void(S::*)();
 
-template<typename SRC,typename SIGN,typename TGT,typename SLOT> struct property_change_signal_traits {
-    static constexpr bool is_compatible = false;
-};
-
-
-template<typename SRC,typename TGT,typename R,typename TgtArg> struct property_change_signal_traits<SRC,simple_signal_t<SRC>,TGT,R(TGT::*)(TgtArg)> {
-    using arg_type = TgtArg;
-    //A parameterless signal is considered compatible with any setter, even though we cannot verify whether the source-property's type matches the target-property's
-    static constexpr bool is_compatible = true;
-};
-
-template<typename SRC,typename TGT,typename R,typename TgtArg> struct property_change_signal_traits<SRC,simple_signal_t<SRC>,TGT,R(*)(TGT*,TgtArg)> {
-    using arg_type = TgtArg;
-    //A parameterless signal is considered compatible with any two-arg function, even though we cannot verify whether the source-property's type matches the target-property's
-    static constexpr bool is_compatible = true;
-};
-
-template<typename SRC,typename TGT,typename R,typename TgtArg> struct property_change_signal_traits<SRC,simple_signal_t<SRC>,TGT,std::function<R(TGT*,TgtArg)>> {
-    using arg_type = TgtArg;
-    //A parameterless signal is considered compatible with any two-arg function, even though we cannot verify whether the source-property's type matches the target-property's
-    static constexpr bool is_compatible = true;
-};
-
-template<typename SRC,typename SrcArg,typename TGT,typename R,typename TgtArg> struct property_change_signal_traits<SRC,void(SRC::*)(SrcArg),TGT,R(TGT::*)(TgtArg)> {
-    using arg_type = TgtArg;
-    static constexpr bool is_compatible = std::is_invocable_v<std::function<void(TgtArg)>,SrcArg>;
-};
-
-template<typename SRC,typename SrcArg,typename TGT,typename SLOT> struct property_change_signal_traits<SRC,void(SRC::*)(SrcArg),TGT,SLOT> {
-    using arg_type = SrcArg;
-    static constexpr bool is_compatible = std::is_invocable_v<SLOT,SRC*,SrcArg>;
-};
 
 
 
@@ -2025,7 +2069,7 @@ template<typename S,typename T,ServiceScope scope> Subscription bind(const Servi
     static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
 
-    return Subscription{detail::bind(source.unwrap(), {sourceProperty}, target.unwrap(), {targetProperty, nullptr})};
+    return Subscription{detail::bind(source.unwrap(), {detail::getPropertyByName(source.serviceMetaObject(), sourceProperty)}, target.unwrap(), {targetProperty, nullptr})};
 }
 
 ///
@@ -2042,8 +2086,7 @@ template<typename S,typename T,ServiceScope scope> Subscription bind(const Servi
 /// \tparam SLT the type of the slot
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, const Registration<T>& target, SLT setter) ->
-std::enable_if_t<detail::property_change_signal_traits<S,detail::simple_signal_t<S>,T,SLT>::is_compatible,Subscription> {
+template<typename S,typename T,ServiceScope scope,typename R,typename A> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, const Registration<T>& target, R(T::*setter)(A)){
     static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
 
@@ -2051,7 +2094,7 @@ std::enable_if_t<detail::property_change_signal_traits<S,detail::simple_signal_t
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
-    return Subscription{detail::bind(source.unwrap(), {sourceProperty}, target.unwrap(), {detail::uniqueName(setter).toLatin1(), detail::adaptSetter<T,typename detail::property_change_signal_traits<S,detail::simple_signal_t<S>,T,SLT>::arg_type>(setter)})};
+    return Subscription{detail::bind(source.unwrap(), {detail::getPropertyByName(source.serviceMetaObject(), sourceProperty)}, target.unwrap(), {detail::uniqueName(setter).toLatin1(), detail::adaptSetter<T,A>(setter)})};
 }
 
 
@@ -2063,10 +2106,6 @@ std::enable_if_t<detail::property_change_signal_traits<S,detail::simple_signal_t
 /// <br>This function identifies the source-property by the signal that is emitted when the property changes.
 /// The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding
 /// to a property of the source-service, according to `QMetaMethod::fromSignal(SI)`.
-/// <br>If `SI` denotes a signal with no argument, then `F` must denote a pointer to a member-function of `T`, taking one argument. There will be no compile-time check
-/// whether the type of the source-property actually matches the type of the target-property!
-/// <br>If `SI` denotes a signal with one argument, then `F` shall either denote a pointer to a member-function of `T`, taking one argument that is assignment-compatible with
-/// the signal's argument, or it shall denote a callable object that can be invoked with one argument of type `T*` and one argument of the signal's argument-type.
 /// <br>All changes made to the source-property will be propagated to all Services represented by the target.
 /// For each target-property, there can be only successful call to bind().
 /// <br>**Thread-safety:** This function only may be called from the QApplicationContext's thread.
@@ -2077,24 +2116,52 @@ std::enable_if_t<detail::property_change_signal_traits<S,detail::simple_signal_t
 /// \tparam S the type of the source.
 /// \tparam T the type of the target
 /// \tparam A the type of the property.
-/// \tparam SIGN the type of the signal-function. Must be a non-static member-function of S with either no arguments or one argument of type A.
 /// \tparam SLT the type of the slot. Must either be a non-static member-function of T with one argument,
 /// or a callable object taking two arguments, one of type `T*` and the second of the signal's argument-type.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename SIGN,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, SIGN signalFunction, const Registration<T>& target, SLT func) ->
-    std::enable_if_t<detail::property_change_signal_traits<S,SIGN,T,SLT>::is_compatible,Subscription> {
+template<typename A,typename S,typename T,ServiceScope scope,typename SLT> auto bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(A), const Registration<T>& target, SLT func) ->
+    std::enable_if_t<std::is_invocable_v<SLT,T*,A>,Subscription> {
     static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
 
     if(signalFunction) {
-        if(auto signalMethod = QMetaMethod::fromSignal(signalFunction); signalMethod.isValid()) {
-            return Subscription{detail::bind(source.unwrap(), {{}, signalMethod}, target.unwrap(), {detail::uniqueName(func).toLatin1(), detail::adaptSetter<T,typename detail::property_change_signal_traits<S,SIGN,T,SLT>::arg_type>(func)})};
-        }
+        auto signalProperty = detail::getPropertyBySignal(QMetaMethod::fromSignal(signalFunction));
+        return Subscription{detail::bind(source.unwrap(), {signalProperty}, target.unwrap(), {detail::uniqueName(func).toLatin1(), detail::adaptSetter<T,A>(func)})};
     }
 
     qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to " << target;
     return Subscription{};
+}
+
+
+
+///
+/// \brief Binds a property of one ServiceRegistration to a slot from  another Registration.
+/// <br>This function identifies the source-property via a member-function that returns a QBindable.
+/// <br>All changes made to the source-property will be propagated to all Services represented by the target.
+/// For each target-property, there can be only successful call to bind().
+/// <br>**Thread-safety:** This function only may be called from the QApplicationContext's thread.
+/// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
+/// \param bindable the address of a member-function of `S` that returns a QBindable.
+/// \param target the Registration with the target-property to which the source-property shall be bound.
+/// \param func the method in the target which shall be bound to the source-property.
+/// \tparam S the type of the source.
+/// \tparam T the type of the target
+/// \tparam A the type of the property.
+/// \tparam SLT the type of the slot. Must either be a non-static member-function of T with one argument,
+/// or a callable object taking two arguments, one of type `T*` and the second of the signal's argument-type.
+/// \return the Subscription established by this binding.
+///
+template<typename S,typename T,typename A,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, QBindable<A>(S::*bindable)(), const Registration<T>& target, SLT func) ->
+    std::enable_if_t<std::is_invocable_v<SLT,T*,A>,Subscription> {
+    static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
+    static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
+    if(!bindable) {
+        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to " << target;
+        return Subscription{};
+    }
+    return Subscription{detail::bind(source.unwrap(), {{}, detail::adaptBindableGetter(bindable)}, target.unwrap(), {detail::uniqueName(func).toLatin1(), detail::adaptSetter<T,A>(func)})};
 }
 
 

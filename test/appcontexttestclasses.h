@@ -1,5 +1,6 @@
 #pragma once
 #include "qapplicationcontext.h"
+#include <QProperty>
 #include <QTimer>
 #include <QObject>
 
@@ -106,7 +107,7 @@ Q_SIGNALS:
 
     void fooChanged(const QString&);
 
-    void signalWithoutProperty();
+    void signalWithoutProperty(QString);
 
 private:
 
@@ -166,17 +167,23 @@ public:
 
     Q_PROPERTY(BaseService2 *reference READ reference WRITE setReference NOTIFY referenceChanged FINAL)
 
+    Q_PROPERTY(QString foo READ foo WRITE setFoo BINDABLE fooBindable)
+
 
     virtual QString foo() const override {
-        return "BaseService";
+        return m_foo.value();
     }
 
-    virtual void setFoo(const QString&) override {
-
+    virtual void setFoo(const QString& foo) override {
+        m_foo.setValue(foo);
     }
 
     void init() override {
         ++initCalled;
+    }
+
+    QBindable<QString> fooBindable() {
+        return &m_foo;
     }
 
     void setReference(BaseService2* ref);
@@ -186,6 +193,7 @@ public:
 
     int initCalled = 0;
     BaseService2* m_reference;
+    QProperty<QString> m_foo;
 Q_SIGNALS:
     void referenceChanged();
 };

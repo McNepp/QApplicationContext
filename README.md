@@ -946,11 +946,13 @@ aka those that represent more than one service. The source-property will be boun
 
 
 
-### Type-safe bindings
+### Type-safe bindings using signals
 
 The above binding used property-names to denote the source- and target-properties.
-<br>In case the source-service offers a signal that corresponds with the property, you can use pointers to member-functions instead, which is more type-safe.
-<br>Here is an example:
+<br>In case the source-service offers a signal that corresponds with the property, you can use pointers to signal-member-functions instead, which is more type-safe.
+<br>Beware that this is only possible if the signal-function has an argument of the property's type!
+<br>Here is an example, using a pointer to the signal-member-function QTimer::objectNameChanged(const QString&). From this member-function, the corresponding property "objectName" is
+automatically deduced:
 
     QTimer timer1;
     
@@ -968,6 +970,29 @@ The above binding used property-names to denote the source- and target-propertie
 2. We register a second `QTimer` as "timer2". 
 3. We bind the property `objectName` of the second timer to the first timer's propery.
 4. We change the first timer's objectName. This will also change the second timer's objectName!
+
+### Type-safe bindings using QBindables
+
+The above binding used a pointer to a signal-member-function of the source.
+<br>Sometimes, however, no signal is available, as is the case with QTimer's `interval` property.
+<br>Instead, QTimer has a member-function QTimer::bindableInterval() which can be used to establish the binding:
+
+    QTimer timer1;
+    
+    auto reg1 = context -> registerObject(&timer1, "timer1"); // 1
+    
+    auto reg2 = context -> registerService<QTimer>("timer2"); // 2
+    
+    bind(reg1, &QTimer::bindableInterval, reg2, &QTimer::setInterval); // 3
+    
+    context -> publish(); 
+    
+    timer1.setInterval(5000); // 4
+
+1. We register a `QTimer` as "timer1".
+2. We register a second `QTimer` as "timer2". 
+3. We bind the property `interval` of the second timer to the first timer's propery.
+4. We change the first timer's interval. This will also change the second timer's interval!
 
 
 ## Subscribing to a service after registration

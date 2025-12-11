@@ -622,9 +622,6 @@ private:
 
 
 
-    static QMetaProperty getProperty(registration_handle_t reg, const detail::source_property_descriptor& sourceProperty);
-
-
 
 
     enum class Status {
