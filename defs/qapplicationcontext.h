@@ -311,42 +311,62 @@ template<typename T> struct has_qvariant_support<T,decltype(QVariant{std::declva
 };
 
 
-inline void convertVariant(QVariant& var, q_variant_converter_t converter) {
-    if(converter) {
-        var = converter(var.toString());
-    }
-}
 
+template<typename T,typename C,bool=std::is_invocable_v<C,QString>> struct is_string_converter;
 
+template<typename T,typename C> struct is_string_converter<T,C,false> : std::false_type {
+};
 
-template<typename T> struct default_string_converter {
-    T operator()(const QString& str) const {
-        return T{str};
-    }
+template<typename T,typename C> struct is_string_converter<T,C,true> : std::bool_constant<std::is_convertible_v<std::invoke_result_t<C,QString>,T>> {
 };
 
 
+template<typename T,typename C> constexpr bool is_string_converter_v = is_string_converter<T,C>::value;
 
-template<typename T,bool=std::disjunction_v<has_qvariant_support<T>,std::is_convertible<T,QObject*>>> struct variant_converter_traits;
+template<typename C> static std::enable_if_t<std::is_invocable_v<C,QString>,q_variant_converter_t> adaptVariantConverter(C converter) {
+    return [converter](const QString& str) { return QVariant::fromValue(converter(str));};
+}
+
+
+#ifdef __cpp_aggregate_paren_init
+
+template<typename T> using is_string_constructible=std::is_constructible<T,QString>;
+
+#else
+
+template<typename T,typename=T> struct is_string_constructible : std::false_type {
+
+};
+
+template<typename T> struct is_string_constructible<T,decltype(T{std::declval<QString>()})> : std::true_type {
+
+};
+
+
+#endif
+
+template<typename T,bool=has_qvariant_support<T>::value> struct variant_converter_traits;
 
 
 template<typename T> struct variant_converter_traits<T,true> {
-    using type = std::nullptr_t;
 
-    static constexpr std::nullptr_t makeConverter(std::nullptr_t = nullptr) {
+    static constexpr bool is_convertible = true;
+
+    static constexpr std::nullptr_t defaultConverter() {
         return nullptr;
     }
 
 
 };
 
+
 template<typename T> struct variant_converter_traits<T,false> {
-    using type = default_string_converter<T>;
+    using arg_t = remove_cvref_t<T>;
 
+    static constexpr bool is_convertible = is_string_constructible<arg_t>::value;
 
-    template<typename C=type> static q_variant_converter_t makeConverter(C converter = C{}) {
-        static_assert(std::is_convertible_v<std::invoke_result_t<C,QString>,T>, "return-type of converter does not match");
-        return [converter](const QString& str) { return QVariant::fromValue(converter(str));};
+    static q_variant_converter_t defaultConverter() {
+        return [](const QString& str) { return QVariant::fromValue(arg_t{str});};
     }
 
 };
@@ -2495,8 +2515,9 @@ template<typename S> using Resolvable = detail::Resolvable<S>;
 /// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S=QString> [[nodiscard]] Resolvable<S> resolve(const QString& expression) {
-    return Resolvable<S>{expression, QVariant{}, detail::variant_converter_traits<S>::makeConverter()};
+template<typename S=QString> [[nodiscard]] auto resolve(const QString& expression)
+-> std::enable_if_t<detail::variant_converter_traits<S>::is_convertible,Resolvable<S>> {
+    return Resolvable<S>{expression, QVariant{}, detail::variant_converter_traits<S>::defaultConverter()};
 }
 
 
@@ -2545,8 +2566,8 @@ template<typename S=QString> [[nodiscard]] Resolvable<S> resolve(const QString& 
 /// \return a Resolvable instance for the supplied type.
 ///
 template<typename S,typename C> [[nodiscard]] auto resolve(const QString& expression, const S& defaultValue, C converter) ->
-std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,S>,Resolvable<S>> {
-    return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::variant_converter_traits<S>::makeConverter(converter)};
+std::enable_if_t<detail::is_string_converter_v<S,C>,Resolvable<S>> {
+    return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::adaptVariantConverter(converter)};
 }
 
 
@@ -2557,8 +2578,8 @@ std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,S>,Resolv
 /// <br>This is an overload of mcnepp::qtdi::resolve(const QString&,const S&,C) without the default-value.
 ///
 template<typename S,typename C> [[nodiscard]] auto resolve(const QString& expression, C converter) ->
-std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,S>,Resolvable<S>> {
-    return Resolvable<S>{expression, QVariant{}, detail::variant_converter_traits<S>::makeConverter(converter)};
+std::enable_if_t<detail::is_string_converter_v<S,C>,Resolvable<S>> {
+    return Resolvable<S>{expression, QVariant{}, detail::adaptVariantConverter(converter)};
 }
 
 
@@ -2566,8 +2587,9 @@ std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,S>,Resolv
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
 /// <br>This is an overload of mcnepp::qtdi::resolve(const QString&,const S&,C) without the explicit converter.
 ///
-template<typename S> [[nodiscard]] Resolvable<S>  resolve(const QString& expression, const S& defaultValue) {
-    return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::variant_converter_traits<S>::makeConverter()};
+template<typename S> [[nodiscard]] auto resolve(const QString& expression, const S& defaultValue)
+-> std::enable_if_t<detail::variant_converter_traits<S>::is_convertible,Resolvable<S>> {
+    return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::variant_converter_traits<S>::defaultConverter()};
 }
 
 
@@ -2681,7 +2703,7 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression, C converter) ->
-    std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,A>,service_config_entry<S>>
+    std::enable_if_t<detail::is_string_converter_v<A,C>,service_config_entry<S>>
 
 {
     if(!propertySetter) {
@@ -2689,7 +2711,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolve
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::adaptVariantConverter(converter)}};
 }
 
 
@@ -2705,13 +2727,14 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolve
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> resolveProp(R(S::*propertySetter)(A), const QString& expression) {
+template<typename S,typename R,typename A> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression)
+-> std::enable_if_t<detail::variant_converter_traits<A>::is_convertible,service_config_entry<S>>{
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter()}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<A>::defaultConverter()}};
 }
 
 
@@ -2838,14 +2861,17 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// \tparam S the service-type.
 /// \param propertySetter the member-function that will be invoked with the property-value.
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
-/// \param converter (optional) specifies a converter that constructs an argument of type `A` from a QString.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+template<typename S,typename R,typename A> [[nodiscard]] auto autoRefresh(R(S::*propertySetter)(A), const QString& expression)
+-> std::enable_if_t<detail::variant_converter_traits<A>::is_convertible,service_config_entry<S>> {
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<A>::defaultConverter()}};
 }
 
-
+template<typename S,typename R,typename A,typename C> [[nodiscard]] auto autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter)
+-> std::enable_if_t<detail::is_string_converter_v<A,C>,service_config_entry<S>> {
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S,A>(propertySetter), detail::adaptVariantConverter(converter)}};
+}
 
 
 

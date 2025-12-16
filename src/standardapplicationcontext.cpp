@@ -108,7 +108,11 @@ bool isBindable(const QMetaProperty& sourceProperty) {
 }
 
 
-
+void convertVariant(QVariant& var, q_variant_converter_t converter) {
+    if(converter) {
+        var = converter(var.toString());
+    }
+}
 
 }
 
