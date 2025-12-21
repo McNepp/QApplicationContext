@@ -674,138 +674,135 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span> </div>
 <div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span> </div>
 <div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span> </div>
-<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>    <span class="keyword">static</span> QMetaProperty getProperty(registration_handle_t reg, <span class="keyword">const</span> detail::source_property_descriptor&amp; sourceProperty);</div>
+<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span> </div>
 <div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span> </div>
-<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span> </div>
-<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span> </div>
-<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span> </div>
-<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>    <span class="keyword">enum class</span> Status {</div>
-<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>        ok,</div>
-<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>        fixable,</div>
-<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>        fatal</div>
-<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>    };</div>
+<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>    <span class="keyword">enum class</span> Status {</div>
+<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>        ok,</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>        fixable,</div>
+<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>        fatal</div>
+<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>    };</div>
+<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span> </div>
+<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span> </div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>    Status validate(<span class="keywordtype">bool</span> allowPartial, <span class="keyword">const</span> descriptor_list&amp; published, descriptor_list&amp; unpublished);</div>
 <div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span> </div>
-<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span> </div>
-<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>    Status validate(<span class="keywordtype">bool</span> allowPartial, <span class="keyword">const</span> descriptor_list&amp; published, descriptor_list&amp; unpublished);</div>
-<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span> </div>
-<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>    <span class="keywordtype">bool</span> checkTransitiveDependentsOn(<span class="keyword">const</span> service_descriptor&amp; descriptor, <span class="keyword">const</span> QString&amp; name, <span class="keyword">const</span> std::unordered_set&lt;dependency_info&gt;&amp; dependencies) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span> </div>
-<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>    <span class="keywordtype">bool</span> findTransitiveDependenciesOf(<span class="keyword">const</span> service_descriptor&amp; descriptor, std::unordered_set&lt;dependency_info&gt;&amp; dependents) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span> </div>
-<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>    <span class="keywordtype">void</span> unpublish();</div>
-<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span> </div>
-<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>    <span class="keywordtype">void</span> contextObjectDestroyed(DescriptorRegistration*);</div>
+<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>    <span class="keywordtype">bool</span> checkTransitiveDependentsOn(<span class="keyword">const</span> service_descriptor&amp; descriptor, <span class="keyword">const</span> QString&amp; name, <span class="keyword">const</span> std::unordered_set&lt;dependency_info&gt;&amp; dependencies) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span> </div>
+<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>    <span class="keywordtype">bool</span> findTransitiveDependenciesOf(<span class="keyword">const</span> service_descriptor&amp; descriptor, std::unordered_set&lt;dependency_info&gt;&amp; dependents) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span> </div>
+<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>    <span class="keywordtype">void</span> unpublish();</div>
+<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span> </div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>    <span class="keywordtype">void</span> contextObjectDestroyed(DescriptorRegistration*);</div>
+<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span> </div>
+<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>    DescriptorRegistration* getActiveRegistrationByName(<span class="keyword">const</span> QString&amp; name) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span> </div>
 <div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span> </div>
-<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>    DescriptorRegistration* getActiveRegistrationByName(<span class="keyword">const</span> QString&amp; name) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>    std::pair&lt;QVariant,Status&gt; resolveDependency(<span class="keyword">const</span> descriptor_list&amp; published, DescriptorRegistration* reg, <span class="keyword">const</span> dependency_info&amp; d, <span class="keywordtype">bool</span> allowPartial);</div>
 <div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span> </div>
-<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span> </div>
-<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>    std::pair&lt;QVariant,Status&gt; resolveDependency(<span class="keyword">const</span> descriptor_list&amp; published, DescriptorRegistration* reg, <span class="keyword">const</span> dependency_info&amp; d, <span class="keywordtype">bool</span> allowPartial);</div>
-<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span> </div>
-<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>    <span class="keyword">static</span> QVariantList resolveDependencies(<span class="keyword">const</span> QVariantList&amp; dependencies, descriptor_list&amp; created);</div>
-<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span> </div>
-<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>    <span class="keyword">static</span> QVariant resolveDependency(<span class="keyword">const</span> QVariant&amp; arg, descriptor_list&amp; created);</div>
-<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span> </div>
-<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>    Status configure(DescriptorRegistration*, QVariantMap&amp; resolvedPlaceholders, QObject*, descriptor_list&amp; toBePublished, <span class="keywordtype">bool</span> allowPartial);</div>
-<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span> </div>
-<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>    <span class="keywordtype">bool</span> init(DescriptorRegistration*, ServiceInitializationPolicy);</div>
-<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span> </div>
-<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>    <span class="keywordtype">void</span> runPostProcessors(DescriptorRegistration*, <span class="keyword">const</span> QList&lt;QApplicationContextPostProcessor*&gt;&amp; postProcessors);</div>
-<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span> </div>
-<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>    DescriptorRegistration* findAutowiringCandidate(service_registration_handle_t, <span class="keyword">const</span> QMetaProperty&amp;);</div>
-<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span> </div>
-<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>    <span class="keywordtype">bool</span> registerBoundProperty(registration_handle_t target, <span class="keyword">const</span> <span class="keywordtype">char</span>* propName);</div>
-<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span> </div>
-<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>    <span class="keywordtype">bool</span> validateResolvers(<span class="keyword">const</span> service_descriptor&amp; descriptor, <span class="keyword">const</span> service_config&amp; config);</div>
-<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span> </div>
-<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>    detail::PlaceholderResolver* getResolver(<span class="keyword">const</span> QString&amp;);</div>
-<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span> </div>
-<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>    <span class="keywordtype">void</span> onSettingsAdded(QSettings*);</div>
-<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span> </div>
-<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>    QObject* obtainHandleFromApplicationThread(std::function&lt;QObject*()&gt;);</div>
-<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span> </div>
-<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>    <span class="keywordtype">void</span> insertByName(<span class="keyword">const</span> QString&amp; name, DescriptorRegistration* reg);</div>
-<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span> </div>
-<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>    <span class="keywordtype">bool</span> canChangeActiveProfiles();</div>
-<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span> </div>
-<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>    QSettings* settingsForProfile(QSettings* settings, <span class="keyword">const</span> QString&amp; profile);</div>
-<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span> </div>
-<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>    <span class="keywordtype">void</span> initSettingsForActiveProfiles();</div>
-<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span> </div>
-<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>    <span class="comment">// QObject interface</span></div>
-<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>    <span class="keywordtype">bool</span> event(QEvent *event) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>    <span class="keyword">static</span> QVariantList resolveDependencies(<span class="keyword">const</span> QVariantList&amp; dependencies, descriptor_list&amp; created);</div>
+<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span> </div>
+<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>    <span class="keyword">static</span> QVariant resolveDependency(<span class="keyword">const</span> QVariant&amp; arg, descriptor_list&amp; created);</div>
+<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span> </div>
+<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>    Status configure(DescriptorRegistration*, QVariantMap&amp; resolvedPlaceholders, QObject*, descriptor_list&amp; toBePublished, <span class="keywordtype">bool</span> allowPartial);</div>
+<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span> </div>
+<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>    <span class="keywordtype">bool</span> init(DescriptorRegistration*, ServiceInitializationPolicy);</div>
+<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span> </div>
+<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>    <span class="keywordtype">void</span> runPostProcessors(DescriptorRegistration*, <span class="keyword">const</span> QList&lt;QApplicationContextPostProcessor*&gt;&amp; postProcessors);</div>
+<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span> </div>
+<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>    DescriptorRegistration* findAutowiringCandidate(service_registration_handle_t, <span class="keyword">const</span> QMetaProperty&amp;);</div>
+<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span> </div>
+<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>    <span class="keywordtype">bool</span> registerBoundProperty(registration_handle_t target, <span class="keyword">const</span> <span class="keywordtype">char</span>* propName);</div>
+<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span> </div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>    <span class="keywordtype">bool</span> validateResolvers(<span class="keyword">const</span> service_descriptor&amp; descriptor, <span class="keyword">const</span> service_config&amp; config);</div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span> </div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>    detail::PlaceholderResolver* getResolver(<span class="keyword">const</span> QString&amp;);</div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span> </div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>    <span class="keywordtype">void</span> onSettingsAdded(QSettings*);</div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span> </div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>    QObject* obtainHandleFromApplicationThread(std::function&lt;QObject*()&gt;);</div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span> </div>
+<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>    <span class="keywordtype">void</span> insertByName(<span class="keyword">const</span> QString&amp; name, DescriptorRegistration* reg);</div>
+<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span> </div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>    <span class="keywordtype">bool</span> canChangeActiveProfiles();</div>
+<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span> </div>
+<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>    QSettings* settingsForProfile(QSettings* settings, <span class="keyword">const</span> QString&amp; profile);</div>
+<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span> </div>
+<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>    <span class="keywordtype">void</span> initSettingsForActiveProfiles();</div>
+<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span> </div>
+<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>    <span class="comment">// QObject interface</span></div>
+<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>    <span class="keywordtype">bool</span> event(QEvent *event) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span> </div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span> </div>
+<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span><span class="keyword">private</span>:</div>
 <div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span> </div>
-<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span> </div>
-<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span> </div>
-<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>    <span class="keyword">struct </span>ProfileAndName {</div>
-<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>        QString profile;</div>
-<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>        QString name;</div>
-<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span> </div>
-<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>        <span class="keyword">friend</span> <span class="keywordtype">bool</span> operator==(<span class="keyword">const</span> ProfileAndName&amp; left, <span class="keyword">const</span> ProfileAndName&amp; right) {</div>
-<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>            <span class="keywordflow">return</span> left.profile == right.profile &amp;&amp; left.name == right.name;</div>
-<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>        }</div>
-<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>    };</div>
-<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span> </div>
-<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>    <span class="keyword">struct </span>ProfileNameHash {</div>
-<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>        std::size_t operator()(<span class="keyword">const</span> ProfileAndName&amp; profileAndName)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>            <span class="keywordflow">return</span> qHash(profileAndName.profile) ^ qHash(profileAndName.name);</div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>        }</div>
-<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>    };</div>
-<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span> </div>
-<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>    descriptor_list registrations;</div>
-<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span> </div>
-<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>    std::unordered_map&lt;QString,std::unordered_set&lt;DescriptorRegistration*&gt;&gt; registrationsByName;</div>
-<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span> </div>
-<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>    <span class="keyword">mutable</span> std::unordered_map&lt;std::type_index,ProxyRegistrationImpl*&gt; proxyRegistrationCache;</div>
-<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>    <span class="keyword">mutable</span> QMutex mutex;</div>
-<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    <span class="keyword">mutable</span> QWaitCondition m_condition;</div>
-<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>    std::unordered_map&lt;registration_handle_t,std::unordered_set&lt;QString&gt;&gt; m_boundProperties;</div>
-<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>    std::atomic&lt;unsigned&gt; nextIndex;</div>
-<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>    <span class="keyword">const</span> QLoggingCategory&amp; m_loggingCategory;</div>
-<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>    QApplicationContext* <span class="keyword">const</span> m_injectedContext;</div>
-<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span> </div>
-<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>    detail::QSettingsWatcher* m_SettingsWatcher = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>    std::unordered_map&lt;QString,QPointer&lt;detail::PlaceholderResolver&gt;&gt; resolverCache;</div>
-<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>    <a class="code hl_typedef" href="qapplicationcontext_8h.html#ae6c23817c171c31a11e310fd61c2f857">Profiles</a>* m_activeProfiles;</div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>    std::unordered_map&lt;ProfileAndName,QSettings*,ProfileNameHash&gt; m_profileSettings;</div>
-<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>};</div>
+<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>    <span class="keyword">struct </span>ProfileAndName {</div>
+<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>        QString profile;</div>
+<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>        QString name;</div>
+<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span> </div>
+<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>        <span class="keyword">friend</span> <span class="keywordtype">bool</span> operator==(<span class="keyword">const</span> ProfileAndName&amp; left, <span class="keyword">const</span> ProfileAndName&amp; right) {</div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>            <span class="keywordflow">return</span> left.profile == right.profile &amp;&amp; left.name == right.name;</div>
+<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>        }</div>
+<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>    };</div>
+<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span> </div>
+<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>    <span class="keyword">struct </span>ProfileNameHash {</div>
+<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>        std::size_t operator()(<span class="keyword">const</span> ProfileAndName&amp; profileAndName)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>            <span class="keywordflow">return</span> qHash(profileAndName.profile) ^ qHash(profileAndName.name);</div>
+<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>        }</div>
+<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>    };</div>
+<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span> </div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>    descriptor_list registrations;</div>
+<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span> </div>
+<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>    std::unordered_map&lt;QString,std::unordered_set&lt;DescriptorRegistration*&gt;&gt; registrationsByName;</div>
+<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span> </div>
+<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>    <span class="keyword">mutable</span> std::unordered_map&lt;std::type_index,ProxyRegistrationImpl*&gt; proxyRegistrationCache;</div>
+<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>    <span class="keyword">mutable</span> QMutex mutex;</div>
+<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>    <span class="keyword">mutable</span> QWaitCondition m_condition;</div>
+<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>    std::unordered_map&lt;registration_handle_t,std::unordered_set&lt;QString&gt;&gt; m_boundProperties;</div>
+<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>    std::atomic&lt;unsigned&gt; nextIndex;</div>
+<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    <span class="keyword">const</span> QLoggingCategory&amp; m_loggingCategory;</div>
+<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>    QApplicationContext* <span class="keyword">const</span> m_injectedContext;</div>
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span> </div>
+<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>    detail::QSettingsWatcher* m_SettingsWatcher = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>    std::unordered_map&lt;QString,QPointer&lt;detail::PlaceholderResolver&gt;&gt; resolverCache;</div>
+<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>    <a class="code hl_typedef" href="qapplicationcontext_8h.html#ae6c23817c171c31a11e310fd61c2f857">Profiles</a>* m_activeProfiles;</div>
+<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>    std::unordered_map&lt;ProfileAndName,QSettings*,ProfileNameHash&gt; m_profileSettings;</div>
+<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>};</div>
 </div>
-<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span> </div>
-<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span><span class="keyword">namespace </span>detail {</div>
+<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span> </div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span><span class="keyword">namespace </span>detail {</div>
+<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span> </div>
+<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span><span class="keyword">class </span>BindingProxy : <span class="keyword">public</span> QObject {</div>
+<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>    Q_OBJECT</div>
 <div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span> </div>
-<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span><span class="keyword">class </span>BindingProxy : <span class="keyword">public</span> QObject {</div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>    Q_OBJECT</div>
+<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>    BindingProxy(QMetaProperty sourceProp, QObject* source, <span class="keyword">const</span> detail::property_descriptor&amp; setter, QObject* target);</div>
 <div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span> </div>
-<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>    BindingProxy(QMetaProperty sourceProp, QObject* source, <span class="keyword">const</span> detail::property_descriptor&amp; setter, QObject* target);</div>
+<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>    <span class="keyword">static</span> <span class="keyword">const</span> QMetaMethod&amp; notifySlot();</div>
+<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span> </div>
 <div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span> </div>
-<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>    <span class="keyword">static</span> <span class="keyword">const</span> QMetaMethod&amp; notifySlot();</div>
-<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span> </div>
-<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span> </div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span><span class="keyword">private</span> Q_SLOTS:</div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>    <span class="keywordtype">void</span> notify();</div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    QMetaProperty m_sourceProp;</div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>    QObject* m_source;</div>
-<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>    QObject* m_target;</div>
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>    detail::property_descriptor m_setter;</div>
-<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>};</div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>}</div>
-<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span> </div>
+<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span><span class="keyword">private</span> Q_SLOTS:</div>
+<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>    <span class="keywordtype">void</span> notify();</div>
+<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>    QMetaProperty m_sourceProp;</div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>    QObject* m_source;</div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>    QObject* m_target;</div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    detail::property_descriptor m_setter;</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>};</div>
+<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>}</div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span> </div>
+<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span> </div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span> </div>
+<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>}</div>
 <div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span> </div>
-<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span> </div>
-<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>}</div>
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span> </div>
-<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_condition_html"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_condition.html">mcnepp::qtdi::Condition</a></div><div class="ttdoc">Makes conditional activation of Services possible.  An instance of this type is passed to QApplicatio...</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:1047</div></div>
-<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></div><div class="ttdoc">A DI-Container for Qt-based applications.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3688</div></div>
+<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_condition_html"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_condition.html">mcnepp::qtdi::Condition</a></div><div class="ttdoc">Makes conditional activation of Services possible.  An instance of this type is passed to QApplicatio...</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:1111</div></div>
+<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html">mcnepp::qtdi::QApplicationContext</a></div><div class="ttdoc">A DI-Container for Qt-based applications.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3781</div></div>
 <div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_a03a175639fd8bb3134a721ff5cd5d92a"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a03a175639fd8bb3134a721ff5cd5d92a">mcnepp::qtdi::QApplicationContext::loggingCategory</a></div><div class="ttdeci">virtual const QLoggingCategory &amp; loggingCategory() const =0</div><div class="ttdoc">The QLoggingCategory that this ApplicationContext uses.</div></div>
-<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_a41a9694c1b68949bdd33dc2394591372"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a41a9694c1b68949bdd33dc2394591372">mcnepp::qtdi::QApplicationContext::dependency_info</a></div><div class="ttdeci">detail::dependency_info dependency_info</div><div class="ttdoc">describes a service-dependency.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3737</div></div>
-<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_a5ddf9204ec6f0071793adb3c770bc3ab"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5ddf9204ec6f0071793adb3c770bc3ab">mcnepp::qtdi::QApplicationContext::registerObject</a></div><div class="ttdeci">ServiceRegistration&lt; S, ServiceScope::EXTERNAL &gt; registerObject(S *obj, const QString &amp;objName={})</div><div class="ttdoc">Registers an object with this ApplicationContext. The object will immediately be published....</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3868</div></div>
-<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_abf3f2be652bda167f2b0f5b9b3ce5f26"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">mcnepp::qtdi::QApplicationContext::service_descriptor</a></div><div class="ttdeci">detail::service_descriptor service_descriptor</div><div class="ttdoc">everything needed to describe service.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3730</div></div>
-<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_ac6fcf7f68b82288b49ab48eea3c1e76e"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ac6fcf7f68b82288b49ab48eea3c1e76e">mcnepp::qtdi::QApplicationContext::registerPrototype</a></div><div class="ttdeci">auto registerPrototype(const QString &amp;objectName={}) -&gt; ServiceRegistration&lt; S, ServiceScope::PROTOTYPE &gt;</div><div class="ttdoc">Registers a service-prototype with no dependencies with this ApplicationContext. This is a convenienc...</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3828</div></div>
-<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_ad080ee93de3b838e0f34d74253ae8fe8"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad080ee93de3b838e0f34d74253ae8fe8">mcnepp::qtdi::QApplicationContext::registerService</a></div><div class="ttdeci">auto registerService(const Service&lt; S, Impl, scope &gt; &amp;serviceDeclaration, const QString &amp;objectName={}, const Condition &amp;condition=Condition::always()) -&gt; ServiceRegistration&lt; S, scope &gt;</div><div class="ttdoc">Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3756</div></div>
-<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_configuration_watcher_html"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html">mcnepp::qtdi::QConfigurationWatcher</a></div><div class="ttdoc">Watches a configuration-value.  Instances will be returned from QApplicationContext::watchConfigValue...</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3655</div></div>
+<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_a41a9694c1b68949bdd33dc2394591372"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a41a9694c1b68949bdd33dc2394591372">mcnepp::qtdi::QApplicationContext::dependency_info</a></div><div class="ttdeci">detail::dependency_info dependency_info</div><div class="ttdoc">describes a service-dependency.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3830</div></div>
+<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_a5ddf9204ec6f0071793adb3c770bc3ab"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#a5ddf9204ec6f0071793adb3c770bc3ab">mcnepp::qtdi::QApplicationContext::registerObject</a></div><div class="ttdeci">ServiceRegistration&lt; S, ServiceScope::EXTERNAL &gt; registerObject(S *obj, const QString &amp;objName={})</div><div class="ttdoc">Registers an object with this ApplicationContext. The object will immediately be published....</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3961</div></div>
+<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_abf3f2be652bda167f2b0f5b9b3ce5f26"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#abf3f2be652bda167f2b0f5b9b3ce5f26">mcnepp::qtdi::QApplicationContext::service_descriptor</a></div><div class="ttdeci">detail::service_descriptor service_descriptor</div><div class="ttdoc">everything needed to describe service.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3823</div></div>
+<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_ac6fcf7f68b82288b49ab48eea3c1e76e"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ac6fcf7f68b82288b49ab48eea3c1e76e">mcnepp::qtdi::QApplicationContext::registerPrototype</a></div><div class="ttdeci">auto registerPrototype(const QString &amp;objectName={}) -&gt; ServiceRegistration&lt; S, ServiceScope::PROTOTYPE &gt;</div><div class="ttdoc">Registers a service-prototype with no dependencies with this ApplicationContext. This is a convenienc...</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3921</div></div>
+<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_application_context_html_ad080ee93de3b838e0f34d74253ae8fe8"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_application_context.html#ad080ee93de3b838e0f34d74253ae8fe8">mcnepp::qtdi::QApplicationContext::registerService</a></div><div class="ttdeci">auto registerService(const Service&lt; S, Impl, scope &gt; &amp;serviceDeclaration, const QString &amp;objectName={}, const Condition &amp;condition=Condition::always()) -&gt; ServiceRegistration&lt; S, scope &gt;</div><div class="ttdoc">Registers a service with this ApplicationContext.  Thread-safety: This function may only be called fr...</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3849</div></div>
+<div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_q_configuration_watcher_html"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html">mcnepp::qtdi::QConfigurationWatcher</a></div><div class="ttdoc">Watches a configuration-value.  Instances will be returned from QApplicationContext::watchConfigValue...</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:3748</div></div>
 <div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_standard_application_context_html"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_standard_application_context.html">mcnepp::qtdi::StandardApplicationContext</a></div><div class="ttdoc">A ready-to use implementation of the QApplicationContext. Using this class is the &quot;canonical way&quot; of ...</div><div class="ttdef"><b>Definition</b> standardapplicationcontext.h:34</div></div>
 <div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_standard_application_context_html_a0056367b4295150bdf70843a371f2ec4"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a0056367b4295150bdf70843a371f2ec4">mcnepp::qtdi::StandardApplicationContext::published</a></div><div class="ttdeci">virtual unsigned published() const final override</div><div class="ttdoc">The number of published services.  Thread-safety: This function may be safely called from any thread.</div></div>
 <div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_standard_application_context_html_a091bb1b3dffb066be3d14e8c94443b87"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#a091bb1b3dffb066be3d14e8c94443b87">mcnepp::qtdi::StandardApplicationContext::activeProfiles</a></div><div class="ttdeci">virtual Profiles activeProfiles() const override</div><div class="ttdoc">What profiles are active?  Obtains the profiles that have been activated for this ApplicationContext....</div></div>
@@ -828,17 +825,17 @@ $(function(){ initResizable(false); });
 <div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_standard_application_context_html_ad58c83a97736500900b331ec30b92690"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ad58c83a97736500900b331ec30b92690">mcnepp::qtdi::StandardApplicationContext::publish</a></div><div class="ttdeci">virtual bool publish(bool allowPartial=false) final override</div><div class="ttdoc">Publishes this ApplicationContext. This method may be invoked multiple times. Each time it is invoked...</div></div>
 <div class="ttc" id="aclassmcnepp_1_1qtdi_1_1_standard_application_context_html_ae4b6887de6d62b6fe942efad8df1dce3"><div class="ttname"><a href="classmcnepp_1_1qtdi_1_1_standard_application_context.html#ae4b6887de6d62b6fe942efad8df1dce3">mcnepp::qtdi::StandardApplicationContext::autoRefreshEnabled</a></div><div class="ttdeci">bool autoRefreshEnabled() const override</div><div class="ttdoc">Has auto-refresh been enabled?  If enabled, it is possible to use mcnepp::qtdi::autoRefresh(const QSt...</div></div>
 <div class="ttc" id="aqapplicationcontext_8h_html"><div class="ttname"><a href="qapplicationcontext_8h.html">qapplicationcontext.h</a></div><div class="ttdoc">Contains the class QApplicationContext and other related types and functions.</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_a19ce4ad196137c5749cc881631050853"><div class="ttname"><a href="qapplicationcontext_8h.html#a19ce4ad196137c5749cc881631050853">mcnepp::qtdi::registeredServices</a></div><div class="ttdeci">QList&lt; service_registration_handle_t &gt; registeredServices(proxy_registration_handle_t handle)</div><div class="ttdoc">Obtains the registered Services from a handle to a ProxyRegistration.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:1441</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_a1f56afa215e218121866a25e41dcca2f"><div class="ttname"><a href="qapplicationcontext_8h.html#a1f56afa215e218121866a25e41dcca2f">mcnepp::qtdi::registration_handle_t</a></div><div class="ttdeci">detail::Registration * registration_handle_t</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:41</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_a39dc357c96a514de650b3113f5142cfc"><div class="ttname"><a href="qapplicationcontext_8h.html#a39dc357c96a514de650b3113f5142cfc">mcnepp::qtdi::subscription_handle_t</a></div><div class="ttdeci">detail::Subscription * subscription_handle_t</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:70</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_a4d48e0805aa7f293c0b050534a8c6e9e"><div class="ttname"><a href="qapplicationcontext_8h.html#a4d48e0805aa7f293c0b050534a8c6e9e">mcnepp::qtdi::serviceMetaObject</a></div><div class="ttdeci">const QMetaObject * serviceMetaObject(registration_handle_t handle)</div><div class="ttdoc">Obtains the QMetaObject from a handle to a Registration.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:1422</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_a5429ea6117bd8ce9da93bb56b0affded"><div class="ttname"><a href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">mcnepp::qtdi::ServiceScope</a></div><div class="ttdeci">ServiceScope</div><div class="ttdoc">Specifies the scope of a ServiceRegistration.  Serves as a non-type template-argument for ServiceRegi...</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:91</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_ab271ebdb94c20e9ff86195e615d50798"><div class="ttname"><a href="qapplicationcontext_8h.html#ab271ebdb94c20e9ff86195e615d50798">mcnepp::qtdi::applicationContext</a></div><div class="ttdeci">QApplicationContext * applicationContext(registration_handle_t handle)</div><div class="ttdoc">Obtains the QApplicationContext from a handle to a Registration.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:1386</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_ac0f1782be3128a539e69f84272844e02"><div class="ttname"><a href="qapplicationcontext_8h.html#ac0f1782be3128a539e69f84272844e02">mcnepp::qtdi::service_registration_handle_t</a></div><div class="ttdeci">detail::ServiceRegistration * service_registration_handle_t</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:52</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_a19ce4ad196137c5749cc881631050853"><div class="ttname"><a href="qapplicationcontext_8h.html#a19ce4ad196137c5749cc881631050853">mcnepp::qtdi::registeredServices</a></div><div class="ttdeci">QList&lt; service_registration_handle_t &gt; registeredServices(proxy_registration_handle_t handle)</div><div class="ttdoc">Obtains the registered Services from a handle to a ProxyRegistration.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:1505</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_a1f56afa215e218121866a25e41dcca2f"><div class="ttname"><a href="qapplicationcontext_8h.html#a1f56afa215e218121866a25e41dcca2f">mcnepp::qtdi::registration_handle_t</a></div><div class="ttdeci">detail::Registration * registration_handle_t</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:42</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_a39dc357c96a514de650b3113f5142cfc"><div class="ttname"><a href="qapplicationcontext_8h.html#a39dc357c96a514de650b3113f5142cfc">mcnepp::qtdi::subscription_handle_t</a></div><div class="ttdeci">detail::Subscription * subscription_handle_t</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:71</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_a4d48e0805aa7f293c0b050534a8c6e9e"><div class="ttname"><a href="qapplicationcontext_8h.html#a4d48e0805aa7f293c0b050534a8c6e9e">mcnepp::qtdi::serviceMetaObject</a></div><div class="ttdeci">const QMetaObject * serviceMetaObject(registration_handle_t handle)</div><div class="ttdoc">Obtains the QMetaObject from a handle to a Registration.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:1486</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_a5429ea6117bd8ce9da93bb56b0affded"><div class="ttname"><a href="qapplicationcontext_8h.html#a5429ea6117bd8ce9da93bb56b0affded">mcnepp::qtdi::ServiceScope</a></div><div class="ttdeci">ServiceScope</div><div class="ttdoc">Specifies the scope of a ServiceRegistration.  Serves as a non-type template-argument for ServiceRegi...</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:92</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_ab271ebdb94c20e9ff86195e615d50798"><div class="ttname"><a href="qapplicationcontext_8h.html#ab271ebdb94c20e9ff86195e615d50798">mcnepp::qtdi::applicationContext</a></div><div class="ttdeci">QApplicationContext * applicationContext(registration_handle_t handle)</div><div class="ttdoc">Obtains the QApplicationContext from a handle to a Registration.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:1450</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_ac0f1782be3128a539e69f84272844e02"><div class="ttname"><a href="qapplicationcontext_8h.html#ac0f1782be3128a539e69f84272844e02">mcnepp::qtdi::service_registration_handle_t</a></div><div class="ttdeci">detail::ServiceRegistration * service_registration_handle_t</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:53</div></div>
 <div class="ttc" id="aqapplicationcontext_8h_html_ad8f2bbaf5d705c9287fa8139b9037f15"><div class="ttname"><a href="qapplicationcontext_8h.html#ad8f2bbaf5d705c9287fa8139b9037f15">mcnepp::qtdi::loggingCategory</a></div><div class="ttdeci">const QLoggingCategory &amp; loggingCategory(registration_handle_t handle)</div><div class="ttdoc">Obtains the QLoggingCategory from a handle to a Registration.</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_ad99aa9332aee20a47057f62ed4e8f285"><div class="ttname"><a href="qapplicationcontext_8h.html#ad99aa9332aee20a47057f62ed4e8f285">mcnepp::qtdi::matches</a></div><div class="ttdeci">bool matches(registration_handle_t handle)</div><div class="ttdoc">Determines whether a handle to a Registration matches a type.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:1375</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_ae6c23817c171c31a11e310fd61c2f857"><div class="ttname"><a href="qapplicationcontext_8h.html#ae6c23817c171c31a11e310fd61c2f857">mcnepp::qtdi::Profiles</a></div><div class="ttdeci">QSet&lt; QString &gt; Profiles</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:127</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_aec447170b9d5815c59b29ae88ef8bd09"><div class="ttname"><a href="qapplicationcontext_8h.html#aec447170b9d5815c59b29ae88ef8bd09">mcnepp::qtdi::proxy_registration_handle_t</a></div><div class="ttdeci">detail::ProxyRegistration * proxy_registration_handle_t</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:62</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_ad99aa9332aee20a47057f62ed4e8f285"><div class="ttname"><a href="qapplicationcontext_8h.html#ad99aa9332aee20a47057f62ed4e8f285">mcnepp::qtdi::matches</a></div><div class="ttdeci">bool matches(registration_handle_t handle)</div><div class="ttdoc">Determines whether a handle to a Registration matches a type.</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:1439</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_ae6c23817c171c31a11e310fd61c2f857"><div class="ttname"><a href="qapplicationcontext_8h.html#ae6c23817c171c31a11e310fd61c2f857">mcnepp::qtdi::Profiles</a></div><div class="ttdeci">QSet&lt; QString &gt; Profiles</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:128</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_aec447170b9d5815c59b29ae88ef8bd09"><div class="ttname"><a href="qapplicationcontext_8h.html#aec447170b9d5815c59b29ae88ef8bd09">mcnepp::qtdi::proxy_registration_handle_t</a></div><div class="ttdeci">detail::ProxyRegistration * proxy_registration_handle_t</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:63</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

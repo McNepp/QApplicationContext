@@ -3,7 +3,7 @@ var searchData=
   ['parent_0',['Injecting a parent',['../index.html#autotoc_md7',1,'']]],
   ['pendingpublication_1',['pendingPublication',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a5514133528db14cb3308410984b2b2c1',1,'mcnepp::qtdi::QApplicationContext::pendingPublication'],['../classmcnepp_1_1qtdi_1_1_q_application_context.html#aaa68903ec532fbeaa3975c4af668fe35',1,'mcnepp::qtdi::QApplicationContext::pendingPublication() const =0'],['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#ac06c9af8c588a8aacf48fdd141b37476',1,'mcnepp::qtdi::StandardApplicationContext::pendingPublication()']]],
   ['pendingpublicationchanged_2',['pendingPublicationChanged',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a6a963715f0a4e7c0a3eea27acab23e13',1,'mcnepp::qtdi::QApplicationContext']]],
-  ['per_20registration_3',['Specifying initializers per Registration',['../index.html#autotoc_md43',1,'']]],
+  ['per_20registration_3',['Specifying initializers per Registration',['../index.html#autotoc_md44',1,'']]],
   ['placeholders_4',['Placeholders',['../qapplicationcontext_8h.html#autotoc_md1',1,'']]],
   ['placeholdervalue_5',['placeholderValue',['../qapplicationcontext_8h.html#a95e9c49e39e4fcbe28ceca48da71dcd1',1,'mcnepp::qtdi']]],
   ['process_6',['process',['../classmcnepp_1_1qtdi_1_1_q_application_context_post_processor.html#a418008a76c919bb8d42b51c7f483ad50',1,'mcnepp::qtdi::QApplicationContextPostProcessor']]],
@@ -19,14 +19,14 @@ var searchData=
   ['propvalue_16',['propValue',['../qapplicationcontext_8h.html#a25304d4b38f9cc433bc0234172a5cf8a',1,'mcnepp::qtdi::propValue(R(S::*propertySetter)(A), C value) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; C, A &gt;, service_config_entry&lt; S &gt; &gt;'],['../qapplicationcontext_8h.html#a9fc86adce6d4387101f682a739b0d4c2',1,'mcnepp::qtdi::propValue(R(S::*propertySetter)(A *), const ServiceRegistration&lt; A, scope &gt; &amp;reg) -&gt; std::enable_if_t&lt; detail::is_allowed_as_dependency(scope), service_config_entry&lt; S &gt; &gt;'],['../qapplicationcontext_8h.html#a509df471e547cb302621d2643fc6aa98',1,'mcnepp::qtdi::propValue(R(S::*propertySetter)(L), const ProxyRegistration&lt; A &gt; &amp;reg) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; L, QList&lt; A * &gt; &gt;, service_config_entry&lt; S &gt; &gt;'],['../qapplicationcontext_8h.html#a3132230c22164258d920ca3b64c5aa0d',1,'mcnepp::qtdi::propValue(R(S::*propertySetter)(L), const ServiceRegistration&lt; A, ServiceScope::SERVICE_GROUP &gt; &amp;reg) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; L, QList&lt; A * &gt; &gt;, service_config_entry&lt; S &gt; &gt;'],['../qapplicationcontext_8h.html#a7c28f9811838c5ecf5ad5ac51e9bf956',1,'mcnepp::qtdi::propValue(const QString &amp;name, const QVariant &amp;value)']]],
   ['prototype_17',['prototype',['../qapplicationcontext_8h.html#a2438ec3e3e81944f1c8c8eeee580998d',1,'mcnepp::qtdi']]],
   ['prototypes_18',['Service-prototypes',['../index.html#autotoc_md17',1,'']]],
-  ['provide_20a_20custom_20factory_20for_20the_20service_5ftraits_19',['Provide a custom factory for the service_traits',['../index.html#autotoc_md48',1,'']]],
+  ['provide_20a_20custom_20factory_20for_20the_20service_5ftraits_19',['Provide a custom factory for the service_traits',['../index.html#autotoc_md49',1,'']]],
   ['proxy_5fregistration_5fhandle_5ft_20',['proxy_registration_handle_t',['../qapplicationcontext_8h.html#aec447170b9d5815c59b29ae88ef8bd09',1,'mcnepp::qtdi']]],
   ['proxyregistration_21',['ProxyRegistration',['../classmcnepp_1_1qtdi_1_1_proxy_registration.html',1,'mcnepp::qtdi']]],
   ['publication_22',['Detection of ambiguity at publication',['../index.html#autotoc_md33',1,'']]],
   ['publish_23',['publish',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#ad87cbddf0501c5ea8cb1ebe11176e689',1,'mcnepp::qtdi::QApplicationContext::publish()'],['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#ad58c83a97736500900b331ec30b92690',1,'mcnepp::qtdi::StandardApplicationContext::publish()']]],
-  ['publish_20mode_20allowpartial_24',['Publish-mode (&apos;allowPartial&apos;)',['../index.html#autotoc_md51',1,'']]],
+  ['publish_20mode_20allowpartial_24',['Publish-mode (&apos;allowPartial&apos;)',['../index.html#autotoc_md52',1,'']]],
   ['published_25',['published',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#ab9bee920351076344b92a8143b05da81',1,'mcnepp::qtdi::QApplicationContext::published'],['../classmcnepp_1_1qtdi_1_1_q_application_context.html#aaf18b3bff9aa48a1279cc9b0fad7d8a9',1,'mcnepp::qtdi::QApplicationContext::published() const =0'],['../classmcnepp_1_1qtdi_1_1_standard_application_context.html#a0056367b4295150bdf70843a371f2ec4',1,'mcnepp::qtdi::StandardApplicationContext::published()']]],
-  ['published_20services_20of_20the_20applicationcontext_26',['Accessing published services of the ApplicationContext',['../index.html#autotoc_md40',1,'']]],
+  ['published_20services_20of_20the_20applicationcontext_26',['Accessing published services of the ApplicationContext',['../index.html#autotoc_md41',1,'']]],
   ['publishedchanged_27',['publishedChanged',['../classmcnepp_1_1qtdi_1_1_q_application_context.html#a75153d41f99f713cdf05079870f8b3e8',1,'mcnepp::qtdi::QApplicationContext']]],
-  ['publishing_20an_20applicationcontext_20more_20than_20once_28',['Publishing an ApplicationContext more than once',['../index.html#autotoc_md50',1,'']]]
+  ['publishing_20an_20applicationcontext_20more_20than_20once_28',['Publishing an ApplicationContext more than once',['../index.html#autotoc_md51',1,'']]]
 ];

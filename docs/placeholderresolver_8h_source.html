@@ -102,11 +102,11 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="keyword">public</span>:</div>
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    QVariant <a class="code hl_function" href="qapplicationcontext_8h.html#a59d0392bb960299590af56049c779ba8">resolve</a>(<span class="keyword">const</span> QString&amp; group, QVariantMap&amp; resolvedPlaceholders) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    QVariant <a class="code hl_function" href="qapplicationcontext_8h.html#a9942449302d9366f62a825f59f6bdf80">resolve</a>(<span class="keyword">const</span> QString&amp; group, QVariantMap&amp; resolvedPlaceholders) <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    QVariant <a class="code hl_function" href="qapplicationcontext_8h.html#a59d0392bb960299590af56049c779ba8">resolve</a>(<span class="keyword">const</span> QString&amp; group = {}) <span class="keyword">const</span> {</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    QVariant <a class="code hl_function" href="qapplicationcontext_8h.html#a9942449302d9366f62a825f59f6bdf80">resolve</a>(<span class="keyword">const</span> QString&amp; group = {}) <span class="keyword">const</span> {</div>
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>        QVariantMap resolvedPlaceholders;</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>        <span class="keywordflow">return</span> <a class="code hl_function" href="qapplicationcontext_8h.html#a59d0392bb960299590af56049c779ba8">resolve</a>(group, resolvedPlaceholders);</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>        <span class="keywordflow">return</span> <a class="code hl_function" href="qapplicationcontext_8h.html#a9942449302d9366f62a825f59f6bdf80">resolve</a>(group, resolvedPlaceholders);</div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    }</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    <span class="keywordtype">bool</span> hasPlaceholders() <span class="keyword">const</span>;</div>
@@ -128,7 +128,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="keyword">struct </span>resolvable_step {</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>        <span class="keyword">virtual</span> ~resolvable_step() = <span class="keywordflow">default</span>;</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        <span class="keyword">virtual</span> QVariant <a class="code hl_function" href="qapplicationcontext_8h.html#a59d0392bb960299590af56049c779ba8">resolve</a>(QApplicationContext* appContext, <span class="keyword">const</span> QString&amp; group, QVariantMap&amp; resolvedPlaceholders) = 0;</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        <span class="keyword">virtual</span> QVariant <a class="code hl_function" href="qapplicationcontext_8h.html#a9942449302d9366f62a825f59f6bdf80">resolve</a>(QApplicationContext* appContext, <span class="keyword">const</span> QString&amp; group, QVariantMap&amp; resolvedPlaceholders) = 0;</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        <span class="keyword">virtual</span> QString placeholder() <span class="keyword">const</span> = 0;</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    };</div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span> </div>
@@ -150,7 +150,7 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span> </div>
 <div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>}</div>
 <div class="ttc" id="aqapplicationcontext_8h_html"><div class="ttname"><a href="qapplicationcontext_8h.html">qapplicationcontext.h</a></div><div class="ttdoc">Contains the class QApplicationContext and other related types and functions.</div></div>
-<div class="ttc" id="aqapplicationcontext_8h_html_a59d0392bb960299590af56049c779ba8"><div class="ttname"><a href="qapplicationcontext_8h.html#a59d0392bb960299590af56049c779ba8">mcnepp::qtdi::resolve</a></div><div class="ttdeci">Resolvable&lt; S &gt; resolve(const QString &amp;expression)</div><div class="ttdoc">Specifies a constructor-argument that shall be resolved by the QApplicationContext....</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:2498</div></div>
+<div class="ttc" id="aqapplicationcontext_8h_html_a9942449302d9366f62a825f59f6bdf80"><div class="ttname"><a href="qapplicationcontext_8h.html#a9942449302d9366f62a825f59f6bdf80">mcnepp::qtdi::resolve</a></div><div class="ttdeci">auto resolve(const QString &amp;expression) -&gt; std::enable_if_t&lt; detail::variant_converter_traits&lt; S &gt;::is_convertible, Resolvable&lt; S &gt; &gt;</div><div class="ttdoc">Specifies a constructor-argument that shall be resolved by the QApplicationContext....</div><div class="ttdef"><b>Definition</b> qapplicationcontext.h:2585</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

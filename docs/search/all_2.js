@@ -1,7 +1,7 @@
 var searchData=
 [
   ['cancel_0',['cancel',['../classmcnepp_1_1qtdi_1_1_subscription.html#a9f1f91cf61304e348c798b219fba7507',1,'mcnepp::qtdi::Subscription']]],
-  ['changing_20the_20order_20of_20initialization_1',['Changing the order of initialization',['../index.html#autotoc_md44',1,'']]],
+  ['changing_20the_20order_20of_20initialization_1',['Changing the order of initialization',['../index.html#autotoc_md45',1,'']]],
   ['combine_2',['combine',['../qapplicationcontext_8h.html#acb4ad42eaff551d32fe42b828b3a256c',1,'mcnepp::qtdi']]],
   ['computed_20dependencies_3',['Injecting computed dependencies',['../index.html#autotoc_md8',1,'']]],
   ['condition_4',['Condition',['../classmcnepp_1_1qtdi_1_1_condition.html',1,'mcnepp::qtdi']]],
@@ -20,7 +20,7 @@ var searchData=
   ['constructor_20arguments_17',['Using Constructor-arguments',['../index.html#constructor-arguments',1,'']]],
   ['currentvalue_18',['currentValue',['../classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html#a8e9f8a8dfc786ce6e6a53db6ddf5a3b8',1,'mcnepp::qtdi::QConfigurationWatcher']]],
   ['currentvaluechanged_19',['currentValueChanged',['../classmcnepp_1_1qtdi_1_1_q_configuration_watcher.html#a92636868a90b4832c690d650af55e019',1,'mcnepp::qtdi::QConfigurationWatcher']]],
-  ['custom_20factory_20for_20the_20service_5ftraits_20',['Provide a custom factory for the service_traits',['../index.html#autotoc_md48',1,'']]],
-  ['custom_20factory_20selectively_21',['Use a custom factory selectively',['../index.html#autotoc_md49',1,'']]],
-  ['customizing_20service_20instantiation_22',['Customizing service-instantiation',['../index.html#autotoc_md46',1,'']]]
+  ['custom_20factory_20for_20the_20service_5ftraits_20',['Provide a custom factory for the service_traits',['../index.html#autotoc_md49',1,'']]],
+  ['custom_20factory_20selectively_21',['Use a custom factory selectively',['../index.html#autotoc_md50',1,'']]],
+  ['customizing_20service_20instantiation_22',['Customizing service-instantiation',['../index.html#autotoc_md47',1,'']]]
 ];
