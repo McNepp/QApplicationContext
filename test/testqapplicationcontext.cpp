@@ -1303,7 +1303,7 @@ void testWatchConfigurationFileChangeWithError() {
         auto regBase2 = context->registerService(service<BaseService2>());
         auto regObjectService = context->registerService(service<QObjectService>(injectAll<QObject>()));
 
-        bind(regBase2, &BaseService2::referenceChanged, regObjectService, &QObjectService::setDependency);
+        bind(regBase2, "reference", regObjectService, &QObjectService::setDependency);
 
         QVERIFY(context->publish());
         RegistrationSlot<BaseService2> baseSlot2{regBase2, this};
@@ -1315,22 +1315,7 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(objectServiceSlot->dependency(), &base2);
     }
 
-    void testBindParameterlessSignalToFunction() {
-        QObject* lastDep = nullptr;
 
-        auto regBase2 = context->registerService(service<BaseService2>());
-        auto regObjectService = context->registerService(service<QObjectService>(injectAll<QObject>()));
-
-        mcnepp::qtdi::bind(regBase2, &BaseService2::referenceChanged, regObjectService, std::function{[&lastDep](QObjectService*, QObject* dep) { lastDep = dep;}});
-
-        QVERIFY(context->publish());
-        RegistrationSlot<BaseService2> baseSlot2{regBase2, this};
-        QVERIFY(!baseSlot2->reference());
-        QVERIFY(!lastDep);
-        BaseService2 base2;
-        baseSlot2->setReference(&base2);
-        QCOMPARE(lastDep, &base2);
-    }
 
 
     void testBindSignalWithParameterToObjectSetter() {
@@ -1363,16 +1348,31 @@ void testWatchConfigurationFileChangeWithError() {
         QCOMPARE(lastFoo, "Mickey Mouse");
     }
 
+    void testBindBindableWithParameterToObjectSetter() {
+
+        auto regBase1 = context->registerService(service<BaseService>(), "base");
+        auto regBase2 = context->registerService(service<BaseService2>() << propValue("foo", "Donald Duck"), "base2");
+        bind(regBase2, &BaseService2::fooBindable, regBase1, &BaseService::setFoo);
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> baseSlot1{regBase1, this};
+        RegistrationSlot<BaseService2> baseSlot2{regBase2, this};
+        QCOMPARE(baseSlot1->foo(), "Donald Duck");
+        baseSlot2->setFoo("Mickey Mouse");
+        QCOMPARE(baseSlot1->foo(), "Mickey Mouse");
+
+    }
+
     void testCannotBindToSignalWithoutProperty() {
 
         auto regBase1 = context->registerService<BaseService>("base1");
-        QVERIFY(!bind(regBase1, &BaseService::signalWithoutProperty, regBase1, &BaseService::setTimer));
+        QVERIFY(!bind(regBase1, &BaseService::signalWithoutProperty, regBase1, &BaseService::setFoo));
     }
 
     void testCannotBindToNonSignalFunction() {
 
         auto regBase1 = context->registerService<BaseService>("base1");
-        QVERIFY(!bind(regBase1, &BaseService::init, regBase1, &BaseService::setTimer));
+        QVERIFY(!bind(regBase1, &BaseService::setFoo, regBase1, &BaseService::setFoo));
     }
 
     void testServiceTemplate() {

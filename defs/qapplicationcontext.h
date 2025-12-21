@@ -13,6 +13,7 @@
 #include <QMetaMethod>
 #include <QLoggingCategory>
 #include <QRegularExpression>
+#include <QBindable>
 
 namespace mcnepp::qtdi {
 
@@ -300,6 +301,82 @@ using q_variant_converter_t = std::function<QVariant(const QString&)>;
 
 struct service_descriptor;
 
+QMetaProperty getPropertyBySignal(const QMetaMethod& signalMethod);
+
+QMetaProperty getPropertyByName(const QMetaObject*, const char*);
+
+///
+/// \brief A type-erased class that helps to retrieve values from an QBindable in a generic way.
+/// \note I would have loved to simply use QUntypedBindable. However, that offers no functionaliy to retrieve
+/// the binding's value!
+///
+class q_bindable_helper {
+public:
+
+    template<typename F> std::enable_if_t<std::is_invocable_v<F>,QPropertyNotifier> addNotifier(F func) {
+        if(m_impl) {
+            return m_impl->get_bindable().addNotifier(func);
+        }
+        return {};
+    }
+
+    QVariant operator()() const {
+        return m_impl->get_value();
+    }
+
+    template<typename T> explicit q_bindable_helper(const QBindable<T>& bindable) :
+        m_impl{new TypedImpl<T>{bindable}} {
+
+    }
+
+    explicit operator bool() const {
+        return m_impl != nullptr;
+    }
+
+    q_bindable_helper(std::nullptr_t = nullptr) {
+
+    }
+
+private:
+    struct Impl : public QSharedData {
+        virtual QUntypedBindable& get_bindable() = 0;
+        virtual QVariant get_value() const = 0;
+        virtual ~Impl() = default;
+    };
+
+    template<typename T> struct TypedImpl : Impl {
+        TypedImpl(const QBindable<T>& bindable) : m_bindable{bindable} {
+
+        }
+
+        virtual QUntypedBindable& get_bindable() override {
+            return m_bindable;
+        }
+
+        virtual QVariant get_value() const override {
+            return QVariant::fromValue(m_bindable.value());
+        }
+
+        QBindable<T> m_bindable;
+    };
+
+    QExplicitlySharedDataPointer<Impl> m_impl;
+};
+
+using q_bindable_getter_t = std::function<q_bindable_helper(QObject*)>;
+
+template<typename S,typename A> q_bindable_getter_t adaptBindableGetter(QBindable<A>(S::*func)()) {
+    if(!func) {
+        return nullptr;
+    }
+    return [func](QObject* obj) -> q_bindable_helper {
+        if(S* srv = dynamic_cast<S*>(obj)) {
+            return q_bindable_helper{std::invoke(func, srv)};
+        }
+        return nullptr;
+    };
+}
+
 
 
 template<typename T,typename=QVariant> struct has_qvariant_support : std::false_type {
@@ -311,42 +388,62 @@ template<typename T> struct has_qvariant_support<T,decltype(QVariant{std::declva
 };
 
 
-inline void convertVariant(QVariant& var, q_variant_converter_t converter) {
-    if(converter) {
-        var = converter(var.toString());
-    }
-}
 
+template<typename T,typename C,bool=std::is_invocable_v<C,QString>> struct is_string_converter;
 
+template<typename T,typename C> struct is_string_converter<T,C,false> : std::false_type {
+};
 
-template<typename T> struct default_string_converter {
-    T operator()(const QString& str) const {
-        return T{str};
-    }
+template<typename T,typename C> struct is_string_converter<T,C,true> : std::bool_constant<std::is_convertible_v<std::invoke_result_t<C,QString>,T>> {
 };
 
 
+template<typename T,typename C> constexpr bool is_string_converter_v = is_string_converter<T,C>::value;
 
-template<typename T,bool=std::disjunction_v<has_qvariant_support<T>,std::is_convertible<T,QObject*>>> struct variant_converter_traits;
+template<typename C> static std::enable_if_t<std::is_invocable_v<C,QString>,q_variant_converter_t> adaptVariantConverter(C converter) {
+    return [converter](const QString& str) { return QVariant::fromValue(converter(str));};
+}
+
+
+#ifdef __cpp_aggregate_paren_init
+
+template<typename T> using is_string_constructible=std::is_constructible<T,QString>;
+
+#else
+
+template<typename T,typename=T> struct is_string_constructible : std::false_type {
+
+};
+
+template<typename T> struct is_string_constructible<T,decltype(T{std::declval<QString>()})> : std::true_type {
+
+};
+
+
+#endif
+
+template<typename T,bool=has_qvariant_support<T>::value> struct variant_converter_traits;
 
 
 template<typename T> struct variant_converter_traits<T,true> {
-    using type = std::nullptr_t;
 
-    static constexpr std::nullptr_t makeConverter(std::nullptr_t = nullptr) {
+    static constexpr bool is_convertible = true;
+
+    static constexpr std::nullptr_t defaultConverter() {
         return nullptr;
     }
 
 
 };
 
+
 template<typename T> struct variant_converter_traits<T,false> {
-    using type = default_string_converter<T>;
+    using arg_t = remove_cvref_t<T>;
 
+    static constexpr bool is_convertible = is_string_constructible<arg_t>::value;
 
-    template<typename C=type> static q_variant_converter_t makeConverter(C converter = C{}) {
-        static_assert(std::is_convertible_v<std::invoke_result_t<C,QString>,T>, "return-type of converter does not match");
-        return [converter](const QString& str) { return QVariant::fromValue(converter(str));};
+    static q_variant_converter_t defaultConverter() {
+        return [](const QString& str) { return QVariant::fromValue(arg_t{str});};
     }
 
 };
@@ -364,8 +461,8 @@ struct property_descriptor {
 /// In the latter case, the name will be empty.
 ///
 struct source_property_descriptor {
-    QByteArray name;
-    QMetaMethod signalMethod;
+    QMetaProperty sourceProperty;
+    q_bindable_getter_t bindable;
 };
 
 inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
@@ -376,13 +473,13 @@ inline QDebug operator << (QDebug out, const property_descriptor& descriptor) {
 }
 
 inline QDebug operator << (QDebug out, const source_property_descriptor& descriptor) {
-    if(!descriptor.name.isEmpty()) {
-        return out.noquote().nospace() << "property '" << descriptor.name << "'";
+    if(descriptor.sourceProperty.isValid()) {
+        return out.noquote().nospace() << "property '" << descriptor.sourceProperty.name() << "'";
     }
-    if(descriptor.signalMethod.isValid()) {
-        return out.noquote().nospace() << "property '" << descriptor.signalMethod.name() << "'";
+    if(descriptor.bindable) {
+        return out << "Unknown property";
     }
-    return out;
+    return out << "Invalid property";
 }
 
 
@@ -411,40 +508,7 @@ template<typename S,typename A,typename F> std::enable_if_t<std::is_invocable_v<
     };
 }
 
-template<typename S> using simple_signal_t = void(S::*)();
 
-template<typename SRC,typename SIGN,typename TGT,typename SLOT> struct property_change_signal_traits {
-    static constexpr bool is_compatible = false;
-};
-
-
-template<typename SRC,typename TGT,typename R,typename TgtArg> struct property_change_signal_traits<SRC,simple_signal_t<SRC>,TGT,R(TGT::*)(TgtArg)> {
-    using arg_type = TgtArg;
-    //A parameterless signal is considered compatible with any setter, even though we cannot verify whether the source-property's type matches the target-property's
-    static constexpr bool is_compatible = true;
-};
-
-template<typename SRC,typename TGT,typename R,typename TgtArg> struct property_change_signal_traits<SRC,simple_signal_t<SRC>,TGT,R(*)(TGT*,TgtArg)> {
-    using arg_type = TgtArg;
-    //A parameterless signal is considered compatible with any two-arg function, even though we cannot verify whether the source-property's type matches the target-property's
-    static constexpr bool is_compatible = true;
-};
-
-template<typename SRC,typename TGT,typename R,typename TgtArg> struct property_change_signal_traits<SRC,simple_signal_t<SRC>,TGT,std::function<R(TGT*,TgtArg)>> {
-    using arg_type = TgtArg;
-    //A parameterless signal is considered compatible with any two-arg function, even though we cannot verify whether the source-property's type matches the target-property's
-    static constexpr bool is_compatible = true;
-};
-
-template<typename SRC,typename SrcArg,typename TGT,typename R,typename TgtArg> struct property_change_signal_traits<SRC,void(SRC::*)(SrcArg),TGT,R(TGT::*)(TgtArg)> {
-    using arg_type = TgtArg;
-    static constexpr bool is_compatible = std::is_invocable_v<std::function<void(TgtArg)>,SrcArg>;
-};
-
-template<typename SRC,typename SrcArg,typename TGT,typename SLOT> struct property_change_signal_traits<SRC,void(SRC::*)(SrcArg),TGT,SLOT> {
-    using arg_type = SrcArg;
-    static constexpr bool is_compatible = std::is_invocable_v<SLOT,SRC*,SrcArg>;
-};
 
 
 
@@ -2005,7 +2069,7 @@ template<typename S,typename T,ServiceScope scope> Subscription bind(const Servi
     static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
 
-    return Subscription{detail::bind(source.unwrap(), {sourceProperty}, target.unwrap(), {targetProperty, nullptr})};
+    return Subscription{detail::bind(source.unwrap(), {detail::getPropertyByName(source.serviceMetaObject(), sourceProperty)}, target.unwrap(), {targetProperty, nullptr})};
 }
 
 ///
@@ -2022,8 +2086,7 @@ template<typename S,typename T,ServiceScope scope> Subscription bind(const Servi
 /// \tparam SLT the type of the slot
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, const Registration<T>& target, SLT setter) ->
-std::enable_if_t<detail::property_change_signal_traits<S,detail::simple_signal_t<S>,T,SLT>::is_compatible,Subscription> {
+template<typename S,typename T,ServiceScope scope,typename R,typename A> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, const Registration<T>& target, R(T::*setter)(A)){
     static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
 
@@ -2031,7 +2094,7 @@ std::enable_if_t<detail::property_change_signal_traits<S,detail::simple_signal_t
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
         return Subscription{};
     }
-    return Subscription{detail::bind(source.unwrap(), {sourceProperty}, target.unwrap(), {detail::uniqueName(setter).toLatin1(), detail::adaptSetter<T,typename detail::property_change_signal_traits<S,detail::simple_signal_t<S>,T,SLT>::arg_type>(setter)})};
+    return Subscription{detail::bind(source.unwrap(), {detail::getPropertyByName(source.serviceMetaObject(), sourceProperty)}, target.unwrap(), {detail::uniqueName(setter).toLatin1(), detail::adaptSetter<T,A>(setter)})};
 }
 
 
@@ -2043,10 +2106,6 @@ std::enable_if_t<detail::property_change_signal_traits<S,detail::simple_signal_t
 /// <br>This function identifies the source-property by the signal that is emitted when the property changes.
 /// The signal is specified in terms of a pointer to a member-function. This member-function must denote the signal corresponding
 /// to a property of the source-service, according to `QMetaMethod::fromSignal(SI)`.
-/// <br>If `SI` denotes a signal with no argument, then `F` must denote a pointer to a member-function of `T`, taking one argument. There will be no compile-time check
-/// whether the type of the source-property actually matches the type of the target-property!
-/// <br>If `SI` denotes a signal with one argument, then `F` shall either denote a pointer to a member-function of `T`, taking one argument that is assignment-compatible with
-/// the signal's argument, or it shall denote a callable object that can be invoked with one argument of type `T*` and one argument of the signal's argument-type.
 /// <br>All changes made to the source-property will be propagated to all Services represented by the target.
 /// For each target-property, there can be only successful call to bind().
 /// <br>**Thread-safety:** This function only may be called from the QApplicationContext's thread.
@@ -2057,24 +2116,52 @@ std::enable_if_t<detail::property_change_signal_traits<S,detail::simple_signal_t
 /// \tparam S the type of the source.
 /// \tparam T the type of the target
 /// \tparam A the type of the property.
-/// \tparam SIGN the type of the signal-function. Must be a non-static member-function of S with either no arguments or one argument of type A.
 /// \tparam SLT the type of the slot. Must either be a non-static member-function of T with one argument,
 /// or a callable object taking two arguments, one of type `T*` and the second of the signal's argument-type.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename SIGN,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, SIGN signalFunction, const Registration<T>& target, SLT func) ->
-    std::enable_if_t<detail::property_change_signal_traits<S,SIGN,T,SLT>::is_compatible,Subscription> {
+template<typename A,typename S,typename T,ServiceScope scope,typename SLT> auto bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(A), const Registration<T>& target, SLT func) ->
+    std::enable_if_t<std::is_invocable_v<SLT,T*,A>,Subscription> {
     static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
     static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
 
     if(signalFunction) {
-        if(auto signalMethod = QMetaMethod::fromSignal(signalFunction); signalMethod.isValid()) {
-            return Subscription{detail::bind(source.unwrap(), {{}, signalMethod}, target.unwrap(), {detail::uniqueName(func).toLatin1(), detail::adaptSetter<T,typename detail::property_change_signal_traits<S,SIGN,T,SLT>::arg_type>(func)})};
-        }
+        auto signalProperty = detail::getPropertyBySignal(QMetaMethod::fromSignal(signalFunction));
+        return Subscription{detail::bind(source.unwrap(), {signalProperty}, target.unwrap(), {detail::uniqueName(func).toLatin1(), detail::adaptSetter<T,A>(func)})};
     }
 
     qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to " << target;
     return Subscription{};
+}
+
+
+
+///
+/// \brief Binds a property of one ServiceRegistration to a slot from  another Registration.
+/// <br>This function identifies the source-property via a member-function that returns a QBindable.
+/// <br>All changes made to the source-property will be propagated to all Services represented by the target.
+/// For each target-property, there can be only successful call to bind().
+/// <br>**Thread-safety:** This function only may be called from the QApplicationContext's thread.
+/// \param source the ServiceRegistration with the source-property to which the target-property shall be bound.
+/// \param bindable the address of a member-function of `S` that returns a QBindable.
+/// \param target the Registration with the target-property to which the source-property shall be bound.
+/// \param func the method in the target which shall be bound to the source-property.
+/// \tparam S the type of the source.
+/// \tparam T the type of the target
+/// \tparam A the type of the property.
+/// \tparam SLT the type of the slot. Must either be a non-static member-function of T with one argument,
+/// or a callable object taking two arguments, one of type `T*` and the second of the signal's argument-type.
+/// \return the Subscription established by this binding.
+///
+template<typename S,typename T,typename A,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, QBindable<A>(S::*bindable)(), const Registration<T>& target, SLT func) ->
+    std::enable_if_t<std::is_invocable_v<SLT,T*,A>,Subscription> {
+    static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
+    static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
+    if(!bindable) {
+        qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to " << target;
+        return Subscription{};
+    }
+    return Subscription{detail::bind(source.unwrap(), {{}, detail::adaptBindableGetter(bindable)}, target.unwrap(), {detail::uniqueName(func).toLatin1(), detail::adaptSetter<T,A>(func)})};
 }
 
 
@@ -2495,8 +2582,9 @@ template<typename S> using Resolvable = detail::Resolvable<S>;
 /// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S=QString> [[nodiscard]] Resolvable<S> resolve(const QString& expression) {
-    return Resolvable<S>{expression, QVariant{}, detail::variant_converter_traits<S>::makeConverter()};
+template<typename S=QString> [[nodiscard]] auto resolve(const QString& expression)
+-> std::enable_if_t<detail::variant_converter_traits<S>::is_convertible,Resolvable<S>> {
+    return Resolvable<S>{expression, QVariant{}, detail::variant_converter_traits<S>::defaultConverter()};
 }
 
 
@@ -2545,8 +2633,8 @@ template<typename S=QString> [[nodiscard]] Resolvable<S> resolve(const QString& 
 /// \return a Resolvable instance for the supplied type.
 ///
 template<typename S,typename C> [[nodiscard]] auto resolve(const QString& expression, const S& defaultValue, C converter) ->
-std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,S>,Resolvable<S>> {
-    return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::variant_converter_traits<S>::makeConverter(converter)};
+std::enable_if_t<detail::is_string_converter_v<S,C>,Resolvable<S>> {
+    return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::adaptVariantConverter(converter)};
 }
 
 
@@ -2557,8 +2645,8 @@ std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,S>,Resolv
 /// <br>This is an overload of mcnepp::qtdi::resolve(const QString&,const S&,C) without the default-value.
 ///
 template<typename S,typename C> [[nodiscard]] auto resolve(const QString& expression, C converter) ->
-std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,S>,Resolvable<S>> {
-    return Resolvable<S>{expression, QVariant{}, detail::variant_converter_traits<S>::makeConverter(converter)};
+std::enable_if_t<detail::is_string_converter_v<S,C>,Resolvable<S>> {
+    return Resolvable<S>{expression, QVariant{}, detail::adaptVariantConverter(converter)};
 }
 
 
@@ -2566,8 +2654,9 @@ std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,S>,Resolv
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
 /// <br>This is an overload of mcnepp::qtdi::resolve(const QString&,const S&,C) without the explicit converter.
 ///
-template<typename S> [[nodiscard]] Resolvable<S>  resolve(const QString& expression, const S& defaultValue) {
-    return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::variant_converter_traits<S>::makeConverter()};
+template<typename S> [[nodiscard]] auto resolve(const QString& expression, const S& defaultValue)
+-> std::enable_if_t<detail::variant_converter_traits<S>::is_convertible,Resolvable<S>> {
+    return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::variant_converter_traits<S>::defaultConverter()};
 }
 
 
@@ -2681,7 +2770,7 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 /// \return a type-safe configuration for a service.
 ///
 template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression, C converter) ->
-    std::enable_if_t<std::is_convertible_v<std::invoke_result_t<C,QString>,A>,service_config_entry<S>>
+    std::enable_if_t<detail::is_string_converter_v<A,C>,service_config_entry<S>>
 
 {
     if(!propertySetter) {
@@ -2689,7 +2778,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolve
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::adaptVariantConverter(converter)}};
 }
 
 
@@ -2705,13 +2794,14 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolve
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> resolveProp(R(S::*propertySetter)(A), const QString& expression) {
+template<typename S,typename R,typename A> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression)
+-> std::enable_if_t<detail::variant_converter_traits<A>::is_convertible,service_config_entry<S>>{
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter()}};
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<A>::defaultConverter()}};
 }
 
 
@@ -2838,14 +2928,17 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// \tparam S the service-type.
 /// \param propertySetter the member-function that will be invoked with the property-value.
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
-/// \param converter (optional) specifies a converter that constructs an argument of type `A` from a QString.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename C=typename detail::variant_converter_traits<detail::remove_cvref_t<A>>::type> [[nodiscard]] service_config_entry<S> autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter=C{}) {
-    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<detail::remove_cvref_t<A>>::makeConverter(converter)}};
+template<typename S,typename R,typename A> [[nodiscard]] auto autoRefresh(R(S::*propertySetter)(A), const QString& expression)
+-> std::enable_if_t<detail::variant_converter_traits<A>::is_convertible,service_config_entry<S>> {
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S,A>(propertySetter), detail::variant_converter_traits<A>::defaultConverter()}};
 }
 
-
+template<typename S,typename R,typename A,typename C> [[nodiscard]] auto autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter)
+-> std::enable_if_t<detail::is_string_converter_v<A,C>,service_config_entry<S>> {
+    return {detail::uniquePropertyName(&propertySetter, sizeof propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, detail::adaptSetter<S,A>(propertySetter), detail::adaptVariantConverter(converter)}};
+}
 
 
 

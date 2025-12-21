@@ -67,6 +67,27 @@ const QLoggingCategory& loggingCategory(registration_handle_t handle) {
 
 namespace detail {
 
+QMetaProperty getPropertyBySignal(const QMetaMethod& signalMethod) {
+    if(signalMethod.isValid()) {
+        if(auto meta = signalMethod.enclosingMetaObject()) {
+            for(int index = 0; index < meta->propertyCount(); ++index) {
+                auto prop = meta->property(index);
+                if(prop.hasNotifySignal() && prop.notifySignal() == signalMethod) {
+                    return prop;
+                }
+            }
+        }
+    }
+    return QMetaProperty{};
+}
+
+QMetaProperty getPropertyByName(const QMetaObject* meta, const char* name) {
+    if(int index = meta->indexOfProperty(name); index > -1) {
+        return meta->property(index);
+    }
+    return QMetaProperty{};
+}
+
 subscription_handle_t bind(service_registration_handle_t source, const source_property_descriptor& sourcePropertyDescriptor, registration_handle_t target, const property_descriptor& targetPropertyDescriptor) {
     if(!target || !source) {
         qCCritical(loggingCategory(source)).noquote().nospace() << "Cannot bind " << source << " to " << target;
