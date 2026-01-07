@@ -67,6 +67,35 @@ const QLoggingCategory& loggingCategory(registration_handle_t handle) {
 
 namespace detail {
 
+struct q_setter_t::QPropertyInvoker : Invoker {
+    QMetaProperty m_property;
+
+    QPropertyInvoker(const QMetaProperty& prop) :
+        m_property{prop} {
+
+    }
+
+    virtual void invoke(QObject* target, const QVariant& arg) const override {
+        m_property.write(target, arg);
+        m_property.enclosingMetaObject();
+    }
+
+    virtual bool equals(const Invoker* other) const override {
+        if(this == other) {
+            return true;
+        }
+        if(auto t = dynamic_cast<const QPropertyInvoker*>(other)) {
+            return m_property.enclosingMetaObject() == t->m_property.enclosingMetaObject() && strcmp(m_property.name(), t->m_property.name()) == 0;
+        }
+        return false;
+    }
+};
+
+q_setter_t::q_setter_t(const QMetaProperty& property) :
+    m_impl{property.isValid() ? new QPropertyInvoker{property} : nullptr} {
+}
+
+
 QMetaProperty getPropertyBySignal(const QMetaMethod& signalMethod) {
     if(signalMethod.isValid()) {
         if(auto meta = signalMethod.enclosingMetaObject()) {
@@ -207,7 +236,7 @@ void BasicSubscription::connectTo(registration_handle_t source) {
 
 
 
-QString uniquePropertyName(const void* data, std::size_t size)
+QString uniqueName(const void* data, std::size_t size)
 {
     if(data && size) {
         QString str;

@@ -16,6 +16,7 @@ namespace mcnepp::qtdi {
 
 namespace detail {
     class QSettingsWatcher;
+    class QPropertyCache;
 }
 
 
@@ -658,7 +659,7 @@ private:
 
     DescriptorRegistration* findAutowiringCandidate(service_registration_handle_t, const QMetaProperty&);
 
-    bool registerBoundProperty(registration_handle_t target, const char* propName);
+    bool registerBoundProperty(registration_handle_t target, const detail::property_descriptor& descriptor);
 
     bool validateResolvers(const service_descriptor& descriptor, const service_config& config);
 
@@ -705,7 +706,7 @@ private:
     mutable std::unordered_map<std::type_index,ProxyRegistrationImpl*> proxyRegistrationCache;
     mutable QMutex mutex;
     mutable QWaitCondition m_condition;
-    std::unordered_map<registration_handle_t,std::unordered_set<QString>> m_boundProperties;
+    std::unordered_map<registration_handle_t,std::unordered_set<detail::property_descriptor>> m_boundProperties;
     std::atomic<unsigned> nextIndex;
     const QLoggingCategory& m_loggingCategory;
     QApplicationContext* const m_injectedContext;
@@ -714,6 +715,7 @@ private:
     std::unordered_map<QString,QPointer<detail::PlaceholderResolver>> resolverCache;
     Profiles* m_activeProfiles;
     std::unordered_map<ProfileAndName,QSettings*,ProfileNameHash> m_profileSettings;
+    detail::QPropertyCache* const m_propertyCache;
 };
 
 namespace detail {
@@ -722,7 +724,7 @@ class BindingProxy : public QObject {
     Q_OBJECT
 
 public:
-    BindingProxy(QMetaProperty sourceProp, QObject* source, const detail::property_descriptor& setter, QObject* target);
+    BindingProxy(QMetaProperty sourceProp, QObject* source, q_setter_t setter, QObject* target);
 
     static const QMetaMethod& notifySlot();
 
@@ -733,8 +735,10 @@ private:
     QMetaProperty m_sourceProp;
     QObject* m_source;
     QObject* m_target;
-    detail::property_descriptor m_setter;
+    q_setter_t m_setter;
 };
+
+
 }
 
 

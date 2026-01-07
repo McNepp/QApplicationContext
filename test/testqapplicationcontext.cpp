@@ -1363,6 +1363,21 @@ void testWatchConfigurationFileChangeWithError() {
 
     }
 
+    void testBindBindablePropertyToObjectSetter() {
+
+        auto regBase1 = context->registerService(service<BaseService>(), "base");
+        auto regBase2 = context->registerService(service<BaseService2>() << propValue("foo", "Donald Duck"), "base2");
+        bind(regBase2, "foo", regBase1, &BaseService::setFoo);
+        QVERIFY(context->publish());
+
+        RegistrationSlot<BaseService> baseSlot1{regBase1, this};
+        RegistrationSlot<BaseService2> baseSlot2{regBase2, this};
+        QCOMPARE(baseSlot1->foo(), "Donald Duck");
+        baseSlot2->setFoo("Mickey Mouse");
+        QCOMPARE(baseSlot1->foo(), "Mickey Mouse");
+
+    }
+
     void testCannotBindToSignalWithoutProperty() {
 
         auto regBase1 = context->registerService<BaseService>("base1");
