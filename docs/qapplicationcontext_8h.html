@@ -431,26 +431,26 @@ The resulting service_config_entry can then be passed to <a class="el" href="#a4
 <tr class="memdesc:a9fc86adce6d4387101f682a739b0d4c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
 The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
 <tr class="separator:a9fc86adce6d4387101f682a739b0d4c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a509df471e547cb302621d2643fc6aa98" id="r_a509df471e547cb302621d2643fc6aa98"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename L &gt; </td></tr>
-<tr class="memitem:a509df471e547cb302621d2643fc6aa98"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a509df471e547cb302621d2643fc6aa98">mcnepp::qtdi::propValue</a> (R(S::*propertySetter)(L), const <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; A &gt; &amp;reg) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; L, QList&lt; A * &gt; &gt;, service_config_entry&lt; S &gt; &gt;</td></tr>
-<tr class="memdesc:a509df471e547cb302621d2643fc6aa98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
+<tr class="memitem:a46dc28c272fdf18da5e53114ff589f5b" id="r_a46dc28c272fdf18da5e53114ff589f5b"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename L &gt; </td></tr>
+<tr class="memitem:a46dc28c272fdf18da5e53114ff589f5b"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a46dc28c272fdf18da5e53114ff589f5b">mcnepp::qtdi::propValue</a> (R(S::*propertySetter)(L), const <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; A &gt; &amp;reg) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; QList&lt; A * &gt;, L &gt;, service_config_entry&lt; S &gt; &gt;</td></tr>
+<tr class="memdesc:a46dc28c272fdf18da5e53114ff589f5b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
 The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
-<tr class="separator:a509df471e547cb302621d2643fc6aa98"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3132230c22164258d920ca3b64c5aa0d" id="r_a3132230c22164258d920ca3b64c5aa0d"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename L &gt; </td></tr>
-<tr class="memitem:a3132230c22164258d920ca3b64c5aa0d"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a3132230c22164258d920ca3b64c5aa0d">mcnepp::qtdi::propValue</a> (R(S::*propertySetter)(L), const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; A, ServiceScope::SERVICE_GROUP &gt; &amp;reg) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; L, QList&lt; A * &gt; &gt;, service_config_entry&lt; S &gt; &gt;</td></tr>
-<tr class="memdesc:a3132230c22164258d920ca3b64c5aa0d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
+<tr class="separator:a46dc28c272fdf18da5e53114ff589f5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9eb00e4f43d994a7e8d529736adce292" id="r_a9eb00e4f43d994a7e8d529736adce292"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A , typename L &gt; </td></tr>
+<tr class="memitem:a9eb00e4f43d994a7e8d529736adce292"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a9eb00e4f43d994a7e8d529736adce292">mcnepp::qtdi::propValue</a> (R(S::*propertySetter)(L), const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; A, ServiceScope::SERVICE_GROUP &gt; &amp;reg) -&gt; std::enable_if_t&lt; std::is_convertible_v&lt; QList&lt; A * &gt;, L &gt;, service_config_entry&lt; S &gt; &gt;</td></tr>
+<tr class="memdesc:a9eb00e4f43d994a7e8d529736adce292"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe configuration-entry for a service. <br  />
 The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
-<tr class="separator:a3132230c22164258d920ca3b64c5aa0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a9eb00e4f43d994a7e8d529736adce292"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2146991cb6279f45280ab9b68e12b0f1" id="r_a2146991cb6279f45280ab9b68e12b0f1"><td class="memTemplParams" colspan="2">template&lt;typename S , typename R , typename A &gt; </td></tr>
 <tr class="memitem:a2146991cb6279f45280ab9b68e12b0f1"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a2146991cb6279f45280ab9b68e12b0f1">mcnepp::qtdi::autoRefresh</a> (R(S::*propertySetter)(A), const QString &amp;expression) -&gt; std::enable_if_t&lt; detail::variant_converter_traits&lt; A &gt;::is_convertible, service_config_entry&lt; S &gt; &gt;</td></tr>
 <tr class="memdesc:a2146991cb6279f45280ab9b68e12b0f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a type-safe, auto-refreshing configuration-entry for a service. <br  />
 The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>. <br  />
 In order to demonstrate the purpose, consider this example of a normal, non-updating service-configuration for a QTimer:  <br /></td></tr>
 <tr class="separator:a2146991cb6279f45280ab9b68e12b0f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a738616d120322b65f2248087a7eda047" id="r_a738616d120322b65f2248087a7eda047"><td class="memTemplParams" colspan="2"><a id="a738616d120322b65f2248087a7eda047" name="a738616d120322b65f2248087a7eda047"></a>
+<tr class="memitem:a1729df9a173cdcb2ef3364efb9d20984" id="r_a1729df9a173cdcb2ef3364efb9d20984"><td class="memTemplParams" colspan="2"><a id="a1729df9a173cdcb2ef3364efb9d20984" name="a1729df9a173cdcb2ef3364efb9d20984"></a>
 template&lt;typename S , typename R , typename A , typename C &gt; </td></tr>
-<tr class="memitem:a738616d120322b65f2248087a7eda047"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mcnepp::qtdi::autoRefresh</b> (R(S::*propertySetter)(A), const QString &amp;expression, C converter) -&gt; std::enable_if_t&lt; detail::is_string_converter_v&lt; A, C &gt;, service_config_entry&lt; S &gt; &gt;</td></tr>
-<tr class="separator:a738616d120322b65f2248087a7eda047"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1729df9a173cdcb2ef3364efb9d20984"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mcnepp::qtdi::autoRefresh</b> (R(S::*propertySetter)(A), const QString &amp;expression, C converter) -&gt; std::enable_if_t&lt; detail::is_string_converter&lt; A, C &gt;::value, service_config_entry&lt; S &gt; &gt;</td></tr>
+<tr class="separator:a1729df9a173cdcb2ef3364efb9d20984"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7c28f9811838c5ecf5ad5ac51e9bf956" id="r_a7c28f9811838c5ecf5ad5ac51e9bf956"><td class="memItemLeft" align="right" valign="top">detail::service_config::entry_type&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7c28f9811838c5ecf5ad5ac51e9bf956">mcnepp::qtdi::propValue</a> (const QString &amp;name, const QVariant &amp;value)</td></tr>
 <tr class="memdesc:a7c28f9811838c5ecf5ad5ac51e9bf956"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a configuration-entry for a service. <br  />
 The resulting service_config_entry can then be passed to <a class="el" href="#a45251145dd09691a5b6ca160b1b3e6ac" title="Creates a Service with an explicit factory.">mcnepp::qtdi::service()</a> using the <code>operator &lt;&lt;</code>.  <br /></td></tr>
@@ -1944,8 +1944,8 @@ The resulting service_config_entry can then be passed to <a class="el" href="#a4
 
 </div>
 </div>
-<a id="a509df471e547cb302621d2643fc6aa98" name="a509df471e547cb302621d2643fc6aa98"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a509df471e547cb302621d2643fc6aa98">&#9670;&#160;</a></span>propValue() <span class="overload">[4/5]</span></h2>
+<a id="a46dc28c272fdf18da5e53114ff589f5b" name="a46dc28c272fdf18da5e53114ff589f5b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a46dc28c272fdf18da5e53114ff589f5b">&#9670;&#160;</a></span>propValue() <span class="overload">[4/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1963,7 +1963,7 @@ template&lt;typename S , typename R , typename A , typename L &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; A &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>reg</em></span>&#160;) -&gt; std::enable_if_t&lt;std::is_convertible_v&lt;L,QList&lt;A*&gt;&gt;,service_config_entry&lt;S&gt;&gt;
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_proxy_registration.html">ProxyRegistration</a>&lt; A &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>reg</em></span>&#160;) -&gt; std::enable_if_t&lt;std::is_convertible_v&lt;QList&lt;A*&gt;,L&gt;,service_config_entry&lt;S&gt;&gt;
 </td>
         </tr>
       </table>
@@ -1993,8 +1993,8 @@ The resulting service_config_entry can then be passed to <a class="el" href="#a4
 
 </div>
 </div>
-<a id="a3132230c22164258d920ca3b64c5aa0d" name="a3132230c22164258d920ca3b64c5aa0d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3132230c22164258d920ca3b64c5aa0d">&#9670;&#160;</a></span>propValue() <span class="overload">[5/5]</span></h2>
+<a id="a9eb00e4f43d994a7e8d529736adce292" name="a9eb00e4f43d994a7e8d529736adce292"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9eb00e4f43d994a7e8d529736adce292">&#9670;&#160;</a></span>propValue() <span class="overload">[5/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -2012,7 +2012,7 @@ template&lt;typename S , typename R , typename A , typename L &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; A, ServiceScope::SERVICE_GROUP &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>reg</em></span>&#160;) -&gt; std::enable_if_t&lt;std::is_convertible_v&lt;L,QList&lt;A*&gt;&gt;,service_config_entry&lt;S&gt;&gt;
+          <td class="paramtype">const <a class="el" href="classmcnepp_1_1qtdi_1_1_service_registration.html">ServiceRegistration</a>&lt; A, ServiceScope::SERVICE_GROUP &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>reg</em></span>&#160;) -&gt; std::enable_if_t&lt;std::is_convertible_v&lt;QList&lt;A*&gt;,L&gt;,service_config_entry&lt;S&gt;&gt;
 </td>
         </tr>
       </table>
