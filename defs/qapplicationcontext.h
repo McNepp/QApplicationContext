@@ -499,7 +499,7 @@ private:
     std::vector<QPropertyNotifier> m_bindings;
 };
 
-using q_bindable_helper_t = BindableHelper*;
+using q_bindable_helper_t = std::shared_ptr<BindableHelper>;
 
 using q_bindable_getter_t = std::function<q_bindable_helper_t(QObject*)>;
 
@@ -509,7 +509,7 @@ template<typename S,typename A> q_bindable_getter_t adaptBindableGetter(QBindabl
     }
     return [func](QObject* obj) -> q_bindable_helper_t {
         if(S* srv = dynamic_cast<S*>(obj)) {
-            return new TypedBindableHelper<A>{std::invoke(func, srv)};
+            return std::make_shared<TypedBindableHelper<A>>(std::invoke(func, srv));
         }
         return nullptr;
     };

@@ -140,8 +140,10 @@ public:
     }
 
     ~NonBindablePropertyHelper() {
-        for(auto proxy : proxies) {
-            delete proxy;
+        for(auto& proxy : proxies) {
+            if(proxy) {
+                delete proxy.get();
+            }
         }
     }
 
@@ -154,7 +156,7 @@ private:
 
     QMetaProperty m_prop;
     QObject* const m_source;
-    QObjectList proxies;
+    QList<QPointer<BindingProxy>> proxies;
 };
 
 
@@ -302,9 +304,7 @@ public:
 
     void cancel() override {
         //QPropertyNotifier will remove the binding in its destructor:
-        for(auto b : bindings) {
-            delete b;
-        }
+        bindings.clear();
         MultiServiceSubscription::cancel();
     }
 
@@ -334,9 +334,9 @@ private:
     void notify(const QObjectList& objs) {
         auto source = objs[0];
         auto target = objs[1];
-        std::unique_ptr<detail::BindableHelper> sourceBindable{m_sourceDescriptor.bindable(source)};
+        detail::q_bindable_helper_t sourceBindable{m_sourceDescriptor.bindable(source)};
         if(sourceBindable->subscribe(target, m_setter)) {
-            bindings.push_back(sourceBindable.release());
+            bindings.push_back(sourceBindable);
             qCDebug(m_loggingCategory).nospace().noquote() << "Bound property " << m_sourceDescriptor << " of " << source << " to " << m_targetDescriptor << " of " << target;
         } else {
             qCWarning(m_loggingCategory()).nospace().noquote() << "Could not bind property " << m_sourceDescriptor << " of " << source << " to " << m_targetDescriptor << " of " << target;
@@ -531,9 +531,9 @@ subscription_handle_t StandardApplicationContext::DescriptorRegistration::create
         }
 
         if(sourceProperty.isBindable()) {
-            bindable = [sourceProperty](QObject* source) { return new detail::BindablePropertyHelper{sourceProperty, source};};
+            bindable = [sourceProperty](QObject* source) { return std::make_shared<detail::BindablePropertyHelper>(sourceProperty, source);};
         } else {
-            bindable = [sourceProperty](QObject* source) { return new detail::NonBindablePropertyHelper{sourceProperty, source};};
+            bindable = [sourceProperty](QObject* source) { return std::make_shared<detail::NonBindablePropertyHelper>(sourceProperty, source);};
         }
     }
 
