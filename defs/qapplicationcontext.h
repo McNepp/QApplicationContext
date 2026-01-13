@@ -892,7 +892,7 @@ protected:
 private:
 
     template<std::size_t...Indices> void call(std::index_sequence<Indices...>,const QObjectList& objs) {
-        m_callable(dynamic_cast<S*>(objs[Indices])...);
+        std::invoke(m_callable, dynamic_cast<S*>(objs[Indices])...);
     }
 
     QObject* m_context;
@@ -1814,7 +1814,7 @@ public:
             qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this << " with null";
             return Subscription{};
         }
-        return subscribe(target, std::bind(std::mem_fn(setter), target, std::placeholders::_1), connectionType);
+        return subscribe(target, std::bind(setter, target, std::placeholders::_1), connectionType);
      }
 
 
@@ -4504,8 +4504,7 @@ template<typename S> template<typename D,typename R> Subscription Registration<S
     }
 
     auto target = this->applicationContext()->template getRegistration<D>();
-    auto callable = std::mem_fn(injectionSlot);
-    auto subscription = new detail::CombiningSubscription<decltype(callable),S,D>{QList<registration_handle_t>{target.unwrap()}, target.unwrap(), callable, Qt::AutoConnection};
+    auto subscription = new detail::CombiningSubscription<decltype(injectionSlot),S,D>{QList<registration_handle_t>{target.unwrap()}, target.unwrap(), injectionSlot, Qt::AutoConnection};
     return Subscription{unwrap()->subscribe(subscription)};
 }
 
