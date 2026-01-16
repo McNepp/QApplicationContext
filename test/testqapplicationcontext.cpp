@@ -2793,6 +2793,26 @@ void testWatchConfigurationFileChangeWithError() {
 
     }
 
+    void testCyclicConfigurationDependencies() {
+        //These service have a cyclic dependency. Thus, one of them must be configured before its dependency has been configured
+        auto regCyclic = context->registerService(service<CyclicDependency>() << withAutowire, "cyclic");
+        auto regBase = context->registerService(service<BaseService>()<< propValue(&BaseService::setDependency, regCyclic), "dependency");
+        QVERIFY(regBase);
+
+        QVERIFY(regCyclic);
+
+        //We expect a warning to be logged
+        QVERIFY(context->publish());
+
+        RegistrationSlot<CyclicDependency> cyclicSlot{regCyclic, this};
+        RegistrationSlot<BaseService> baseSlot{regBase, this};
+
+        QVERIFY(cyclicSlot);
+        QCOMPARE(cyclicSlot.last(), baseSlot->dependency());
+        QCOMPARE(baseSlot.last(), cyclicSlot->dependency());
+
+    }
+
     void testWorkaroundCyclicDependencyWithAutowiring() {
         auto regBase = context->registerService(service<BaseService>(inject<CyclicDependency>()), "dependency");
         QVERIFY(regBase);
@@ -2980,14 +3000,14 @@ void testWatchConfigurationFileChangeWithError() {
 
 
 
-    void testInjectComputedStringBeforeProperties() {
+    void testInjectComputedStringAfterProperties() {
        auto baseReg = context->registerService(service<Interface1,BaseService>() << propValue(&BaseService::setFoo, "Mickey Mouse"));
        auto depReg1 = context->registerService(service<DependentService>(Address{}, inject(baseReg, &Interface1::foo), baseReg) , "dep1");
        RegistrationSlot<Interface1> baseSlot{baseReg, this};
        RegistrationSlot<DependentService> depSlot1{depReg1, this};
        QVERIFY(context->publish());
-        // The computed dependency will be injected before BaseService::setFoo("Mickey Mouse") has been invoked:
-       QCOMPARE(depSlot1->m_url, "BaseService");
+        // The computed dependency will be injected after BaseService::setFoo("Mickey Mouse") has been invoked:
+       QCOMPARE(depSlot1->m_url, "Mickey Mouse");
     }
 
     void testInjectInvalidComputedDependencyFails() {

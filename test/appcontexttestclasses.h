@@ -102,6 +102,10 @@ public:
         return m_appContext;
     }
 
+    void setDependency(CyclicDependency* dep) {
+        m_dependency = dep;
+    }
+
 Q_SIGNALS:
     void timerChanged(QTimer*);
 
