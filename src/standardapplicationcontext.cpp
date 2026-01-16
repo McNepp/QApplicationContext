@@ -371,6 +371,30 @@ public:
     }
 };
 
+bool configurationDependsOnOtherService(service_registration_handle_t handle, service_registration_handle_t candidate) {
+    for(auto& prop : handle->config().properties) {
+        switch(prop.configType) {
+        case detail::ConfigValueType::SERVICE:
+            if(prop.expression.value<service_registration_handle_t>() == candidate) {
+                    return true;
+            }
+            continue;
+        default:
+            continue;
+        }
+    }
+    if(handle->config().autowire) {
+        auto meta = handle->serviceMetaObject();
+        for(int p = 0, props = meta->propertyCount(); p < props; ++p) {
+            auto prop = meta->property(p);
+            if(prop.name() == candidate->registeredName()) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 
 } // End of anonymous namespace
 
@@ -1362,7 +1386,6 @@ bool StandardApplicationContext::publish(bool allowPartial)
 
     descriptor_list allCreated;
     descriptor_list toBePublished;
-    descriptor_list needConfiguration;
     descriptor_list allRegistrations;
     Status validationResult = Status::ok;
     {
@@ -1374,6 +1397,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
     for(auto reg : allRegistrations) {
         switch (reg->state()) {
         case STATE_INIT:
+        case STATE_NEEDS_CONFIGURATION:
             if(!reg->isActiveInProfile()) {
                 qCInfo(loggingCategory()).noquote().nospace() << "Service " << *reg << " is not active in " << profilesAsString(*m_activeProfiles);
                 continue;
@@ -1386,14 +1410,11 @@ bool StandardApplicationContext::publish(bool allowPartial)
 
             toBePublished.push_back(reg);
             break;
-        case STATE_NEEDS_CONFIGURATION:
-            needConfiguration.push_back(reg);
-            [[fallthrough]];
         case STATE_PUBLISHED:
             allCreated.push_back(reg);
         }
     }
-    if(toBePublished.empty() && needConfiguration.empty()) {
+    if(toBePublished.empty()) {
         return true;
     }
     validationResult = validate(allowPartial, allCreated, toBePublished);
@@ -1404,61 +1425,84 @@ bool StandardApplicationContext::publish(bool allowPartial)
     qCInfo(loggingCategory()).noquote().nospace() << "Publish ApplicationContext " << profilesAsString(*m_activeProfiles) << " with " << toBePublished.size() << " unpublished Objects";
 
     //Move QSettings to the beginning, so that they will be available for configuration of other services:
-    std::stable_sort(needConfiguration.begin(), needConfiguration.end(), [](const DescriptorRegistration* left, const DescriptorRegistration* right) { return left->provideConfig() && !right->provideConfig();});
+    std::stable_sort(toBePublished.begin(), toBePublished.end(), [](const DescriptorRegistration* left, const DescriptorRegistration* right) { return left->provideConfig() && !right->provideConfig();});
+
+    descriptor_list configured;
+    //computes hash and equality for pairs of registrations. They are deemed equal regardless of the order within the pair.
+    struct dep_hash_comp {
+        std::size_t operator()(const std::pair<service_registration_handle_t,service_registration_handle_t>& pair) const {
+            return pointer_hash(pair.first) ^ pointer_hash(pair.second);
+        }
+
+        bool operator()(const std::pair<service_registration_handle_t,service_registration_handle_t>& left, const std::pair<service_registration_handle_t,service_registration_handle_t>& right) const {
+            return left == right || left == std::make_pair(right.second, right.first);
+        }
+
+        std::hash<service_registration_handle_t> pointer_hash;
+    };
+    std::unordered_set<std::pair<service_registration_handle_t,service_registration_handle_t>,dep_hash_comp,dep_hash_comp> configurationDependencies;
 
     //Do several rounds and publish those services whose dependencies have already been published.
     //For a service with an empty set of dependencies, this means that it will be published first.
     while(!toBePublished.empty()) {
         auto reg = pop_front(toBePublished);
-        QVariantList dependencies;
-        auto& dependencyInfos = reg->descriptor().dependencies;
-        if(!dependencyInfos.empty()) {
-            qCInfo(loggingCategory()).noquote().nospace() << "Resolving " << dependencyInfos.size() << " dependencies of " << *reg << ":";
-            for(auto& d : dependencyInfos) {
-                auto result = resolveDependency(allCreated, reg, d, allowPartial);
-                dependencies.push_back(result.first);
-            }
-        }
-
-        if(!reg->prepareService(dependencies, needConfiguration)) {
-            qCCritical(loggingCategory()).nospace().noquote() << "Could not create Service " << *reg;
-            return false;
-        }
 
         switch(reg->state()) {
+        case STATE_INIT:
+            {
+                QVariantList dependencies;
+                auto& dependencyInfos = reg->descriptor().dependencies;
+                if(!dependencyInfos.empty()) {
+                    qCInfo(loggingCategory()).noquote().nospace() << "Resolving " << dependencyInfos.size() << " dependencies of " << *reg << ":";
+                    for(auto& d : dependencyInfos) {
+                        auto result = resolveDependency(allCreated, reg, d, allowPartial);
+                        dependencies.push_back(result.first);
+                    }
+                }
+
+                if(!reg->prepareService(dependencies, toBePublished)) {
+                    qCCritical(loggingCategory()).nospace().noquote() << "Could not create Service " << *reg;
+                    return false;
+                }
+                allCreated.push_back(reg);
+                //If state has changed, place in queue for next processing-step:
+                if(reg->state() != STATE_INIT) {
+                    qCInfo(loggingCategory()).nospace().noquote() << "Created Service for " << *reg;
+                    toBePublished.push_front(reg);
+                }
+            }
+            break;
         case STATE_NEEDS_CONFIGURATION:
-            needConfiguration.push_back(reg);
-            [[fallthrough]];
-        case STATE_PUBLISHED:
-            qCInfo(loggingCategory()).nospace().noquote() << "Created Service '" << reg->registeredName() << "'";
-            [[fallthrough]];
-        default:
-            allCreated.push_back(reg);
+            if(auto iter = std::find_if(toBePublished.begin(), toBePublished.end(), [reg](auto d) { return configurationDependsOnOtherService(reg, d);}); iter != toBePublished.end()) {
+                auto dep = *iter;
+                if(configurationDependencies.insert({reg, dep}).second) {
+                    toBePublished.insert(++iter, reg) ;
+                    continue;
+                }
+                qCWarning(loggingCategory()).nospace().noquote() << "Configuring " << *reg << " before " << *dep << ", as they have a cyclic dependency";
+            }
+
+            auto configResult = configure(reg, reg->resolvedPlaceholders(), reg->getObject(), toBePublished, allowPartial);
+            switch(configResult) {
+            case Status::fatal:
+                qCCritical(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
+                return false;
+            case Status::fixable:
+                qCWarning(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
+                validationResult = Status::fixable;
+                continue;
+
+            case Status::ok:
+                qCInfo(loggingCategory()).noquote().nospace() << "Configured Service '" << reg->registeredName() << "'";
+                configured.push_back(reg);
+            }
         }
     }
 
 
     unsigned managed = std::count_if(allCreated.begin(), allCreated.end(), std::mem_fn(&DescriptorRegistration::isManaged));
 
-    //The services that have been instantiated during this methd-invocation will be configured in the order they have have been
-    //instantiated.
-    while(!needConfiguration.empty()) {
-        auto reg = pop_front(needConfiguration);
-        auto configResult = configure(reg, reg->resolvedPlaceholders(), reg->getObject(), needConfiguration, allowPartial);
-        switch(configResult) {
-        case Status::fatal:
-            qCCritical(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
-            return false;
-        case Status::fixable:
-            qCWarning(loggingCategory()).nospace().noquote() << "Could not configure " << *reg;
-            validationResult = Status::fixable;
-            continue;
 
-        case Status::ok:
-            qCInfo(loggingCategory()).noquote().nospace() << "Configured Service '" << reg->registeredName() << "'";
-            toBePublished.push_back(reg);
-        }
-    }
     qsizetype publishedCount = 0;
     QList<QApplicationContextPostProcessor*> postProcessors;
     for(auto reg : allCreated) {
@@ -1474,8 +1518,8 @@ bool StandardApplicationContext::publish(bool allowPartial)
             std::swap(toBePublished[moved++], toBePublished[pos]);
         }
     }
-    while(!toBePublished.empty()) {
-        auto reg = toBePublished.front();
+    while(!configured.empty()) {
+        auto reg = configured.front();
         QObject* target = reg->getObject();
         if(!target) {
             qCCritical(loggingCategory()).nospace().noquote() << "Could not initialize " << *reg;
@@ -1490,7 +1534,7 @@ bool StandardApplicationContext::publish(bool allowPartial)
         //If the service has no parent, make it a child of this ApplicationContext.
         //Note: It will be deleted in StandardApplicationContext's destructor explicitly, to maintain the correct order of dependencies!
         setParentIfNotSet(target, m_injectedContext);
-        toBePublished.pop_front();
+        configured.pop_front();
         ++publishedCount;
         qCInfo(loggingCategory()).noquote().nospace() << "Published " << *reg;
     }
@@ -2225,7 +2269,6 @@ QApplicationContext *newDelegate(const QLoggingCategory &loggingCategory, QAppli
 {
     return new StandardApplicationContext{loggingCategory, delegatingContext, delegatingContext};
 }
-
 
 
 }//mcnepp::qtdi
