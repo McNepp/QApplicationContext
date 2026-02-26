@@ -51,7 +51,7 @@ namespace mcnepp::qtdi::detail {
                 if(resolved.typeId() == QMetaType::QString) {
                     resolved = appContext->resolveConfigValue(resolved.toString());
                 }
-                if(!resolved.isValid() && !defaultValue.isEmpty()) {
+                if(!resolved.isValid() && defaultValue.isValid()) {
                     resolved = defaultValue;
                 }
             }
@@ -66,7 +66,7 @@ namespace mcnepp::qtdi::detail {
         }
 
 
-        placeholder_step(const QString& key, const QString& defaultValue, bool hasWildcard) :
+        placeholder_step(const QString& key, const QVariant& defaultValue, bool hasWildcard) :
             key{key},
             defaultValue{defaultValue},
             hasWildcard{hasWildcard} {
@@ -74,7 +74,7 @@ namespace mcnepp::qtdi::detail {
         }
 
         QString key;
-        QString defaultValue;
+        QVariant defaultValue;
         bool hasWildcard;
 
     };
@@ -83,7 +83,7 @@ namespace mcnepp::qtdi::detail {
         return std::make_unique<literal_step>(literal);
     }
 
-    std::unique_ptr<PlaceholderResolver::resolvable_step>  PlaceholderResolver::addStep(const QString& placeholder, const QString& defaultValue, bool hasWildcard) {
+    std::unique_ptr<PlaceholderResolver::resolvable_step>  PlaceholderResolver::addStep(const QString& placeholder, const QVariant& defaultValue, bool hasWildcard) {
         return std::make_unique<placeholder_step>(placeholder, defaultValue, hasWildcard);
     }
 
@@ -197,10 +197,17 @@ namespace mcnepp::qtdi::detail {
                     state = lastStateBeforeEscape;
                     continue;
                 case STATE_FOUND_DEFAULT_VALUE:
-                case STATE_FOUND_PLACEHOLDER:
                     if(!token.isEmpty()) {
                         steps.push_back(addStep(token, defaultValueToken, hasWildcard));
                         defaultValueToken.clear();
+                        token.clear();
+                        hasWildcard = false;
+                    }
+                    state = STATE_START;
+                    continue;
+                case STATE_FOUND_PLACEHOLDER:
+                    if(!token.isEmpty()) {
+                        steps.push_back(addStep(token, QVariant{}, hasWildcard));
                         token.clear();
                         hasWildcard = false;
                     }
