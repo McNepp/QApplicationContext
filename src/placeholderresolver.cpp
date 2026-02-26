@@ -1,13 +1,16 @@
 #include "placeholderresolver.h"
 namespace mcnepp::qtdi::detail {
 
-    QVariant PlaceholderResolver::resolve(const QString& group, QVariantMap& resolvedPlaceholders) const {
+    QVariant PlaceholderResolver::resolve(const QString& group, QVariantMap& resolvedPlaceholders, bool optional) const {
         QString resolvedString;
         for(auto& resolvable : m_steps) {
             QVariant resolved = resolvable->resolve(m_context, group, resolvedPlaceholders);
             if(!resolved.isValid()) {
-                qCCritical(m_loggingCategory).nospace() << "Could not resolve placeholder " << resolvable->placeholder();
-
+                if(optional) {
+                    qCInfo(m_loggingCategory).nospace() << "Could not resolve placeholder " << resolvable->placeholder();
+                } else {
+                   qCCritical(m_loggingCategory).nospace() << "Could not resolve placeholder " << resolvable->placeholder();
+                }
                 return resolved;
             }
             if(m_steps.size() == 1) {

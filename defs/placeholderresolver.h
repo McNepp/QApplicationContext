@@ -12,7 +12,7 @@ class PlaceholderResolver : public QObject {
 
 public:
 
-    QVariant resolve(const QString& group, QVariantMap& resolvedPlaceholders) const;
+    QVariant resolve(const QString& group, QVariantMap& resolvedPlaceholders, bool optional=false) const;
 
     QVariant resolve(const QString& group = {}) const {
         QVariantMap resolvedPlaceholders;

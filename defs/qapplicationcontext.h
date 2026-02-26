@@ -98,6 +98,18 @@ enum class ServiceScope {
     SERVICE_GROUP
 };
 
+/**
+ * @brief Determines the behaviour for setting Service-properties.
+ */
+enum class ConfigValueType {
+    DEFAULT,
+    AUTO_REFRESH,
+    SERVICE,
+    PLACEHOLDER,
+    OPTIONAL
+};
+
+
 ///
 /// \brief Determines whether a %Service's *init-method* is invoked before or after the service is published.
 /// <br>
@@ -158,6 +170,13 @@ enum class Kind {
 
 };
 
+template<ConfigValueType> struct config_value_traits {
+    static constexpr bool is_resolvable = true;
+};
+
+template<> struct config_value_traits<ConfigValueType::SERVICE> {
+    static constexpr bool is_resolvable = false;
+};
 
 
 template<ServiceScope scope> struct service_scope_traits {
@@ -1041,12 +1060,6 @@ protected:
     struct ParentPlaceholder {
     };
 
-    enum class ConfigValueType {
-        DEFAULT,
-        AUTO_REFRESH_EXPRESSION,
-        SERVICE,
-        PRIVATE
-    };
 
     struct ConfigValue {
         QVariant expression;
@@ -2876,6 +2889,12 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
 /// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
+/// \tparam configValueType determines the behaviour of the property:
+///
+/// - ConfigValueType::DEFAULT: the property will be set after instantiation of the %Service.
+/// - ConfigValueType::OPTIONAL: the property will only be set if all placeholders within `expression` can be resolved.
+/// - ConfigValueType::AUTO_REFRESH: The property will be automatically updated when the configuration changes.
+/// - ConfigValueType::PLACEHOLDER: No property of the %Service will be set. Instead, a value for a *placeholder* will be defined.
 ///
 /// \tparam S the service-type.
 /// \param propertySetter the member-function that will be invoked with the property-value.
@@ -2883,15 +2902,15 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 /// \param converter specifies a converter that constructs an argument of type `A` from a QString.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression, C converter) ->
-    std::enable_if_t<detail::is_string_converter_v<A,C>,service_config_entry<S>>
+template<ConfigValueType configValueType=ConfigValueType::DEFAULT,typename S,typename R,typename A,typename C> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression, C converter) ->
+    std::enable_if_t<detail::config_value_traits<configValueType>::is_resolvable && detail::is_string_converter_v<A,C>,service_config_entry<S>>
 
 {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniqueName(&propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, {"",detail::adaptSetter<S,A>(propertySetter)}, detail::adaptVariantConverter(converter)}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{expression, configValueType, {"",detail::adaptSetter<S,A>(propertySetter)}, detail::adaptVariantConverter(converter)}};
 }
 
 
@@ -2901,21 +2920,48 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto resolve
 ///
 /// \brief Creates a type-safe configuration-entry for a service.
 /// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
+/// \tparam configValueType determines the behaviour of the property:
+///
+/// - ConfigValueType::DEFAULT: the property will be set after instantiation of the %Service.
+/// - ConfigValueType::OPTIONAL: the property will only be set if all placeholders within `expression` can be resolved.
+/// - ConfigValueType::AUTO_REFRESH: The property will be automatically updated when the configuration changes.
+/// - ConfigValueType::PLACEHOLDER: No property of the %Service will be set. Instead, a value for a *placeholder* will be defined.
 ///
 /// \tparam S the service-type.
 /// \param propertySetter the member-function that will be invoked with the property-value.
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression)
--> std::enable_if_t<detail::variant_converter_traits<A>::is_convertible,service_config_entry<S>>{
+template<ConfigValueType configValueType=ConfigValueType::DEFAULT,typename S,typename R,typename A> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression)
+-> std::enable_if_t<detail::config_value_traits<configValueType>::is_resolvable && detail::variant_converter_traits<A>::is_convertible,service_config_entry<S>>{
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniqueName(&propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::DEFAULT, {"",detail::adaptSetter<S,A>(propertySetter)}, detail::variant_converter_traits<A>::defaultConverter()}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{expression, configValueType, {"",detail::adaptSetter<S,A>(propertySetter)}, detail::variant_converter_traits<A>::defaultConverter()}};
 }
+
+///
+/// \brief Creates a configuration-entry for a service.
+/// <br>The resulting service_config_entry can then be passed to mcnepp::qtdi::service() using the `operator <<`.
+/// \tparam configValueType determines the behaviour of the property:
+///
+/// - ConfigValueType::DEFAULT: the property will be set after instantiation of the %Service.
+/// - ConfigValueType::OPTIONAL: the property will only be set if all placeholders within `expression` can be resolved.
+/// - ConfigValueType::AUTO_REFRESH: The property will be automatically updated when the configuration changes.
+/// - ConfigValueType::PLACEHOLDER: No property of the %Service will be set. Instead, a value for a *placeholder* will be defined.
+///
+/// \param name the name of the Q_PROPERTY to set.
+/// \param expression will be resolved when the service is being configured. May contain *placeholders*.
+/// \return a type-safe configuration for a service.
+///
+template<ConfigValueType configValueType=ConfigValueType::DEFAULT> [[nodiscard]] auto resolveProp(const QString& name, const QString& expression)
+-> std::enable_if_t<detail::config_value_traits<configValueType>::is_resolvable,detail::service_config::entry_type> {
+    return {name, detail::ConfigValue{expression, configValueType, {name.toLatin1(), nullptr}}};
+}
+
+
 
 
 
@@ -2934,7 +2980,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propVal
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue<detail::remove_cvref_t<A>>(value), detail::ConfigValueType::DEFAULT, {"",detail::adaptSetter<S,A>(propertySetter)}}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue<detail::remove_cvref_t<A>>(value), ConfigValueType::DEFAULT, {"",detail::adaptSetter<S,A>(propertySetter)}}};
 }
 
 
@@ -2957,7 +3003,7 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject ServiceRegistration " << reg;
         return {".invalid", QVariant{}};
     }
-    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, {"",detail::adaptSetter<S,A*>(propertySetter)}}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), ConfigValueType::SERVICE, {"",detail::adaptSetter<S,A*>(propertySetter)}}};
 }
 
 
@@ -2982,7 +3028,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, {"",detail::adaptSetter<S,QList<A*>>(propertySetter)}, nullptr}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), ConfigValueType::SERVICE, {"",detail::adaptSetter<S,QList<A*>>(propertySetter)}, nullptr}};
 }
 
 ///
@@ -3004,7 +3050,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject invalid ServiceRegistration";
         return {".invalid", QVariant{}};
     }
-    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), detail::ConfigValueType::SERVICE, {"",detail::adaptSetter<S,QList<A*>>(propertySetter)}, nullptr}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue(reg.unwrap()), ConfigValueType::SERVICE, {"",detail::adaptSetter<S,QList<A*>>(propertySetter)}, nullptr}};
 }
 
 
@@ -3030,7 +3076,7 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 ///
 ///     context->registerService(service<QTimer>() << withAutoRefresh << propValue(&QObject::setObjectName, "theTimer") << resolveProp(&QTimer::setInterval, "${timerInterval}"), "timer");
 ///
-/// **Note:** Auto-refreshing an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
+/// **Note:** Auto-refreshing is an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
 /// by putting a configuration-entry into one of the QSettings-objects registered with the context:
 ///
 ///     [qtdi]
@@ -3038,20 +3084,19 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 ///     ; Optionally, specify the refresh-period:
 ///     autoRefreshMillis=2000
 ///
+/// **Note:** autoRefresh() is a convenience-function. Using it is equivalent to using `resolveProp<ConfigValueType::AUTO_REFRESH>(propertySetter, expression)`
+///
 /// \tparam S the service-type.
 /// \param propertySetter the member-function that will be invoked with the property-value.
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
 /// \return a type-safe configuration for a service.
+/// \see mcnepp::qtdi::resolveProp()
 ///
 template<typename S,typename R,typename A> [[nodiscard]] auto autoRefresh(R(S::*propertySetter)(A), const QString& expression)
 -> std::enable_if_t<detail::variant_converter_traits<A>::is_convertible,service_config_entry<S>> {
-    return {detail::uniqueName(&propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, {"",detail::adaptSetter<S,A>(propertySetter)}, detail::variant_converter_traits<A>::defaultConverter()}};
+    return resolveProp<ConfigValueType::AUTO_REFRESH>(propertySetter, expression);
 }
 
-template<typename S,typename R,typename A,typename C> [[nodiscard]] auto autoRefresh(R(S::*propertySetter)(A), const QString& expression, C converter)
--> std::enable_if_t<detail::is_string_converter<A,C>::value,service_config_entry<S>> {
-    return {detail::uniqueName(&propertySetter), detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, {"", detail::adaptSetter<S,A>(propertySetter)}, detail::adaptVariantConverter(converter)}};
-}
 
 
 
@@ -3063,8 +3108,9 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto autoRef
 /// \return a configuration for a service.
 ///
 [[nodiscard]]inline detail::service_config::entry_type propValue(const QString& name, const QVariant& value) {
-    return {name, detail::ConfigValue{value, detail::ConfigValueType::DEFAULT, {name.toLatin1(), nullptr}}};
+    return {name, detail::ConfigValue{value, ConfigValueType::DEFAULT, {name.toLatin1(), nullptr}}};
 }
+
 
 ///
 /// \brief Creates a configuration-entry for a service.
@@ -3074,7 +3120,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto autoRef
 /// \return a configuration for a service.
 ///
 [[nodiscard]]inline detail::service_config::entry_type placeholderValue(const QString& name, const QVariant& value) {
-    return {name, detail::ConfigValue{value, detail::ConfigValueType::PRIVATE}};
+    return {name, detail::ConfigValue{value, ConfigValueType::PLACEHOLDER}};
 }
 
 
@@ -3100,7 +3146,7 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto autoRef
 ///
 ///     context->registerService(service<QTimer>() << withAutoRefresh << propValue("objectName", "theTimer") << resolveProp("interval", "${timerInterval}"), "timer");
 ///
-/// **Note:** Auto-refreshing an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
+/// **Note:** Auto-refreshing is an optional feature that needs to be explicitly enabled for mcnepp::qtdi::StandardApplicationContext
 /// by putting a configuration-entry into one of the QSettings-objects registered with the context:
 ///
 ///     [qtdi]
@@ -3108,11 +3154,14 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto autoRef
 ///     ; Optionally, specify the refresh-period:
 ///     autoRefreshMillis=2000
 ///
+/// **Note:** autoRefresh() is a convenience-function. Using it is equivalent to using `resolveProp<ConfigValueType::AUTO_REFRESH>(name, expression)`
+///
 /// \param name the name of the configuration-entry.
 /// \param expression a String, possibly containing one or more placeholders.
 /// \return an  entry that will ensure that the expression will be re-evaluated when the underlying QSettings changes.
+/// \see mcnepp::qtdi::resolveProp(const QString&,const QString&)
 [[nodiscard]] inline detail::service_config::entry_type autoRefresh(const QString& name, const QString& expression) {
-    return {name, detail::ConfigValue{expression, detail::ConfigValueType::AUTO_REFRESH_EXPRESSION, {name.toLatin1(), nullptr}, nullptr}};
+    return resolveProp<ConfigValueType::AUTO_REFRESH>(name, expression);
 }
 
 
@@ -3774,7 +3823,7 @@ struct ServiceGroup {
     /// \return a Service-declaration for a Service-group.
     template<typename S,typename Impl>  [[nodiscard]] Service<S,Impl,ServiceScope::SERVICE_GROUP> operator<<(Service<S,Impl,ServiceScope::SINGLETON>&& service)&& {
         service.config.serviceGroupPlaceholder = placeholder.toString();
-        service.config.properties.insert(service.config.serviceGroupPlaceholder , detail::ConfigValue{groupExpression.toString(), detail::ConfigValueType::PRIVATE});
+        service.config.properties.insert(service.config.serviceGroupPlaceholder , detail::ConfigValue{groupExpression.toString(), ConfigValueType::PLACEHOLDER});
         return Service<S,Impl,ServiceScope::SERVICE_GROUP>{std::move(service.descriptor), std::move(service.config)};
     }
 
@@ -3797,7 +3846,7 @@ struct ServiceGroup {
     template<typename S,typename Impl>  [[nodiscard]] Service<S,Impl,ServiceScope::SERVICE_GROUP> operator<<(const Service<S,Impl,ServiceScope::SINGLETON>& service)&& {
         detail::service_config cfg{service.config};
         cfg.serviceGroupPlaceholder = placeholder.toString();
-        cfg.properties.insert(cfg.serviceGroupPlaceholder , detail::ConfigValue{groupExpression.toString(), detail::ConfigValueType::PRIVATE});
+        cfg.properties.insert(cfg.serviceGroupPlaceholder , detail::ConfigValue{groupExpression.toString(), ConfigValueType::PLACEHOLDER});
         return Service<S,Impl,ServiceScope::SERVICE_GROUP>{detail::service_descriptor{service.descriptor}, std::move(cfg)};
     }
 
