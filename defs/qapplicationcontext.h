@@ -281,7 +281,7 @@ Q_SIGNALS:
 };
 
 
-template<typename T,typename M=const QMetaObject*> struct meta_type_traits {
+template<typename T,typename=const QMetaObject*> struct meta_type_traits {
     static constexpr std::nullptr_t getMetaObject() {
         return nullptr;
     }
@@ -517,13 +517,7 @@ template<typename S,typename A> q_bindable_getter_t adaptBindableGetter(QBindabl
 
 
 
-template<typename T,typename=QVariant> struct has_qvariant_support : std::false_type {
-
-};
-
-template<typename T> struct has_qvariant_support<T,decltype(QVariant{std::declval<T>()})> : std::true_type {
-
-};
+template<typename T> using has_qvariant_support = std::bool_constant<std::is_constructible_v<QVariant,T>>;
 
 
 

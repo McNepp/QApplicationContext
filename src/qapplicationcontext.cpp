@@ -77,7 +77,6 @@ struct q_setter_t::QPropertyInvoker : Invoker {
 
     virtual void invoke(QObject* target, const QVariant& arg) const override {
         m_property.write(target, arg);
-        m_property.enclosingMetaObject();
     }
 
     virtual bool equals(const Invoker* other) const override {
