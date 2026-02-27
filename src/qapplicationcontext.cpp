@@ -12,7 +12,7 @@ namespace mcnepp::qtdi {
 
 
 
-std::atomic<QApplicationContext*> QApplicationContext::theInstance = nullptr;
+constinit std::atomic<QApplicationContext*> QApplicationContext::theInstance = nullptr;
 
 
 Q_LOGGING_CATEGORY(defaultLoggingCategory, "qtdi")

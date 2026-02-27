@@ -214,8 +214,7 @@ template<typename T> struct Collector : public detail::Subscription {
         QObject::connect(this, &detail::Subscription::objectPublished, this, &Collector::collect);
     }
 
-    template<typename Cont> auto subscribeAll(const Cont& container) ->
-        std::enable_if_t<std::conjunction_v<std::is_assignable<registration_handle_t&,decltype(*container.begin())>,std::is_assignable<registration_handle_t&,decltype(*container.end())>>,void>
+    template<std::ranges::range Cont> void subscribeAll(const Cont& container) requires std::is_assignable_v<registration_handle_t&,typename Cont::value_type>
     {
         for(auto& reg : container) {
             reg->subscribe(this);
@@ -257,7 +256,7 @@ QVariantMap initPlaceholders(const detail::service_config::map_type& properties)
 
 
 
-template<typename C,typename P> auto eraseIf(C& container, P predicate) -> std::enable_if_t<std::is_pointer_v<typename C::value_type>,typename C::value_type> {
+template<std::ranges::range C,typename P> typename C::value_type eraseIf(C& container, P predicate) requires std::is_pointer_v<typename C::value_type> {
         auto iterator = std::find_if(container.begin(), container.end(), predicate);
         if(iterator != container.end()) {
             auto value = *iterator;

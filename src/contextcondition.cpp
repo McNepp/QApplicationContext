@@ -418,9 +418,6 @@ bool operator==(const Condition &left, const Condition &right) {
     return left.m_data == right.m_data || left.m_data->equals(right.m_data.get());
 }
 
-bool operator!=(const Condition &left, const Condition &right) {
-    return left.m_data != right.m_data && !left.m_data->equals(right.m_data.get());
-}
 
 bool Condition::overlaps(const Condition &other) const {
     return m_data->overlaps(other.m_data.get()) || other.m_data->overlaps(m_data.get());

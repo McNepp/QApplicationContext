@@ -211,15 +211,9 @@ constexpr bool is_allowed_as_dependency(ServiceScope scope) {
     return scope != ServiceScope::TEMPLATE && scope != ServiceScope::SERVICE_GROUP;
 }
 
-#ifdef __cpp_lib_remove_cvref
-template<typename T> using remove_cvref_t = std::remove_cvref_t<T>;
-#else
-template<typename T> using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
-#endif
-
-template<typename S,typename V=QObject*> struct could_be_qobject : std::false_type {};
-
-template<typename S> struct could_be_qobject<S,decltype(dynamic_cast<QObject*>(static_cast<S*>(nullptr)))> : std::true_type {};
+template<typename S> concept potential_qobject = requires(S* srv) {
+    dynamic_cast<QObject*>(srv);
+};
 
 
 template <typename T>
@@ -324,13 +318,7 @@ template<typename T> struct qvariant_cast<QList<T*>> {
     }
 };
 
-template<typename T,typename=void> struct is_equality_comparable : public std::false_type {
 
-};
-
-template<typename T> struct is_equality_comparable<T,std::enable_if_t<std::is_convertible_v<decltype(std::declval<T>() == std::declval<T>()),bool>>> : public std::true_type {
-
-};
 
 
 ///
@@ -365,7 +353,7 @@ class q_setter_t {
             if(this == other) {
                 return true;
             }
-            if constexpr(is_equality_comparable<F>::value) {
+            if constexpr( std::equality_comparable<F> ) {
                 if(auto t = dynamic_cast<const UntypedInvoker*>(other)) {
                     return callable == t->callable;
                 }
@@ -383,7 +371,7 @@ class q_setter_t {
 
         virtual void invoke(QObject* target, const QVariant& arg) const override {
             if(auto srv = dynamic_cast<S*>(target)) {
-                std::invoke(callable, srv, qvariant_cast<remove_cvref_t<A>>{}(arg));
+                std::invoke(callable, srv, qvariant_cast<std::remove_cvref_t<A>>{}(arg));
             }
         }
 
@@ -391,7 +379,7 @@ class q_setter_t {
             if(this == other) {
                 return true;
             }
-            if constexpr(is_equality_comparable<F>::value) {
+            if constexpr(std::equality_comparable<F>) {
                 if(auto t = dynamic_cast<const TypedInvoker*>(other)) {
                     return callable == t->callable;
                 }
@@ -410,7 +398,7 @@ public:
 
     explicit q_setter_t(const QMetaProperty& property);
 
-    template<typename F,std::enable_if_t<std::is_invocable_v<F,QObject*,QVariant>,int> = 0> explicit q_setter_t(F callable) :
+    template<std::invocable<QObject*,QVariant> F> explicit q_setter_t(F callable) :
         m_impl{new UntypedInvoker<F>{callable}}{
     }
 
@@ -434,10 +422,6 @@ public:
         return !other;
     }
 
-    bool operator!=(const q_setter_t& other) const {
-        return !(*this == other);
-    }
-
     template<typename S,typename A,typename F> static q_setter_t create(F callable) {
         return q_setter_t{new TypedInvoker<S,A,F>{callable}};
     }
@@ -451,7 +435,7 @@ private:
     QExplicitlySharedDataPointer<Invoker> m_impl;
 };
 
-template<typename S,typename A,typename F> std::enable_if_t<std::is_invocable_v<F,S*,A>,q_setter_t> adaptSetter(F callable) {
+template<typename S,typename A,std::invocable<S*,A> F> q_setter_t adaptSetter(F callable) {
     return q_setter_t::create<S,A>(callable);
 }
 
@@ -536,47 +520,30 @@ template<typename S,typename A> q_bindable_getter_t adaptBindableGetter(QBindabl
 
 
 
-template<typename T> using has_qvariant_support = std::bool_constant<std::is_constructible_v<QVariant,T>>;
 
-
-
-template<typename T,typename C,bool=std::is_invocable_v<C,QString>> struct is_string_converter;
-
-template<typename T,typename C> struct is_string_converter<T,C,false> : std::false_type {
-};
-
-template<typename T,typename C> struct is_string_converter<T,C,true> : std::bool_constant<std::is_convertible_v<std::invoke_result_t<C,QString>,T>> {
+template<typename C,typename T> concept string_converter = requires(C callable, QString str) {
+    { std::invoke(callable, str) } -> std::convertible_to<T>;
 };
 
 
-template<typename T,typename C> constexpr bool is_string_converter_v = is_string_converter<T,C>::value;
-
-template<typename C> static std::enable_if_t<std::is_invocable_v<C,QString>,q_variant_converter_t> adaptVariantConverter(C converter) {
+template<typename C> static q_variant_converter_t adaptVariantConverter(C converter) requires std::is_invocable_v<C,QString> {
     return [converter](const QString& str) { return QVariant::fromValue(converter(str));};
 }
 
 
-#ifdef __cpp_aggregate_paren_init
 
-template<typename T> using is_string_constructible=std::is_constructible<T,QString>;
+template<typename T> struct variant_converter_traits {
+    using arg_t = std::remove_cvref_t<T>;
 
-#else
+    static constexpr bool is_convertible = std::is_constructible_v<arg_t,QString>;
 
-template<typename T,typename=T> struct is_string_constructible : std::false_type {
-
-};
-
-template<typename T> struct is_string_constructible<T,decltype(T{std::declval<QString>()})> : std::true_type {
+    static q_variant_converter_t defaultConverter() {
+        return [](const QString& str) { return QVariant::fromValue(arg_t{str});};
+    }
 
 };
 
-
-#endif
-
-template<typename T,bool=has_qvariant_support<T>::value> struct variant_converter_traits;
-
-
-template<typename T> struct variant_converter_traits<T,true> {
+template<typename T> requires std::constructible_from<QVariant,T> struct variant_converter_traits<T> {
 
     static constexpr bool is_convertible = true;
 
@@ -588,16 +555,6 @@ template<typename T> struct variant_converter_traits<T,true> {
 };
 
 
-template<typename T> struct variant_converter_traits<T,false> {
-    using arg_t = remove_cvref_t<T>;
-
-    static constexpr bool is_convertible = is_string_constructible<arg_t>::value;
-
-    static q_variant_converter_t defaultConverter() {
-        return [](const QString& str) { return QVariant::fromValue(arg_t{str});};
-    }
-
-};
 
 
 
@@ -776,9 +733,8 @@ public:
 
     }
 
-    template<typename S,typename F> void connectOut(S* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection)
+    template<std::derived_from<QObject> S,typename F> void connectOut(S* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection)
     {
-        static_assert(std::is_base_of_v<QObject,S>, "Context must be derived from QObject");
         out_connection = QObject::connect(this, &Subscription::objectPublished, context, callable, connectionType);
     }
 
@@ -1209,8 +1165,7 @@ protected:
     /// \sa mcnepp::qtdi::inject()
     /// \sa mcnepp::qtdi::injectIfPresent()
     /// \sa mcnepp::qtdi::injectAll()
-    template<typename S,Kind kind> struct Dependency {
-        static_assert(could_be_qobject<S>::value, "Dependency must be potentially convertible to QObject");
+    template<potential_qobject S,Kind kind> struct Dependency {
         ///
         /// \brief the required name for this dependency.
         /// The default-value is the empty String, with the implied meaning <em>"any dependency of the correct type may be used"</em>.
@@ -1492,8 +1447,6 @@ public:
 
 
     friend bool operator==(const Condition& left, const Condition& right);
-
-    friend bool operator!=(const Condition& left, const Condition& right);
 
     ///
     /// \brief Does this Condition overlap with another one?
@@ -1790,7 +1743,7 @@ public:
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
     /// \return the Subscription if `this->isValid()`
     ///
-    template<typename F> std::enable_if_t<std::is_invocable_v<F,S*>,Subscription> subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
+    template<std::invocable<S*>  F> Subscription subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection) {
         if(!registrationHolder || !context) {
             qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this;
             return Subscription{};
@@ -1816,7 +1769,7 @@ public:
     /// \param connectionType determines whether the signal is processed synchronously or asynchronously
     /// \return  the Subscription if `this->isValid() && target != nullptr && setter != nullptr`
     ///
-      template<typename T,typename R> std::enable_if_t<std::is_base_of_v<QObject,T>,Subscription> subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
+      template<std::derived_from<QObject> T,typename R> Subscription subscribe(T* target, R (T::*setter)(S*), Qt::ConnectionType connectionType = Qt::AutoConnection) {
         if(!setter || !target) {
             qCCritical(loggingCategory(unwrap())).noquote().nospace() << "Cannot subscribe to " << *this << " with null";
             return Subscription{};
@@ -2158,11 +2111,13 @@ private:
 namespace detail {
 
 //Tests whether the type T is a ServiceRegistration with type Srv and an arbitrary ServiceScope:
-template<typename Srv,typename T> struct is_service_registration : std::false_type {};
+template<typename T,typename Srv> struct is_service_registration : std::false_type {};
 
-template<typename Srv,ServiceScope scope> struct is_service_registration<Srv,mcnepp::qtdi::ServiceRegistration<Srv,scope>> : std::true_type {};
+template<typename Srv,ServiceScope scope> struct is_service_registration<mcnepp::qtdi::ServiceRegistration<Srv,scope>,Srv> : std::true_type {};
 
+template<typename T,typename Srv> concept service_registration = detail::is_service_registration<std::remove_cvref_t<T>,Srv>::value;
 }
+
 
 ///
 /// \brief Tests two Registrations for equality.
@@ -2192,11 +2147,8 @@ template<typename S1,typename S2> bool operator==(const Registration<S1>& reg1, 
 /// \tparam T the type of the target.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, const Registration<T>& target, const char* targetProperty) {
-    static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
-    static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
-    static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
-
+template<std::derived_from<QObject> S,std::derived_from<QObject> T,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, const Registration<T>& target, const char* targetProperty)
+requires detail::service_scope_traits<scope>::is_binding_source {
     return Subscription{detail::bind(source.unwrap(), {detail::getPropertyByName(source.serviceMetaObject(), sourceProperty)}, target.unwrap(), {targetProperty, nullptr})};
 }
 
@@ -2214,9 +2166,8 @@ template<typename S,typename T,ServiceScope scope> Subscription bind(const Servi
 /// \tparam SLT the type of the slot
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,ServiceScope scope,typename R,typename A> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, const Registration<T>& target, R(T::*setter)(A)){
-    static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
-    static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
+template<std::derived_from<QObject> S,typename T,ServiceScope scope,typename R,typename A> Subscription bind(const ServiceRegistration<S,scope>& source, const char* sourceProperty, const Registration<T>& target, R(T::*setter)(A))
+    requires detail::service_scope_traits<scope>::is_binding_source {
 
     if(!setter) {
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to null";
@@ -2248,10 +2199,8 @@ template<typename S,typename T,ServiceScope scope,typename R,typename A> Subscri
 /// or a callable object taking two arguments, one of type `T*` and the second of the signal's argument-type.
 /// \return the Subscription established by this binding.
 ///
-template<typename A,typename S,typename T,ServiceScope scope,typename SLT> auto bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(A), const Registration<T>& target, SLT func) ->
-    std::enable_if_t<std::is_invocable_v<SLT,T*,A>,Subscription> {
-    static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
-    static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
+template<typename A,std::derived_from<QObject> S,typename T,ServiceScope scope,std::invocable<T*,A> SLT> Subscription bind(const ServiceRegistration<S,scope>& source, void(S::*signalFunction)(A), const Registration<T>& target, SLT func)
+    requires detail::service_scope_traits<scope>::is_binding_source {
 
     if(signalFunction) {
         auto signalProperty = detail::getPropertyBySignal(QMetaMethod::fromSignal(signalFunction));
@@ -2280,10 +2229,8 @@ template<typename A,typename S,typename T,ServiceScope scope,typename SLT> auto 
 /// or a callable object taking two arguments, one of type `T*` and the second of the signal's argument-type.
 /// \return the Subscription established by this binding.
 ///
-template<typename S,typename T,typename A,typename SLT,ServiceScope scope> auto bind(const ServiceRegistration<S,scope>& source, QBindable<A>(S::*bindable)(), const Registration<T>& target, SLT func) ->
-    std::enable_if_t<std::is_invocable_v<SLT,T*,A>,Subscription> {
-    static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
-    static_assert(detail::service_scope_traits<scope>::is_binding_source, "The scope of the service does not permit binding");
+template<std::derived_from<QObject> S,typename T,typename A,std::invocable<T*,A> SLT,ServiceScope scope> Subscription bind(const ServiceRegistration<S,scope>& source, QBindable<A>(S::*bindable)(), const Registration<T>& target, SLT func)
+    requires detail::service_scope_traits<scope>::is_binding_source {
     if(!bindable) {
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot bind " << source << " to " << target;
         return Subscription{};
@@ -2309,9 +2256,7 @@ template<typename S,typename T,typename A,typename SLT,ServiceScope scope> auto 
 /// \return a Subscription. Cancelling this Subscription will disconnect any connections that have already been made between the source-service
 /// and the target-service.
 ///
-template<typename S,typename SIG,typename T,typename SLT> Subscription connectServices(const Registration<S>& source, SIG sourceSignal, const Registration<T>& target, SLT targetSlot, Qt::ConnectionType connectionType = Qt::AutoConnection) {
-    static_assert(std::is_base_of_v<QObject,S>, "Source must be derived from QObject");
-    static_assert(std::is_base_of_v<QObject,T>, "Target must be derived from QObject");
+template<std::derived_from<QObject> S,typename SIG,std::derived_from<QObject> T,typename SLT> Subscription connectServices(const Registration<S>& source, SIG sourceSignal, const Registration<T>& target, SLT targetSlot, Qt::ConnectionType connectionType = Qt::AutoConnection) {
     if(!source || !target) {
         qCCritical(loggingCategory(source.unwrap())).noquote().nospace() << "Cannot connect " << source << " to " << target;
         return Subscription{};
@@ -2355,7 +2300,7 @@ public:
     /// \param connectionType
     /// \return a valid Subscription if all of the supplied Registrations are valid.
     ///
-    template<typename F> std::enable_if_t<std::is_invocable_v<F,S*...>,Subscription> subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection)&& {
+    template<std::invocable<S*...> F> Subscription subscribe(QObject* context, F callable, Qt::ConnectionType connectionType = Qt::AutoConnection)&& {
         if(m_registrations.empty()) {
             return Subscription{};
         }
@@ -2391,7 +2336,7 @@ private:
 /// \param registrations the list of registrations. Must contain at least two entries. Curently, combining up to five services is supported.
 /// \return a ServiceCombination which can be subscribed.
 ///
-template<typename...S> std::enable_if_t<(sizeof...(S) > 1),ServiceCombination<S...>> combine(const Registration<S>&...registrations) {
+template<typename...S> ServiceCombination<S...> combine(const Registration<S>&...registrations) requires (sizeof...(S) > 1) {
     return ServiceCombination<S...>{registrations...};
 }
 
@@ -2400,19 +2345,6 @@ template<typename...S> std::enable_if_t<(sizeof...(S) > 1),ServiceCombination<S.
 
 
 
-
-///
-/// \brief Tests two Registrations for difference.
-///
-/// Two Registrations are deemed different if the pointers returned by Registration::unwrap() do not point to the same Registration
-/// **or** if they both report `false` via eRegistration::isValid().
-/// \param reg1
-/// \param reg2
-/// \return `true` if the two Registrations are logically different.
-///
-template<typename S1,typename S2> bool operator!=(const Registration<S1>& reg1, const Registration<S2>& reg2) {
-    return reg1.unwrap() != reg2.unwrap() || !reg1;
-}
 
 template<typename S> QDebug operator<<(QDebug out, const Registration<S>& reg) {
     if(reg) {
@@ -2487,8 +2419,7 @@ template<typename S> struct service_factory {
 /// \tparam F the type of the service-factory. Defaults to mcnepp::qtdi::service_factory.
 ///
 
-template<typename S,typename I=std::nullptr_t,ServiceInitializationPolicy serviceInitPolicy=ServiceInitializationPolicy::DEFAULT,typename F=service_factory<S>> struct default_service_traits {
-    static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
+template<detail::potential_qobject S,typename I=std::nullptr_t,ServiceInitializationPolicy serviceInitPolicy=ServiceInitializationPolicy::DEFAULT,typename F=service_factory<S>> struct default_service_traits {
 
     using service_type = S;
 
@@ -2593,8 +2524,8 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,DependencyKind::MANDAT
 /// \tparam F the type of the accessor function. Must be either a callable that accepts a pointer to S, or a pointer to a member-function of S.
 /// \return an opaque Object representing the Dependency.
 ///
-template<typename S,typename F,ServiceScope scope> auto inject(const ServiceRegistration<S,scope>& registration, F accessor) ->
-std::enable_if_t<detail::is_allowed_as_dependency(scope) && std::is_invocable_v<F,S*>,detail::ComputedDependency<S,std::invoke_result_t<F,S*>>> {
+template<typename S,std::invocable<S*> F,ServiceScope scope> detail::ComputedDependency<S,std::invoke_result_t<F,S*>> inject(const ServiceRegistration<S,scope>& registration, F accessor)
+requires (detail::is_allowed_as_dependency(scope)) {
     //ServiceScope could be UNKNOWN statically, which passes the check, but TEMPLATE at runtime:
     if(!registration || !detail::is_allowed_as_dependency(registration.unwrap() -> scope())) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot inject ServiceRegistration " << registration;
@@ -2663,8 +2594,7 @@ template<typename S> [[nodiscard]] constexpr Dependency<S,DependencyKind::OPTION
 /// \tparam S the service-type of the dependency.
 /// \return a 1-to-N Dependency on the supplied type.
 ///
-template<typename S,typename...Names> [[nodiscard]] auto injectAll(Names&&...requiredNames) ->
-std::enable_if_t<std::conjunction_v<std::is_convertible<detail::remove_cvref_t<Names>,QString>...>,Dependency<S,DependencyKind::N>> {
+template<typename S,std::convertible_to<QString>...Names> [[nodiscard]] Dependency<S,DependencyKind::N> injectAll(Names&&...requiredNames) {
     QStringList requiredNamesList;
     (requiredNamesList.push_back(requiredNames), ...);
     return Dependency<S,DependencyKind::N>{requiredNamesList.join(',')};
@@ -2677,15 +2607,15 @@ std::enable_if_t<std::conjunction_v<std::is_convertible<detail::remove_cvref_t<N
 /// \param first the first ServiceRegistration.
 /// \param tail more ServiceRegistrations.
 /// \tparam S the service-type of the dependency.
-/// \tparam Reg a list of values implicitly convertible to `Registration<S>`.
+/// \tparam Reg a list of values implicitly convertible to `ServiceRegistration<S>`.
 /// \return a 1-to-N  Dependency on the supplied registration.
 ///
-template<typename S,ServiceScope scope,typename...Reg> [[nodiscard]] auto injectAll(const ServiceRegistration<S,scope>& first, Reg&&... tail) ->
-    std::enable_if_t<std::conjunction_v<detail::is_service_registration<S,detail::remove_cvref_t<Reg>>...>,Dependency<S,DependencyKind::N>> {
+template<typename S,ServiceScope scope,detail::service_registration<S>...Reg> [[nodiscard]] Dependency<S,DependencyKind::N> injectAll(const ServiceRegistration<S,scope>& first, Reg&&... tail) {
     QStringList requiredNames;
     (requiredNames.push_back(first.registeredName()), ..., requiredNames.push_back(tail.registeredName()));
     return Dependency<S,DependencyKind::N>{requiredNames.join(',')};
 }
+
 
 ///
 /// An opaque type denoting a constructor-argument for a %Service.
@@ -2709,8 +2639,7 @@ template<typename S> using Resolvable = detail::Resolvable<S>;
 /// \param expression may contain placeholders in the format `${identifier}` or `${identifier:defaultValue}`.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S=QString> [[nodiscard]] auto resolve(const QString& expression)
--> std::enable_if_t<detail::variant_converter_traits<S>::is_convertible,Resolvable<S>> {
+template<typename S=QString> [[nodiscard]] Resolvable<S> resolve(const QString& expression) requires detail::variant_converter_traits<S>::is_convertible {
     return Resolvable<S>{expression, QVariant{}, detail::variant_converter_traits<S>::defaultConverter()};
 }
 
@@ -2759,8 +2688,7 @@ template<typename S=QString> [[nodiscard]] auto resolve(const QString& expressio
 /// \param converter Will be used to convert the resolved expression into a value.
 /// \return a Resolvable instance for the supplied type.
 ///
-template<typename S,typename C> [[nodiscard]] auto resolve(const QString& expression, const S& defaultValue, C converter) ->
-std::enable_if_t<detail::is_string_converter_v<S,C>,Resolvable<S>> {
+template<typename S,detail::string_converter<S> C> [[nodiscard]] Resolvable<S> resolve(const QString& expression, const S& defaultValue, C converter) {
     return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::adaptVariantConverter(converter)};
 }
 
@@ -2771,8 +2699,7 @@ std::enable_if_t<detail::is_string_converter_v<S,C>,Resolvable<S>> {
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
 /// <br>This is an overload of mcnepp::qtdi::resolve(const QString&,const S&,C) without the default-value.
 ///
-template<typename S,typename C> [[nodiscard]] auto resolve(const QString& expression, C converter) ->
-std::enable_if_t<detail::is_string_converter_v<S,C>,Resolvable<S>> {
+template<typename S,detail::string_converter<S> C> [[nodiscard]] Resolvable<S> resolve(const QString& expression, C converter) {
     return Resolvable<S>{expression, QVariant{}, detail::adaptVariantConverter(converter)};
 }
 
@@ -2781,8 +2708,8 @@ std::enable_if_t<detail::is_string_converter_v<S,C>,Resolvable<S>> {
 /// \brief Specifies a constructor-argument that shall be resolved by the QApplicationContext.
 /// <br>This is an overload of mcnepp::qtdi::resolve(const QString&,const S&,C) without the explicit converter.
 ///
-template<typename S> [[nodiscard]] auto resolve(const QString& expression, const S& defaultValue)
--> std::enable_if_t<detail::variant_converter_traits<S>::is_convertible,Resolvable<S>> {
+template<typename S> [[nodiscard]] Resolvable<S> resolve(const QString& expression, const S& defaultValue) requires
+detail::variant_converter_traits<S>::is_convertible {
     return Resolvable<S>{expression, QVariant::fromValue(defaultValue), detail::variant_converter_traits<S>::defaultConverter()};
 }
 
@@ -2902,9 +2829,8 @@ inline detail::service_config::config_modifier withGroup(const QString& groupExp
 /// \param converter specifies a converter that constructs an argument of type `A` from a QString.
 /// \return a type-safe configuration for a service.
 ///
-template<ConfigValueType configValueType=ConfigValueType::DEFAULT,typename S,typename R,typename A,typename C> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression, C converter) ->
-    std::enable_if_t<detail::config_value_traits<configValueType>::is_resolvable && detail::is_string_converter_v<A,C>,service_config_entry<S>>
-
+template<ConfigValueType configValueType=ConfigValueType::DEFAULT,typename S,typename R,typename A,detail::string_converter<A> C> [[nodiscard]] service_config_entry<S> resolveProp(R(S::*propertySetter)(A), const QString& expression, C converter)
+requires detail::config_value_traits<configValueType>::is_resolvable
 {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
@@ -2932,8 +2858,9 @@ template<ConfigValueType configValueType=ConfigValueType::DEFAULT,typename S,typ
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
 /// \return a type-safe configuration for a service.
 ///
-template<ConfigValueType configValueType=ConfigValueType::DEFAULT,typename S,typename R,typename A> [[nodiscard]] auto resolveProp(R(S::*propertySetter)(A), const QString& expression)
--> std::enable_if_t<detail::config_value_traits<configValueType>::is_resolvable && detail::variant_converter_traits<A>::is_convertible,service_config_entry<S>>{
+template<ConfigValueType configValueType=ConfigValueType::DEFAULT,typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> resolveProp(R(S::*propertySetter)(A), const QString& expression)
+requires detail::config_value_traits<configValueType>::is_resolvable && detail::variant_converter_traits<A>::is_convertible
+{
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
@@ -2956,8 +2883,8 @@ template<ConfigValueType configValueType=ConfigValueType::DEFAULT,typename S,typ
 /// \param expression will be resolved when the service is being configured. May contain *placeholders*.
 /// \return a type-safe configuration for a service.
 ///
-template<ConfigValueType configValueType=ConfigValueType::DEFAULT> [[nodiscard]] auto resolveProp(const QString& name, const QString& expression)
--> std::enable_if_t<detail::config_value_traits<configValueType>::is_resolvable,detail::service_config::entry_type> {
+template<ConfigValueType configValueType=ConfigValueType::DEFAULT> [[nodiscard]] detail::service_config::entry_type resolveProp(const QString& name, const QString& expression)
+requires detail::config_value_traits<configValueType>::is_resolvable {
     return {name, detail::ConfigValue{expression, configValueType, {name.toLatin1(), nullptr}}};
 }
 
@@ -2973,14 +2900,14 @@ template<ConfigValueType configValueType=ConfigValueType::DEFAULT> [[nodiscard]]
 /// \param value will be set when the service is being configured.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propValue(R(S::*propertySetter)(A), C value) ->
-    std::enable_if_t<std::is_convertible_v<C,A>,service_config_entry<S>> {
+template<typename S,typename R,typename A,typename C> [[nodiscard]] service_config_entry<S> propValue(R(S::*propertySetter)(A), C value)
+requires std::is_convertible_v<C,A> {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
         return {".invalid", QVariant{}};
     }
 
-    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue<detail::remove_cvref_t<A>>(value), ConfigValueType::DEFAULT, {"",detail::adaptSetter<S,A>(propertySetter)}}};
+    return {detail::uniqueName(&propertySetter), detail::ConfigValue{QVariant::fromValue<std::remove_cvref_t<A>>(value), ConfigValueType::DEFAULT, {"",detail::adaptSetter<S,A>(propertySetter)}}};
 }
 
 
@@ -2993,7 +2920,8 @@ template<typename S,typename R,typename A,typename C> [[nodiscard]] auto propVal
 /// \param reg the registration for the service-instance that will be injected into the configured service.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto propValue(R(S::*propertySetter)(A*), const ServiceRegistration<A,scope>& reg) -> std::enable_if_t<detail::is_allowed_as_dependency(scope),service_config_entry<S>>
+template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] service_config_entry<S> propValue(R(S::*propertySetter)(A*), const ServiceRegistration<A,scope>& reg)
+requires(detail::is_allowed_as_dependency(scope))
 {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
@@ -3018,7 +2946,8 @@ template<typename S,typename R,typename A,ServiceScope scope> [[nodiscard]] auto
 /// \param reg the registration for those services that will be injected into the configured service.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propValue(R(S::*propertySetter)(L), const ProxyRegistration<A>& reg) -> std::enable_if_t<std::is_convertible_v<QList<A*>,L>,service_config_entry<S>>
+template<typename S,typename R,typename A,typename L> [[nodiscard]] service_config_entry<S> propValue(R(S::*propertySetter)(L), const ProxyRegistration<A>& reg)
+requires std::is_convertible_v<QList<A*>,L>
 {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
@@ -3040,7 +2969,8 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// \param reg the registration for the Service-group whose services will be injected into the configured service.
 /// \return a type-safe configuration for a service.
 ///
-template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propValue(R(S::*propertySetter)(L), const ServiceRegistration<A,ServiceScope::SERVICE_GROUP>& reg) -> std::enable_if_t<std::is_convertible_v<QList<A*>,L>,service_config_entry<S>>
+template<typename S,typename R,typename A,typename L> [[nodiscard]] service_config_entry<S> propValue(R(S::*propertySetter)(L), const ServiceRegistration<A,ServiceScope::SERVICE_GROUP>& reg)
+requires std::is_convertible_v<QList<A*>,L>
 {
     if(!propertySetter) {
         qCCritical(defaultLoggingCategory()).nospace() << "Cannot set invalid property";
@@ -3092,8 +3022,8 @@ template<typename S,typename R,typename A,typename L> [[nodiscard]] auto propVal
 /// \return a type-safe configuration for a service.
 /// \see mcnepp::qtdi::resolveProp()
 ///
-template<typename S,typename R,typename A> [[nodiscard]] auto autoRefresh(R(S::*propertySetter)(A), const QString& expression)
--> std::enable_if_t<detail::variant_converter_traits<A>::is_convertible,service_config_entry<S>> {
+template<typename S,typename R,typename A> [[nodiscard]] service_config_entry<S> autoRefresh(R(S::*propertySetter)(A), const QString& expression)
+requires detail::variant_converter_traits<A>::is_convertible {
     return resolveProp<ConfigValueType::AUTO_REFRESH>(propertySetter, expression);
 }
 
@@ -3174,7 +3104,7 @@ template<typename S,typename R,typename A> [[nodiscard]] auto autoRefresh(R(S::*
 namespace detail {
 
 
-template<typename S,typename F> static auto adaptInitializer(F func) -> std::enable_if_t<std::is_invocable_v<F,S*,QApplicationContext*>,q_init_t> {
+template<typename S,std::invocable<S*,QApplicationContext*> F> static q_init_t adaptInitializer(F func) {
     return [func](QObject* target,QApplicationContext* context) {
         if(auto ptr =dynamic_cast<S*>(target)) {
             std::invoke(func, ptr, context);
@@ -3182,7 +3112,7 @@ template<typename S,typename F> static auto adaptInitializer(F func) -> std::ena
 
 }
 
-template<typename S,typename F,typename...Args> static auto adaptInitializer(F func, Args&&...args) -> std::enable_if_t<std::is_invocable_v<F,S*,Args...>,q_init_t> {
+template<typename S,typename F,typename...Args> static q_init_t adaptInitializer(F func, Args&&...args) requires std::is_invocable_v<F,S*,Args...> {
     return [func=std::bind(func, std::placeholders::_1, std::forward<Args>(args)...)](QObject* target,QApplicationContext*) {
         if(auto ptr =dynamic_cast<S*>(target)) {
             std::invoke(func, ptr);
@@ -3311,9 +3241,6 @@ inline bool operator==(const service_descriptor &left, const service_descriptor 
     return static_cast<bool>(left.init_method) == static_cast<bool>(right.init_method);
  }
 
-inline bool operator!=(const service_descriptor &left, const service_descriptor &right) {
-    return !(left == right);
-}
 
 
 
@@ -3368,8 +3295,7 @@ struct dependency_helper<mcnepp::qtdi::ServiceRegistration<S,scope>> {
 
     using arg_type = S*;
 
-    static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S,scope>& dep) {
-        static_assert(is_allowed_as_dependency(scope), "ServiceRegistration with this scope cannot be a dependency");
+    static dependency_info info(const mcnepp::qtdi::ServiceRegistration<S,scope>& dep) requires(is_allowed_as_dependency(scope)) {
         //It could still be ServiceScope::UNKNOWN statically, but ServiceScope::TEMPLATE at runtime:
         if(dep && is_allowed_as_dependency(dep.unwrap()->scope())) {
             return { dep.unwrap()->descriptor().impl_type, static_cast<int>(Kind::MANDATORY), dep.registeredName() };
@@ -3596,9 +3522,7 @@ template<typename Srv,typename Impl,ServiceScope scope,typename F,typename...Dep
 /// \tparam Impl the implementation-type of the service.
 /// \tparam scope the scope of the designated Service.
 ///
-template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN> struct Service {
-
-    static_assert(std::is_base_of_v<QObject,Impl>, "Implementation-type must be a subclass of QObject");
+template<typename Srv,std::derived_from<QObject> Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN> struct Service {
 
     static_assert(std::is_base_of_v<Srv,Impl> || scope == ServiceScope::TEMPLATE, "Implementation-type must be a subclass of Service-type");
 
@@ -3631,7 +3555,7 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
      * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
      * @return this Service.
      */
-    template<typename...IFaces> std::enable_if_t<(sizeof...(IFaces) > 0),Service<Srv,Impl,scope>>&& advertiseAs() && {
+    template<typename...IFaces> Service<Srv,Impl,scope>&& advertiseAs() && requires (sizeof...(IFaces) > 0) {
         //Check whether the Impl-type is derived from the service-interfaces (except for service-templates)
         if constexpr(scope != ServiceScope::TEMPLATE) {
             static_assert(std::conjunction_v<std::is_base_of<IFaces,Impl>...>, "Implementation-type does not implement all advertised interfaces");
@@ -3665,7 +3589,7 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
      * \tparam IFaces additional service-interfaces to be advertised. <b>At least one must be supplied.</b>
      * @return a Service with the advertised interfaces.
      */
-    template<typename...IFaces> [[nodiscard]] std::enable_if_t<(sizeof...(IFaces) > 0),Service<Srv,Impl,scope>> advertiseAs() const& {
+    template<typename...IFaces> [[nodiscard]] Service<Srv,Impl,scope> advertiseAs() const& requires (sizeof...(IFaces) > 0) {
         return Service<Srv,Impl,scope>{*this}.advertiseAs<IFaces...>();
     }
 
@@ -3718,19 +3642,9 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
     /// \brief Adds a type-safe configuration-entry to this Service.
     /// \param entry will be added to the configuration.
     /// \return this Service.
-    ///
-    Service<Srv,Impl,scope>& operator<<(const service_config_entry<Impl>& entry) {
-        config.properties.insert(entry.name, entry.value);
-        return *this;
-    }
-
-    ///
-    /// \brief Adds a type-safe configuration-entry to this Service.
-    /// \param entry will be added to the configuration.
-    /// \return this Service.
     /// \note this function needs to be declared as a function-template. Otherwise, a duplicate function error would occur in case `Impl` and `Srv` denote the same type.
     ///
-    template<typename T> auto operator<<(const service_config_entry<T>& entry) -> std::enable_if_t<std::is_same_v<T,Srv>,Service<Srv,Impl,scope>&> {
+    template<typename T> Service<Srv,Impl,scope>& operator<<(const service_config_entry<T>& entry) requires std::is_same_v<T,Srv> || std::is_same_v<T,Impl> {
         config.properties.insert(entry.name, entry.value);
         return *this;
     }
@@ -3775,8 +3689,8 @@ template<typename Srv,typename Impl=Srv,ServiceScope scope=ServiceScope::UNKNOWN
 /// \tparam Impl the implementation-type of the service. If the factory-type F contains
 /// a type-declaration `service_type`, Impl will be deduced as that type.
 /// \return a Service that will use the provided factory.
-template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nodiscard]] auto service(F factory, Dep...dependencies) ->
-    std::enable_if_t<std::is_invocable_v<F,typename detail::dependency_helper<Dep>::arg_type...>,Service<Impl,Impl,ServiceScope::SINGLETON>>
+template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nodiscard]] Service<Impl,Impl,ServiceScope::SINGLETON> service(F factory, Dep...dependencies)
+    requires std::is_invocable_v<F,typename detail::dependency_helper<Dep>::arg_type...>
 {
     return Service<Impl,Impl,ServiceScope::SINGLETON>{detail::make_descriptor<Impl,Impl,ServiceScope::SINGLETON>(factory, dependencies...)};
 }
@@ -3791,7 +3705,7 @@ template<typename F,typename Impl=typename F::service_type,typename...Dep> [[nod
 /// \tparam S the primary service-interface.
 /// \tparam Impl the implementation-type of the service.
 /// \return a Service-declaration
-template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Impl,ServiceScope::SINGLETON> service(Dep...dependencies) {
+template<typename S,std::derived_from<S> Impl=S,typename...Dep>  [[nodiscard]] Service<S,Impl,ServiceScope::SINGLETON> service(Dep...dependencies) {
     return Service<S,Impl,ServiceScope::SINGLETON>{detail::make_descriptor<S,Impl,ServiceScope::SINGLETON>(typename service_traits<Impl>::factory_type{}, dependencies...)};
 }
 
@@ -3883,7 +3797,7 @@ struct ServiceGroup {
 /// \tparam S the primary service-interface.
 /// \tparam Impl the implementation-type of the service.
 /// \return a Prototype-declaration
-template<typename S,typename Impl=S,typename...Dep>  [[nodiscard]] Service<S,Impl,ServiceScope::PROTOTYPE> prototype(Dep...dependencies) {
+template<typename S,std::derived_from<S> Impl=S,typename...Dep>  [[nodiscard]] Service<S,Impl,ServiceScope::PROTOTYPE> prototype(Dep...dependencies) {
     return Service<S,Impl,ServiceScope::PROTOTYPE>{detail::make_descriptor<S,Impl,ServiceScope::PROTOTYPE>(typename service_traits<Impl>::factory_type{}, dependencies...)};
 }
 
@@ -4008,7 +3922,7 @@ public:
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName = {}, const Condition& condition = Condition::always()) -> ServiceRegistration<S,scope> {
+    template<typename S,typename Impl,ServiceScope scope> ServiceRegistration<S,scope> registerService(const Service<S,Impl,scope>& serviceDeclaration, const QString& objectName = {}, const Condition& condition = Condition::always()) {
         return ServiceRegistration<S,scope>::wrap(registerServiceHandle(objectName, serviceDeclaration.descriptor, serviceDeclaration.config, scope, condition, nullptr));
     }
 
@@ -4036,8 +3950,8 @@ public:
     /// \tparam Impl the implementation-type. The Service will be instantiated using this class' constructor.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename Impl,typename B,ServiceScope scope> auto registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName = {}, const Condition& condition = Condition::always()) -> ServiceRegistration<S,scope> {
-        static_assert(std::is_base_of_v<B,Impl>, "Service-type does not extend type of Service-template.");
+    template<typename S,typename Impl,typename B,ServiceScope scope> ServiceRegistration<S,scope> registerService(const Service<S,Impl,scope>& serviceDeclaration, const ServiceRegistration<B,ServiceScope::TEMPLATE>& templateRegistration, const QString& objectName = {}, const Condition& condition = Condition::always())
+        requires std::is_base_of_v<B,Impl> {
         if(!templateRegistration) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot register " << serviceDeclaration.descriptor << " with name '" << objectName << "'. Invalid service-template";
             return ServiceRegistration<S,scope>{};
@@ -4120,8 +4034,7 @@ public:
     /// \tparam IFaces additional service-interfaces to be advertised. If a type appears more than once in the set of types comprising `S` and `IFaces`, compilation will fail with a diagnostic.
     /// \return a ServiceRegistration for the registered service, or an invalid ServiceRegistration if it could not be registered.
     ///
-    template<typename S,typename... IFaces> ServiceRegistration<S,ServiceScope::EXTERNAL> registerObject(S* obj, const QString& objName = {}) {
-        static_assert(detail::could_be_qobject<S>::value, "Object is not potentially convertible to QObject");
+    template<detail::potential_qobject S,typename... IFaces> ServiceRegistration<S,ServiceScope::EXTERNAL> registerObject(S* obj, const QString& objName = {}) {
         QObject* qObject = dynamic_cast<QObject*>(obj);
         if(!qObject) {
             qCCritical(loggingCategory()).noquote().nospace() << "Cannot register Object " << obj << " as '" << objName << "'. Object is no QObject";
@@ -4171,8 +4084,7 @@ public:
     /// \tparam S the required service-type.
     /// \return a ProxyRegistration that corresponds to all registration that match the service-type.
     ///
-    template<typename S> [[nodiscard]] ProxyRegistration<S> getRegistration() const {
-        static_assert(detail::could_be_qobject<S>::value, "Type must be potentially convertible to QObject");
+    template<detail::potential_qobject S> [[nodiscard]] ProxyRegistration<S> getRegistration() const {
         return ProxyRegistration<S>::wrap(getRegistrationHandle(typeid(S), detail::meta_type_traits<S>::getMetaObject()));
     }
 
@@ -4533,7 +4445,7 @@ protected:
     }
 
 private:
-    static std::atomic<QApplicationContext*> theInstance;
+    static constinit std::atomic<QApplicationContext*> theInstance;
 };
 
 template<typename S> template<typename D,typename R> Subscription Registration<S>::autowire(R (S::*injectionSlot)(D*)) {
