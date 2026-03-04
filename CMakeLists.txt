@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
 project(QApplicationContext)
-set(CMAKE_CXX_STANDARD 17)
 enable_testing()
 
 set(CMAKE_AUTOMOC ON)
@@ -39,6 +38,7 @@ foreach(testfile ${test_sources})
     get_filename_component(testname ${testfile} NAME_WE)
 
     qt_add_executable(${testname} ${testfile} ${CMAKE_CURRENT_LIST_DIR}/test/appcontexttestclasses.cpp ${CMAKE_CURRENT_LIST_DIR}/test/appcontexttestclasses.h ${CMAKE_CURRENT_LIST_DIR}/test/registrationslot.h)
+    target_compile_features(${testname} PUBLIC cxx_std_17)
     if(MSVC)
       target_compile_options(${testname} PRIVATE /W4 /w45262 /w44062)
     endif()
