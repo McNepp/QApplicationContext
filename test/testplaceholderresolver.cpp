@@ -58,9 +58,11 @@ private slots:
         PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit}", configResolver.get());
         QVERIFY(resolver);
         QVERIFY(resolver->hasPlaceholders());
+        QVERIFY(!resolver->resolve().isValid());
         settings->setValue("sayit", "Hello, world!");
         QCOMPARE(resolver->resolve(), "Hello, world!");
-        QCOMPARE(configResolver->lookupKeys, QStringList{"sayit"});
+        QStringList expected{"sayit", "sayit"};
+        QCOMPARE(configResolver->lookupKeys, expected);
     }
 
     void testResolvePlaceholderInSection() {
@@ -133,6 +135,13 @@ private slots:
         PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit:Hello, world!}", configResolver.get());
         QVERIFY(resolver);
         QCOMPARE(resolver->resolve(), "Hello, world!");
+        QCOMPARE(configResolver->lookupKeys, QStringList{"sayit"});
+    }
+
+    void testResolveEmptyStringDefaultValue() {
+        PlaceholderResolver* resolver = PlaceholderResolver::parse("${sayit:}", configResolver.get());
+        QVERIFY(resolver);
+        QCOMPARE(resolver->resolve(), "");
         QCOMPARE(configResolver->lookupKeys, QStringList{"sayit"});
     }
 

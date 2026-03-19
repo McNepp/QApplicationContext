@@ -12,7 +12,7 @@ namespace mcnepp::qtdi {
 
 
 
-std::atomic<QApplicationContext*> QApplicationContext::theInstance = nullptr;
+constinit std::atomic<QApplicationContext*> QApplicationContext::theInstance = nullptr;
 
 
 Q_LOGGING_CATEGORY(defaultLoggingCategory, "qtdi")
@@ -77,7 +77,6 @@ struct q_setter_t::QPropertyInvoker : Invoker {
 
     virtual void invoke(QObject* target, const QVariant& arg) const override {
         m_property.write(target, arg);
-        m_property.enclosingMetaObject();
     }
 
     virtual bool equals(const Invoker* other) const override {

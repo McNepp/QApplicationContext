@@ -287,6 +287,25 @@ Such *placeholder-value* may be passed to a mcnepp::qtdi::QApplicationContextPos
 
 Also, *placeholder-value* can be very useful in conjunction with [Service-templates](#service-templates).
 
+
+### Default-values and optional properties
+
+The syntax for *placeholder-values* allows you to specify a default-value to be used in case the configuration-entry cannot be found.
+The default-value appears within the curly brackets, after colon.
+ 
+The following line configures a `QTimer` with an interval determined by the configuration-entry `timeout`.
+<br>Should the configuration-entry not be present, a value of 1500 millis will be used:
+
+    context -> registerService(service<QTimer>() << resolveProp("interval", "${timeout:1500}"));
+
+Sometimes, it may be desirable that a property is only set if the corresponding configuration-entry does exist.
+<br>For example, a Service may initialize a property in its constructor, and this value should only be overwritten if the configuration provides an explicit value.
+<br>In order to achieve this, you can pass an additional type-argument to mcnepp::qtdi::resolveProp():
+
+    context -> registerService(service<QTimer>() << resolveProp<ConfigValueType::OPTIONAL>("interval", "${timeout}"));
+
+
+
 ### Configuring services with type-safe 'setters'
 
 In the previous paragraph, you could see how Q_PROPERTYs of the services were initialized using the property-names.

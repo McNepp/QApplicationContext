@@ -12,7 +12,7 @@ class PlaceholderResolver : public QObject {
 
 public:
 
-    QVariant resolve(const QString& group, QVariantMap& resolvedPlaceholders) const;
+    QVariant resolve(const QString& group, QVariantMap& resolvedPlaceholders, bool optional=false) const;
 
     QVariant resolve(const QString& group = {}) const {
         QVariantMap resolvedPlaceholders;
@@ -58,7 +58,7 @@ private:
 
     static std::unique_ptr<resolvable_step> addStep(const QString& literal);
 
-    static std::unique_ptr<resolvable_step> addStep(const QString& placeholder, const QString& defaultValue, bool hasWildcard);
+    static std::unique_ptr<resolvable_step> addStep(const QString& placeholder, const QVariant& defaultValue, bool hasWildcard);
 
     QApplicationContext* const m_context;
     QString m_placeholderText;

@@ -1,13 +1,16 @@
 #include "placeholderresolver.h"
 namespace mcnepp::qtdi::detail {
 
-    QVariant PlaceholderResolver::resolve(const QString& group, QVariantMap& resolvedPlaceholders) const {
+    QVariant PlaceholderResolver::resolve(const QString& group, QVariantMap& resolvedPlaceholders, bool optional) const {
         QString resolvedString;
         for(auto& resolvable : m_steps) {
             QVariant resolved = resolvable->resolve(m_context, group, resolvedPlaceholders);
             if(!resolved.isValid()) {
-                qCCritical(m_loggingCategory).nospace() << "Could not resolve placeholder " << resolvable->placeholder();
-
+                if(optional) {
+                    qCInfo(m_loggingCategory).nospace() << "Could not resolve placeholder " << resolvable->placeholder();
+                } else {
+                   qCCritical(m_loggingCategory).nospace() << "Could not resolve placeholder " << resolvable->placeholder();
+                }
                 return resolved;
             }
             if(m_steps.size() == 1) {
@@ -51,7 +54,7 @@ namespace mcnepp::qtdi::detail {
                 if(resolved.typeId() == QMetaType::QString) {
                     resolved = appContext->resolveConfigValue(resolved.toString());
                 }
-                if(!resolved.isValid() && !defaultValue.isEmpty()) {
+                if(!resolved.isValid() && defaultValue.isValid()) {
                     resolved = defaultValue;
                 }
             }
@@ -66,7 +69,7 @@ namespace mcnepp::qtdi::detail {
         }
 
 
-        placeholder_step(const QString& key, const QString& defaultValue, bool hasWildcard) :
+        placeholder_step(const QString& key, const QVariant& defaultValue, bool hasWildcard) :
             key{key},
             defaultValue{defaultValue},
             hasWildcard{hasWildcard} {
@@ -74,7 +77,7 @@ namespace mcnepp::qtdi::detail {
         }
 
         QString key;
-        QString defaultValue;
+        QVariant defaultValue;
         bool hasWildcard;
 
     };
@@ -83,7 +86,7 @@ namespace mcnepp::qtdi::detail {
         return std::make_unique<literal_step>(literal);
     }
 
-    std::unique_ptr<PlaceholderResolver::resolvable_step>  PlaceholderResolver::addStep(const QString& placeholder, const QString& defaultValue, bool hasWildcard) {
+    std::unique_ptr<PlaceholderResolver::resolvable_step>  PlaceholderResolver::addStep(const QString& placeholder, const QVariant& defaultValue, bool hasWildcard) {
         return std::make_unique<placeholder_step>(placeholder, defaultValue, hasWildcard);
     }
 
@@ -197,10 +200,17 @@ namespace mcnepp::qtdi::detail {
                     state = lastStateBeforeEscape;
                     continue;
                 case STATE_FOUND_DEFAULT_VALUE:
-                case STATE_FOUND_PLACEHOLDER:
                     if(!token.isEmpty()) {
                         steps.push_back(addStep(token, defaultValueToken, hasWildcard));
                         defaultValueToken.clear();
+                        token.clear();
+                        hasWildcard = false;
+                    }
+                    state = STATE_START;
+                    continue;
+                case STATE_FOUND_PLACEHOLDER:
+                    if(!token.isEmpty()) {
+                        steps.push_back(addStep(token, QVariant{}, hasWildcard));
                         token.clear();
                         hasWildcard = false;
                     }

@@ -214,8 +214,7 @@ template<typename T> struct Collector : public detail::Subscription {
         QObject::connect(this, &detail::Subscription::objectPublished, this, &Collector::collect);
     }
 
-    template<typename Cont> auto subscribeAll(const Cont& container) ->
-        std::enable_if_t<std::conjunction_v<std::is_assignable<registration_handle_t&,decltype(*container.begin())>,std::is_assignable<registration_handle_t&,decltype(*container.end())>>,void>
+    template<std::ranges::range Cont> void subscribeAll(const Cont& container) requires std::is_assignable_v<registration_handle_t&,typename Cont::value_type>
     {
         for(auto& reg : container) {
             reg->subscribe(this);
@@ -247,7 +246,7 @@ QVariantMap initPlaceholders(const detail::service_config::map_type& properties)
 {
     QVariantMap resolved;
     for(const auto& entry : properties.asKeyValueRange()) {
-        if(entry.second.configType == detail::ConfigValueType::PRIVATE) {
+        if(entry.second.configType == ConfigValueType::PLACEHOLDER) {
             resolved[entry.first] = entry.second.expression;
         }
     }
@@ -257,7 +256,7 @@ QVariantMap initPlaceholders(const detail::service_config::map_type& properties)
 
 
 
-template<typename C,typename P> auto eraseIf(C& container, P predicate) -> std::enable_if_t<std::is_pointer_v<typename C::value_type>,typename C::value_type> {
+template<std::ranges::range C,typename P> typename C::value_type eraseIf(C& container, P predicate) requires std::is_pointer_v<typename C::value_type> {
         auto iterator = std::find_if(container.begin(), container.end(), predicate);
         if(iterator != container.end()) {
             auto value = *iterator;
@@ -374,7 +373,7 @@ public:
 bool configurationDependsOnOtherService(service_registration_handle_t handle, service_registration_handle_t candidate) {
     for(auto& prop : handle->config().properties) {
         switch(prop.configType) {
-        case detail::ConfigValueType::SERVICE:
+        case ConfigValueType::SERVICE:
             if(prop.expression.value<service_registration_handle_t>() == candidate) {
                     return true;
             }
@@ -1725,7 +1724,7 @@ service_registration_handle_t StandardApplicationContext::registerServiceHandle(
                 const service_config::map_type* props = &config.properties;
                 for(DescriptorRegistration* handle = base;;handle = handle->base() ){
                     for(const auto& entry : props->asKeyValueRange()) {
-                        if(entry.second.configType != detail::ConfigValueType::PRIVATE && !entry.second.propertyDescriptor.setter && descriptor.meta_object->indexOfProperty(entry.second.propertyDescriptor.name) < 0) {
+                        if(entry.second.configType != ConfigValueType::PLACEHOLDER && !entry.second.propertyDescriptor.setter && descriptor.meta_object->indexOfProperty(entry.second.propertyDescriptor.name) < 0) {
                             qCCritical(loggingCategory()).nospace().noquote() << "Cannot register " << descriptor << " as '" << name << "'. Service-type has no property '" << entry.second.propertyDescriptor.name << "'";
                             return nullptr;
                         }
@@ -1894,8 +1893,9 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
             QVariant resolvedValue = cv.expression;
             detail::PlaceholderResolver* resolver = nullptr;
             bool isAutoRefreshProperty = config.autoRefresh; // If config.autoRefresh is false, we might still find a detail::ConfigValue below
+            bool isOptional =  cv.configType == ConfigValueType::OPTIONAL;
             switch(cv.configType) {
-            case detail::ConfigValueType::SERVICE:
+            case ConfigValueType::SERVICE:
                 if(auto srvReg = dynamic_cast<DescriptorRegistration*>(cv.expression.value<service_registration_handle_t>())) {
                     auto instances = srvReg->obtainServices(toBePublished);
                     switch(srvReg->scope()) {
@@ -1920,10 +1920,11 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 }
                 break;
 
-            case detail::ConfigValueType::AUTO_REFRESH_EXPRESSION:
+            case ConfigValueType::AUTO_REFRESH:
                 isAutoRefreshProperty = true;
                 [[fallthrough]];
-            case detail::ConfigValueType::DEFAULT:
+            case ConfigValueType::OPTIONAL:
+            case ConfigValueType::DEFAULT:
                 if(cv.expression.typeId() == QMetaType::QString) {
                     resolver = getResolver(cv.expression.toString());
                     if(!resolver) {
@@ -1931,7 +1932,7 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                     }
                     // We only need to watch this property if it does contain placeholders:
                     isAutoRefreshProperty = isAutoRefreshProperty && resolver && resolver->hasPlaceholders();
-                    resolvedValue = resolver->resolve(config.group, resolvedPlaceholders);
+                    resolvedValue = resolver->resolve(config.group, resolvedPlaceholders, isOptional);
                     if(resolvedValue.isValid()) {
                         detail::convertVariant(resolvedValue, cv.variantConverter);
                     }
@@ -1943,6 +1944,9 @@ StandardApplicationContext::Status StandardApplicationContext::configure(Descrip
                 continue;
             }
             if(!resolvedValue.isValid()) {
+                if(isOptional) {
+                    continue;
+                }
                 return Status::fatal;
             }
             detail::property_descriptor propertyDescriptor = cv.propertyDescriptor;
@@ -2061,13 +2065,13 @@ bool StandardApplicationContext::validateResolvers(const service_descriptor& des
         bool isAutoRefreshProperty = config.autoRefresh;
         QString asString;
         switch(cv.configType) {
-        case detail::ConfigValueType::SERVICE:
+        case ConfigValueType::SERVICE:
             if(!cv.expression.value<registration_handle_t>()) {
                 qCritical(loggingCategory()).nospace().noquote() << "Invalid value for property '" << key << "'";
                 return false;
             }
             continue;
-        case detail::ConfigValueType::AUTO_REFRESH_EXPRESSION:
+        case ConfigValueType::AUTO_REFRESH:
             isAutoRefreshProperty = true;
             [[fallthrough]];
         default:

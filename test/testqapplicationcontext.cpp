@@ -453,6 +453,21 @@ private slots:
         QCOMPARE(slot->interval(), 4711);
     }
 
+    void testResolveOptionalPlaceholderProperty() {
+        configuration->setValue("foo", "Hello, world");
+        context->registerObject(configuration.get());
+
+        auto reg1 = context->registerService(service<BaseService>() << resolveProp<ConfigValueType::OPTIONAL>(&BaseService::setFoo, "${foo}"));
+        auto reg2 = context->registerService(service<BaseService>() << resolveProp<ConfigValueType::OPTIONAL>(&BaseService::setFoo, "${fxx}"));
+        QVERIFY(context->publish());
+        RegistrationSlot<BaseService> slot1{reg1, this};
+
+        QCOMPARE(slot1->foo(), "Hello, world");
+        RegistrationSlot<BaseService> slot2{reg2, this};
+
+        QCOMPARE(slot2->foo(), "BaseService");
+    }
+
     void testRegisterQSettingsAsService() {
         auto reg = context->registerService(service<QTimer>() << propValue("interval", "${timerInterval}"));
 
@@ -547,7 +562,7 @@ private slots:
         QCOMPARE(static_cast<StandardApplicationContext*>(context.get())->autoRefreshMillis(), 500);
 
         QCOMPARE(4711, context->getConfigurationValue("timerInterval"));
-        auto reg = context->registerService(service<QTimer>() << autoRefresh("interval", "${timerInterval}"));
+        auto reg = context->registerService(service<QTimer>() << resolveProp<ConfigValueType::AUTO_REFRESH>("interval", "${timerInterval}"));
         QVERIFY(context->publish());
         RegistrationSlot<QTimer> slot{reg, this};
 
@@ -1115,7 +1130,7 @@ void testWatchConfigurationFileChangeWithError() {
         context->registerObject(configuration.get());
         auto baseServiceTemplate = context->registerService(serviceTemplate<BaseService>() << propValue("foo", "${id}-foo"));
 
-        auto base1 = context->registerService(service<BaseService>() << placeholderValue("id", "${externalId}"), baseServiceTemplate, "base1");
+        auto base1 = context->registerService(service<BaseService>() << resolveProp<ConfigValueType::PLACEHOLDER>("id", "${externalId}"), baseServiceTemplate, "base1");
         auto base2 = context->registerService(service<BaseService>() << placeholderValue("id", 3141), baseServiceTemplate, "base2");
         QVERIFY(context->publish());
 
@@ -1706,7 +1721,7 @@ void testWatchConfigurationFileChangeWithError() {
         QSettings settings{file.fileName(), QSettings::IniFormat};
         context->registerObject(&settings);
         // Use custom-converter:
-        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()) << autoRefresh(&DependentService::setAddress, "${host}", addressConverter), "dep");
+        auto reg = context->registerService(service<DependentService>(injectIfPresent<Interface1>()) << resolveProp<ConfigValueType::AUTO_REFRESH>(&DependentService::setAddress, "${host}", addressConverter), "dep");
         RegistrationSlot<DependentService> srv{reg, this};
         QVERIFY(context->publish());
         QCOMPARE(srv->address(), Address{"192.168.1.1"});
