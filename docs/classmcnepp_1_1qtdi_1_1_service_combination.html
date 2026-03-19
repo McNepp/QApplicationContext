@@ -97,9 +97,9 @@ $(function(){ initResizable(false); });
 <div class="contents">
 
 <p>A combination of Services that can be subscribed. <br  />
-An instance of this type will be returned by <a class="el" href="qapplicationcontext_8h.html#acb4ad42eaff551d32fe42b828b3a256c" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a>. <br  />
+An instance of this type will be returned by <a class="el" href="qapplicationcontext_8h.html#af7d3e0d821d10225f83c7c0ceb017298" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a>. <br  />
 This type is neither copyable nor moveable. <br  />
-It is meant to be treated solely as a temporary object, on which <a class="el" href="#a392e36cf6961cfd0a6356f2441f4ac4c" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">ServiceCombination::subscribe()</a> shall be invoked.  
+It is meant to be treated solely as a temporary object, on which <a class="el" href="#abc400d84096ff1d803c2864b70ec1f79" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">ServiceCombination::subscribe()</a> shall be invoked.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="qapplicationcontext_8h_source.html">qapplicationcontext.h</a>&gt;</code></p>
@@ -121,34 +121,34 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:abdf9048620580aecb232f59a02da8c09" id="r_abdf9048620580aecb232f59a02da8c09"><td class="memItemLeft" align="right" valign="top"><a id="abdf9048620580aecb232f59a02da8c09" name="abdf9048620580aecb232f59a02da8c09"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>ServiceCombination</b> (const <a class="el" href="classmcnepp_1_1qtdi_1_1_registration.html">Registration</a>&lt; S &gt; &amp;... registrations)</td></tr>
 <tr class="separator:abdf9048620580aecb232f59a02da8c09"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a392e36cf6961cfd0a6356f2441f4ac4c" id="r_a392e36cf6961cfd0a6356f2441f4ac4c"><td class="memTemplParams" colspan="2">template&lt;typename F &gt; </td></tr>
-<tr class="memitem:a392e36cf6961cfd0a6356f2441f4ac4c"><td class="memTemplItemLeft" align="right" valign="top">std::enable_if_t&lt; std::is_invocable_v&lt; F, S *... &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a392e36cf6961cfd0a6356f2441f4ac4c">subscribe</a> (QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection) &amp;&amp;</td></tr>
-<tr class="memdesc:a392e36cf6961cfd0a6356f2441f4ac4c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subscribes to this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html" title="A combination of Services that can be subscribed.  An instance of this type will be returned by mcnep...">ServiceCombination</a>. <br  />
+<tr class="memitem:abc400d84096ff1d803c2864b70ec1f79" id="r_abc400d84096ff1d803c2864b70ec1f79"><td class="memTemplParams" colspan="2">template&lt;std::invocable&lt; S *... &gt; F&gt; </td></tr>
+<tr class="memitem:abc400d84096ff1d803c2864b70ec1f79"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#abc400d84096ff1d803c2864b70ec1f79">subscribe</a> (QObject *context, F callable, Qt::ConnectionType connectionType=Qt::AutoConnection) &amp;&amp;</td></tr>
+<tr class="memdesc:abc400d84096ff1d803c2864b70ec1f79"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subscribes to this <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html" title="A combination of Services that can be subscribed.  An instance of this type will be returned by mcnep...">ServiceCombination</a>. <br  />
 <b>Note:</b> the callable will be invoked once for <em>every distinct combination of services</em>. In particular, if one of the supplied Registrations was of ServiceScope::PROXY, the callable will be invoked at least as many times as there are instances of the service-type.  <br /></td></tr>
-<tr class="separator:a392e36cf6961cfd0a6356f2441f4ac4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:abc400d84096ff1d803c2864b70ec1f79"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename... S&gt;<br />
 class mcnepp::qtdi::ServiceCombination&lt; S &gt;</div><p>A combination of Services that can be subscribed. <br  />
-An instance of this type will be returned by <a class="el" href="qapplicationcontext_8h.html#acb4ad42eaff551d32fe42b828b3a256c" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a>. <br  />
+An instance of this type will be returned by <a class="el" href="qapplicationcontext_8h.html#af7d3e0d821d10225f83c7c0ceb017298" title="Combines two ore more ServiceRegistrations.  This function returns a temporary object of type Service...">mcnepp::qtdi::combine()</a>. <br  />
 This type is neither copyable nor moveable. <br  />
-It is meant to be treated solely as a temporary object, on which <a class="el" href="#a392e36cf6961cfd0a6356f2441f4ac4c" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">ServiceCombination::subscribe()</a> shall be invoked. </p>
+It is meant to be treated solely as a temporary object, on which <a class="el" href="#abc400d84096ff1d803c2864b70ec1f79" title="Subscribes to this ServiceCombination.  Note: the callable will be invoked once for every distinct co...">ServiceCombination::subscribe()</a> shall be invoked. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a392e36cf6961cfd0a6356f2441f4ac4c" name="a392e36cf6961cfd0a6356f2441f4ac4c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a392e36cf6961cfd0a6356f2441f4ac4c">&#9670;&#160;</a></span>subscribe()</h2>
+<a id="abc400d84096ff1d803c2864b70ec1f79" name="abc400d84096ff1d803c2864b70ec1f79"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abc400d84096ff1d803c2864b70ec1f79">&#9670;&#160;</a></span>subscribe()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
 template&lt;typename... S&gt; </div>
 <div class="memtemplate">
-template&lt;typename F &gt; </div>
+template&lt;std::invocable&lt; S *... &gt; F&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::enable_if_t&lt; std::is_invocable_v&lt; F, S *... &gt;, <a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> &gt; <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html">mcnepp::qtdi::ServiceCombination</a>&lt; S &gt;::subscribe </td>
+          <td class="memname"><a class="el" href="classmcnepp_1_1qtdi_1_1_subscription.html">Subscription</a> <a class="el" href="classmcnepp_1_1qtdi_1_1_service_combination.html">mcnepp::qtdi::ServiceCombination</a>&lt; S &gt;::subscribe </td>
           <td>(</td>
           <td class="paramtype">QObject *</td>          <td class="paramname"><span class="paramname"><em>context</em></span>, </td>
         </tr>
